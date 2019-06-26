@@ -1,9 +1,11 @@
-+++
-title = "Getting started with Eclipse Hono"
-linkTitle = "Getting started"
-menu = "main"
-weight = 100
-+++
+---
+title: "Getting started with Eclipse Hono"
+linkTitle: "Getting started"
+menu: "main"
+weight: 100
+resources:
+  - src: Hono_instance.svg
+---
 
 This guide will walk you through an interactive example usage scenario of Eclipse Hono. You will learn how devices can use Hono's protocol adapters to publish telemetry data and events using both HTTP and/or MQTT. You will also see how a downstream application can consume this data using Hono's north bound API without requiring the application to know anything about the specifics of the communication protocols used by the devices.
 
@@ -91,7 +93,7 @@ export MQTT_ADAPTER_IP=$(kubectl get service hono-adapter-mqtt-vertx --output='j
 
 Hono consists of a set of microservices which are deployed as Docker containers. The diagram below provides an overview of the containers that are part of the example deployment of Hono on the Sandbox or a local Minikube cluster.
 
-{{< figure src="../img/Hono_instance.svg" title="Components of the example Hono deployment" alt="The Docker containers representing the services of the example Hono deployment" >}}
+{{< figure src="Hono_instance.svg" title="Components of the example Hono deployment" alt="The Docker containers representing the services of the example Hono deployment" >}}
 
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
@@ -165,6 +167,7 @@ Location: /credentials/my-tenant/my-device/hashed-password
 Content-Length: 0
 ~~~
 
+<a name="starting-a-consumer"></a>
 ## Starting the example Application
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.

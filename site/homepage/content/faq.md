@@ -11,7 +11,7 @@ weight = 550
 
 #### Why do I get `HTTP/1.1 503 Service Unavailable` when sending messages to the HTTP protocol adapter?
 
-Please check if you have a [consumer connected]({{< ref "/getting-started.md#starting-a-consumer" >}}) 
+Please check if you have a [consumer connected]({{< relref "getting-started#starting-a-consumer" >}}) 
 and that your consumer is for the same type of message (telemetry or event) that you are sending.  
 
 
