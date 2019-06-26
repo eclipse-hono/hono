@@ -9,9 +9,12 @@ A tenant is a logical entity, which groups together a set of devices. The inform
 determine if devices belonging to the tenant are allowed to connect to a certain protocol adapter or if devices are required to authenticate.
 <!--more-->
 
+The Tenant API also present an HTTP endpoint for management operations, such as creating, updating and deleting tenants.  
+
 This document *describes* the Tenant API's operations and the payload data format used by them.
 Please refer to [Multi Tenancy]({{< ref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
 
+## AMQP API
 The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
 <a name="preconditions"></a>
@@ -213,3 +216,417 @@ A Tenant service implementation uses the following AMQP message delivery states 
 | :------------- | :---------- |
 | *ACCEPTED*     | Indicates that the request message has been received and accepted for processing. |
 | *REJECTED*     | Indicates that the request message has been received but cannot be processed. The disposition frame's *error* field contains information regarding the reason why. Clients should not try to re-send the request using the same message properties and payload in this case. |
+
+## REST Management API 
+
+All the management operations are accessible through the `/tenants` HTTP endpoint.
+
+### Create a Tenant
+
+An HTTP `POST` method request on the tenant endpoint triggers the tenant creation in the device registry.
+
+#### URL pattern
+The tenant id value can be optionally appended to the URL : `tenants/{tenantId}`.
+If no parameter is given, the tenant will be assigned an auto-generated ID.
+
+#### Request Format
+The body should be of type `application/json`.
+
+##### Body
+The following table provides an overview of the properties that can be set in the request :
+
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *enabled*        | Boolean     | no        | Default: true. |
+| *ext*            | Json Object | no        | Arbitrary properties as extension to the ones specified by the Hono API. |
+| *adapters*       | Json Array  | no        | Only a single entry per type is allowed. If multiple entries for the same type are present it is handled as an error. See [adapters](#Adapters)
+| *limits*         | Json Object | no        | The resource limits to apply for this tenant. See [object format](#Resource Limits)
+| *trusted-ca*     | Json Object | no        | The signed certificate of the trusted CA. See [the object format](#Trusted Certificate)
+
+Example value:
+~~~json
+{
+  "enabled": true,
+  "ext": {
+    "additionalProp1": {}
+  },
+  "adapters": [
+    {
+      "type": "string",
+      "enabled": false,
+      "device-authentication-required": true,
+      "ext": {
+        "additionalProp1": {}
+      },
+      "additionalProp1": {}
+    }
+  ],
+  "defaults": {
+    "additionalProp1": {}
+  },
+  "limits": {
+    "max-connections": 0,
+    "ext": {
+      "additionalProp1": {}
+    }
+  },
+  "trusted-ca": {
+    "subject-dn": "string",
+    "public-key": "string",
+    "cert": "string",
+    "algorithm": "EC"
+  }
+}
+~~~
+
+#### Expected Response Overview
+| Response | Reason |
+| -------- | ------ |
+| 201      | Object created |
+| 400      | Malformed request |
+| 401      | Authentication error. |
+| 403      | Operation not allowed. If the user does not have read access for this object, then `404` will be returned instead. |
+| 409      | Object already exists.   |
+
+#### Success Response
+If the tenant is created successfully, the return code should be `201`.
+
+##### Headers
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| Location         | string      | URL to the resource |
+| ETag             | string      | The version of the resource |
+
+##### Body
+The body should be a Json Object:
+| Field Name       | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| id               | string      | The created Tenant ID. |
+
+Example value:
+~~~json
+{
+  "id": "string"
+}
+~~~
+
+#### Failure Response
+If the tenant could not be created, the return code can be one of the following : `400`, `401`, `403`, `409`.
+
+
+##### Headers
+
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+
+### Retrieve Tenant Information
+
+Tenant information is retrieved with the `GET` method. 
+
+#### URL pattern
+The tenant id parameter MUST should appended to the URL : `tenants/{tenantId}`.
+
+#### Request Format
+The only parameter must be passed in the URL, the body should be empty.
+
+#### Expected Response Overview
+| Response | Reason                    |
+| -------- | ------                    |
+| 200      | Operation successful.     |
+| 400      | Malformed request         |
+| 401      | Authentication error.     |
+| 404      | Resource cannot be found. |
+
+#### Success Response
+If the tenant is created successfully, the return code should be `200`.
+
+##### Headers
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| ETag             | string      | The version of the resource |
+
+##### Body
+The body MUST be of type `application/json`. Here is the expected Json Object fields:
+| Name             | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| *enabled*        | Boolean     | Tenant state. |
+| *ext*            | Json Object | Arbitrary properties as extension to the ones specified by the Hono API. |
+| *adapters*       | Json Array  | the adapters details for this tenant. See [adapters](#Adapters)
+| *limits*         | Json Object | The resource limits to apply for this tenant. See [object format](#Resource Limits)
+| *trusted-ca*     | Json Object | The signed certificate of the trusted CA. See [the object format](#Trusted Certificate)
+
+
+Example value:
+~~~json
+{
+  "enabled": true,
+  "ext": {
+    "additionalProp1": {}
+  },
+  "adapters": [
+    {
+      "type": "string",
+      "enabled": false,
+      "device-authentication-required": true,
+      "ext": {
+        "additionalProp1": {}
+      },
+      "additionalProp1": {}
+    }
+  ],
+  "defaults": {
+    "additionalProp1": {}
+  },
+  "limits": {
+    "max-connections": 0,
+    "ext": {
+      "additionalProp1": {}
+    }
+  },
+  "trusted-ca": {
+    "subject-dn": "string",
+    "public-key": "string",
+    "cert": "string",
+    "algorithm": "EC"
+  }
+}
+~~~
+
+#### Failure Response
+If the tenant could not be retrieved, the return code can be one of the following : `400`, `401`, `404`.
+
+##### Headers
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+
+### Update a Tenant information
+
+An HTTP `PUT` method request on the tenant endpoint will update the tenant details in the device registry.
+
+#### URL pattern
+The tenant id value MUST be appended to the URL : `tenants/{tenantId}`.
+
+#### Request Format
+The body should be of type `application/json`.
+
+##### Headers
+The request MAY contain the following headers :
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| If-Match         | string      | The expected resource version |
+
+##### Body
+The following table provides an overview of the properties that can be set in the request :
+
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *enabled*        | Boolean     | no        | Default: true. |
+| *ext*            | Json Object | no        | Arbitrary properties as extension to the ones specified by the Hono API. |
+| *adapters*       | Json Array  | no        | Only a single entry per type is allowed. If multiple entries for the same type are present it is handled as an error. See [adapters](#Adapters)
+| *limits*         | Json Object | no        | The resource limits to apply for this tenant. See [object format](#Resource Limits)
+| *trusted-ca*     | Json Object | no        | The signed certificate of the trusted CA. See [the object format](#Trusted Certificate)
+
+Example value:
+~~~json
+{
+  "enabled": true,
+  "ext": {
+    "additionalProp1": {}
+  },
+  "adapters": [
+    {
+      "type": "string",
+      "enabled": false,
+      "device-authentication-required": true,
+      "ext": {
+        "additionalProp1": {}
+      },
+      "additionalProp1": {}
+    }
+  ],
+  "defaults": {
+    "additionalProp1": {}
+  },
+  "limits": {
+    "max-connections": 0,
+    "ext": {
+      "additionalProp1": {}
+    }
+  },
+  "trusted-ca": {
+    "subject-dn": "string",
+    "public-key": "string",
+    "cert": "string",
+    "algorithm": "EC"
+  }
+}
+~~~
+
+#### Expected Response Overview
+| Response | Reason |
+| -------- | ------ |
+| 204      | Object updated. |
+| 400      | Malformed request. |
+| 401      | Authentication error. |
+| 403      | Operation not allowed. If the user does not have read access for this object, then `404` will be returned instead. |
+| 404      | Tenant not found.   |
+| 412      | The given resource Version does not match current. This can only happen when the request header If-Match was set. |
+
+#### Success Response
+If the tenant is created successfully, the return code should be `201`.
+
+##### Headers
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| Location         | string      | URL to the resource |
+| ETag             | string      | The version of the resource |
+
+##### Body
+The body should be a Json Object:
+| Field Name       | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| id               | string      | The created Tenant ID. |
+
+Example value:
+~~~json
+{
+  "id": "string"
+}
+~~~
+
+#### Failure Response
+If the tenant could not be updated, the return code can be one of the following : `400`, `401`, `403`, `404`, `412`.
+
+
+##### Headers
+
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+
+### Delete a Tenant information
+
+An HTTP `DELETE` method request on the tenant endpoint will remove the tenant details in the device registry.
+
+#### URL pattern
+The tenant id value MUST be appended to the URL : `tenants/{tenantId}`.
+
+#### Request Format
+The only parameter must be passed in the URL, the body should be empty.
+
+##### Headers
+The request MAY contain the following headers :
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| If-Match         | string      | The expected resource version |
+
+#### Expected Response Overview
+| Response | Reason |
+| -------- | ------ |
+| 204      | Object deleted. |
+| 401      | Authentication error. |
+| 403      | Operation not allowed. If the user does not have read access for this object, then `404` will be returned instead. |
+| 404      | Tenant not found.   |
+| 412      | The given resource Version does not match current. This can only happen when the request header If-Match was set. |
+
+#### Success Response
+If the tenant is deleted successfully, the return code should be `204`. No additional will be provided. 
+
+#### Failure Response
+If the tenant could not be deleted, the return code can be one of the following : `401`, `403`, `404`, `412`.
+
+##### Headers
+
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+### Schemas
+
+#### Adapters
+TODO : what adapters are really ? 
+Json Object :
+ 
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *type*           | String      | yes       | The adapter type.
+| *enabled*        | Boolean     | no        | Default: true. |
+| *device-authentication-required* | Boolean | no        | Default: true.
+| *ext*            | Json Object | no        | 	Allows arbitrary properties as extension to the ones specified by the Hono API.
+
+#### Resource Limits
+Defines a resource limit for a tenant.
+Json Object :
+ 
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *type*           | Integer     | no       | The maximum number of concurrent connections allowed from devices of this tenant. The default value -1 indicates that no limit is set.
+| *ext*            | Json Object | no        | 	Allows arbitrary properties as extension to the ones specified by the Hono API.
+
+#### Trusted Certificate
+TODO : add a description ? 
+Json Object :
+ 
+| Name             | Type         | Mandatory |  Description |
+| :--------------- | :-------:    | :-------: |  :---------- |
+| *subject-dn*     | String       | yes       | The subject DN of the trusted root certificate in the format defined by RFC 2253.
+| *public-key*     | string($byte)| no        | The Base64 encoded binary DER encoding of the trusted root certificate’s public key. Either this property or cert must be set. |
+| *cert*           | string($byte)| no        | The Base64 encoded binary DER encoding of the trusted root certificate. Either this property or public-key must be set.
+| *algorithm*      | string       | no        | The algorithm used for the public key of the CA. If the cert property is used to provide an X.509 certificate then the algorithm is determined from the certificate and this property is ignored. Otherwise, i.e. if the public-key property is used, this property must be set to the algorithm used, if other than the default.
+
+#### Error Result
+This object MAY be returned by the device registry to provide more details on a failure.
+Json Object :
+
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *error*          | string       | yes      | A human readable error message of what went wrong.
