@@ -14,14 +14,9 @@
 package org.eclipse.hono.service.registration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 
 import java.net.HttpURLConnection;
 import java.util.function.Function;
@@ -34,7 +29,6 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -199,7 +193,6 @@ public class BaseRegistrationServiceTest {
         // WHEN trying to assert the device's registration status
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.succeeding(result -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
 
@@ -207,10 +200,6 @@ public class BaseRegistrationServiceTest {
             final JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
             assertNotNull(defaults);
             assertEquals("application/default", defaults.getString(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
-            // and the device data 'last-via' property was updated
-            final ArgumentCaptor<String> gatewayCaptor = ArgumentCaptor.forClass(String.class);
-            verify(registrationService).updateDeviceLastVia(anyString(), anyString(), gatewayCaptor.capture(), any(JsonObject.class));
-            assertEquals("4711", gatewayCaptor.getValue());
             ctx.completeNow();
         })));
     }
@@ -234,7 +223,6 @@ public class BaseRegistrationServiceTest {
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 200 status
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
             assertion.flag();
@@ -244,7 +232,6 @@ public class BaseRegistrationServiceTest {
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-4", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 200 status
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
             assertion.flag();
@@ -268,16 +255,8 @@ public class BaseRegistrationServiceTest {
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 200 status
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
-
-            // and the device data 'last-via' property was updated
-            verify(registrationService).updateDeviceLastVia(
-                    eq(Constants.DEFAULT_TENANT),
-                    eq("4714"),
-                    eq("gw-1"),
-                    any(JsonObject.class));
             ctx.completeNow();
         })));
     }
@@ -301,14 +280,8 @@ public class BaseRegistrationServiceTest {
         registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714",  ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the response contains a 200 status
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertFalse(result.getCacheDirective().isCachingAllowed());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
-
-            // and the device data 'last-via' property was updated
-            final ArgumentCaptor<String> gatewayCaptor = ArgumentCaptor.forClass(String.class);
-            verify(registrationService).updateDeviceLastVia(anyString(), anyString(), gatewayCaptor.capture(), any(JsonObject.class));
-            assertEquals("4714", gatewayCaptor.getValue());
             assertion.flag();
         })));
     }

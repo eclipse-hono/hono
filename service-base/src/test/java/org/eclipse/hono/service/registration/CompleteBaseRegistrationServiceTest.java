@@ -16,7 +16,6 @@ package org.eclipse.hono.service.registration;
 import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static org.eclipse.hono.util.Constants.JSON_FIELD_DEVICE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -158,95 +157,6 @@ public class CompleteBaseRegistrationServiceTest {
                         RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
                 ctx.completeNow();
             })));
-        }));
-    }
-
-    /**
-     * Verifies that the <em>assertRegistration</em> operation on a device with multiple 'via' entries updates
-     * the 'last-via' property.
-     *
-     * @param ctx The vert.x unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationUpdatesLastViaProperty(final VertxTestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device that is configured to
-        // be connected to an enabled gateway
-        final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
-
-        // WHEN trying to assert the device's registration status for gateway 1
-        final Future<RegistrationResult> registrationResult = Future.future();
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", registrationResult);
-        registrationResult
-        .map(r -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
-            assertFalse(r.getCacheDirective().isCachingAllowed());
-            assertNotNull(r.getPayload());
-        }))
-        .compose(ok -> {
-            // and when retrieving the device information
-            final Future<RegistrationResult> getResult = Future.future();
-            registrationService.getDevice(Constants.DEFAULT_TENANT, "4714", getResult);
-            return getResult;
-        })
-        .setHandler(ctx.succeeding(r -> {
-            // then the last-via property is set to gateway 1
-            ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
-                assertNotNull(r.getPayload(), "payload not set");
-                final JsonObject data = r.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
-                assertNotNull(data, "payload data not set");
-                final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
-                assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
-                assertEquals("gw-1", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
-                assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
-                                        RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
-            });
-            ctx.completeNow();
-        }));
-    }
-
-    /**
-     * Verifies that the <em>assertRegistration</em> operation on a device with multiple 'via' entries updates
-     * the 'last-via' property - here in the case where no gateway id is passed to the assertRegistration method.
-     *
-     * @param ctx The vert.x unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationWithoutGatewayUpdatesLastViaProperty(final VertxTestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device that is configured to
-        // be connected to an enabled gateway
-        final CompleteBaseRegistrationService<ServiceConfigProperties> registrationService = newCompleteRegistrationService();
-
-        // WHEN trying to assert the device's registration status for gateway 1
-        final Future<RegistrationResult> registrationResult = Future.future();
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", registrationResult);
-        registrationResult
-        .map(r -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
-            // and caching of the response payload is not allowed
-            assertFalse(r.getCacheDirective().isCachingAllowed());
-            assertNotNull(r.getPayload());
-        }))
-        .compose(ok -> {
-            final Future<RegistrationResult> getResult = Future.future();
-            registrationService.getDevice(Constants.DEFAULT_TENANT, "4714", getResult);
-            return getResult;
-        })
-        .setHandler(ctx.succeeding(r -> {
-            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
-            assertNotNull(r.getPayload(), "payload not set");
-            final JsonObject data = r.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
-            assertNotNull(data, "payload data not set");
-            final JsonObject lastViaObj = data.getJsonObject(RegistrationConstants.FIELD_LAST_VIA);
-            assertNotNull(lastViaObj, RegistrationConstants.FIELD_LAST_VIA + " property not set");
-            assertEquals("4714", lastViaObj.getString(JSON_FIELD_DEVICE_ID));
-            assertNotNull(lastViaObj.getString(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE),
-                    RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE + " property not set");
-            ctx.completeNow();
         }));
     }
 

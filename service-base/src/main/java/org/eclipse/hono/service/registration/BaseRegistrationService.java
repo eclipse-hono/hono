@@ -17,7 +17,6 @@ import java.util.Collections;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -197,11 +196,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
         getResultTracker.compose(result -> {
             if (isDeviceEnabled(result)) {
                 final JsonObject deviceData = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
-                return updateDeviceLastViaIfNeeded(tenantId, deviceId, deviceId, deviceData, span).map(res -> {
-                    return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData);
-                }).recover(t -> {
-                    return Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(t)));
-                });
+                return Future.succeededFuture(createSuccessfulRegistrationResult(tenantId, deviceId, deviceData));
             } else {
                 TracingHelper.logError(span, "device not enabled");
                 return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
@@ -262,11 +257,7 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
                 final JsonObject gatewayData = gatewayResult.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
 
                 if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
-                    return updateDeviceLastViaIfNeeded(tenantId, deviceId, gatewayId, deviceData, span).map(res -> {
-                        return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData);
-                    }).recover(t -> {
-                        return Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(t)));
-                    });
+                    return Future.succeededFuture(createSuccessfulRegistrationResult(tenantId, deviceId, deviceData));
                 } else {
                     TracingHelper.logError(span, "gateway not authorized");
                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
@@ -280,12 +271,10 @@ public abstract class BaseRegistrationService<T> extends EventBusService<T> impl
             final String deviceId,
             final JsonObject deviceData) {
 
-        final CacheDirective cacheDirective = isGatewaySupportedForDevice(tenantId, deviceId, deviceData) ? CacheDirective.noCacheDirective()
-                : getRegistrationAssertionCacheDirective(deviceId, tenantId);
         return RegistrationResult.from(
                 HttpURLConnection.HTTP_OK,
                 getAssertionPayload(tenantId, deviceId, deviceData),
-                cacheDirective);
+                getRegistrationAssertionCacheDirective(deviceId, tenantId));
     }
 
     private Future<Void> updateDeviceLastViaIfNeeded(final String tenantId, final String deviceId,
