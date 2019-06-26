@@ -351,7 +351,7 @@ The only parameter must be passed in the URL, the body should be empty.
 | 404      | Resource cannot be found. |
 
 #### Success Response
-If the tenant is created successfully, the return code should be `200`.
+If the tenant is successfully obtained, the return code should be `200`.
 
 ##### Headers
 | Header Name      | Type        |  Description |
