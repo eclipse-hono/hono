@@ -93,3 +93,309 @@ The Device Registration service uses the following AMQP message delivery states 
 | :------------- | :---------- |
 | *ACCEPTED*     | Indicates that the request message has been received and accepted for processing. |
 | *REJECTED*     | Indicates that the request message has been received but cannot be processed. The disposition frame's *error* field contains information regarding the reason why. Clients should not try to re-send the request using the same message properties in this case. |
+
+## REST Management API 
+
+All the management operations are accessible through the `/devices` HTTP endpoint.
+
+### Create a device
+
+An HTTP `POST` method request on the device endpoint triggers the device creation in the device registry.
+
+#### URL pattern
+The device id value can be optionally appended to the URL : `devices/{tenantID}/{deviceId}`.
+The tenant id parameter MUST be given.
+If no device id parameter is given, the device will be created with an auto-generated ID.
+
+#### Request Format
+The body should be of type `application/json`.
+
+##### Body
+The following table provides an overview of the properties that can be set in the request :
+
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *enabled*        | Boolean     | no        | Default: true. |
+| *defaults*       | Json Object | no        | Defaults for properties defined on the tenant and device level.
+| *via*            | Json Array  | no        | The device IDs of the gateways this device is assigned to.
+| *ext*            | Json Object | no        | Arbitrary properties as extension to the ones specified by the Hono API. |
+
+Example value:
+~~~json
+{
+  "enabled": true,
+  "defaults": {
+    "additionalProp1": {}
+  },
+  "via": [
+    "string"
+  ],
+  "ext": {
+    "additionalProp1": {}
+  }
+}
+~~~
+
+#### Expected Response Overview
+| Response | Reason |
+| -------- | ------ |
+| 201      | Object created |
+| 400      | Malformed request |
+| 401      | Authentication error. |
+| 403      | Operation not allowed. If the user does not have read access for this object, then `404` will be returned instead. |
+| 409      | Object already exists.   |
+
+#### Success Response
+If the device is created successfully, the return code should be `201`.
+
+##### Headers
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| Location         | string      | URL to the resource |
+| ETag             | string      | The version of the resource |
+
+##### Body
+The body should be a Json Object:
+| Field Name       | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| id               | string      | The created device ID. |
+
+Example value:
+~~~json
+{
+  "id": "string"
+}
+~~~
+
+#### Failure Response
+If the device could not be created, the return code can be one of the following : `400`, `401`, `403`, `409`.
+
+
+##### Headers
+
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+
+### Retrieve Device Information
+
+Device information is retrieved with the `GET` method. 
+
+#### URL pattern
+The device id parameter MUST should appended to the URL : `devices/{deviceId}`.
+
+#### Request Format
+The only parameter must be passed in the URL, the body should be empty.
+
+#### Expected Response Overview
+| Response | Reason                    |
+| -------- | ------                    |
+| 200      | Operation successful.     |
+| 400      | Malformed request         |
+| 401      | Authentication error.     |
+| 404      | Resource cannot be found. |
+
+#### Success Response
+If the device information is successfully obtained, the return code should be `200`.
+
+##### Headers
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| ETag             | string      | The version of the resource |
+
+##### Body
+The body MUST be of type `application/json`. Here is the expected Json Object fields:
+| Name             | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| *enabled*        | Boolean     | Device state. |
+| *defaults*       | Json Object | Defaults for properties defined on the tenant and device level.
+| *via*            | Json Array  | The device IDs of the gateways this device is assigned to.
+| *ext*            | Json Object | Arbitrary properties as extension to the ones specified by the Hono API. |
+
+
+Example value:
+~~~json
+{
+  "enabled": true,
+  "defaults": {
+    "additionalProp1": {}
+  },
+  "via": [
+    "string"
+  ],
+  "ext": {
+    "additionalProp1": {}
+  }
+}
+~~~
+
+#### Failure Response
+If the device could not be retrieved, the return code can be one of the following : `400`, `401`, `404`.
+
+##### Headers
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+
+### Update a Device information
+
+An HTTP `PUT` method request on the devices endpoint will update the device details in the device registry.
+
+#### URL pattern
+The device id value MUST be appended to the URL : `devices/{deviceId}`.
+
+#### Request Format
+The body should be of type `application/json`.
+
+##### Headers
+The request MAY contain the following headers :
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| If-Match         | string      | The expected resource version |
+
+##### Body
+The following table provides an overview of the properties that can be set in the request :
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *enabled*        | Boolean     | no        | Default: true. |
+| *defaults*       | Json Object | no        | Defaults for properties defined on the tenant and device level.
+| *via*            | Json Array  | no        | The device IDs of the gateways this device is assigned to.
+| *ext*            | Json Object | no        | Arbitrary properties as extension to the ones specified by the Hono API. |
+
+Example value:
+~~~json
+{
+  "enabled": true,
+  "defaults": {
+    "additionalProp1": {}
+  },
+  "via": [
+    "string"
+  ],
+  "ext": {
+    "additionalProp1": {}
+  }
+}
+~~~
+
+#### Expected Response Overview
+| Response | Reason |
+| -------- | ------ |
+| 204      | Object updated. |
+| 400      | Malformed request. |
+| 401      | Authentication error. |
+| 403      | Operation not allowed. If the user does not have read access for this object, then `404` will be returned instead. |
+| 404      | Device not found.   |
+| 412      | The given resource version does not match current. This can only happen when the request header If-Match was set. |
+
+#### Success Response
+If the device is updated successfully, the return code should be `201`. The body will be empty.
+
+##### Headers
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| ETag             | string      | The version of the resource |
+
+#### Failure Response
+If the device could not be updated, the return code can be one of the following : `400`, `401`, `403`, `404`, `412`.
+
+
+##### Headers
+
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+
+### Delete a Device information
+
+An HTTP `DELETE` method request on the device endpoint will remove the device details in the device registry.
+
+#### URL pattern
+The device id value MUST be appended to the URL : `devices/{deviceId}`.
+
+#### Request Format
+The only parameter must be passed in the URL, the body should be empty.
+
+##### Headers
+The request MAY contain the following headers :
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| If-Match         | string      | The expected resource version |
+
+#### Expected Response Overview
+| Response | Reason |
+| -------- | ------ |
+| 204      | Object deleted. |
+| 401      | Authentication error. |
+| 403      | Operation not allowed. If the user does not have read access for this object, then `404` will be returned instead. |
+| 404      | Device not found.   |
+| 412      | The given resource Version does not match current. This can only happen when the request header If-Match was set. |
+
+#### Success Response
+If the device is deleted successfully, the return code should be `204`. No additional will be provided. 
+
+#### Failure Response
+If the device could not be deleted, the return code can be one of the following : `401`, `403`, `404`, `412`.
+
+##### Headers
+
+A `401` Unauthorized error MUST carry the following header: 
+
+| Header Name      | Type        |  Description |
+| :--------------- | :-------:   |  :---------- |
+| WWW-Authenticate | string      |  Defines the authentication method that should be used to authenticate.|
+
+##### Body
+The body MAY contain a Json Object with more details on the error. See the [error structure](#Error Result).
+
+~~~json
+{
+  "error": "string",
+  "additionalProp1": {}
+}
+~~~
+### Schemas
+
+#### Error Result
+This object MAY be returned by the device registry to provide more details on a failure.
+Json Object :
+
+| Name             | Type        | Mandatory |  Description |
+| :--------------- | :-------:   | :-------: |  :---------- |
+| *error*          | string       | yes      | A human readable error message of what went wrong.

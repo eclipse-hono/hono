@@ -499,19 +499,12 @@ Example value:
 | 412      | The given resource Version does not match current. This can only happen when the request header If-Match was set. |
 
 #### Success Response
-If the tenant is created successfully, the return code should be `201`.
+If the tenant is updated successfully, the return code should be `201`. The body will be empty.
 
 ##### Headers
 | Header Name      | Type        |  Description |
 | :--------------- | :-------:   |  :---------- |
-| Location         | string      | URL to the resource |
 | ETag             | string      | The version of the resource |
-
-##### Body
-The body should be a Json Object:
-| Field Name       | Type        |  Description |
-| :--------------- | :-------:   |  :---------- |
-| id               | string      | The created Tenant ID. |
 
 Example value:
 ~~~json
