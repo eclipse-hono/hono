@@ -370,7 +370,7 @@ In order to do so, the client needs to be run with the `command` profile as foll
  
 ~~~sh
 # in directory: hono/cli/
-mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Drun.profiles=command,ssl
+mvn spring-boot:run -Dspring-boot.run.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Dspring-boot.run.profiles=command,ssl
 ~~~
 
 The client will prompt the user to enter the command's name, the payload to send and the payload's content type. For more information about command and payload refer to [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/).
@@ -403,7 +403,7 @@ a response from the device but will consider the sending of the command successf
 
 ~~~sh
 # in directory: hono/cli/
-mvn spring-boot:run -Drun.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--command.timeoutInSeconds=10,--device.id=4711,--tenant.id=DEFAULT_TENANT -Drun.profiles=command,ssl
+mvn spring-boot:run -Dspring-boot.run.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret,--command.timeoutInSeconds=10,--device.id=4711,--tenant.id=DEFAULT_TENANT -Dspring-boot.run.profiles=command,ssl
 ~~~
 
 ### Summary
