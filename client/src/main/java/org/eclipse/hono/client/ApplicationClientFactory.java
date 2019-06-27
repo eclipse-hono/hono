@@ -177,18 +177,17 @@ public interface ApplicationClientFactory extends ConnectionLifecycle<HonoConnec
     Future<CommandClient> getOrCreateCommandClient(String tenantId, String replyId);
 
     /**
-     * Gets a client for sending commands to a device asynchronously, i.e. command responses get received by a
-     * separate receiver.
+     * Gets a client for sending commands to devices of the given tenant asynchronously, i.e. command responses
+     * get received by a separate receiver.
      * <p>
-     * The client returned may be either newly created or it may be an existing client for the given device.
+     * The client returned may be either newly created or it may be an existing client for the given tenant.
      *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to send the commands to.
+     * @param tenantId The tenant of the devices to which commands shall be sent.
      * @return A future that will complete with the command client (if successful) or
      *         fail if the client cannot be created, e.g. because the underlying connection
      *         is not established or if a concurrent request to create a client for the same
-     *         tenant and device is already being executed.
+     *         tenant is already being executed.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<AsyncCommandClient> getOrCreateAsyncCommandClient(String tenantId, String deviceId);
+    Future<AsyncCommandClient> getOrCreateAsyncCommandClient(String tenantId);
 }

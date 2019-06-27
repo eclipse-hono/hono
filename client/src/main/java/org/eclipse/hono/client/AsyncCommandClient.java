@@ -32,6 +32,7 @@ public interface AsyncCommandClient extends MessageSender {
      * A device needs to be (successfully) registered before a client can upload any data for it. The device also needs
      * to be connected for a successful delivery.
      *
+     * @param deviceId The device to send the command to.
      * @param command The command name.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
      * @param correlationId The identifier to use for correlating the response with the request. Note: This parameter is
@@ -52,7 +53,7 @@ public interface AsyncCommandClient extends MessageSender {
      * @see ApplicationClientFactory#createAsyncCommandResponseConsumer(String, String,
      *      java.util.function.BiConsumer, io.vertx.core.Handler)
      */
-    Future<Void> sendAsyncCommand(String command, Buffer data, String correlationId, String replyId);
+    Future<Void> sendAsyncCommand(String deviceId, String command, Buffer data, String correlationId, String replyId);
 
     /**
      * Sends an async command to a device, i.e. there is no immediate response expected from the device, but
@@ -61,6 +62,7 @@ public interface AsyncCommandClient extends MessageSender {
      * A device needs to be (successfully) registered before a client can upload any data for it. The device also needs
      * to be connected for a successful delivery.
      *
+     * @param deviceId The device to send the command to.
      * @param command The command name.
      * @param contentType The type of the data submitted as part of the command or {@code null} if unknown.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
@@ -83,6 +85,6 @@ public interface AsyncCommandClient extends MessageSender {
      * @see ApplicationClientFactory#createAsyncCommandResponseConsumer(String, String,
      *      java.util.function.BiConsumer, io.vertx.core.Handler)
      */
-    Future<Void> sendAsyncCommand(String command, String contentType, Buffer data, String correlationId, String replyId,
+    Future<Void> sendAsyncCommand(String deviceId, String command, String contentType, Buffer data, String correlationId, String replyId,
             Map<String, Object> properties);
 }

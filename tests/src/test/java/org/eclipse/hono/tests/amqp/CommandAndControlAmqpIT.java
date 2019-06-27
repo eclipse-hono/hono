@@ -259,7 +259,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     }
                 },
                 null);
-        final Future<AsyncCommandClient> asyncCommandClient = helper.applicationClientFactory.getOrCreateAsyncCommandClient(tenantId, deviceId);
+        final Future<AsyncCommandClient> asyncCommandClient = helper.applicationClientFactory.getOrCreateAsyncCommandClient(tenantId);
 
         CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).setHandler(ctx.asyncAssertSuccess(ok -> commandClientCreation.complete()));
         commandClientCreation.await();
@@ -271,7 +271,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             context.runOnContext(go -> {
                 final String correlationId = String.valueOf(commandsSent.getAndIncrement());
                 final Buffer msg = Buffer.buffer("value: " + correlationId);
-                asyncCommandClient.result().sendAsyncCommand("setValue", "text/plain", msg, correlationId, replyId, null).setHandler(sendAttempt -> {
+                asyncCommandClient.result().sendAsyncCommand(deviceId, "setValue", "text/plain", msg, correlationId, replyId, null).setHandler(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         log.debug("error sending command {}", correlationId, sendAttempt.cause());
                     }

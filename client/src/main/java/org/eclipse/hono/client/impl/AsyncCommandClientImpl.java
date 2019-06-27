@@ -99,13 +99,13 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
     }
 
     @Override
-    public Future<Void> sendAsyncCommand(final String command, final Buffer data, final String correlationId,
+    public Future<Void> sendAsyncCommand(final String deviceId, final String command, final Buffer data, final String correlationId,
             final String replyId) {
-        return sendAsyncCommand(command, null, data, correlationId, replyId, null);
+        return sendAsyncCommand(deviceId, command, null, data, correlationId, replyId, null);
     }
 
     @Override
-    public Future<Void> sendAsyncCommand(final String command, final String contentType, final Buffer data,
+    public Future<Void> sendAsyncCommand(final String deviceId, final String command, final String contentType, final Buffer data,
             final String correlationId, final String replyId, final Map<String, Object> properties) {
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
@@ -116,7 +116,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
         MessageHelper.setCreationTime(message);
         MessageHelper.setPayload(message, contentType, data);
         message.setSubject(command);
-        message.setAddress(targetAddress);
+        message.setAddress(getTargetAddress(tenantId, deviceId));
         final String replyToAddress = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId);
         message.setReplyTo(replyToAddress);
 
@@ -132,7 +132,6 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
      *
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to create the client for.
      * @param closeHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @return A future indicating the outcome.
      * @throws NullPointerException if any of connection, tenantId or deviceId are {@code null}.
@@ -140,16 +139,13 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
     public static Future<AsyncCommandClient> create(
             final HonoConnection con,
             final String tenantId,
-            final String deviceId,
             final Handler<String> closeHook) {
 
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
 
-        final String targetAddress = AsyncCommandClientImpl.getTargetAddress(tenantId, deviceId);
         final String linkTargetAddress = AsyncCommandClientImpl.getLinkTargetAddress(tenantId);
         return con.createSender(linkTargetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-                .compose(sender -> Future.succeededFuture(new AsyncCommandClientImpl(con, sender, tenantId, targetAddress)));
+                .compose(sender -> Future.succeededFuture(new AsyncCommandClientImpl(con, sender, tenantId, linkTargetAddress)));
     }
 }

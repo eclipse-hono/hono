@@ -156,20 +156,18 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
      * {@inheritDoc}
      */
     @Override
-    public Future<AsyncCommandClient> getOrCreateAsyncCommandClient(final String tenantId, final String deviceId) {
+    public Future<AsyncCommandClient> getOrCreateAsyncCommandClient(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
 
         return connection.executeOrRunOnContext(result -> {
-            final String targetAddress = AsyncCommandClientImpl.getTargetAddress(tenantId, deviceId);
+            final String key = String.format("%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId);
             asyncCommandClientFactory.getOrCreateClient(
-                    targetAddress,
+                    key,
                     () -> AsyncCommandClientImpl.create(
                             connection,
                             tenantId,
-                            deviceId,
-                            s -> removeAsyncCommandClient(targetAddress)),
+                            s -> removeAsyncCommandClient(key)),
                     result);
         });
     }
