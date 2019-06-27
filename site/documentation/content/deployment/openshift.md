@@ -725,7 +725,7 @@ guide, data produced by devices is usually consumed by downstream applications
 which connect directly to the router network service. You can start the client
 from the `cli` folder as follows:
 
-    mvn spring-boot:run -Drun.arguments=--hono.client.host=$(oc -n hono get addressspace default -o jsonpath={.status.endpointStatuses[?(@.name==\'messaging\')].externalHost}),--hono.client.port=443,--hono.client.username=consumer,--hono.client.password=verysecret,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
+    mvn spring-boot:run -Dspring-boot.run.arguments=--hono.client.host=$(oc -n hono get addressspace default -o jsonpath={.status.endpointStatuses[?(@.name==\'messaging\')].externalHost}),--hono.client.port=443,--hono.client.username=consumer,--hono.client.password=verysecret,--hono.client.trustStorePath=target/config/hono-demo-certs-jar/tls.crt
 
 ### Register device
 
