@@ -48,7 +48,11 @@ title = "Release Notes"
   The endpoint names with the `control` prefix are still supported but deprecated. The northbound endpoint for
   *business applications* to receive command responses has the `command_response` prefix now. The old `control` prefix
   for the receiver address is also still supported but deprecated. 
-
+* The `deviceId` parameter of the `getOrCreateCommandClient` and `getOrCreateAsyncCommandClient` methods of the 
+  `org.eclipse.hono.client.ApplicationClientFactory` interface has been removed.
+  That means a `CommandClient` or `AsyncCommandClient` instance can be used to send commands to different devices now.
+  Accordingly, the `CommandClient.sendCommand` and `AsyncCommandClient.sendAsyncCommand` methods now have an additional 
+  `deviceId` parameter.
 
 ## 1.0-M4
 
