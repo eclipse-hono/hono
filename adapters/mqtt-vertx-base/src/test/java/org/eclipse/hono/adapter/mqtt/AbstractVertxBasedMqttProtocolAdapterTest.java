@@ -508,6 +508,50 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter does not forward a message published by a device if
+     * the topic is empty and closes the connection to the device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadTelemetryMessageFailsForEmptyTopic(final TestContext ctx) {
+
+        // GIVEN an adapter
+        config.setAuthenticationRequired(false);
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+        final DownstreamSender sender = givenAQoS0TelemetrySender();
+
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        adapter.handleEndpointConnection(endpoint);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).publishHandler(messageHandler.capture());
+
+        // WHEN a device publishes a message that has no topic
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn(null);
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
+
+        messageHandler.getValue().handle(msg);
+
+        // THEN the device gets disconnected
+        verify(endpoint).close();
+        // and the message is not forwarded downstream
+        verify(sender, never()).send(any(Message.class), any());
+        // and the message has not been reported as processed
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any());
+    }
+
+    /**
      * Verifies that the adapter does not forward a message published by a device if the device's registration status
      * cannot be asserted.
      *
@@ -517,43 +561,48 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadTelemetryMessageFailsForUnknownDevice(final TestContext ctx) {
 
         // GIVEN an adapter
+        config.setAuthenticationRequired(false);
         final MqttServer server = getMqttServer(false);
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
         givenAQoS0TelemetrySender();
 
         // WHEN an unknown device publishes a telemetry message
         when(regClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
                 Future.failedFuture(new ClientErrorException(HTTP_NOT_FOUND)));
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        final DownstreamSender sender = givenAQoS0TelemetrySender();
+
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        adapter.handleEndpointConnection(endpoint);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).publishHandler(messageHandler.capture());
 
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
-        when(msg.topicName()).thenReturn("t/tenant/device");
+        when(msg.topicName()).thenReturn("t/my-tenant/unknown");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
-        adapter.uploadTelemetryMessage(
-                newMqttContext(msg, mockEndpoint()),
-                "my-tenant",
-                "unknown",
-                Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the message has not been sent downstream
-                    verify(sender, never()).send(any(Message.class));
-                    // because the device's registration status could not be asserted
-                    ctx.assertEquals(HTTP_NOT_FOUND,
-                            ((ClientErrorException) t).getErrorCode());
-                    // and the message has not been reported as processed
-                    verify(metrics, never()).reportTelemetry(
-                            any(MetricsTags.EndpointType.class),
-                            anyString(),
-                            eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                            any(MetricsTags.QoS.class),
-                            anyInt(),
-                            any());
-                }));
+
+        messageHandler.getValue().handle(msg);
+
+        // THEN the message has not been sent downstream
+        verify(sender, never()).send(any(Message.class), any());
+        // and the message has not been reported as processed
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any());
+        // and the connection is closed
+        verify(endpoint).close();
     }
 
     /**
-     * Verifies that the adapter does not forward a message published by a device if the device belongs to a tenant for
-     * which the adapter has been disabled.
+     * Verifies that the adapter does not forward a message published by a device
+     * if the device belongs to a tenant for which the adapter has been disabled
+     * and that the adapter closes the connection to the device.
      *
      * @param ctx The vert.x test context.
      */
@@ -561,6 +610,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void testUploadTelemetryMessageFailsForDisabledTenant(final TestContext ctx) {
 
         // GIVEN an adapter
+        config.setAuthenticationRequired(false);
         final MqttServer server = getMqttServer(false);
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
@@ -570,32 +620,32 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(tenantClient.get(eq("my-tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
         forceClientMocksToConnected();
-        final DownstreamSender sender = mock(DownstreamSender.class);
-        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
+        final DownstreamSender sender = givenAQoS1TelemetrySender(Future.future());
 
         // WHEN a device of "my-tenant" publishes a telemetry message
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        adapter.handleEndpointConnection(endpoint);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<MqttPublishMessage>> messageHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(endpoint).publishHandler(messageHandler.capture());
+
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
-        when(msg.topicName()).thenReturn("t/tenant/device");
+        when(msg.topicName()).thenReturn("t/my-tenant/the-device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        adapter.uploadTelemetryMessage(
-                newMqttContext(msg, mockEndpoint()),
-                "my-tenant",
-                "the-device",
-                Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the message has not been sent downstream
-                    verify(sender, never()).send(any(Message.class));
-                    // because the tenant is not enabled
-                    ctx.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
-                            ((ClientErrorException) t).getErrorCode());
-                    // and the message has not been reported as processed
-                    verify(metrics, never()).reportTelemetry(
-                            any(MetricsTags.EndpointType.class),
-                            anyString(),
-                            eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                            any(MetricsTags.QoS.class),
-                            anyInt(),
-                            any());
-                }));
+        messageHandler.getValue().handle(msg);
+
+        // THEN the message has not been sent downstream
+        verify(sender, never()).send(any(Message.class), any());
+        verify(metrics, never()).reportTelemetry(
+                any(MetricsTags.EndpointType.class),
+                anyString(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                any(MetricsTags.QoS.class),
+                anyInt(),
+                any());
+        // and the connection to the client has been closed
+        verify(endpoint).close();
     }
 
     /**

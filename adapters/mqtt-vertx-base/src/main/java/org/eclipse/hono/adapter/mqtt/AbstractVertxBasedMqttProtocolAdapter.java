@@ -714,9 +714,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         onMessageUndeliverable(context);
                     }
                         if (context.deviceEndpoint().isConnected()) {
-                            TracingHelper.logError(span,
-                                    String.format("Closing mqtt connection to the device. [cause: %s]",
-                                            processing.cause().getMessage()));
+                            TracingHelper.logError(span, processing.cause());
+                            span.log("closing connection to device");
                             context.deviceEndpoint().close();
                         }
                 }
@@ -1017,7 +1016,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
                     ctx.authenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                    .compose(tenantObject -> CompositeFuture.all(isAdapterEnabled(tenantObject),
+                    .compose(tenantObject -> CompositeFuture.all(
+                            isAdapterEnabled(tenantObject),
                             checkMessageLimit(tenantObject, payload.length()))
                             .map(success -> tenantObject));
 

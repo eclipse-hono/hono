@@ -53,7 +53,7 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process telemetry messages for the client's tenant and
 * the messages published by the client comply with the format defined by the Telemetry API.
 
-The protocol adapter checks the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded then the incoming telemetry message is discarded. There is no provision in MQTT spec to inform the device on any negative responses and hence this information that the message has been discarded is not cascaded to the device. It is recommended that the device waits only for a reasonable amount of time for a response.
+The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the the incoming telemetry message cannot be processed, the connection to the client is closed.
 
 ## Publish Telemetry Data (authenticated Device)
 
@@ -123,7 +123,7 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process events for the client's tenant and
 * the events published by the client comply with the format defined by the Event API.
 
-The protocol adapter checks the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) before accepting any event messages. If the message limit is exceeded then the incoming event message is discarded. There is no provision in MQTT spec to inform the device on any negative responses and hence this information that the message has been discarded is not cascaded to the device. It is recommended that the device waits only for a reasonable amount of time for a response.
+The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the the incoming telemetry message cannot be processed, the connection to the client is closed.
 
 ## Publish an Event (authenticated Device)
 
