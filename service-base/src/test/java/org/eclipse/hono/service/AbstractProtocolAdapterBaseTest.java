@@ -370,7 +370,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for the device is retrieved
-        adapter.getRegistrationAssertion("tenant", "device", null)
+        adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
                 .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the result contains the registration assertion
             assertEquals(assertionResult, result);
@@ -401,7 +401,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for a non-existing device is retrieved
-        adapter.getRegistrationAssertion("tenant", "non-existent", null)
+        adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class))
                 .setHandler(ctx.failing(t -> ctx.verify(() -> {
             // THEN the request fails with a 404
             assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());

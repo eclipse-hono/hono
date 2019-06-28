@@ -7,6 +7,9 @@ title = "Release Notes"
 ### API Changes
 * The obsolete method variants of `reportTelemetry` in `org.eclipse.hono.service.metric.Metrics` 
   have been removed. The new variants of this method accept an additional parameter of type `TenantObject`.
+* The already deprecated `org.eclipse.hono.service.AbstractProtocolAdapterBase.getRegistrationAssertion`
+  method has been removed. The alternate variant of the `getRegistrationAssertion` method which accepts an 
+  additional OpenTracing span parameter should be used.
 
 ## 1.0-M6
 
