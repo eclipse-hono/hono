@@ -51,9 +51,11 @@ title = "Release Notes"
   for the receiver address is also still supported but deprecated. 
 * The `deviceId` parameter of the `getOrCreateCommandClient` and `getOrCreateAsyncCommandClient` methods of the 
   `org.eclipse.hono.client.ApplicationClientFactory` interface has been removed.
-  That means a `CommandClient` or `AsyncCommandClient` instance can be used to send commands to different devices now.
-  Accordingly, the `CommandClient.sendCommand` and `AsyncCommandClient.sendAsyncCommand` methods now have an additional 
-  `deviceId` parameter.
+  This means that a `CommandClient` or `AsyncCommandClient` instance can be used to send commands to arbitrary
+  devices of a tenant now. Accordingly, the `CommandClient.sendCommand` and `AsyncCommandClient.sendAsyncCommand`
+  methods now require an additional `deviceId` parameter.
+* The deprecated methods of `org.eclipse.hono.client.HonoConnection` have been removed.
+
 
 ## 1.0-M4
 

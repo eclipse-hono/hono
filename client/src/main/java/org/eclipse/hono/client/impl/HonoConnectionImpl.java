@@ -322,7 +322,7 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final Future<HonoConnection> connect() {
-        return connect(null, null);
+        return connect(null);
     }
 
     /**
@@ -330,32 +330,11 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final Future<HonoConnection> connect(final ProtonClientOptions options) {
-        return connect(Objects.requireNonNull(options), null);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Deprecated
-    @Override
-    public final Future<HonoConnection> connect(final Handler<ProtonConnection> disconnectHandler) {
-        return connect(null, Objects.requireNonNull(disconnectHandler));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Deprecated
-    @Override
-    public final Future<HonoConnection> connect(
-            final ProtonClientOptions options,
-            final Handler<ProtonConnection> disconnectHandler) {
-
         final Future<HonoConnection> result = Future.future();
         if (shuttingDown.get()) {
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down"));
         } else {
-            connect(options, result, disconnectHandler);
+            connect(options, result, null);
         }
         return result;
     }

@@ -42,6 +42,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -288,7 +289,6 @@ public class HonoConnectionImplTest {
      * @param ctx The test context.
      */
     @Test
-    @SuppressWarnings("deprecation")
     public void testConnectTriesToReconnectOnFailedConnectAttempt(final TestContext ctx) {
 
         // GIVEN a client that is configured to connect to a peer
@@ -300,16 +300,12 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN trying to connect
-        final Async disconnectHandlerInvocation = ctx.async();
-        honoConnection.connect(null, failedCon -> disconnectHandlerInvocation.complete()).setHandler(ctx.asyncAssertSuccess());
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess());
 
         // THEN the client fails twice to connect
         assertTrue(connectionFactory.awaitFailure());
         // and succeeds to connect on the third attempt
         assertTrue(connectionFactory.await());
-        // and sets the disconnect handler provided as a parameter to the connect method
-        connectionFactory.getDisconnectHandler().handle(con);
-        disconnectHandlerInvocation.await();
     }
 
     /**
@@ -320,26 +316,28 @@ public class HonoConnectionImplTest {
      *
      */
     @Test
-    @SuppressWarnings("deprecation")
     public void testOnRemoteCloseTriggersReconnection(final TestContext ctx) {
 
         // GIVEN a client that is connected to a server
         final Async connected = ctx.async();
-        final Async disconnectHandlerInvocation = ctx.async();
-        honoConnection.connect(
-                new ProtonClientOptions().setReconnectAttempts(1),
-                failedCon -> disconnectHandlerInvocation.complete())
+        @SuppressWarnings("unchecked")
+        final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
+        honoConnection.addDisconnectListener(disconnectListener);
+        honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(1))
             .setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
         connected.await();
+        connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
         // WHEN the peer closes the connection
         connectionFactory.getCloseHandler().handle(Future.failedFuture("shutting down for maintenance"));
 
-        // THEN the client invokes the disconnect handler provided in the original connect method call
-        disconnectHandlerInvocation.await();
+        // THEN the client invokes the registered disconnect handler
+        verify(disconnectListener).onDisconnect(honoConnection);
         // and the original connection has been closed locally
         verify(con).close();
         verify(con).disconnectHandler(null);
+        // and the connection is re-established
+        assertTrue(connectionFactory.await());
     }
 
     /**
