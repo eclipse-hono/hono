@@ -23,7 +23,7 @@ The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client 
 
 {{< figure src="../tenant_ConnectToTenant.png" alt="A client establishes an AMQP connection and the links required to invoke operations of the Tenant service" title="Client connecting to Tenant service" >}}
 
-### Get Tenant Information
+## Get Tenant Information
 
 Clients use this operation to *retrieve* information about a tenant.
 
@@ -94,7 +94,8 @@ For status codes indicating an error (codes in the `400 - 499` range) the messag
 Otherwise the response message contains the information for the requested tenant as described in the following sections.
 
 <a name="payload-format"></a>
-### Tenant Information Format
+
+## Tenant Information Format
 
 Tenant information is carried in a single *Data* section of the response message as a UTF-8 encoded string representation of a single JSON object.
 It is an error to include payload that is not of this type.
