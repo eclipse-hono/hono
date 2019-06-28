@@ -30,7 +30,7 @@ hono:
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/kura-adapter.credentials
-  devcon:
+  deviceConnection:
     name: 'Hono Kura Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672

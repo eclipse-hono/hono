@@ -33,7 +33,7 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/coap-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
-  devcon:
+  deviceConnection:
     name: 'Hono COAP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5671

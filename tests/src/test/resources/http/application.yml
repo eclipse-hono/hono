@@ -45,7 +45,7 @@ hono:
     password: http-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
-  devcon:
+  deviceConnection:
     name: 'Hono HTTP Adapter'
     host: ${hono.registration.host}
     port: 5672

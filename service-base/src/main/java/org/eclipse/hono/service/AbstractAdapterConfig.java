@@ -369,7 +369,7 @@ public abstract class AbstractAdapterConfig {
      * @return The properties.
      */
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @ConfigurationProperties(prefix = "hono.devcon")
+    @ConfigurationProperties(prefix = "hono.device-connection")
     @Bean
     public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();

@@ -35,7 +35,7 @@ hono:
     port: 5671
     credentialsPath: ${secret.path}/amqp-adapter.credentials
     trustStorePath: ${secret.path}/trusted-certs.pem
-  devcon:
+  deviceConnection:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5671

@@ -304,7 +304,7 @@ public class ApplicationConfig {
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.devcon.svc")
+    @ConfigurationProperties(prefix = "hono.device-connection.svc")
     public MapBasedDeviceConnectionsConfigProperties deviceConnectionsProperties() {
         return new MapBasedDeviceConnectionsConfigProperties();
     }
