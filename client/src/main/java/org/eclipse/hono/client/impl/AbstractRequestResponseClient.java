@@ -422,10 +422,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * If the client has specified a cache key for the response when sending the request, then the
      * {@link #addToCache(Object, RequestResponseResult)} method is invoked
      * in order to add the response to the configured cache.
-     * <p>
-     * If an OpenTracing {@code Span} has been used to track the request,
-     * its {@code Tags.HTTP_STATUS} tag will be set to the value conveyed in
-     * the response message.
      * 
      * @param delivery The handle for accessing the message's disposition.
      * @param message The response message.
@@ -448,9 +444,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             if (response == null) {
                 LOG.debug("discarding malformed response [reply-to: {}, correlation ID: {}]",
                         replyToAddress, message.getCorrelationId());
-                if (span != null) {
-                    Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
-                }
                 handler.one().handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
                         "cannot process response from service [" + getName() + "]")));
                 ProtonHelper.released(delivery, true);
@@ -460,7 +453,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 addToCache(handler.two(), response);
                 if (span != null) {
                     span.log("response from peer accepted");
-                    Tags.HTTP_STATUS.set(span, response.getStatus());
                 }
                 handler.one().handle(Future.succeededFuture(response));
                 ProtonHelper.accepted(delivery, true);
@@ -471,10 +463,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Cancels an outstanding request with a given result.
-     * <p>
-     * If an OpenTracing {@code Span} has been used to track the request,
-     * its {@code Tags.HTTP_STATUS} tag will be set to the value determined from the
-     * failed result's cause.
      * 
      * @param correlationId The identifier of the request to cancel.
      * @param result The result to pass to the result handler registered for the correlation ID.
@@ -495,10 +483,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             } else {
                 LOG.debug("canceling request [target: {}, correlation ID: {}]: {}",
                         linkTargetAddress, correlationId, result.cause().getMessage());
-                final Span span = handler.three();
-                if (span != null) {
-                    Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(result.cause()));
-                }
                 handler.one().handle(result);
             }
         }
@@ -717,9 +701,15 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         final Span currentSpan = newChildSpan(spanContext, "invoke '" + action + "' on " + getName() + " endpoint");
         createAndSendRequest(action, properties, payload, contentType, ar -> {
             if (ar.failed()) {
+                Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(ar.cause()));
                 TracingHelper.logError(currentSpan, ar.cause());
-            } else if (ar.result().isError()) {
-                Tags.ERROR.set(currentSpan, Boolean.TRUE);
+            } else if (ar.result() != null) {
+                Tags.HTTP_STATUS.set(currentSpan, ar.result().getStatus());
+                if (ar.result().isError()) {
+                    Tags.ERROR.set(currentSpan, Boolean.TRUE);
+                }
+            } else {
+                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
             }
             currentSpan.finish();
             resultHandler.handle(ar);
@@ -810,7 +800,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             MessageHelper.setPayload(request, contentType, payload);
             sendRequest(request, resultHandler, cacheKey, currentSpan);
         } else {
-            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
             resultHandler.handle(Future.failedFuture(new ServerErrorException(
                     HttpURLConnection.HTTP_UNAVAILABLE, "sender and/or receiver link is not open")));
         }
@@ -823,8 +812,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * Otherwise, the request message is sent and a timer is started which fails the result handler,
      * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
      * <p>
-     * In case of an error the {@code Tags.HTTP_STATUS} tag of the span is set accordingly.
-     * However, the span is never finished by this method.
+     * The given span is never finished by this method.
      * 
      * @param request The message to send.
      * @param resultHandler The handler to notify about the outcome of the request.
@@ -849,7 +837,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [link target: {}]", linkTargetAddress);
-                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
                 resultHandler.handle(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request")));
             } else {
@@ -889,7 +876,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         currentSpan.log("request accepted by peer");
                         // if no reply-to is set, the request is assumed to be one-way (no response is expected)
                         if (request.getReplyTo() == null) {
-                            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
                             replyMap.remove(correlationId);
                             resultHandler.handle(Future.succeededFuture());
                         }
@@ -926,7 +912,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             }
         }).otherwise(t -> {
             // there is no context to run on
-            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
             TracingHelper.logError(currentSpan, "not connected");
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                     "not connected")));
@@ -980,8 +965,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Gets a response from the cache.
      * <p>
-     * Sets tags on the given span according to whether there was a cache hit and according to what the response result
-     * status is (if there was a cache hit).
+     * Sets a tag on the given span according to whether there was a cache hit.
      *
      * @param key The key to get the response for.
      * @param currentSpan The span to mark (may be {@code null}).
@@ -1001,9 +985,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             if (result == null) {
                 return Future.failedFuture("cache miss");
             } else {
-                if (currentSpan != null) {
-                    Tags.HTTP_STATUS.set(currentSpan, result.getStatus());
-                }
                 return Future.succeededFuture(result);
             }
         }
@@ -1088,8 +1069,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Applies the given mapper function to the result of the given Future if it succeeded.
      * <p>
-     * Makes sure that the given Span is finished when the given Future is completed and error information is logged
-     * to the Span if there was an error.
+     * Makes sure that the given Span is finished when the given Future is completed.
+     * Also sets the {@code Tags.HTTP_STATUS} tag on the span and logs error information if there was an error.
      *
      * @param result The Future supplying the <em>RequestResponseResult</em> that the mapper will be applied on.
      * @param resultMapper The mapper function.
@@ -1101,12 +1082,18 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     protected final <T> Future<T> mapResultAndFinishSpan(final Future<R> result, final Function<R, T> resultMapper,
             final Span currentSpan) {
         return result.recover(t -> {
+            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
             TracingHelper.logError(currentSpan, t);
             currentSpan.finish();
             return Future.failedFuture(t);
         }).map(resultValue -> {
-            if (resultValue.isError()) {
-                Tags.ERROR.set(currentSpan, Boolean.TRUE);
+            if (resultValue != null) {
+                Tags.HTTP_STATUS.set(currentSpan, resultValue.getStatus());
+                if (resultValue.isError()) {
+                    Tags.ERROR.set(currentSpan, Boolean.TRUE);
+                }
+            } else {
+                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
             }
             currentSpan.finish();
             return resultMapper.apply(resultValue);

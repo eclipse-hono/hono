@@ -56,7 +56,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -220,8 +219,6 @@ public class AbstractRequestResponseClientTest  {
                     // THEN the response is passed to the handler registered with the request
                     assertEquals(200, s.getStatus());
                     assertEquals("payload", s.getPayload().toString());
-                    // and the status code conveyed in the response is set on the span
-                    verify(span).setTag(Tags.HTTP_STATUS.getKey(), 200);
                     // and no response time-out handler has been set
                     verify(vertx, never()).setTimer(anyLong(), anyHandler());
                     ctx.completeNow();
@@ -266,7 +263,6 @@ public class AbstractRequestResponseClientTest  {
                     assertEquals(
                             HttpURLConnection.HTTP_UNAVAILABLE,
                             ((ServerErrorException) t).getErrorCode());
-                    verify(span).setTag(Tags.HTTP_STATUS.getKey(), HttpURLConnection.HTTP_UNAVAILABLE);
                     verify(span, never()).finish();
                     ctx.completeNow();
                 }),
@@ -523,7 +519,6 @@ public class AbstractRequestResponseClientTest  {
         assertEquals(
                 expectedErrorCode,
                 ((ServiceInvocationException) cause).getErrorCode());
-        verify(span).setTag(Tags.HTTP_STATUS.getKey(), expectedErrorCode);
         verify(span, never()).finish();
     }
 }
