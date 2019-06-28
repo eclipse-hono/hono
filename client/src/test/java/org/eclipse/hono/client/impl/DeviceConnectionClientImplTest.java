@@ -77,7 +77,6 @@ public class DeviceConnectionClientImplTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
 

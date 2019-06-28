@@ -80,6 +80,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                             HttpURLConnection.HTTP_GONE
     };
 
+    /**
+     * The target address of the sender link used to send requests to the service.
+     */
     protected final String linkTargetAddress;
 
     private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Span>> replyMap = new HashMap<>();
@@ -519,23 +522,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * Build a Proton message with a provided subject (serving as the operation that shall be invoked).
-     * The message can be extended by arbitrary application properties passed in.
-     *
-     * @param subject The subject system property of the message.
-     * @param appProperties The map containing arbitrary application properties.
-     *                      Maybe null if no application properties are needed.
-     * @return The Proton message constructed from the provided parameters.
-     * @throws NullPointerException if the subject is {@code null}.
-     * @throws IllegalArgumentException if the application properties contain not AMQP 1.0 compatible values
-     *                  (see {@link AbstractHonoClient#setApplicationProperties(Message, Map)}
-     */
-    private Message createMessage(final String subject, final Map<String, Object> appProperties) {
-        return createMessage(subject, getDefaultMessageTargetAddress(), appProperties);
-    }
-
-    /**
-     * Build a Proton message with a provided subject (serving as the operation that shall be invoked).
+     * Creates an AMQP message for a subject and address.
+     * <p>
      * The message can be extended by arbitrary application properties passed in.
      *
      * @param subject The subject system property of the message.
