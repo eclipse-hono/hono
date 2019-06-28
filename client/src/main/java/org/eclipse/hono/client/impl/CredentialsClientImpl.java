@@ -26,7 +26,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -210,36 +209,27 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
         span.setTag(TAG_CREDENTIALS_TYPE, type);
         span.setTag(TAG_AUTH_ID, authId);
 
-
-        TracingHelper.TAG_CACHE_HIT.set(span, true);
-        return getResponseFromCache(key).recover(cacheMiss -> {
-            TracingHelper.TAG_CACHE_HIT.set(span, false);
-            createAndSendRequest(
-                    CredentialsConstants.CredentialsAction.get.toString(),
-                    null,
-                    specification.toBuffer(),
-                    RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
-                    responseTracker,
-                    key,
-                    span);
-            return responseTracker;
-        }).recover(t -> {
-            TracingHelper.logError(span, t);
-            span.finish();
-            return Future.failedFuture(t);
-        }).map(response -> {
-            if (response.isError()) {
-                TracingHelper.logError(span, "error code: " + response.getStatus());
-            }
-            span.finish();
-            switch(response.getStatus()) {
+        final Future<CredentialsResult<CredentialsObject>> resultTracker = getResponseFromCache(key, span)
+                .recover(cacheMiss -> {
+                    createAndSendRequest(
+                            CredentialsConstants.CredentialsAction.get.toString(),
+                            null,
+                            specification.toBuffer(),
+                            RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                            responseTracker,
+                            key,
+                            span);
+                    return responseTracker;
+                });
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
             case HttpURLConnection.HTTP_OK:
-                return response.getPayload();
+                return result.getPayload();
             case HttpURLConnection.HTTP_NOT_FOUND:
-                throw new ClientErrorException(response.getStatus(), "no such credentials");
+                throw new ClientErrorException(result.getStatus(), "no such credentials");
             default:
-                throw StatusCodeMapper.from(response);
+                throw StatusCodeMapper.from(result);
             }
-        });
+        }, span);
     }
 }

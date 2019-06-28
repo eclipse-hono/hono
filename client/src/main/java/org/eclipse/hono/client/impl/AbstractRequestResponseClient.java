@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -978,21 +979,43 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Gets a response from the cache.
-     * 
+     *
      * @param key The key to get the response for.
      * @return A succeeded future containing the response from the cache
      *         or a failed future if no response exists for the key
      *         or the response is expired.
      */
     protected Future<R> getResponseFromCache(final Object key) {
+        return getResponseFromCache(key, null);
+    }
+
+    /**
+     * Gets a response from the cache.
+     * <p>
+     * Sets tags on the given span according to whether there was a cache hit and according to what the response result
+     * status is (if there was a cache hit).
+     *
+     * @param key The key to get the response for.
+     * @param currentSpan The span to mark (may be {@code null}).
+     * @return A succeeded future containing the response from the cache
+     *         or a failed future if no response exists for the key
+     *         or the response is expired.
+     */
+    protected Future<R> getResponseFromCache(final Object key, final Span currentSpan) {
 
         if (responseCache == null) {
             return Future.failedFuture(new IllegalStateException("no cache configured"));
         } else {
             final R result = responseCache.get(key);
+            if (currentSpan != null) {
+                TracingHelper.TAG_CACHE_HIT.set(currentSpan, result != null);
+            }
             if (result == null) {
                 return Future.failedFuture("cache miss");
             } else {
+                if (currentSpan != null) {
+                    Tags.HTTP_STATUS.set(currentSpan, result.getStatus());
+                }
                 return Future.succeededFuture(result);
             }
         }
@@ -1072,5 +1095,33 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
         return StatusCodeMapper.isSuccessful(status) && payload != null
                 && MessageHelper.CONTENT_TYPE_APPLICATION_JSON.equalsIgnoreCase(contentType);
+    }
+
+    /**
+     * Applies the given mapper function to the result of the given Future if it succeeded.
+     * <p>
+     * Makes sure that the given Span is finished when the given Future is completed and error information is logged
+     * to the Span if there was an error.
+     *
+     * @param result The Future supplying the <em>RequestResponseResult</em> that the mapper will be applied on.
+     * @param resultMapper The mapper function.
+     * @param currentSpan The OpenTracing Span to use.
+     * @param <T> The type of the Future value to be returned.
+     * @return The Future with the result of applying the mapping function or with the error from the given Future.
+     * @throws NullPointerException if either of the parameters is {@code null}.
+     */
+    protected final <T> Future<T> mapResultAndFinishSpan(final Future<R> result, final Function<R, T> resultMapper,
+            final Span currentSpan) {
+        return result.recover(t -> {
+            TracingHelper.logError(currentSpan, t);
+            currentSpan.finish();
+            return Future.failedFuture(t);
+        }).map(resultValue -> {
+            if (resultValue.isError()) {
+                Tags.ERROR.set(currentSpan, Boolean.TRUE);
+            }
+            currentSpan.finish();
+            return resultMapper.apply(resultValue);
+        });
     }
 }

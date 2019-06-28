@@ -23,7 +23,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
@@ -33,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -182,22 +180,14 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
                 resultTracker,
                 null,
                 currentSpan);
-        return resultTracker.recover(t -> {
-            TracingHelper.logError(currentSpan, t);
-            currentSpan.finish();
-            return Future.failedFuture(t);
-        }).map(response -> {
-            if (response.isError()) {
-                Tags.ERROR.set(currentSpan, Boolean.TRUE);
-            }
-            currentSpan.finish();
-            switch (response.getStatus()) {
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
             case HttpURLConnection.HTTP_NO_CONTENT:
                 return null;
             default:
-                throw StatusCodeMapper.from(response);
+                throw StatusCodeMapper.from(result);
             }
-        });
+        }, currentSpan);
     }
 
     /**
@@ -219,21 +209,13 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
                 resultTracker,
                 null,
                 currentSpan);
-        return resultTracker.recover(t -> {
-            TracingHelper.logError(currentSpan, t);
-            currentSpan.finish();
-            return Future.failedFuture(t);
-        }).map(response -> {
-            if (response.isError()) {
-                Tags.ERROR.set(currentSpan, Boolean.TRUE);
-            }
-            currentSpan.finish();
-            switch (response.getStatus()) {
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
             case HttpURLConnection.HTTP_OK:
-                return response.getPayload();
+                return result.getPayload();
             default:
-                throw StatusCodeMapper.from(response);
+                throw StatusCodeMapper.from(result);
             }
-        });
+        }, currentSpan);
     }
 }

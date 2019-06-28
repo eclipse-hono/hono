@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.cache.CacheProvider;
@@ -26,7 +25,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -251,35 +249,25 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
 
-        final AtomicBoolean cacheHit = new AtomicBoolean(true);
-
-        return getResponseFromCache(key).recover(t -> {
-            cacheHit.set(false);
-            final Future<RegistrationResult> regResult = Future.future();
-            final Map<String, Object> properties = createDeviceIdProperties(deviceId);
-            if (gatewayId != null) {
-                properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
-            }
-            createAndSendRequest(
-                    RegistrationConstants.ACTION_ASSERT,
-                    properties,
-                    null,
-                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
-                    regResult,
-                    key,
-                    span);
-            return regResult;
-        }).recover(t -> {
-            TracingHelper.logError(span, t);
-            span.finish();
-            return Future.failedFuture(t);
-        }).map(result -> {
-            TracingHelper.TAG_CACHE_HIT.set(span, cacheHit.get());
-            if (result.isError()) {
-                TracingHelper.logError(span, "error code: " + result.getStatus());
-            }
-            span.finish();
-            switch(result.getStatus()) {
+        final Future<RegistrationResult> resultTracker = getResponseFromCache(key, span)
+                .recover(t -> {
+                    final Future<RegistrationResult> regResult = Future.future();
+                    final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+                    if (gatewayId != null) {
+                        properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+                    }
+                    createAndSendRequest(
+                            RegistrationConstants.ACTION_ASSERT,
+                            properties,
+                            null,
+                            RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
+                            regResult,
+                            key,
+                            span);
+                    return regResult;
+                });
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            switch (result.getStatus()) {
             case HttpURLConnection.HTTP_OK:
                 return result.getPayload();
             case HttpURLConnection.HTTP_NOT_FOUND:
@@ -291,6 +279,6 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
             default:
                 throw StatusCodeMapper.from(result);
             }
-        });
+        }, span);
     }
 }
