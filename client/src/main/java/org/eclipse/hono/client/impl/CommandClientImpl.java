@@ -162,6 +162,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
     public Future<BufferResult> sendCommand(final String deviceId, final String command, final String contentType,
             final Buffer data, final Map<String, Object> properties) {
 
+        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
         final Span currentSpan = newChildSpan(null, command);
@@ -199,8 +200,14 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
      * {@inheritDoc}
      */
     @Override
-    public Future<Void> sendOneWayCommand(final String deviceId, final String command, final String contentType,
-            final Buffer data, final Map<String, Object> properties) {
+    public Future<Void> sendOneWayCommand(
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final Map<String, Object> properties) {
+
+        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
         final Span currentSpan = newChildSpan(null, command);
