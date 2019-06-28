@@ -167,28 +167,19 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
         final Span currentSpan = newChildSpan(null, command);
 
-        final Future<BufferResult> responseTracker = Future.future();
+        final Future<BufferResult> resultTracker = Future.future();
 
         final String messageTargetAddress = getTargetAddress(getTenantId(), deviceId);
-        createAndSendRequest(command, messageTargetAddress, properties, data, contentType, responseTracker,
+        createAndSendRequest(command, messageTargetAddress, properties, data, contentType, resultTracker,
                 null, currentSpan);
 
-        return responseTracker
-                .recover(t -> {
-                    TracingHelper.logError(currentSpan, t);
-                    currentSpan.finish();
-                    return Future.failedFuture(t);
-                }).map(response -> {
-                    if (response.isError()) {
-                        Tags.ERROR.set(currentSpan, Boolean.TRUE);
-                    }
-                    currentSpan.finish();
-                    if (response.isOk()) {
-                        return response;
-                    } else {
-                        throw StatusCodeMapper.from(response);
-                    }
-                });
+        return mapResultAndFinishSpan(resultTracker, result -> {
+            if (result.isOk()) {
+                return result;
+            } else {
+                throw StatusCodeMapper.from(result);
+            }
+        }, currentSpan);
     }
 
     @Override

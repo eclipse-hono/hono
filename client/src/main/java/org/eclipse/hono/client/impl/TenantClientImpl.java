@@ -28,7 +28,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -45,7 +44,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.StringTag;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -227,14 +225,11 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
             final Supplier<JsonObject> payloadSupplier,
             final Span currentSpan) {
 
-        TracingHelper.TAG_CACHE_HIT.set(currentSpan, true);
-
-        return getResponseFromCache(key)
+        final Future<TenantResult<TenantObject>> resultTracker = getResponseFromCache(key, currentSpan)
                 .recover(cacheMiss -> {
-                    TracingHelper.TAG_CACHE_HIT.set(currentSpan, false);
                     final Future<TenantResult<TenantObject>> tenantResult = Future.future();
                     createAndSendRequest(
-                            TenantConstants.TenantAction.get.toString(),
+                            TenantAction.get.toString(),
                             customizeRequestApplicationProperties(),
                             payloadSupplier.get().toBuffer(),
                             RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
@@ -242,24 +237,17 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                             key,
                             currentSpan);
                     return tenantResult;
-                }).recover(t -> {
-                    TracingHelper.logError(currentSpan, t);
-                    currentSpan.finish();
-                    return Future.failedFuture(t);
-                }).map(tenantResult -> {
-                    if (tenantResult.isError()) {
-                        Tags.ERROR.set(currentSpan, Boolean.TRUE);
-                    }
-                    currentSpan.finish();
-                    switch(tenantResult.getStatus()) {
-                    case HttpURLConnection.HTTP_OK:
-                        return tenantResult.getPayload();
-                    case HttpURLConnection.HTTP_NOT_FOUND:
-                        throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
-                    default:
-                        throw StatusCodeMapper.from(tenantResult);
-                    }
                 });
+        return mapResultAndFinishSpan(resultTracker, tenantResult -> {
+            switch (tenantResult.getStatus()) {
+            case HttpURLConnection.HTTP_OK:
+                return tenantResult.getPayload();
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
+            default:
+                throw StatusCodeMapper.from(tenantResult);
+            }
+        }, currentSpan);
     }
 
     /**
