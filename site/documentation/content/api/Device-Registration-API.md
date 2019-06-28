@@ -7,8 +7,6 @@ weight = 425
 The *Device Registration API* is used by Hono's protocol adapters to get information about devices connecting to the adapters.
 <!--more-->
 
-The Device API also present an HTTP endpoint for management operations, such as creating, updating and deleting devices.
-
 The Device Registration API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
 <a name="preconditions"></a>

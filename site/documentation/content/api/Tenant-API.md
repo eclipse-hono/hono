@@ -9,12 +9,9 @@ A tenant is a logical entity, which groups together a set of devices. The inform
 determine if devices belonging to the tenant are allowed to connect to a certain protocol adapter or if devices are required to authenticate.
 <!--more-->
 
-The Tenant API also present an HTTP endpoint for management operations, such as creating, updating and deleting tenants.  
-
 This document *describes* the Tenant API's operations and the payload data format used by them.
 Please refer to [Multi Tenancy]({{< ref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
 
-## AMQP API
 The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
 <a name="preconditions"></a>
