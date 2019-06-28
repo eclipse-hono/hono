@@ -15,26 +15,27 @@ The second type of commands expects a *response* to be sent back from the device
 
 The Command & Control API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of this page we will simply use AMQP when referring to AMQP 1.0.
 
-## Operations
-
-The following API defines operations that can be used by *Business Applications* to send commands to devices over an AMQP 1.0 Network.
-
-### Send a One-Way Command
+## Send a One-Way Command
 
 Business Applications use this operation to send a command to a device for which they do not expect to receive a response from the device.
 
 **Preconditions**
 
 1. The *Business Application* has established an AMQP connection with the AMQP 1.0 Network.
-2. The *Business Application* has established an AMQP link in role *sender* with the target address `command/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to.
-This link is used by the *Business Application* to send command messages. The `to` property of the command messages contains the target address `command/${tenant_id}/${device_id}`, where `${device_id}` is the ID of the device to send the message to.
+2. The *Business Application* has established an AMQP link in role *sender* with the target address `command/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to. This link is used by the *Business Application* to send command messages.
 
 The following sequence diagram illustrates the establishment of the required link:
 
 ![Send One-Way Command Preconditions](../command_control_send_preconditions.png)
 
-{{% note %}}
-Previous versions of Hono used `control` instead of `command` as address prefix for the sender link. Using the `control` prefix is still supported but deprecated. 
+{{% note title="Deprecation" %}}
+Previous versions of Hono required applications to
+
+* use a sender link with target address `control/${tenant_id}/${device_id}` for sending one-ways commands to a specific device.
+
+This link address can still be used but support for it will be removed in a future version of Hono!
+Newly built applications should **only** use the tenant scoped link as described above.
+Note that the deprecated link address also **does not** support sending commands to devices connected via a gateway.
 {{% /note %}}
 
 **Message Format**
@@ -80,23 +81,28 @@ The following sequence diagram illustrates how a malformed command sent by a *Bu
 
 
 
-### Send a (Request/Response) Command
+## Send a (Request/Response) Command
 
 *Business Applications* use this operation to send a command to a device for which they expect the device to send back a response.
 
+<a name="receiver-link-precondition"></a>
 
 **Preconditions**
 
-<a name="receiver-link-precondition"></a>
-
 1. The *Business Application* has established an AMQP connection with the AMQP 1.0 Network.
-2. The *Business Application* has established an AMQP link in role *sender* with the target address `command/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to.
-This link is used by the *Business Application* to send command messages. The `to` property of the command messages contains the target address `command/${tenant_id}/${device_id}`, where `${device_id}` is the ID of the device to send the message to.
+2. The *Business Application* has established an AMQP link in role *sender* with the target address `command/${tenant_id}`, where `${tenant_id}` is the ID of the tenant that the device belongs to. This link is used by the *Business Application* to send command messages.
 3. The *Business Application* has established an AMQP link in role *receiver* with the source address `command_response/${tenant_id}/${reply_id}`.
-This link is used by the *Business Application* to receive the response to the command from the device. This link’s source address is also used as the `reply-to` address for the request messages. The `${reply_id}` may be any [arbitrary string]({{< relref "#strategies-for-building-the-receiver-link-address" >}}) chosen by the application.
+This link is used by the *Business Application* to receive the response to the command from the device. This link’s source address is also used as the `reply-to` address for the request messages. The `${reply_id}` may be any arbitrary string chosen by the application.
 
-{{% note %}}
-Previous versions of Hono used `control` instead of `command` and `command_response` as address prefix for both the sender and receiver link. Using the `control` prefix is still supported but deprecated. Note that when using the old prefix, the sender link address must be `control/${tenant_id}/${device_id}` and that gateway agnostic addressing of devices is not supported for commands sent on this link.  
+{{% note title="Deprecation" %}}
+Previous versions of Hono required applications to
+
+* use a sender link with target address `control/${tenant_id}/${device_id}` for sending commands to a specific device and
+* use a receiver link with source address `control/${tenant_id}/${device_id}/{reply_id}` for receiving command responses from a device.
+
+These link addresses can still be used but support for them will be removed in a future version of Hono!
+Newly built applications should **only** use the tenant scoped links as described above.
+Note that the deprecated link addresses also **do not** support sending commands to devices connected via a gateway.
 {{% /note %}}
 
 **Link establishment**
@@ -120,7 +126,7 @@ The following table provides an overview of the properties the *Business Applica
 | *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 | *correlation-id* | no        | *properties*             | *message-id* | If present, MUST contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
 | *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
-| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the application wants to receive the response from. This address MUST be the same as the source address used for establishing the client's receiver link (see [Preconditions]({{< relref "#receiver-link-precondition" >}}) above). |
+| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the application expects to receive the response from. This address MUST be the same as the source address used for establishing the client's receiver link (see [Preconditions](./#receiver-link-precondition) above). |
 
 The command message MAY contain arbitrary payload to be sent to the device in a single AMQP *Data* section. The value of the command message's *subject* value may provide a hint to the device regarding the format, encoding and semantics of the payload data.
 
@@ -172,13 +178,3 @@ The following sequence diagram illustrates how a *Business Application* sends a 
 The sending of a command may fail for the same reasons as those illustrated for sending a one-way command. Additionally, the sending of a command may be considered unsuccessful by an application if it does not receive the response from the device in a reasonable amount of time:
 
 ![Command times out](../command_control_response_time_out.png)
-
-
-### Strategies for Building the Receiver Link Address
-
-While the `${reply_id}` may be chosen arbitrarily by the client, the specific use case for sending commands should be considered when doing so.
-The following hints might help with creating an appropriate `${reply_id}`:
-
-- if only one command response is expected from the device, the `${reply_id}` could be set to the `${device_id}` plus an arbitrary string to scope the command sender instance and closed again after receiving the response.
-- if several command responses are expected from the device (e.g. since multiple commands were or will be sent to it), such a link should usually remain open after the reception of any response. 
-- if all command responses for the `${tenant_id}` shall be received in the application, the `${reply_id}` could be set to just an arbitrary (short) string to scope the command sender instance (without the `${device_id}`). Such a link should usually remain open after the reception of any response.
