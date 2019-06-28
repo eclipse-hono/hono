@@ -904,42 +904,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Gets an assertion for a device's registration status.
      * <p>
-     * The returned JSON object may include <em>default</em> values for properties to set on
-     * messages published by the device under property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
-     *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to get the assertion for.
-     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
-     *            <p>
-     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
-     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
-     *            acting on behalf of the device.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will fail if the assertion cannot be retrieved. The cause will be a
-     *         {@link ServiceInvocationException} containing a corresponding error code.
-     *         <p>
-     *         Otherwise the future will contain the assertion.
-     * @throws NullPointerException if tenant ID or device ID are {@code null}.
-     * @deprecated Use {@link #getRegistrationAssertion(String, String, Device, SpanContext)} instead.
-     */
-    @Deprecated
-    protected final Future<JsonObject> getRegistrationAssertion(final String tenantId, final String deviceId,
-            final Device authenticatedDevice) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-
-        final Future<String> gatewayId = getGatewayId(tenantId, deviceId, authenticatedDevice);
-
-        return gatewayId
-                .compose(gwId -> getRegistrationClient(tenantId))
-                .compose(client -> client.assertRegistration(deviceId, gatewayId.result()));
-    }
-
-    /**
-     * Gets an assertion for a device's registration status.
-     * <p>
      * The returned JSON object may include <em>default</em>
      * values for properties to set on messages published by the device under
      * property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
