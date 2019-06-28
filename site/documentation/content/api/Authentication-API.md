@@ -13,17 +13,7 @@ Note that a component implementing this API will most likely need to also provid
 
 In a real world environment there will often already be an *identity management system* in place. In such cases it can make sense to just implement a *facade* exposing the Authentication API operations and mapping them to the underlying existing system's functionality.
 
-## Preconditions
-
-The preconditions for performing any of the operations are as follows:
-
-1. Client is in possession of credentials for the subject to get a token for.
-
-## Operations
-
-The Authentication API only defines a single operation which is mandatory to implement.
-
-### Get Token
+## Get Token
 
 Clients use this operation to
 
@@ -34,7 +24,7 @@ Clients use this operation to
 
 The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving a token.
 
-![Get Token message flow](../get-token.png)
+{{< figure src="../get-token.svg" title="Get Token message flow" >}}
 
 1. The *Client* and *Authentication* service have agreed to use the SASL PLAIN mechanism for authenticating the client. The *Client* therefore sends the credentials of the identity it wants to retrieve a token for. The *Authentication* service successfully verifies the credentials and establishes the *authorization ID*.
    1. The *Authentication* service completes the SASL exchange with a successful outcome (SASL OK).
