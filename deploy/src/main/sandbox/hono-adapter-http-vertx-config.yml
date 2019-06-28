@@ -31,7 +31,7 @@ hono:
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/http-adapter.credentials
-  deviceConnection:
+  devcon:
     name: 'Hono HTTP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672

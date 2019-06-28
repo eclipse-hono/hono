@@ -45,7 +45,7 @@ hono:
     password: coap-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
-  deviceConnection:
+  devcon:
     name: 'Hono CoAP Adapter'
     host: ${hono.registration.host}
     port: 5672

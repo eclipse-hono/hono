@@ -45,7 +45,7 @@ hono:
     password: mqtt-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
-  deviceConnection:
+  devcon:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
     port: 5672

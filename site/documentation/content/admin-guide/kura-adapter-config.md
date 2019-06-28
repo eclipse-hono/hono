@@ -90,6 +90,13 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
+## AMQP 1.0 Messaging Network Connection Configuration
+
+The adapter requires a connection to the *AMQP 1.0 Messaging Network* in order to forward telemetry data and events received from devices to downstream consumers.
+
+The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
+
 ## Tenant Service Connection Configuration
 
 The adapter requires a connection to an implementation of Hono's [Tenant API]({{< ref "Tenant-API.md" >}}) in order to retrieve information for a tenant.
@@ -97,14 +104,8 @@ The adapter requires a connection to an implementation of Hono's [Tenant API]({{
 The connection to the Tenant Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.
 
-The adapter caches the responses for the *get* operation until they expire. This greatly reduces load on the Tenant service.
-
-## AMQP 1.0 Messaging Network Connection Configuration
-
-The adapter requires a connection to the *AMQP 1.0 Messaging Network* in order to forward telemetry data and events received from devices to downstream consumers.
-
-The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
+The adapter caches the responses from the service according to the *cache directive* included in the response.
+If the response doesn't contain a *cache directive* no data will be cached.
 
 ## Device Registration Service Connection Configuration
 
@@ -113,16 +114,29 @@ The adapter requires a connection to an implementation of Hono's [Device Registr
 The connection to the Device Registration Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_REGISTRATION`.
 
-The adapter caches responses for the *assert Device Registration* operation until the returned assertion tokens expire. This greatly reduces load on the Device Registration service.
+The adapter caches the responses from the service according to the *cache directive* included in the response.
+If the response doesn't contain a *cache directive* no data will be cached.
+
 
 ## Credentials Service Connection Configuration
 
-The adapter requires a connection to an implementation of Hono's [Credentials API]({{< ref "Credentials-API.md" >}}) in order to retrieve credentials stored for devices that need to be authenticated.
+The adapter requires a connection to an implementation of Hono's [Credentials API]({{< ref "Credentials-API.md" >}}) in order to retrieve credentials stored for devices that needs to be authenticated. During connection establishment, the adapter uses the Credentials API to retrieve the credentials on record for the device and matches that with the credentials provided by a device.
 
 The connection to the Credentials Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_CREDENTIALS`.
 
-Responses of the Credentials Service are currently not cached, so the cache properties can be ignored.
+The adapter caches the responses from the service according to the *cache directive* included in the response.
+If the response doesn't contain a *cache directive* no data will be cached.
+
+
+## Device Connection Service Connection Configuration
+
+The adapter requires a connection to an implementation of Hono's [Device Connection API]({{< relref "Device-Connection-API.md" >}}) in order to determine the gateway that a device is connected via to a protocol adapter. This information is required in order to forward commands issued by applications to the protocol adapter instance that the gateway is connected to.
+
+The connection to the Device Connection service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+where the `${PREFIX}` is set to `HONO_DEVCON`.
+
+Responses from the Device Connection service are never cached, so the properties for configuring the cache are ignored.
 
 ## Metrics Configuration
 
