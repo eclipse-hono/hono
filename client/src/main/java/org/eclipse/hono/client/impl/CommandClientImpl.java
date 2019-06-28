@@ -22,6 +22,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.BufferResult;
@@ -211,10 +212,12 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             sendRequest(request, responseTracker, null, currentSpan);
 
             return responseTracker.recover(t -> {
+                Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
                 TracingHelper.logError(currentSpan, t);
                 currentSpan.finish();
                 return Future.failedFuture(t);
             }).map(ignore -> {
+                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
                 currentSpan.finish();
                 return null;
             });
