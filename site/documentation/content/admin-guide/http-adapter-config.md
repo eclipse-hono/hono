@@ -34,12 +34,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_HTTP_PORT`<br>`--hono.http.port` | no | `8443` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_HTTP_REALM`<br>`--hono.http.realm` | no | `Hono` | The name of the *realm* that unauthenticated devices are prompted to provide credentials for. The realm is used in the *WWW-Authenticate* header returned to devices in response to unauthenticated requests. |
 | `HONO_HTTP_SECURE_PROTOCOLS`<br>`--hono.http.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
-| `HONO_VERTX_DNS_QUERY_TIMEOUT`<br>`--hono.vertx.dnsQueryTimeout` | no | `5000` | The amount of time after which a DNS query is considered to be failed. Setting this variable to a smaller value may help to reduce the time required to establish connections to the services this adapter depends on. However, setting it to a value that is too small for any DNS query to succeed will effectively prevent any connections to be established at all. |
-| `HONO_PLAN_PROMETHEUS_BASED_HOST`<br>`--hono.plan.prometheusBased.host` | no | none | The host of the prometheus server which will be used by the default implementation to retrieve the live metrics data. This need to be configured to enable the prometheus based default implementation.|
-| `HONO_PLAN_PROMETHEUS_BASED_PORT`<br>`--hono.plan.prometheusBased.port` | no | `9090` | The port of the prometheus server which will be used by the default implementation to retrieve the live metrics data.|
-| `HONO_PLAN_PROMETHEUS_BASED_CACHE_MIN_SIZE`<br>`--hono.plan.prometheusBased.cacheMinSize` | no | `20` | The minimum size of the cache to store the metrics data retrieved from the prometheus server which is used to verify the message limit.|
-| `HONO_PLAN_PROMETHEUS_BASED_CACHE_MAX_SIZE`<br>`--hono.plan.prometheusBased.cacheMaxSize` | no | `1000` | The maximum size of the cache to store the metrics data retrieved from the prometheus server which is used to verify the message limit.|
-| `HONO_PLAN_PROMETHEUS_BASED_CACHE_TIMEOUT`<br>`--hono.plan.prometheusBased.cacheTimeout` | no | `600` | The number of seconds after which the cached metrics data used to verify the message limit should be considered invalid.|
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -137,6 +131,22 @@ where the `${PREFIX}` is set to `HONO_DEVCON`.
 
 Responses from the Device Connection service are never cached, so the properties for configuring the cache are ignored.
 
+
+## Resource Limits Checker Configuration
+
+The adapter can use metrics collected by a Prometheus server to enforce certain limits set at the tenant level like the overall number of connected devices allowed per tenant.
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the checker.
+
+| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
+| :------------------------------------------ | :-------: | :------------ | :------------|
+| `HONO_PLAN_PROMETHEUS_BASED_HOST`<br>`--hono.plan.prometheusBased.host` | no | none | The host name or IP address of the Prometheus server to retrieve the metrics data from. This property needs to be set in order to enable the Prometheus based checks. |
+| `HONO_PLAN_PROMETHEUS_BASED_PORT`<br>`--hono.plan.prometheusBased.port` | no | `9090` | The port of the Prometheus server to retrieve metrics data from. |
+| `HONO_PLAN_PROMETHEUS_BASED_CACHE_MIN_SIZE`<br>`--hono.plan.prometheusBased.cacheMinSize` | no | `20` | The minimum size of the cache to store the metrics data retrieved from the Prometheus server. The cache is used for storing the current amount of data exchanged with devices of tenants. |
+| `HONO_PLAN_PROMETHEUS_BASED_CACHE_MAX_SIZE`<br>`--hono.plan.prometheusBased.cacheMaxSize` | no | `1000` | The maximum size of the cache to store the metrics data retrieved from the Prometheus server. |
+| `HONO_PLAN_PROMETHEUS_BASED_CACHE_TIMEOUT`<br>`--hono.plan.prometheusBased.cacheTimeout` | no | `600` | The number of seconds after which the cached metrics data should be considered invalid. |
+
+
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< relref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
