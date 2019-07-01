@@ -20,8 +20,6 @@ Please note that the HTTP resources exposed by the Device Registry are **not** p
 
 ## Managing Tenants
 
-(since Hono 0.6)
-
 The following sections describe the resources representing the operations of the Tenant API and how they can be used to manage tenants.
 Please refer to the [Tenant API]({{< relref "/api/Tenant-API.md" >}}) for the specific elements that are explained in detail there.
 

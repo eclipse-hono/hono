@@ -69,44 +69,48 @@ This is the preferred way for devices to publish telemetry data. It is available
 
 Publish some JSON data for device `4711`:
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 Publish some JSON data for device `4711` using *at least once* QoS:
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' \
-     --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' \
-     --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 
-    HTTP/1.1 200 OK
-    hono-command: set
-    hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
-    Content-Length: 23
-    
-    {
-      "brightness" : 87
-    }
+HTTP/1.1 200 OK
+hono-command: set
+hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
+Content-Length: 23
+
+{
+  "brightness" : 87
+}
+~~~
 
 Publish some JSON data for device `4711` using a client certificate for authentication:
 
-    # in base directory of Hono repository:
-    curl -i --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cacert demo-certs/certs/trusted-certs.pem \
-    -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://localhost:8443/telemetry
+~~~sh
+# in base directory of Hono repository:
+curl -i --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cacert demo-certs/certs/trusted-certs.pem -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://localhost:8443/telemetry
 
-    HTTP/1.1 202 Accepted
-    content-length: 0
+HTTP/1.1 202 Accepted
+content-length: 0
+~~~
 
-**NB**: The example above assumes that the HTTP adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication.md#http-adapter" >}}) and the secure port is used.
+**NB**: The example above assumes that the HTTP adapter is [configured for TLS]({{< relref "/admin-guide/secure_communication.md#http-adapter" >}}) and the secure port is used.
 
 ## Publish Telemetry Data (unauthenticated Device)
 
@@ -145,33 +149,36 @@ This resource MUST be used by devices that have not authenticated to the protoco
 
 Publish some JSON data for device `4711`:
 
-    curl -i -X PUT -H 'Content-Type: application/json' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 Publish some JSON data for device `4711` using *at least once* QoS:
 
-    curl -i -X PUT -H 'Content-Type: application/json' -H 'QoS-Level: 1' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' \
-     --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 
-    HTTP/1.1 200 OK
-    hono-command: set
-    hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
-    Content-Length: 23
-    
-    {
-      "brightness" : 87
-    }
+HTTP/1.1 200 OK
+hono-command: set
+hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
+Content-Length: 23
+
+{
+  "brightness" : 87
+}
+~~~
 
 ## Publish Telemetry Data (authenticated Gateway)
 
@@ -217,33 +224,36 @@ The protocol adapter checks the gateway's authority to publish data on behalf of
 
 Publish some JSON data for device `4712`:
 
-    curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+~~~sh
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 Publish some JSON data for device `4712` using *at least once* QoS:
 
-    curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+~~~sh
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 Publish some JSON data for device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
 
-    curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' \
-     --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4712
+~~~sh
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4712
 
-    HTTP/1.1 200 OK
-    hono-command: set
-    hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
-    Content-Length: 23
-    
-    {
-      "brightness" : 87
-    }
+HTTP/1.1 200 OK
+hono-command: set
+hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
+Content-Length: 23
+
+{
+  "brightness" : 87
+}
+~~~
 
 **NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
 
@@ -283,11 +293,12 @@ This is the preferred way for devices to publish events. It is available only if
 
 Publish some JSON data for device `4711`:
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-     --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 ## Publish an Event (unauthenticated Device)
 
@@ -324,11 +335,12 @@ This resource MUST be used by devices that have not authenticated to the protoco
 
 Publish some JSON data for device `4711`:
 
-    curl -i -X PUT -H 'Content-Type: application/json' \
-     --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 ## Publish an Event (authenticated Gateway)
 
@@ -371,48 +383,42 @@ The protocol adapter checks the gateway's authority to publish data on behalf of
 
 Publish some JSON data for device `4712`:
 
-    curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4712
+~~~sh
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4712
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 **NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
 
-## Specifying the time a device will wait for a response
+## Specifying the Time a Device will wait for a Response
 
-The adapter lets devices specify the number of seconds they will wait for a response by setting a header or a query parameter.
-
-{{% note %}}
-This feature has been added in Hono 0.6. Previous versions of the adapter do not support it.
-{{% /note %}}
-
-The parameter is available for all variants `authenticated`, `unauthenticated` and `authenticated gateway`. For simplification
-only the `authenticated` URI is used below.
+The adapter lets devices indicate the number of seconds they will wait for a response by setting a header or a query parameter.
 
 ### Using an HTTP Header
 
-The optional header `hono-ttd` can be set for any downstream message.
+The (optional) *hono-ttd* header can be set in requests for publishing telemetry data or events.
 
 Example:
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 60' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 60' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 ### Using a Query Parameter
 
-Alternatively the value for `hono-ttd` can be set by using a query parameter.
+Alternatively the *hono-ttd* query parameter can be used:
 
-Example:
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=60
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-     --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=60
-
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 ## Sending a Response to a Command (authenticated Device)
 
@@ -439,7 +445,7 @@ Example:
 
 This is the preferred way for devices to respond to commands. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
-{{% note %}}
+{{% note title="Deprecation" %}}
 Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
 {{% /note %}}
 
@@ -447,12 +453,12 @@ Previous versions of Hono used `control` instead of `command` as prefix in the c
 
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4711`:
 
-    curl -i -X POST -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' \
-     --data-binary '{"brightness-changed": true}' \
-     http://127.0.0.1:8080/command/res/req-id-uuid?hono-cmd-status=200
+~~~sh
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/req-id-uuid?hono-cmd-status=200
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 ## Sending a Response to a Command (unauthenticated Device)
 
@@ -479,7 +485,7 @@ Send a response to a previously received command with the command-request-id `re
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
-{{% note %}}
+{{% note title="Deprecation" %}}
 Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
 {{% /note %}}
 
@@ -487,12 +493,12 @@ Previous versions of Hono used `control` instead of `command` as prefix in the c
 
 Send a response to a previously received command with the command-request-id `req-id-uuid` for the unauthenticated device `4711`:
 
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' \
-     http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
-
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 ## Sending a Response to a Command (authenticated Gateway)
 
@@ -523,17 +529,20 @@ This resource can be used by *gateway* components to send the response to a comm
 
 The protocol adapter checks the gateway's authority to send responses to a command on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "#device-registration-service-connection-configuration" >}}).
 
+{{% note title="Deprecation" %}}
+Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
+{{% /note %}}
+
 **Examples**
 
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4712`:
 
-    curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' \
-     --data-binary '{"brightness-changed": true}' \
-     http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200
+~~~sh
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200
 
-    HTTP/1.1 202 Accepted
-    Content-Length: 0
-
+HTTP/1.1 202 Accepted
+Content-Length: 0
+~~~
 
 **NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
 

@@ -85,8 +85,8 @@ Hono's service components do not report any metrics at the moment.
 This metrics configuration is still supported in Hono, but is considered
 deprecated and will be removed in a future version of Hono.
 
-The legacy metrics support needs to be enabled explicitly, starting with Hono 0.9.
-See [Legacy support]({{< ref "/admin-guide/monitoring-tracing-config#legacy-metrics-support" >}})
+The legacy metrics support needs to be enabled explicitly.
+See [Legacy support]({{< relref "monitoring-tracing-config#legacy-metrics-support" >}})
 for more information.
 {{%/note%}}
 

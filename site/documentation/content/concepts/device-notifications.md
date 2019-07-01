@@ -1,103 +1,85 @@
 +++
-title = "Device notifications"
+title = "Device Notifications"
 weight = 190
 +++
 
-*Business applications* can be informed by Hono about specific states of a device. This concept - referred to as
- **Device notifications** - is described in detail here.
- 
- 
+*Business Applications* need to know when an attempt to send a command to device is feasible, e.g. because the device is then known to be connected to a protocol adapter. *Devices* and *Protocol Adapters* can indicate to *Business Applications* a device's intent to e.g. receive commands using specific *notifications*.
+  
 <!--more-->
 
-{{% note %}}
-This concept has been added in Hono 0.6. Previous versions of Hono do not support it.
-{{% /note %}}
+## Time until Disconnect Notification
 
-For implementing specific behaviour *Business applications* need to know if
-a device is currently ready to receive an upstream message.
+*Devicess* and *Protocol Adapters* can notify an application about the fact that a device is connected and ready to receive one or more commands by means of including a *time 'til disconnect* (*ttd*) property in downstream AMQP 1.0 messages containing data originating from a connected device.
 
-This is the purpose of the following *Time until disconnect notification*.
+The *ttd* property value indicates the time that the device will stay connected to the protocol adapter.
+Using this value together with the *creation-time* of the message, an application can determine whether an attempt to send a command to the device has a reasonable chance of succeeding.
 
-## Time until disconnect notification
+The *ttd* property can be included in any regular telemetry or event message. However, if a device does not have any telemetry data or event to upload to the adapter, it can also use an [empty notification]({{< relref "Event-API#empty-notification" >}}) instead.
 
-This notification can be triggered in an application by any downstream message as long as the following AMQP 1.0 properties are set:
-
-- the property `creation-time` (automatically set by protocol adapters to the current time when creating the message)
-- an additional application-property `ttd` (the number of seconds the device will stay connected to the protocol adapter)
-
-A device that wants to only trigger this notification (without sending other downstream data) may send an 
-[empty notification]({{< relref "/api/Event-API.md#empty-notification" >}}) event.
-
-The application can register a callback for this notification that is invoked if the contained
-timestamp is not expired at the time the message was received. The callback provides an instance of `TimeUntilDisconnectNotification`
-that contains all necessary data to let the application send an upstream message to the device.
-
+Hono includes utility classes that application developers can use to register a callback to be notified when a device sends a *ttd* notification.
 See Hono's example module for details where such a notification callback is used.
 
- 
-Please refer to the [Telemetry API]({{< relref "/api/Telemetry-API.md" >}}) and the [Event API]({{< relref "/api/Event-API.md" >}}) for further details.
+Please refer to the [Telemetry API]({{< relref "Telemetry-API" >}}) and the [Event API]({{< relref "Event-API" >}}) for further details.
 
-### Semantics of the `ttd` property
+The following table defines the possible values of the *ttd* property and their semantics:
 
-| ttd value | Semantic |
-| :--- | :---------- |
-| > 0  | The number of seconds the device will stay connected. Additionally this signals that the device will be not connected anymore after having received an upstream message (matching request-response pattern based protocols like HTTP). **NB**: if in the future there should be protocols where the device stays connected for a specific number of seconds (even after having received a command), we will notify this by an additional value or flag.
-| -1   | The device is now connected (i.e. available to receive upstream messages) until further notification (usually a `ttd` of `0`).
+| TTD  | Description  |
+| :--- | :----------- |
+| > 0  | The value indicates the number of seconds that the device will stay connected. Devices using a stateless protocol like HTTP will be able to receive a single command only before disconnecting.
+| -1   | The device is now connected (i.e. available to receive upstream messages) until further notice.
 | 0    | The device is now disconnected (i.e. not available anymore to receive upstream messages).
 
-### Time based validation of a notification 
+### Determining a Device's Connection Status 
 
-An application receiving a downstream message containing the notification relevant properties can verify at any point in
-time if a device is ready to receive an upstream message by:
+An application receiving a downstream message containing a *ttd* property can check if the device is currently connected
+(and thus ready to receive a command) by
 
-- adding the values of the `creation-time` and the `ttd` properties to build an *expiration timestamp*
-- comparing the current time with the *expiration timestamp*
+- adding the *ttd* value to the *creation-time* to determine the *expiration* time, and then
+- comparing the *current* time with the *expiration* time
 
-If the current time is *after* the *expiration timestamp*, the notification shall be regarded as being expired.
+If the *current* time is *after* the *expiration* time, the device should be assumed to already have disconnected again.
 
-### Source of the `ttd` value
+### Source of the *ttd* Value
 
 While it seems to be natural that a device itself indicates when it is ready to receive a command, it may not always be
 possible or desirable to do so.
 
-A device could e.g. be not capable to specify the value for `ttd` in it's message, or all devices of a particular setup would always use the same value
-for `ttd`, so it would not make much sense to provide this value always again.
+A device could e.g. be not capable to specify the value for *ttd* in it's message, or all devices of a particular setup
+would always use the same value for *ttd*, so it would not make much sense to provide this value always again.
 
 Additionally different protocols may or may not let a sender set specific values for a message, so a device using a 
-specific protocol may not be able to
-provide a value for the `ttd` property at all.
+specific protocol may not be able to provide a value for the *ttd* property at all.
 
-For these reasons there are (resp. may be) additional ways of setting the value of `ttd`:
+For these reasons there are (resp. may be) additional ways of setting the value of *ttd*:
 
-- Hono's Device Registry supports default values for any application-properties in the AMQP 1.0 message. By this means
-  a device can be configured to always have a specific value for `ttd`.
-- In a future extension there may be a configuration value per tenant and protocol adapter that sets the value of `ttd`
-  if it was not provided by other means already (like provided to the protocol adapter or by using a default value of the 
-  Device Registry).
+- Hono's Tenant and Device Registration APIs support the inclusion of default values for application-properties in the
+  AMQP 1.0 message. By these means a device can be configured to always have a specific value for *ttd*.
+- In a future extension there may be a configuration value per tenant and protocol adapter that sets the value of *ttd*
+  if it was not provided by other means already (like provided to the protocol adapter or by setting a default value).
   
 ### Hono's HTTP protocol adapter
 
-Hono's HTTP protocol adapter supports the setting of the `ttd` value in requests explicitly - please refer to the
+Hono's HTTP protocol adapter supports the setting of the *ttd* value in requests explicitly - please refer to the
 [HTTP Adapter]({{< relref "/user-guide/http-adapter.md" >}}) for details.
 
 Alternatively the default property values for devices from the Device Registry can be used (described above).
   
 ### Hono's MQTT protocol adapter
 
-The MQTT protocol adapter automatically sends a `Time until disconnect notification` with a `ttd` value of `-1`
-for a device that subscribes to
-the appropriate command topic (refer to the [MQTT Adapter]({{< relref "/user-guide/mqtt-adapter.md" >}}) for details).
+The MQTT protocol adapter automatically sends a *Time until disconnect notification* with a *ttd* value of `-1`
+for a device that subscribes to the appropriate command topic (refer to the [MQTT Adapter user guide]
+({{< relref "/user-guide/mqtt-adapter.md" >}}) for details).
 
-If it unsubscribes again, the adapter automatically sends a `Time until disconnect notification` with a `ttd` value of `0`.
+When a device unsubscribes again, the adapter automatically sends a *Time until disconnect notification* with a *ttd* value of `0`.
 
-### Sequence diagrams of Time until disconnect notifications
+### Examples
 
-The following sequence diagram shows a **Time until disconnect notification** while sending a telemetry message downstream
+The following sequence diagram shows a *Time until disconnect notification* while sending a telemetry message downstream
 via the HTTP protocol adapter:
 
 ![Device command readiness with telemetry data](../device_commandReadinessImplicit.png)
 
-The following sequence diagram shows a **Time until disconnect notification** by sending an empty event message downstream
+The following sequence diagram shows a *Time until disconnect notification* by sending an empty event message downstream
 via the HTTP protocol adapter:
 
 ![Device command readiness with explicit event](../device_commandReadinessExplicit.png)
