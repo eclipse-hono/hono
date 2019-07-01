@@ -20,16 +20,17 @@
   <formats>
     <format>tar.gz</format>
   </formats>
-  <includeBaseDirectory>false</includeBaseDirectory>
+  <includeBaseDirectory>true</includeBaseDirectory>
+  <baseDirectory>eclipse-hono-${project.version}</baseDirectory>
 
   <fileSets>
     <fileSet>
-      <outputDirectory>eclipse-hono</outputDirectory>
+      <outputDirectory>deploy/helm</outputDirectory>
       <directory>${project.build.directory}/deploy/helm</directory>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <outputDirectory></outputDirectory>
+      <outputDirectory>deploy</outputDirectory>
       <directory>${project.build.directory}/deploy</directory>
       <includes>
         <include>*.sh</include>
