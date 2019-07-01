@@ -26,7 +26,7 @@ Business Applications use this operation to send a command to a device for which
 
 The following sequence diagram illustrates the establishment of the required link:
 
-{{< figure src="../command_control_send_preconditions.svg" title="Send One-Way Command Preconditions" >}}
+{{< figure src="../command_control_send_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
 
 {{% note title="Deprecation" %}}
 Previous versions of Hono required applications to
@@ -67,11 +67,11 @@ Hono indicates the outcome of the operation by means of the following AMQP deliv
 
 **Examples**
 
-The following sequence diagram shows the successful delivery of a command to a device:
+The following sequence diagram shows the successful delivery of a one-way command called `switchOn` to device `4711` of the `DEFAULT_TENANT`:
 
 {{< figure src="../command_control_one_way_success.svg" title="Successfully send a One-Way Command" >}}
 
-The following sequence diagram shows how the delivery of a command fails because the device is not connected:
+The following sequence diagram shows how the delivery of the same one-way command fails because the device is not connected:
 
 {{< figure src="../command_control_device_not_connected.svg" title="Device not connected" >}}
 
@@ -94,6 +94,10 @@ The following sequence diagram illustrates how a malformed command sent by a *Bu
 3. The *Business Application* has established an AMQP link in role *receiver* with the source address `command_response/${tenant_id}/${reply_id}`.
 This link is used by the *Business Application* to receive the response to the command from the device. This link’s source address is also used as the `reply-to` address for the request messages. The `${reply_id}` may be any arbitrary string chosen by the application.
 
+The following sequence diagram illustrates the establishment of the required links:
+
+{{< figure src="../command_control_receive_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
+
 {{% note title="Deprecation" %}}
 Previous versions of Hono required applications to
 
@@ -104,16 +108,6 @@ These link addresses can still be used but support for them will be removed in a
 Newly built applications should **only** use the tenant scoped links as described above.
 Note that the deprecated link addresses also **do not** support sending commands to devices connected via a gateway.
 {{% /note %}}
-
-**Link establishment**
-
-The following sequence diagram illustrates the establishment of the required sender link:
-
-{{< figure src="../command_control_send_preconditions.svg" title="Send Command Preconditions" >}}
-
-The following sequence diagram illustrates the establishment of the required receiver link:
-
-{{< figure src="../command_control_receive_preconditions.svg" title="Receive Response Preconditions" >}}
 
 **Command Message Format**
 
@@ -171,7 +165,7 @@ If a command message response contains a payload, the body of the message MUST c
 
 **Examples**
 
-The following sequence diagram illustrates how a *Business Application* sends a command and receives the response from the device:
+The following sequence diagram illustrates how a *Business Application* sends a command called `getReading` to device `4711` of the `DEFAULT_TENANT` and receives a response from the device:
 
 {{< figure src="../command_control_success.svg" title="Successfully send a Command" >}}
 
