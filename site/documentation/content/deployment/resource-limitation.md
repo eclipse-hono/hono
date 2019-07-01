@@ -84,8 +84,10 @@ spec:
 
 The `resources` property defines the overall limit of 256 MB of memory that the pod may use. The `_JAVA_OPTIONS` environment variable is again used to configure the JVM to use 80% of the total memory for its heap.
 
-## Limiting the number of device connections
-Resource limits namely the maximum number of device connections allowed per tenant can be set in Hono. Please refer to the [connections limit concept] ({{< ref "/concepts/resource-limits.md#connections-limit" >}}) for more information. The resource-limits for a tenant can be set using the tenant configuration and please refer to the [Tenant API]({{< ref "/api/Tenant-API.md#request-payload" >}}) for the configuration details.
+## Limiting the Number of Device Connections
 
-## Limiting the number of telemetry and event messages
-A limit on the incoming telemetry and event messages per tenant can be set in Hono. Please refer to the [messages limit concept] ({{< ref "/concepts/resource-limits.md#messages-limit" >}}) for more information. The resource-limits for a tenant can be set using the tenant configuration and please refer to the [Tenant API]({{< ref "/api/Tenant-API.md#request-payload" >}}) for the configuration details.
+Hono supports limiting the overall number of simultaneously connected devices per tenant. Please refer to the [connections limit concept]({{< relref "/concepts/resource-limits.md#connections-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/Tenant-API.md#tenant-information-format" >}}) for configuration details.
+
+## Limiting the Number of Messages
+
+Hono supports limiting the number of messages that devices of a tenant can publish to Hono during a given time interval. Please refer to the [messages limit concept] ({{< relref "/concepts/resource-limits.md#messages-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/Tenant-API.md#tenant-information-format" >}}) for configuration details.
