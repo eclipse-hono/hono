@@ -23,13 +23,7 @@ A Java based command line client for consuming telemetry data and events from Ho
 
 * [Eclipse Hono 0.9 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-0.9-exec.jar)
 
-The client requires a Java 11 runtime environment and can be run from the command line like this:
-
-~~~sh
-java -jar hono-cli-0.9-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 \
---hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret \
---spring.profiles.active=receiver --tenant.id=DEFAULT_TENANT
-~~~
+The client requires a Java 11 runtime environment to run.
 
 Please refer to the [Admin Guide](https://www.eclipse.org/hono/docs/latest/admin-guide/hono-client-configuration/) for details regarding the command line options that the client supports.
 
@@ -39,21 +33,16 @@ The newest features and bug fixes are available in *milestones* that are publish
 *state of development* which also means that APIs or features may change from one milestone to the other.
 Installation works in the same way as for the latest stable release.
 
-* [Eclipse Hono 1.0-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M1.tar.gz)
-* [Eclipse Hono 1.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M1-exec.jar)
-* [Eclipse Hono 1.0-M2 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M2.tar.gz)
-* [Eclipse Hono 1.0-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M2-exec.jar)
-* [Eclipse Hono 1.0-M3 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M3.tar.gz)
-* [Eclipse Hono 1.0-M3 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M3-exec.jar)
+* [Eclipse Hono 1.0-M5 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.0-M5-chart.tar.gz)
+* [Eclipse Hono 1.0-M5 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M5-exec.jar)
 * [Eclipse Hono 1.0-M4 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.0-M4-deploy.tar.gz)
 * [Eclipse Hono 1.0-M4 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M4-exec.jar)
-
-### Older Versions
-
-These artifacts are available for reference only. Please always use the latest version since this is the one we can provide the best support for.
-
-* [Eclipse Hono 0.8 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.8.tar.gz)
-* [Eclipse Hono 0.7 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-example-0.7.tar.gz)
+* [Eclipse Hono 1.0-M3 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M3.tar.gz)
+* [Eclipse Hono 1.0-M3 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M3-exec.jar)
+* [Eclipse Hono 1.0-M2 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M2.tar.gz)
+* [Eclipse Hono 1.0-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M2-exec.jar)
+* [Eclipse Hono 1.0-M1 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-1.0-M1.tar.gz)
+* [Eclipse Hono 1.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0-M1-exec.jar)
 
 ## Source Code
 
