@@ -13,42 +13,35 @@
 
 package org.eclipse.hono.cli.app;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Test cases verifying the behavior of {@code Receiver}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class ReceiverTest {
-
-    /**
-     * Global timeout for all test cases.
-     */
-    @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private Receiver receiver;
 
@@ -57,7 +50,7 @@ public class ReceiverTest {
      *
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setup() {
 
         final Vertx vertx = mock(Vertx.class);
@@ -82,12 +75,17 @@ public class ReceiverTest {
      * @param context The vert.x test context.
      */
     @Test
-    public void testTelemetryStart(final TestContext context) {
+    public void testTelemetryStart(final VertxTestContext context) {
         receiver.messageType = "telemetry";
-        receiver.start().setHandler(context.asyncAssertSuccess(result->{
-            context.assertNotNull(result.list());
-            context.assertTrue(result.list().size() == 1);
-        }));
+
+        receiver.start().setHandler(
+                context.succeeding(result ->{
+                   context.verify(()->{
+                       assertNotNull(result.list());
+                       assertEquals(result.size(), 1);
+                   });
+                    context.completeNow();
+                }));
     }
 
     /**
@@ -96,12 +94,16 @@ public class ReceiverTest {
      * @param context The vert.x test context.
      */
     @Test
-    public void testEventStart(final TestContext context) {
+    public void testEventStart(final VertxTestContext context) {
         receiver.messageType = "event";
-        receiver.start().setHandler(context.asyncAssertSuccess(result->{
-            context.assertNotNull(result.list());
-            context.assertTrue(result.list().size() == 1);
-        }));
+        receiver.start().setHandler(
+                context.succeeding(result -> {
+                    context.verify(() -> {
+                        assertNotNull(result.list());
+                        assertEquals(result.size(), 1);
+                    });
+                    context.completeNow();
+                }));
     }
 
     /**
@@ -110,12 +112,17 @@ public class ReceiverTest {
      * @param context The vert.x test context.
      */
     @Test
-    public void testDefaultStart(final TestContext context) {
+    public void testDefaultStart(final VertxTestContext context) {
         receiver.messageType="all";
-        receiver.start().setHandler(context.asyncAssertSuccess(result->{
-           context.assertNotNull(result.list());
-           context.assertTrue(result.list().size() == 2);
-        }));
+
+        receiver.start().setHandler(
+                context.succeeding(result -> {
+                    context.verify(() -> {
+                        assertNotNull(result.list());
+                        assertEquals(result.size(), 2);
+                    });
+                    context.completeNow();
+                }));
     }
 
     /**
@@ -124,8 +131,9 @@ public class ReceiverTest {
      * @param context The vert.x test context.
      */
     @Test
-    public void testInvalidTypeStart(final TestContext context) {
+    public void testInvalidTypeStart(final VertxTestContext context) {
         receiver.messageType = "xxxxx";
-        receiver.start().setHandler(context.asyncAssertFailure());
+        receiver.start().setHandler(
+                context.failing(result -> context.completeNow()));
     }
 }
