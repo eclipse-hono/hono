@@ -12,7 +12,6 @@ The MQTT adapter is **not** a general purpose MQTT broker. In particular the ada
 * does not maintain session state for clients and thus always sets the *session present* flag in its CONNACK packet to `0`, regardless of the value  of the *clean session* flag provided in a client's CONNECT packet.
 * ignores any *Will* included in a client's CONNECT packet.
 * only supports topic names/filters for devices to publish and subscribe to that are specific to Hono's functionality as described in the following sections.
-* discards *malformed* messages that e.g. are published to an unsupported topic or use an unsupported QoS value.
 * does not support *retaining* messages. However, if an event or telemetry message's *retain* flag is set to `1` then the corresponding AMQP 1.0 message being sent downstream by the adapter will contain an *x-opt-retain* message annotation containing the boolean value `true`. A downstream consumer may then react according to the presence of this annotation.
 
 ## Authentication
