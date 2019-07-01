@@ -93,6 +93,7 @@
       <name>Dejan Bosanac</name>
       <email>dejan@sensatic.net</email>
       <roles>
+        <role>Lead</role>
         <role>Committer</role>
       </roles>
     </developer>
@@ -111,7 +112,6 @@
       <name>Paolo Patierno</name>
       <email>ppatierno@live.com</email>
       <roles>
-        <role>Lead</role>
         <role>Committer</role>
       </roles>
     </developer>
