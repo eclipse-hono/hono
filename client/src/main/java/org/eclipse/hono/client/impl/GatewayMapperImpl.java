@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ConnectionLifecycle;
@@ -61,12 +62,13 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
      * @param registrationClientFactory The factory to create a registration client instance.
      * @param deviceConnectionClientFactory The factory to create a device connection client instance.
      * @param tracer The tracer instance.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public GatewayMapperImpl(final RegistrationClientFactory registrationClientFactory,
             final DeviceConnectionClientFactory deviceConnectionClientFactory, final Tracer tracer) {
-        this.registrationClientFactory = registrationClientFactory;
-        this.deviceConnectionClientFactory = deviceConnectionClientFactory;
-        this.tracer = tracer;
+        this.registrationClientFactory = Objects.requireNonNull(registrationClientFactory);
+        this.deviceConnectionClientFactory = Objects.requireNonNull(deviceConnectionClientFactory);
+        this.tracer = Objects.requireNonNull(tracer);
     }
 
     @Override

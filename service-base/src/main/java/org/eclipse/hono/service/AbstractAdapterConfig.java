@@ -25,7 +25,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
-import org.eclipse.hono.client.impl.GatewayMapperImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
@@ -433,7 +432,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public GatewayMapper gatewayMapper() {
-        return new GatewayMapperImpl(registrationClientFactory(), deviceConnectionClientFactory(), getTracer());
+        return GatewayMapper.create(registrationClientFactory(), deviceConnectionClientFactory(), getTracer());
     }
 
     /**

@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.client;
 
+import org.eclipse.hono.client.impl.GatewayMapperImpl;
+
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.Future;
 
 /**
@@ -21,6 +24,20 @@ import io.vertx.core.Future;
  *
  */
 public interface GatewayMapper extends ConnectionLifecycle<HonoConnection> {
+
+    /**
+     * Creates a new GatewayMapper instance.
+     *
+     * @param registrationClientFactory The factory to create a registration client instance.
+     * @param deviceConnectionClientFactory The factory to create a device connection client instance.
+     * @param tracer The tracer instance.
+     * @return The GatewayMapper instance.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    static GatewayMapper create(final RegistrationClientFactory registrationClientFactory,
+            final DeviceConnectionClientFactory deviceConnectionClientFactory, final Tracer tracer) {
+        return new GatewayMapperImpl(registrationClientFactory, deviceConnectionClientFactory, tracer);
+    }
 
     /**
      * Determines the gateway device id for the given device id (if applicable).
