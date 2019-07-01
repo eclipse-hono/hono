@@ -146,6 +146,16 @@
         <role>Committer</role>
       </roles>
     </developer>
+    <developer>
+      <id>calohmn</id>
+      <name>Carsten Lohmann</name>
+      <email>carsten.lohmann@bosch-si.com</email>
+      <organization>Bosch Software Innovations GmbH</organization>
+      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <roles>
+        <role>Committer</role>
+      </roles>
+    </developer>
   </developers>
 
   <properties>
