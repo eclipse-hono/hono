@@ -21,7 +21,6 @@ The following operations can be used by *Protocol Adapters* to forward telemetry
 1. Adapter has established an AMQP connection with the AMQP Messaging Network.
 1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload telemetry data for. 
 1. The device for which the adapter wants to send telemetry data has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
-1. Adapter has obtained a *registration assertion* for the device from the Device Registration service by means of the [assert Device Registration operation]({{< relref "Device-Registration-API.md#assert-device-registration" >}}).
 
 The adapter indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment.
 
@@ -105,7 +104,7 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 {{< figure src="../consumeTelemetry_Success.svg" title="Receive Telemetry Data" >}}
 
 1. *AMQP 1.0 Messaging Network* delivers telemetry message to *Business Application*.
-1. *Business Application* acknowledges reception of message.
+   1. *Business Application* acknowledges reception of message.
 
 {{% note %}}
 The *Business Application* can only consume telemetry messages that have been uploaded to Hono *after* the *Business Application* has established the link with the *AMQP 1.0 Messaging Network*. This is because telemetry messages are not *durable*, i.e. they are not persisted in Hono in order to be forwarded at a later time.
