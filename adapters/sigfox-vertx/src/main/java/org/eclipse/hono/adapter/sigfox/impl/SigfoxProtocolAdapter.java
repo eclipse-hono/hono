@@ -119,7 +119,7 @@ public final class SigfoxProtocolAdapter extends AbstractVertxBasedHttpProtocolA
     private Handler<RoutingContext> dataCorsHandler() {
         return CorsHandler.create(getConfig().getCorsAllowedOrigin())
                 .allowedMethod(HttpMethod.GET)
-                .allowedHeader(Constants.HEADER_TIME_TIL_DISCONNECT)
+                .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
                 .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
                 .exposedHeader(Constants.HEADER_COMMAND)

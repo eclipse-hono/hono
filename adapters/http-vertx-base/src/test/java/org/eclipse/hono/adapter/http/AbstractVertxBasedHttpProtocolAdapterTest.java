@@ -334,7 +334,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("5");
+        when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("5");
         final RoutingContext ctx = newRoutingContext(payload, "application/text", request, response);
 
         adapter.uploadTelemetryMessage(ctx, "my-tenant", "unknown-device", payload, "application/text");
@@ -658,7 +658,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("10");
+        when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
         final RoutingContext ctx = newRoutingContext(payload, "text/plain", request, response);
         when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
@@ -704,7 +704,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // WHEN a device publishes an empty notification event with a TTD
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("10");
+        when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
         final RoutingContext ctx = newRoutingContext(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, request, response);
         // and the Command consumer for the device is already in use
         when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any()))
@@ -747,7 +747,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.getHeader(eq(Constants.HEADER_TIME_TIL_DISCONNECT))).thenReturn("40");
+        when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("40");
         final RoutingContext ctx = newRoutingContext(payload, "application/text", request, response);
 
         adapter.uploadTelemetryMessage(ctx, "tenant", "device");

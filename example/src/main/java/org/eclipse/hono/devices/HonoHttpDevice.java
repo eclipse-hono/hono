@@ -115,7 +115,7 @@ public class HonoHttpDevice {
             final MultiMap headers = MultiMap.caseInsensitiveMultiMap();
             headers.add(HttpHeaders.CONTENT_TYPE, contentType);
             if (ttd != null) {
-                headers.add(Constants.HEADER_TIME_TIL_DISCONNECT, ttd.toString());
+                headers.add(Constants.HEADER_TIME_TILL_DISCONNECT, ttd.toString());
             }
             return headers;
         }

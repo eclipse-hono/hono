@@ -228,25 +228,45 @@ public final class HttpUtils {
     }
 
     /**
-     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TIL_DISCONNECT} HTTP header for a request.
+     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} HTTP header for a
+     * request. If no such header can be found, the query is searched for containing a query parameter with the same
+     * key.
+     *
+     * @param ctx The routing context containing the HTTP request.
+     * @return The time til disconnect or {@code null} if
+     *         <ul>
+     *         <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT}
+     *         header or query parameter.</li>
+     *         <li>the contained value cannot be parsed as an Integer</li>
+     *         </ul>
+     * @throws NullPointerException if context is {@code null}.
+     * @deprecated Use {@link #getTimeTillDisconnect(RoutingContext)} instead
+     */
+    @Deprecated
+    public static Integer getTimeTilDisconnect(final RoutingContext ctx) {
+        return getTimeTillDisconnect(ctx);
+    }
+
+    /**
+     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} HTTP header for a request.
      * If no such header can be found, the query is searched for containing a query parameter with the same key.
      *
      * @param ctx The routing context containing the HTTP request.
      * @return The time til disconnect or {@code null} if
      * <ul>
-     *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TIL_DISCONNECT} header or query parameter.</li>
+     *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} header or query parameter.</li>
      *     <li>the contained value cannot be parsed as an Integer</li>
      * </ul>
      * @throws NullPointerException if context is {@code null}.
      */
-    public static Integer getTimeTilDisconnect(final RoutingContext ctx) {
+    public static Integer getTimeTillDisconnect(final RoutingContext ctx) {
         Objects.requireNonNull(ctx);
 
         try {
-            Optional<String> timeTilDisconnectHeader = Optional.ofNullable(ctx.request().getHeader(Constants.HEADER_TIME_TIL_DISCONNECT));
+            Optional<String> timeTilDisconnectHeader = Optional.ofNullable(ctx.request().getHeader(Constants.HEADER_TIME_TILL_DISCONNECT));
 
             if (!timeTilDisconnectHeader.isPresent()) {
-                timeTilDisconnectHeader = Optional.ofNullable(ctx.request().getParam(Constants.HEADER_TIME_TIL_DISCONNECT));
+                timeTilDisconnectHeader = Optional.ofNullable(ctx.request().getParam(Constants.HEADER_TIME_TILL_DISCONNECT));
             }
 
             if (timeTilDisconnectHeader.isPresent()) {

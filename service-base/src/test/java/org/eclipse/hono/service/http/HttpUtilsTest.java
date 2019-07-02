@@ -49,46 +49,48 @@ public class HttpUtilsTest {
     }
 
     /**
-     * Verifies that the {@link Constants#HEADER_TIME_TIL_DISCONNECT} header is used by
-     * the {@link HttpUtils#getTimeTilDisconnect(RoutingContext)} method.
+     * Verifies that the {@link Constants#HEADER_TIME_TILL_DISCONNECT} header is used by
+     * the {@link HttpUtils#getTimeTillDisconnect(RoutingContext)} method.
      */
     @Test
-    public void testGetTimeTilDisconnectUsesHeader() {
+    public void testGetTimeTillDisconnectUsesHeader() {
 
-        // GIVEN a time til disconnect
-        final Integer timeTilDisconnect = 60;
+        // GIVEN a time till disconnect
+        final Integer timeTillDisconnect = 60;
         // WHEN evaluating a routingContext that has this value set as header
-        when(httpServerRequest.getHeader(Constants.HEADER_TIME_TIL_DISCONNECT)).thenReturn(timeTilDisconnect.toString());
+        when(httpServerRequest.getHeader(Constants.HEADER_TIME_TILL_DISCONNECT))
+                .thenReturn(timeTillDisconnect.toString());
 
         // THEN the get method returns this value
-        assertEquals(timeTilDisconnect, HttpUtils.getTimeTilDisconnect(routingContext));
+        assertEquals(timeTillDisconnect, HttpUtils.getTimeTillDisconnect(routingContext));
     }
 
     /**
-     * Verifies that the {@link Constants#HEADER_TIME_TIL_DISCONNECT} query parameter is used by
-     * the {@link HttpUtils#getTimeTilDisconnect(RoutingContext)} method.
+     * Verifies that the {@link Constants#HEADER_TIME_TILL_DISCONNECT} query parameter is used by
+     * the {@link HttpUtils#getTimeTillDisconnect(RoutingContext)} method.
      */
     @Test
-    public void testGetTimeTilDisconnectUsesQueryParam() {
+    public void testGetTimeTillDisconnectUsesQueryParam() {
 
-        // GIVEN a time til disconnect
-        final Integer timeTilDisconnect = 60;
+        // GIVEN a time till disconnect
+        final Integer timeTillDisconnect = 60;
         // WHEN evaluating a routingContext that has this value set as query param
-        when(httpServerRequest.getParam(Constants.HEADER_TIME_TIL_DISCONNECT)).thenReturn(timeTilDisconnect.toString());
+        when(httpServerRequest.getParam(Constants.HEADER_TIME_TILL_DISCONNECT))
+                .thenReturn(timeTillDisconnect.toString());
 
         // THEN the get method returns this value
-        assertEquals(timeTilDisconnect, HttpUtils.getTimeTilDisconnect(routingContext));
+        assertEquals(timeTillDisconnect, HttpUtils.getTimeTillDisconnect(routingContext));
     }
 
     /**
      * Verifies that
-     * the {@link HttpUtils#getTimeTilDisconnect(RoutingContext)} method returns {@code null} if
-     * {@link Constants#HEADER_TIME_TIL_DISCONNECT} is neither provided as query parameter nor as requests header.
+     * the {@link HttpUtils#getTimeTillDisconnect(RoutingContext)} method returns {@code null} if
+     * {@link Constants#HEADER_TIME_TILL_DISCONNECT} is neither provided as query parameter nor as requests header.
      */
     @Test
-    public void testGetTimeTilDisconnectReturnsNullIfNotSpecified() {
+    public void testGetTimeTillDisconnectReturnsNullIfNotSpecified() {
 
-        assertNull(HttpUtils.getTimeTilDisconnect(routingContext));
+        assertNull(HttpUtils.getTimeTillDisconnect(routingContext));
     }
 
 }

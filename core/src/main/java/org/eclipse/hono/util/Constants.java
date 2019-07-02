@@ -204,9 +204,17 @@ public final class Constants {
     };
 
     /**
-     * The header name defined for setting the <em>time to deliver</em> for device command readiness notification events.
+     * The header name defined for setting the <em>time till disconnect</em> for device command readiness notification
+     * events.
      */
-    public static final String HEADER_TIME_TIL_DISCONNECT = "hono-ttd";
+    public static final String HEADER_TIME_TILL_DISCONNECT = "hono-ttd";
+
+    /**
+     * The header name defined for setting the <em>time to deliver</em> for device command readiness notification events.
+     * @deprecated Use {@link #HEADER_TIME_TILL_DISCONNECT} instead
+     */
+    @Deprecated
+    public static final String HEADER_TIME_TIL_DISCONNECT = HEADER_TIME_TILL_DISCONNECT;
 
     /**
      * The header name defined for setting the <em>request id</em> for device responses to a command.

@@ -701,7 +701,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/msg1")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "10");
+                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "10");
 
         final Future<MultiMap> firstRequest = httpClient.create(
                 getEndpointUri(),
@@ -720,7 +720,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/msg2")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "5");
+                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "5");
         final Future<MultiMap> secondRequest = httpClient.create(
                 getEndpointUri(),
                 Buffer.buffer("hello two"),
@@ -767,7 +767,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
+                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
 
         helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();
@@ -816,7 +816,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
+                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
 
         final MultiMap cmdResponseRequestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
@@ -893,7 +893,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TIL_DISCONNECT, "2");
+                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
 
         helper.registry.addDeviceForTenant(tenant, deviceId, PWD).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
         setup.await();

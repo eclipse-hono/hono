@@ -616,7 +616,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 // is enabled for the tenant
                 final Future<Integer> ttdTracker = CompositeFuture.all(tokenTracker, tenantTracker)
                         .compose(ok -> {
-                            final Integer ttdParam = HttpUtils.getTimeTilDisconnect(ctx);
+                            final Integer ttdParam = HttpUtils.getTimeTillDisconnect(ctx);
                             return getTimeUntilDisconnect(tenantTracker.result(), ttdParam).map(effectiveTtd -> {
                                 if (effectiveTtd != null) {
                                     currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
