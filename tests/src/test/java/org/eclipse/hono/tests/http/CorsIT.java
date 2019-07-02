@@ -88,7 +88,8 @@ public class CorsIT {
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
             ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_QOS_LEVEL));
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
+                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
+                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
         }));
     }
 
@@ -110,7 +111,8 @@ public class CorsIT {
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
             ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_QOS_LEVEL));
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
+                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
+                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
         }));
     }
 
@@ -131,7 +133,8 @@ public class CorsIT {
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
+                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
+                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
         }));
     }
 
@@ -152,7 +155,8 @@ public class CorsIT {
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.asyncAssertSuccess(headers -> {
             assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_TIME_TIL_DISCONNECT));
+                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
+                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
         }));
     }
 
