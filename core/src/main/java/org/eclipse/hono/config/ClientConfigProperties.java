@@ -50,6 +50,22 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public static final long DEFAULT_LINK_ESTABLISHMENT_TIMEOUT = 1000L; //ms
     /**
+     * The default minimum amount of time (milliseconds) to wait before trying to re-establish an
+     * AMQP connection with the peer.
+     */
+    public static final int DEFAULT_RECONNECT_MIN_DELAY = 0; // ms
+    /**
+     * The default maximum amount of time (milliseconds) to wait before trying to re-establish an
+     * AMQP connection with the peer.
+     */
+    public static final int DEFAULT_RECONNECT_MAX_DELAY = 7000; // ms
+    /**
+     * The default amount of time (milliseconds) that the delay before trying to re-establish an
+     * AMQP connection with the peer will be increased by with each successive attempt.
+     */
+    public static final int DEFAULT_RECONNECT_DELAY_INCREMENT = 100; // ms
+
+    /**
      * The default amount of time (milliseconds) to wait for a response before a request times out.
      */
     public static final long DEFAULT_REQUEST_TIMEOUT = 200L; // ms
@@ -71,6 +87,9 @@ public class ClientConfigProperties extends AbstractConfig {
     private char[] password;
     private int port = Constants.PORT_AMQPS;
     private int reconnectAttempts = -1;
+    private long reconnectMinDelayMillis = DEFAULT_RECONNECT_MIN_DELAY;
+    private long reconnectMaxDelayMillis = DEFAULT_RECONNECT_MAX_DELAY;
+    private long reconnectDelayIncrementMillis = DEFAULT_RECONNECT_DELAY_INCREMENT;
     private long requestTimeoutMillis = DEFAULT_REQUEST_TIMEOUT;
     private long sendMessageTimeoutMillis = DEFAULT_SEND_MESSAGE_TIMEOUT;
     private boolean tlsEnabled = false;
@@ -563,6 +582,93 @@ public class ClientConfigProperties extends AbstractConfig {
             throw new IllegalArgumentException("attempts must be >= -1");
         } else {
             this.reconnectAttempts = attempts;
+        }
+    }
+
+    /**
+     * Gets the minimum amount of time to wait before trying to re-establish an
+     * AMQP connection with the peer.
+     * <p>
+     * The default value of this property is 0.
+     *
+     * @return The minimum delay in milliseconds.
+     */
+    public long getReconnectMinDelay() {
+        return reconnectMinDelayMillis;
+    }
+
+    /**
+     * Sets the minimum amount of time to wait before trying to re-establish an
+     * AMQP connection with the peer.
+     * <p>
+     * The default value of this property is 0.
+     *
+     * @param reconnectMinDelay The minimum delay in milliseconds.
+     * @throws IllegalArgumentException if reconnectMinDelay is &lt; 0.
+     */
+    public void setReconnectMinDelay(final long reconnectMinDelay) {
+        if (reconnectMinDelay < 0) {
+            throw new IllegalArgumentException("minimum delay must be >= 0");
+        } else {
+            this.reconnectMinDelayMillis = reconnectMinDelay;
+        }
+    }
+
+    /**
+     * Gets the maximum amount of time to wait before trying to re-establish an
+     * AMQP connection with the peer.
+     * <p>
+     * The default value of this property is 7000ms.
+     *
+     * @return The maximum delay in milliseconds.
+     */
+    public long getReconnectMaxDelay() {
+        return reconnectMaxDelayMillis;
+    }
+
+    /**
+     * Sets the maximum amount of time to wait before trying to re-establish an
+     * AMQP connection with the peer.
+     * <p>
+     * The default value of this property is 7000ms.
+     *
+     * @param reconnectMaxDelay The maximum delay in milliseconds.
+     * @throws IllegalArgumentException if reconnectMaxDelay is &lt; 0.
+     */
+    public void setReconnectMaxDelay(final long reconnectMaxDelay) {
+        if (reconnectMaxDelay < 0) {
+            throw new IllegalArgumentException("maximum delay must be >= 0");
+        } else {
+            this.reconnectMaxDelayMillis = reconnectMaxDelay;
+        }
+    }
+
+    /**
+     * Gets the factor used in the exponential backoff algorithm for determining the delay
+     * before trying to re-establish an AMQP connection with the peer.
+     * <p>
+     * The default value of this property is 100ms.
+     *
+     * @return The value to exponentially increase the delay by in milliseconds.
+     */
+    public long getReconnectDelayIncrement() {
+        return reconnectDelayIncrementMillis;
+    }
+
+    /**
+     * Sets the factor used in the exponential backoff algorithm for determining the delay
+     * before trying to re-establish an AMQP connection with the peer.
+     * <p>
+     * The default value of this property is 100ms.
+     *
+     * @param reconnectDelayIncrement The value to exponentially increase the delay by in milliseconds.
+     * @throws IllegalArgumentException if reconnectDelayIncrement is &lt; 0.
+     */
+    public void setReconnectDelayIncrement(final long reconnectDelayIncrement) {
+        if (reconnectDelayIncrement < 0) {
+            throw new IllegalArgumentException("value must be >= 0");
+        } else {
+            this.reconnectDelayIncrementMillis = reconnectDelayIncrement;
         }
     }
 

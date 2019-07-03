@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,7 +38,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -482,7 +482,10 @@ public class HonoConnectionImpl implements HonoConnection {
             // no need to try to re-connect
             log.info("client is shutting down, giving up attempt to connect");
             connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
-        } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.getAndIncrement() == 0) {
+            return;
+        }
+        final int reconnectAttempt = connectAttempts.getAndIncrement();
+        if (clientConfigProperties.getReconnectAttempts() - reconnectAttempt == 0) {
             log.info("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
                     clientConfigProperties.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
             clearState();
@@ -492,14 +495,27 @@ public class HonoConnectionImpl implements HonoConnection {
             if (connectionFailureCause != null) {
                 log.debug("connection attempt failed", connectionFailureCause);
             }
-            final long reconnectInterval = Optional.ofNullable(clientOptions)
-                    .map(o -> o.getReconnectInterval())
-                    .orElse(Constants.DEFAULT_RECONNECT_INTERVAL_MILLIS);
-            log.trace("scheduling new connection attempt in {}ms ...", reconnectInterval);
-            // give Vert.x some time to clean up NetClient
-            vertx.setTimer(reconnectInterval, tid -> {
+            // apply exponential backoff with jitter
+            // determine the max delay for this reconnect attempt as 2^attempt * delayIncrement
+            final long currentMaxDelay = (long) Math.pow(2, reconnectAttempt - 1)
+                    * clientConfigProperties.getReconnectDelayIncrement();
+            final long reconnectInterval;
+            if (currentMaxDelay > clientConfigProperties.getReconnectMinDelay()) {
+                // let the actual reconnect delay be a random between the minDelay and the currentMaxDelay,
+                // capped by the overall maxDelay
+                reconnectInterval = ThreadLocalRandom.current().nextLong(clientConfigProperties.getReconnectMinDelay(),
+                        Math.min(clientConfigProperties.getReconnectMaxDelay(), currentMaxDelay));
+            } else {
+                reconnectInterval = clientConfigProperties.getReconnectMinDelay();
+            }
+            if (reconnectInterval > 0) {
+                log.trace("scheduling new connection attempt in {}ms ...", reconnectInterval);
+                vertx.setTimer(reconnectInterval, tid -> {
+                    connect(clientOptions, connectionHandler, disconnectHandler);
+                });
+            } else {
                 connect(clientOptions, connectionHandler, disconnectHandler);
-            });
+            }
         }
     }
 

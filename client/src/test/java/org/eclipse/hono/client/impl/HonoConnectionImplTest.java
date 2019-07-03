@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -138,6 +139,40 @@ public class HonoConnectionImplTest {
         }));
         // and the client has indeed tried three times in total before giving up
         assertTrue(connectionFactory.awaitFailure());
+    }
+
+    /**
+     * Verifies that the delay between reconnect attempts conforms
+     * to how it is configured in the ClientConfigProperties.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testReconnectDelay(final TestContext ctx) {
+
+        // GIVEN a client that is configured to reconnect 5 times with custom delay times.
+        final int reconnectAttempts = 5;
+        props.setReconnectAttempts(reconnectAttempts);
+        props.setReconnectMinDelay(10);
+        props.setReconnectMaxDelay(1000);
+        props.setReconnectDelayIncrement(100);
+        props.setConnectTimeout(10);
+        // expect 6 unsuccessful connection attempts
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con)
+                .setExpectedFailingConnectionAttempts(reconnectAttempts + 1);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+
+        // WHEN the client tries to connect
+        honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection attempt fails
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
+        }));
+        // and the client has indeed tried 6 times in total before giving up
+        assertTrue(connectionFactory.awaitFailure());
+        final ArgumentCaptor<Long> delayValueCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(vertx, times(reconnectAttempts)).setTimer(delayValueCaptor.capture(), anyHandler());
+        // and the first delay period is the minDelay value
+        ctx.assertEquals(10L, delayValueCaptor.getAllValues().get(0));
     }
 
     /**
@@ -262,7 +297,6 @@ public class HonoConnectionImplTest {
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con);
         props.setReconnectAttempts(1);
         final ProtonClientOptions options = new ProtonClientOptions()
-                .setReconnectInterval(50)
                 .setReconnectAttempts(0);
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
         honoConnection.connect(options).setHandler(ctx.asyncAssertSuccess());

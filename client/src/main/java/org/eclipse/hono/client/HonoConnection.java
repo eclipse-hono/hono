@@ -142,10 +142,11 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
     /**
      * Connects to the Hono server using given TCP client options.
      * <p>
-     * The client will try to establish a TCP connection to the peer based on the values of the
-     * <em>connectTimeout</em>, <em>reconnectAttempts</em> and <em>reconnectInterval</em> properties
-     * of the given options. Note that each connection attempt is made using the same IP
-     * address that has been resolved when the method was initially invoked.
+     * The client will try to establish a TCP connection to the peer based on the given options.
+     * If no options are given, the used default properties will have the <em>connectTimeout</em> and
+     * <em>heartBeat</em> values from the {@link ClientConfigProperties}. Note that each connection
+     * attempt is made using the same IP address that has been resolved when the method was initially
+     * invoked.
      * <p>
      * Once a TCP connection is established, the client performs a SASL handshake (if requested by the
      * peer) using the credentials set in the {@link ClientConfigProperties}. Finally, the client
