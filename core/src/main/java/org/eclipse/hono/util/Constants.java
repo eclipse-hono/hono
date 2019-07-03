@@ -46,10 +46,6 @@ public final class Constants {
      */
     public static final String DEFAULT_PATH_SEPARATOR = "/";
     /**
-     * The default number of milliseconds to wait before trying to reconnect to a service.
-     */
-    public static final long DEFAULT_RECONNECT_INTERVAL_MILLIS = 500;
-    /**
      * The name of the default tenant.
      */
     public static final String DEFAULT_TENANT = "DEFAULT_TENANT";
