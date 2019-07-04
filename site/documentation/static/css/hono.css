@@ -80,3 +80,12 @@
   border: 1px solid black;
   border-radius: 4px;
 }
+
+/* do not display Swagger UI top bar and server selection box*/
+.swagger-ui .topbar, .swagger-ui div.scheme-container, .swagger-ui hgroup.main, .swagger-ui .info__license, .swagger-ui .info__contact, .swagger-ui .info__extdocs {
+	display: none;
+}
+
+.swagger-ui table, .swagger-ui thead, .swagger-ui td {
+	border: none;
+}

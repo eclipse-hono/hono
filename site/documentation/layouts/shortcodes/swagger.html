@@ -1,0 +1,27 @@
+<div id="swagger-ui"></div>
+
+<script>
+window.onload = function() {
+  // Begin Swagger UI call region
+  const ui = SwaggerUIBundle({
+    url: "{{ .Get 0 }}",
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    presets: [
+      SwaggerUIBundle.presets.apis,
+      SwaggerUIStandalonePreset
+    ],
+    plugins: [
+      SwaggerUIBundle.plugins.DownloadUrl
+    ],
+    layout: "StandaloneLayout",
+    docExpansion: "none", // don't expand all the tags by default
+    defaultModelRendering: "model", // display models instead of examples by default
+    defaultModelExpandDepth: 0, // collapse the Models for Parameters and Responses
+    defaultModelsExpandDepth: -1, // don't display the "models" section below
+    validatorUrl: null // disable validator
+  })
+  // End Swagger UI call region
+  window.ui = ui
+}
+</script>
