@@ -30,12 +30,12 @@ The [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/
 
 #### Hono Helm Chart
 
-The Helm chart is contained in the Hono archive that is available from [Hono's download page](https://www.eclipse.org/hono/download/).
+The Helm chart is contained in the Hono archive that is available from [Hono's download page]({{% homelink "/downloads/" %}}).
 After the archive has been extracted, the chart can be found in the `eclipse-hono-$VERSION/deploy/helm` folder.
 
 #### Hono Command Line Client
 
-The Hono command line client is available from the [download page](https://www.eclipse.org/hono/download/).
+The Hono command line client is available from the [download page]({{% homelink "/downloads/" %}}).
 The command line client requires a Java 11 runtime environment to run.
 
 ## Deploying Hono

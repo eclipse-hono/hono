@@ -77,8 +77,8 @@ However, if the `curl` command yielded different output, you will need to set up
 In case you cannot access the Hono Sandbox as described above, you will need to set up an instance of Hono running on your local computer.
 For evaluation purposes a single node *Minikube* cluster is sufficient to deploy Hono to.
 
-1. Please refer to the [installation instructions](https://www.eclipse.org/hono/docs/latest/deployment/create-kubernetes-cluster/#local-development) for setting up a local Minikube cluster, then
-1. follow the [Deployment Guide](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/) in order to install Hono to your local Minikube cluster.
+1. Please refer to the [installation instructions]({{% doclink "/deployment/create-kubernetes-cluster/#local-development" %}}) for setting up a local Minikube cluster, then
+1. follow the [Deployment Guide]({{% doclink "/deployment/helm-based-deployment/" %}}) in order to install Hono to your local Minikube cluster.
 
 Once Hono has been deployed to your local cluster, run the following commands to set some environment variables which will be used during the guide
 
@@ -172,7 +172,7 @@ Content-Length: 0
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
 In this guide we will use the Hono command line client to simulate such an application.
-The client will connect to Hono's north bound [Telemetry](https://www.eclipse.org/hono/docs/latest/api/telemetry-api/) and [Event API](https://www.eclipse.org/hono/docs/latest/api/event-api/)s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event messages and log the messages to the console.
+The client will connect to Hono's north bound [Telemetry]({{% doclink "/api/telemetry-api/" %}}) and [Event API]({{% doclink "/api/event-api/" %}})s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event messages and log the messages to the console.
 
 Open a new terminal window and set the `AMQP_NETWORK_IP` environment variable.
 If you are using the Sandbox server:
@@ -242,7 +242,7 @@ consumer to deliver it to.
 
 The HTTP Adapter also supports publishing telemetry messages using *at least once* delivery semantics. For information on how that works
 and additional examples for interacting with Hono via HTTP, please refer to the
-[HTTP Adapter's User Guide](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/).
+[HTTP Adapter's User Guide]({{% doclink "/user-guide/http-adapter/" %}}).
 
 ## Publishing Events to the HTTP Adapter
 
@@ -270,7 +270,7 @@ Again, you should now see the telemetry message being logged to console of the d
 
 The MQTT Adapter also supports publishing telemetry messages using QoS 1. For information on how that works
 and additional examples for interacting with Hono via MQTT, please refer to the
-[MQTT Adapter's User Guide](https://www.eclipse.org/hono/docs/latest/user-guide/mqtt-adapter/).
+[MQTT Adapter's User Guide]({{% doclink "/user-guide/mqtt-adapter/" %}}).
 
 ## Publishing Events to the MQTT Adapter
 
@@ -288,10 +288,10 @@ The application used the AMQP 1.0 protocol to receive messages regardless of the
 
 **What to try next?**
 
-* Continue with the next sections to learn how applications can send commands to devices by means of the [Command & Control API](https://www.eclipse.org/hono/docs/latest/api/command-and-control/).
-* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipse.org:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/#dashboard) for instructions.
-* Check out the [User Guides](https://www.eclipse.org/hono/docs/latest/user-guide/) to explore more options for devices to connect to Hono using different transport protocols.
-* Learn more about the managing tenants, devices and credentials using the [Device Registry's HTTP API](https://www.eclipse.org/hono/docs/latest/user-guide/device-registry/).
+* Continue with the next sections to learn how applications can send commands to devices by means of the [Command & Control API]({{% doclink "/api/command-and-control/" %}}).
+* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipse.org:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard]({{% doclink "/deployment/helm-based-deployment/#dashboard" %}}) for instructions.
+* Check out the [User Guides]({{% doclink "/user-guide/" %}}) to explore more options for devices to connect to Hono using different transport protocols.
+* Learn more about the managing tenants, devices and credentials using the [Device Registry's HTTP API]({{% doclink "/user-guide/device-registry/" %}}).
 {{% /note %}}
 
 ## Sending Commands to a Device
@@ -304,7 +304,7 @@ In particular you will see how an application can send a command to a device and
 Hono comes with an example application (located in the `example` module) that is as small as possible but still covers the main message communication patterns.
 This application also supports Command &amp; Control.
 
-Please start (and potentially configure) the application as described [here](https://www.eclipse.org/hono/docs/latest/dev-guide/java_client_consumer/).
+Please start (and potentially configure) the application as described [here]({{% doclink "/dev-guide/java_client_consumer/" %}}).
 The application writes the payload of incoming messages to standard output and will serve to view how messages are received
 and sent by Hono. 
 
@@ -341,7 +341,7 @@ The response to the `curl` command contains the command from the example applica
     
 The example application sets the `brightness` to a random value between 0 and 100 on each invocation. It also generates a unique correlation identifier for each new command to be sent to the device. The device will need to include this identifier in its response to the command so that the application can properly correlate the response with the request.
 
-**NB:** If the application would send a *one-way command* instead (see [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/)), the `hono-cmd-req-id` response header would be missing.
+**NB:** If the application would send a *one-way command* instead (see [Command and Control Concepts]({{% doclink "/concepts/command-and-control/" %}})), the `hono-cmd-req-id` response header would be missing.
 
 {{% note %}}
 If you are running Hono on another node than the application, e.g. using *Minikube* or *Minishift*, and the clock of that node is not in sync with the node that your (example) application is running on, then the application might consider the *time til disconnect* indicated by the device in its *hono-ttd* parameter to already have expired. This will happen if the application node's clock is ahead of the clock on the HTTP protocol adapter node. Consequently, this will result in the application **not** sending any command to the device.
@@ -373,7 +373,7 @@ In order to do so, the client needs to be run with the `command` profile as foll
 mvn spring-boot:run -Dspring-boot.run.arguments=--hono.client.host=localhost,--hono.client.username=consumer@HONO,--hono.client.password=verysecret -Dspring-boot.run.profiles=command,ssl
 ~~~
 
-The client will prompt the user to enter the command's name, the payload to send and the payload's content type. For more information about command and payload refer to [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/).
+The client will prompt the user to enter the command's name, the payload to send and the payload's content type. For more information about command and payload refer to [Command and Control Concepts]({{% doclink "/concepts/command-and-control/" %}}).
 
 The example below illustrates how a command to set the volume with a JSON payload is sent to device `4711`.
 
@@ -387,7 +387,7 @@ The example below illustrates how a command to set the volume with a JSON payloa
     INFO  org.eclipse.hono.cli.Commander - Command sent to device... [Command request will timeout in 60 seconds]
 
 In the above example, the client waits up to 60 seconds for the response from the device before giving up.
-For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/index.html#specifying-the-time-a-device-will-wait-for-a-response) and [Commands using MQTT](https://www.eclipse.org/hono/docs/latest/user-guide/mqtt-adapter/index.html#command-control).
+For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP]({{% doclink "/user-guide/http-adapter/#specifying-the-time-a-device-will-wait-for-a-response" %}}) and [Commands using MQTT]({{% doclink "/user-guide/mqtt-adapter/#command-control" %}}).
 
 The received command response `{"result":"success"}` is displayed as shown in the below example. 
 
@@ -417,5 +417,5 @@ The following parts of Hono are involved in the upper scenario:
 * HTTP protocol adapter: receives the command and forwards it to the device in the HTTP response body
 * Device sends result of processing the command to HTTP adapter which then forwards it to the application
 
-The [Command and Control Concepts](https://www.eclipse.org/hono/docs/latest/concepts/command-and-control/) page contains sequence diagrams that
+The [Command and Control Concepts]({{% doclink "/concepts/command-and-control/" %}}) page contains sequence diagrams that
 explain this in more detail.

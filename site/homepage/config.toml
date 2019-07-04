@@ -18,6 +18,9 @@ pluralizeListTitles = "false"
     defaultKeywords = []
     defaultDescription = "A set of micro-services for connecting millions of devices."
 
+    # used in shortcode "doclink" to create absoulte URLs for links into the documentation
+    docsBaseUrl = "https://www.eclipse.org/hono/docs/latest"
+
     # Twitter
     twitter = "EclipseHono"
     twitterImage = "img/twitter_image.png"

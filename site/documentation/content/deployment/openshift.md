@@ -720,7 +720,7 @@ Hono documentation.
 
 ### Running consumer
 
-As described in the [Getting Started](https://www.eclipse.org/hono/getting-started/)
+As described in the [Getting Started]({{% homelink "/getting-started/" %}})
 guide, data produced by devices is usually consumed by downstream applications
 which connect directly to the router network service. You can start the client
 from the `cli` folder as follows:
