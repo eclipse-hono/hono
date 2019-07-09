@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -106,6 +107,17 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.app")
     public ApplicationConfigProperties applicationConfigProperties(){
         return new ApplicationConfigProperties();
+    }
+
+    /**
+     * Exposes properties for configuring the health check as a Spring bean.
+     *
+     * @return The health check configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.health-check")
+    public ServerConfig healthCheckConfigProperties() {
+        return new ServerConfig();
     }
 
     /**
@@ -328,7 +340,7 @@ public class ApplicationConfig {
      */
     @Bean
     public HealthCheckServer healthCheckServer() {
-        return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
+        return new VertxBasedHealthCheckServer(vertx(), healthCheckConfigProperties());
     }
 
     /**

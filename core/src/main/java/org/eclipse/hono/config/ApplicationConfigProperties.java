@@ -13,12 +13,6 @@
 
 package org.eclipse.hono.config;
 
-
-import java.util.Objects;
-
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.PortConfigurationHelper;
-
 /**
  * Configuration of common properties that are valid for an application (and not only a specific server).
  *
@@ -27,9 +21,6 @@ public class ApplicationConfigProperties {
 
     private int maxInstances = 0;
     private int startupTimeout = 20;
-
-    private int healthCheckPort = Constants.PORT_UNCONFIGURED;
-    private String healthCheckBindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
 
     /**
      * Gets the maximum time to wait for the server to start up.
@@ -88,51 +79,4 @@ public class ApplicationConfigProperties {
         }
         this.maxInstances = maxVerticleInstances;
     }
-
-    /**
-     * Gets the port that the HTTP server hosting the health check resource is configured to listen on.
-     *
-     * @return The port number.
-     */
-    public final int getHealthCheckPort() {
-        return healthCheckPort;
-    }
-
-    /**
-     * Sets the port that the HTTP server hosting the health check resource should listen on.
-     *
-     * @param port The port number.
-     * @throws IllegalArgumentException if the port number is &lt; 0 or &gt; 2^16 - 1
-     */
-    public final void setHealthCheckPort(final int port) {
-        if (PortConfigurationHelper.isValidPort(port)) {
-            this.healthCheckPort = port;
-        } else {
-            throw new IllegalArgumentException("invalid port number");
-        }
-    }
-
-    /**
-     * Gets the host name or literal IP address of the network interface that the HTTP server hosting the health check
-     * resource is configured to be bound to.
-     *
-     * @return The host name.
-     */
-    public final String getHealthCheckBindAddress() {
-        return healthCheckBindAddress;
-    }
-
-    /**
-     * Sets the host name or literal IP address of the network interface that the HTTP server hosting the health check
-     * resource should be bound to.
-     * <p>
-     * The default value of this property is {@link Constants#LOOPBACK_DEVICE_ADDRESS} on IPv4 stacks.
-     *
-     * @param address The host name or IP address.
-     * @throws NullPointerException if host is {@code null}.
-     */
-    public final void setHealthCheckBindAddress(final String address) {
-        this.healthCheckBindAddress = Objects.requireNonNull(address);
-    }
-
 }

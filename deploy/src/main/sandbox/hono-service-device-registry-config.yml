@@ -1,8 +1,9 @@
 hono:
   app:
     maxInstances: 1
-    healthCheckPort: ${vertx.health.port}
-    healthCheckBindAddress: 0.0.0.0
+  healthCheck:
+    port: ${vertx.health.port}
+    bindAddress: 0.0.0.0
   auth:
     host: ${hono.auth.service}${service.suffix}
     port: 5671

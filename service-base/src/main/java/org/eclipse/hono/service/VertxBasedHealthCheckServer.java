@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +33,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Router;
 
 /**
- * Provides a HTTP server for health checks. Requires an instance of {@link ApplicationConfigProperties} for it's
+ * Provides a HTTP server for health checks. Requires an instance of {@link ServerConfig} for its
  * configuration.
  * <p>
  * <b>Usage</b>
@@ -56,7 +56,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     private final HealthCheckHandler livenessHandler;
 
     private final Vertx vertx;
-    private final ApplicationConfigProperties config;
+    private final ServerConfig config;
     private Router router;
     private final List<Handler<Router>> additionalResources = new ArrayList<>();
 
@@ -69,10 +69,10 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      * @throws NullPointerException if config is {@code null}.
      * @throws IllegalArgumentException if health check port is not configured.
      */
-    public VertxBasedHealthCheckServer(final Vertx vertx, final ApplicationConfigProperties config) {
+    public VertxBasedHealthCheckServer(final Vertx vertx, final ServerConfig config) {
         this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
-        if (config.getHealthCheckPort() == Constants.PORT_UNCONFIGURED) {
+        if (config.getPort() == Constants.PORT_UNCONFIGURED) {
             throw new IllegalArgumentException("Health check port not configured");
         }
 
@@ -118,8 +118,8 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
         final Future<Void> result = Future.future();
         final HttpServerOptions options = new HttpServerOptions()
-                .setPort(config.getHealthCheckPort())
-                .setHost(config.getHealthCheckBindAddress());
+                .setPort(config.getPort())
+                .setHost(config.getBindAddress());
         server = vertx.createHttpServer(options);
 
         registerAdditionalResources();
@@ -163,7 +163,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
         final Future<Void> result = Future.future();
         if (server != null) {
-            LOG.info("closing health check HTTP server [{}:{}]", config.getHealthCheckBindAddress(), server.actualPort());
+            LOG.info("closing health check HTTP server [{}:{}]", config.getBindAddress(), server.actualPort());
             server.close(result);
         } else {
             result.complete();

@@ -27,6 +27,7 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.plan.PrometheusBasedResourceLimitChecks;
@@ -492,13 +493,24 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
+     * Exposes properties for configuring the health check as a Spring bean.
+     *
+     * @return The health check configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.health-check")
+    public ServerConfig healthCheckConfigProperties() {
+        return new ServerConfig();
+    }
+
+    /**
      * Exposes the health check server as a Spring bean.
      *
      * @return The health check server.
      */
     @Bean
     public HealthCheckServer healthCheckServer() {
-        return new VertxBasedHealthCheckServer(vertx(), applicationConfigProperties());
+        return new VertxBasedHealthCheckServer(vertx(), healthCheckConfigProperties());
     }
 
     /**

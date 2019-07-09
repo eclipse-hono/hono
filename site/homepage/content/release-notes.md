@@ -19,6 +19,12 @@ title = "Release Notes"
   classes for services got deprecated, and are planned to be removed in a future
   release. Also see [Device registry changes](#device-registry-changes) for
   more information.
+* The configuration parameters for the health check endpoint were moved from 
+  `hono.app` to `hono.healthCheck`. `hono.app.healthCheckPort` is now
+  `hono.healthCheck.port` and `hono.app.healthCheckBindAddress` is now 
+  `hono.healthCheck.BindAdress`. See the individual 
+  [Adapter Configuration guides](https://www.eclipse.org/hono/docs/latest/admin-guide/) 
+  for more information on the new naming.
 
 ### Device registry changes
 
