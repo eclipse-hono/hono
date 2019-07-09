@@ -323,8 +323,9 @@ objects:
       hono:
         app:
           maxInstances: 1
-          healthCheckPort: 8088
-          healthCheckBindAddress: 0.0.0.0
+        healthCheck:
+          port: 8088
+          bindAddress: 0.0.0.0
         vertx:
           preferNative: true
         amqp:
@@ -660,8 +661,9 @@ objects:
       hono:
         app:
           maxInstances: 1
-          healthCheckPort: 8088
-          healthCheckBindAddress: 0.0.0.0
+        healthCheck:
+          port: 8088
+          bindAddress: 0.0.0.0
         vertx:
           preferNative: true
         mqtt:
@@ -1027,8 +1029,9 @@ objects:
       hono:
         app:
           maxInstances: 1
-          healthCheckPort: 8088
-          healthCheckBindAddress: 0.0.0.0
+        healthCheck:
+          port: 8088
+          bindAddress: 0.0.0.0
         vertx:
           preferNative: true
         http:
@@ -1345,8 +1348,9 @@ objects:
       hono:
         app:
           maxInstances: 1
-          healthCheckBindAddress: 0.0.0.0
-          healthCheckPort: 8088
+        healthCheck:
+          bindAddress: 0.0.0.0
+          port: 8088
         vertx:
           preferNative: true
         auth:
@@ -1678,8 +1682,9 @@ objects:
       hono:
         app:
           maxInstances: 1
-          healthCheckPort: 8088
-          healthCheckBindAddress: 0.0.0.0
+        healthCheck:
+          port: 8088
+          bindAddress: 0.0.0.0
         vertx:
           preferNative: true
         auth:

@@ -1,9 +1,10 @@
 hono:
   app:
     maxInstances: 1
-    healthCheckBindAddress: 0.0.0.0
-    healthCheckPort: ${vertx.health.port}
     startupTimeout: 120
+  healthCheck:
+    bindAddress: 0.0.0.0
+    port: ${vertx.health.port}
   mqtt:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
