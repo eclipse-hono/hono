@@ -134,7 +134,6 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
      * 
      * @return The message.
      * @throws JMSException if the message could not be created.
-     * @throws NullPointerException if payload is {@code null}.
      */
     protected final BytesMessage createMessage() throws JMSException {
         return createMessage((Buffer) null);

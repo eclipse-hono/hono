@@ -226,7 +226,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
      */
     @SuppressWarnings({ "unchecked" })
     @Test
-    public void testDoStartwithStartEmptyIgnoreTenants(final VertxTestContext ctx) {
+    public void testDoStartWithStartEmptyIgnoreTenants(final VertxTestContext ctx) {
 
         // GIVEN a service configured with a file name
         props.setFilename(FILE_NAME);

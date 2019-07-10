@@ -203,7 +203,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     }
 
     /**
-     * Verifies that the adapter forwards on-way commands from
+     * Verifies that the adapter forwards one-way commands from
      * an application to a device.
      * 
      * @param ctx The vert.x test context.
@@ -511,16 +511,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     }
 
     /**
-     * Registers a device and opens a connection to the MQTT adapter using
+     * Registers a device and opens a connection to the AMQP adapter using
      * the device's credentials.
      * 
-     * @param tenantId The ID of the tenant that the device blongs to.
+     * @param tenantId The ID of the tenant that the device belongs to.
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param password The password to use for authentication.
      * @param consumerFactory The factory for creating the consumer of messages published by the device or {@code null}
      *            if no consumer should be created.
-     * @return A future that will be completed with the CONNACK packet received from the adapter or failed if the
+     * @return A future that will be completed with the ProtonConnection with the adapter or failed if the
      *         connection could not be established.
      */
     protected final Future<ProtonConnection> connectToAdapter(

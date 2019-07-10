@@ -9,7 +9,7 @@ weight = 190
 
 ## Time until Disconnect Notification
 
-*Devicess* and *Protocol Adapters* can notify an application about the fact that a device is connected and ready to receive one or more commands by means of including a *time 'til disconnect* (*ttd*) property in downstream AMQP 1.0 messages containing data originating from a connected device.
+*Devices* and *Protocol Adapters* can notify an application about the fact that a device is connected and ready to receive one or more commands by means of including a *time 'til disconnect* (*ttd*) property in downstream AMQP 1.0 messages containing data originating from a connected device.
 
 The *ttd* property value indicates the time that the device will stay connected to the protocol adapter.
 Using this value together with the *creation-time* of the message, an application can determine whether an attempt to send a command to the device has a reasonable chance of succeeding.

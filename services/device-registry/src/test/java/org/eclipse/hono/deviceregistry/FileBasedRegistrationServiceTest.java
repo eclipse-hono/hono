@@ -353,7 +353,6 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
                 // complete
 
                 .setHandler(ctx.completing());
-        ;
 
     }
 

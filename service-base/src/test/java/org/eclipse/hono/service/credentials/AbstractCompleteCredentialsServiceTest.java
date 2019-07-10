@@ -77,7 +77,7 @@ public abstract class AbstractCompleteCredentialsServiceTest {
             assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
             ctx.completeNow();
         })));
-;
+
     }
 
     /**

@@ -194,7 +194,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             result.fail(e);
         }
         return result;
-    };
+    }
 
     int addCredentialsForTenant(final JsonObject tenant) {
         int count = 0;

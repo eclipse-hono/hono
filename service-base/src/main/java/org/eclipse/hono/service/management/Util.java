@@ -35,7 +35,7 @@ public class Util {
     /**
      * Creates a new <em>OpenTracing</em> span for tracing the execution of a service operation.
      * <p>
-     * The returned span will already contain tags for the given tenant and device ids (if either is not {code null}).
+     * The returned span will already contain tags for the given tenant and device ids (if either is not {@code null}).
      *
      * @param operationName The operation name that the span should be created for.
      * @param spanContext Existing span context.
@@ -68,7 +68,7 @@ public class Util {
     /**
      * Creates a new <em>OpenTracing</em> span for tracing the execution of a tenant service operation.
      * <p>
-     * The returned span will already contain tags for the given tenant id (if not {code null}).
+     * The returned span will already contain tags for the given tenant id (if not {@code null}).
      *
      * @param operationName The operation name that the span should be created for.
      * @param spanContext Existing span context.

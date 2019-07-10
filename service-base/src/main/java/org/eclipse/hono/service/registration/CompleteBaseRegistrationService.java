@@ -26,7 +26,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A Base class for implementing {@link CompleteRegistrationService}.
+ * A base class for implementing {@link CompleteRegistrationService}.
  * <p>
  * In particular, this base class provides support for receiving service invocation request messages
  * via vert.x' event bus and route them to specific methods corresponding to the operation indicated

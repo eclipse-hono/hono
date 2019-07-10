@@ -172,7 +172,7 @@ public final class FileBasedCredentialsService extends CompleteBaseCredentialsSe
             result.fail(e);
         }
         return result;
-    };
+    }
 
     int addCredentialsForTenant(final JsonObject tenant) {
         int count = 0;

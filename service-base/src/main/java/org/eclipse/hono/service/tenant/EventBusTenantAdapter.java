@@ -173,7 +173,7 @@ public abstract class EventBusTenantAdapter<T> extends EventBusService<T> implem
     /**
      * Creates a new <em>OpenTracing</em> span for tracing the execution of a tenant service operation.
      * <p>
-     * The returned span will already contain a tag for the given tenant (if it is not {code null}).
+     * The returned span will already contain a tag for the given tenant (if it is not {@code null}).
      *
      * @param operationName The operation name that the span should be created for.
      * @param spanContext Existing span context.

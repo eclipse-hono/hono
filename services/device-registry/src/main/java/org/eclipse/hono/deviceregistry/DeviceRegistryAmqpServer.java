@@ -20,7 +20,7 @@ import org.eclipse.hono.util.Constants;
 import org.springframework.stereotype.Component;
 
 /**
- * Default AQMP server for Hono's example device registry.
+ * Default AMQP server for Hono's example device registry.
  */
 @Component
 public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {

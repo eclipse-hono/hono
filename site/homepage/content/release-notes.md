@@ -635,7 +635,7 @@ Since 0.8-M1 missed an important artifact, the first 0.8 milestone is available 
 * The HTTP protocol adapter now supports devices uploading a response to a command that has been sent to the device before. Please refer to the [HTTP adapter User Guide](https://www.eclipse.org/hono/docs/latest/user-guide/http-adapter/index.html#sending-a-response-to-a-command-authenticated-device) for details.
 * Hono's service components can now be configured to use OpenSSL instead of the JVM's default SSL engine. The [admin guide](https://www.eclipse.org/hono/docs/latest/admin-guide/secure_communication/index.html#using-openssl) describes how to do this.
 * In addition to number of successful MQTT and HTTP messages now also the
-  payload size of the message bodys is being recorded in the metrics system.
+  payload size of the message body is being recorded in the metrics system.
 
 ### Fixes & Enhancements
 

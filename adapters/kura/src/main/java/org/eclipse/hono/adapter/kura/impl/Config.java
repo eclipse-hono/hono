@@ -39,7 +39,7 @@ public class Config extends AbstractAdapterConfig {
     private static final String BEAN_NAME_KURA_PROTOCOL_ADAPTER = "kuraProtocolAdapter";
 
     /**
-     * Creates a new MQTT protocol adapter instance.
+     * Creates a new Kura protocol adapter instance.
      * 
      * @return The new instance.
      */
@@ -114,7 +114,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating MQTT adapter instances.
+     * Exposes a factory for creating Kura adapter instances.
      * 
      * @return The factory bean.
      */

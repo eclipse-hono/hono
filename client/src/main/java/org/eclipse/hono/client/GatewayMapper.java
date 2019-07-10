@@ -26,7 +26,7 @@ import io.vertx.core.Future;
 public interface GatewayMapper extends ConnectionLifecycle<HonoConnection> {
 
     /**
-     * Creates a new GatewayMapper instance.
+     * Creates a new {@link GatewayMapper} using the default implementation.
      *
      * @param registrationClientFactory The factory to create a registration client instance.
      * @param deviceConnectionClientFactory The factory to create a device connection client instance.

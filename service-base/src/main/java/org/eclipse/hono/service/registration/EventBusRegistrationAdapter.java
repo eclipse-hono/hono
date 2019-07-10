@@ -164,7 +164,7 @@ public abstract class EventBusRegistrationAdapter<T> extends EventBusService<T> 
     /**
      * Creates a new <em>OpenTracing</em> span for tracing the execution of a registration service operation.
      * <p>
-     * The returned span will already contain tags for the given tenant, device and gateway ids (if either is not {code null}).
+     * The returned span will already contain tags for the given tenant, device and gateway ids (if either is not {@code null}).
      * 
      * @param operationName The operation name that the span should be created for.
      * @param spanContext Existing span context.

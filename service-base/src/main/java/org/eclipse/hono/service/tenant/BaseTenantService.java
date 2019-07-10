@@ -28,7 +28,7 @@ import org.eclipse.hono.util.TenantResult;
 
 
 /**
- * a Base class for implementing {@link TenantService}.
+ * A base class for implementing {@link TenantService}.
  * <p>
  * In particular, this base class provides support for receiving service invocation request messages
  * via vert.x' event bus and routing them to specific methods accepting the
