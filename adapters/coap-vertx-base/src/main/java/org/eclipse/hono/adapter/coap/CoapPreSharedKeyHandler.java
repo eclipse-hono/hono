@@ -26,6 +26,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.elements.auth.PreSharedKeyIdentity;
+import org.eclipse.californium.scandium.dtls.PskPublicInformation;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.auth.Device;
@@ -150,9 +151,9 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     }
 
     @Override
-    public byte[] getKey(final String identity) {
+    public byte[] getKey(final PskPublicInformation identity) {
         LOG.debug("getting PSK secret for identity [{}]", identity);
-        final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(identity);
+        final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(identity.getPublicInfoAsString());
         if (handshakeIdentity == null) {
             return null;
         }
@@ -178,20 +179,20 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
     }
 
     @Override
-    public byte[] getKey(final ServerNames serverNames, final String identity) {
+    public byte[] getKey(final ServerNames serverNames, final PskPublicInformation identity) {
         // for now, don't support serverNames indication
         // maybe extended in the future to provide tenant identity
         return getKey(identity);
     }
 
     @Override
-    public String getIdentity(final InetSocketAddress inetAddress) {
+    public PskPublicInformation getIdentity(final InetSocketAddress inetAddress) {
         // not used by dtls server, and role exchange is not supported!
         return null;
     }
 
     @Override
-    public String getIdentity(final InetSocketAddress peerAddress, final ServerNames virtualHost) {
+    public PskPublicInformation getIdentity(final InetSocketAddress peerAddress, final ServerNames virtualHost) {
         // not used by dtls server, and role exchange is not supported!
         return null;
     }
