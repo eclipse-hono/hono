@@ -22,31 +22,43 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.eclipse.hono.service.deviceconnection.BaseDeviceConnectionService;
+import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import org.springframework.stereotype.Repository;
 
 /**
  * A device connection service that keeps all data in memory.
  */
 @Repository
-public final class MapBasedDeviceConnectionService extends BaseDeviceConnectionService<MapBasedDeviceConnectionsConfigProperties> {
+@Qualifier("serviceImpl")
+public final class MapBasedDeviceConnectionService extends AbstractVerticle implements DeviceConnectionService {
+
+    private static final Logger log = LoggerFactory.getLogger(MapBasedDeviceConnectionService.class);
 
     // <tenantId, <deviceId, lastKnownGatewayJson>>
     private final Map<String, Map<String, JsonObject>> lastKnownGatewaysMap = new HashMap<>();
 
+    private MapBasedDeviceConnectionsConfigProperties config;
+
     @Autowired
-    @Override
     public void setConfig(final MapBasedDeviceConnectionsConfigProperties configuration) {
-        setSpecificConfig(configuration);
+        this.config = configuration;
+    }
+
+    public MapBasedDeviceConnectionsConfigProperties getConfig() {
+        return config;
     }
 
     @Override

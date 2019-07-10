@@ -22,7 +22,7 @@ import org.eclipse.hono.service.AbstractApplication;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.credentials.CompleteBaseCredentialsService;
-import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
+import org.eclipse.hono.service.deviceconnection.BaseDeviceConnectionService;
 import org.eclipse.hono.service.registration.CompleteBaseRegistrationService;
 import org.eclipse.hono.service.tenant.CompleteBaseTenantService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +49,7 @@ public class Application extends AbstractApplication {
     private CompleteBaseCredentialsService<?> credentialsService;
     private CompleteBaseRegistrationService<?> registrationService;
     private CompleteBaseTenantService<?> tenantService;
-    private DeviceConnectionService deviceConnectionService;
+    private BaseDeviceConnectionService deviceConnectionService;
 
     /**
      * Sets the credentials service implementation this server is based on.
@@ -91,7 +91,7 @@ public class Application extends AbstractApplication {
      * @throws NullPointerException if service is {@code null}.
      */
     @Autowired
-    public final void setDeviceConnectionService(final DeviceConnectionService deviceConnectionService) {
+    public final void setDeviceConnectionService(final BaseDeviceConnectionService deviceConnectionService) {
         this.deviceConnectionService = Objects.requireNonNull(deviceConnectionService);
     }
 
