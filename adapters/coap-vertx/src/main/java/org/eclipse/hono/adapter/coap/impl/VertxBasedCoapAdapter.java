@@ -24,12 +24,11 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
-import org.eclipse.hono.adapter.coap.CoapAuthenticationHandler;
 import org.eclipse.hono.adapter.coap.CoapContext;
 import org.eclipse.hono.adapter.coap.CoapErrorResponse;
+import org.eclipse.hono.adapter.coap.ExtendedDevice;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -82,38 +81,6 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "missing tenant and device ID in URI"));
         }
-    }
-
-    /**
-     * Gets an authenticated device's identity for a CoAP request.
-     * 
-     * @param device The device that the data in the request payload originates from.
-     *               If {@code null}, the origin of the data is assumed to be the authenticated device.
-     * @param exchange The CoAP exchange with the authenticated device's principal.
-     * @return The device identity.
-     */
-    public Future<ExtendedDevice> getAuthenticatedExtendedDevice(final Device device,
-            final CoapExchange exchange) {
-
-        final Future<ExtendedDevice> result = Future.future();
-        final Principal peer = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
-        if (peer == null) {
-            result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
-        } else {
-            final CoapAuthenticationHandler authenticationHandler = getAuthenticationHandler(peer);
-
-            if (authenticationHandler == null) {
-                log.debug("device authentication handler missing for principal [{}]", peer);
-                result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
-            } else {
-                authenticationHandler.getAuthenticatedDevice(exchange)
-                        .compose(authorizedDevice -> {
-                            final Device originDevice = device != null ? device : authorizedDevice;
-                            result.complete(new ExtendedDevice(authorizedDevice, originDevice));
-                        }, result);
-            }
-        }
-        return result;
     }
 
     /**

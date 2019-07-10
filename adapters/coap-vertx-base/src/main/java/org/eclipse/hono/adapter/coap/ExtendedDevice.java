@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.coap.impl;
+package org.eclipse.hono.adapter.coap;
 
 import org.eclipse.hono.auth.Device;
 

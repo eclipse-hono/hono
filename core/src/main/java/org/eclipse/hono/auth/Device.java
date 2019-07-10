@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.auth;
 
+import java.security.Principal;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -30,7 +31,7 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * The device's identity and authorities are contained in a Java Web Token.
  */
-public class Device {
+public class Device implements Principal {
 
     private final JsonObject principal;
     private final Set<Object> authorities = new HashSet<>();
@@ -120,6 +121,16 @@ public class Device {
      */
     public final String getDeviceId() {
         return principal.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Returns the device identifier.
+     */
+    @Override
+    public final String getName() {
+        return getDeviceId();
     }
 
     @Override

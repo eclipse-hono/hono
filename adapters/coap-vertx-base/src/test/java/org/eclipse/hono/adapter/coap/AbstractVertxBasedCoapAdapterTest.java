@@ -270,23 +270,26 @@ public class AbstractVertxBasedCoapAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testStartUpFailsIfCredentialsAuthProviderIsNotSet(final TestContext ctx) {
+    public void testStartUpFailsIfCredentialsClientFactoryIsNotSet(final TestContext ctx) {
 
-        // GIVEN an adapter
+        // GIVEN an adapter that has not all required service clients set
         final CoapServer server = getCoapServer(false);
-        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, false,
-                s -> ctx.fail("should not have invoked onStartupSuccess"));
+        @SuppressWarnings("unchecked")
+        final Handler<Void> successHandler = mock(Handler.class);
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, false, successHandler);
 
         // WHEN starting the adapter
-        final Async startup = ctx.async();
+        final Async startupFailure = ctx.async();
         final Future<Void> startupTracker = Future.future();
         startupTracker.setHandler(ctx.asyncAssertFailure(s -> {
-            startup.complete();
+            startupFailure.complete();
         }));
         adapter.start(startupTracker);
 
-        // THEN the onStartupSuccess method has been invoked, see ctx.fail
-        startup.await();
+        // THEN startup has failed
+        startupFailure.await();
+        // and the onStartupSuccess method has not been invoked
+        verify(successHandler, never()).handle(any());
     }
 
     /**
@@ -558,8 +561,8 @@ public class AbstractVertxBasedCoapAdapterTest {
      * Creates a protocol adapter for a given HTTP server.
      * 
      * @param server The coap server.
-     * @param complete {@code true}, if that adapter should be created with all hono clients set, {@code false}, if the
-     *            adapter should be created, and all hono clients set, but the credentials client is not set.
+     * @param complete {@code true}, if that adapter should be created with all Hono service clients set, {@code false}, if the
+     *            adapter should be created, and all Hono service clients set, but the credentials client is not set.
      * @param onStartupSuccess The handler to invoke on successful startup.
      * 
      * @return The adapter.

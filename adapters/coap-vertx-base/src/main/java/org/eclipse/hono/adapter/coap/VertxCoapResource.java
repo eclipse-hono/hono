@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
@@ -177,6 +178,14 @@ class VertxCoapResource implements Resource {
     @Override
     public ExecutorService getExecutor() {
         return resource.getExecutor();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ScheduledThreadPoolExecutor getSecondaryExecutor() {
+        return resource.getSecondaryExecutor();
     }
 
     @Override

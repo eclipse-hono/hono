@@ -15,13 +15,13 @@ package org.eclipse.hono.adapter.coap;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.security.PrivateKey;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.qpid.proton.message.Message;
@@ -32,9 +32,13 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
+import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
+import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
 import org.eclipse.californium.scandium.DTLSConnector;
+import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
+import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DownstreamSender;
@@ -68,10 +72,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * A logger shared with subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    /**
-     * Map for authorization handler.
-     */
-    protected final Map<Class<? extends Principal>, CoapAuthenticationHandler> authenticationHandlerMap = new HashMap<>();
 
     private final Set<Resource> resourcesToAdd = new HashSet<>();
 
@@ -80,8 +80,30 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     private CoapServer server;
     private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
+    private ApplicationLevelInfoSupplier honoDeviceResolver;
+    private PskStore pskStore;
+
     private volatile Endpoint secureEndpoint;
     private volatile Endpoint insecureEndpoint;
+
+    /**
+     * Sets the service to use for resolving an authenticated CoAP client to a Hono device.
+     * 
+     * @param deviceIdentityResolver The resolver to use.
+     */
+    public final void setHonoDeviceResolver(final ApplicationLevelInfoSupplier deviceIdentityResolver) {
+        this.honoDeviceResolver = Objects.requireNonNull(deviceIdentityResolver);
+    }
+
+    /**
+     * Sets the service to use for looking up pre-shared keys for clients authenticating using PSK
+     * based ciphers in a DTLS handshake.
+     * 
+     * @param pskStore The service to use.
+     */
+    public final void setPskStore(final PskStore pskStore) {
+        this.pskStore = Objects.requireNonNull(pskStore);
+    }
 
     /**
      * Sets the metrics for this service.
@@ -151,16 +173,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * Get authentication handler for the type of the provided principal.
-     * 
-     * @param principal principal to be authenticated
-     * @return authentication handler, or {@code null}, if no handler is available for this principal or no principal was provided.
-     */
-    protected CoapAuthenticationHandler getAuthenticationHandler(final Principal principal) {
-        return principal == null ? null : authenticationHandlerMap.get(principal.getClass());
-    }
-
-    /**
      * Sets the coap server instance configured to serve requests.
      * <p>
      * If no server is set using this method, then a server instance is created during startup of this adapter based on
@@ -184,21 +196,22 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final Future<NetworkConfig> secureConfig = getSecureNetworkConfig();
             final Future<NetworkConfig> insecureConfig = getInsecureNetworkConfig();
 
-            return CompositeFuture.all(secureConfig, insecureConfig)
-                .map(ok -> {
-                    final CoapServer startingServer = server == null ? new CoapServer(insecureConfig.result()) : server;
-                    addResources(startingServer);
-                    bindSecureEndpoint(startingServer, secureConfig.result());
-                    bindInsecureEndpoint(startingServer, insecureConfig.result());
-                    startingServer.start();
-                    if (secureEndpoint != null) {
-                        LOG.info("coaps/udp endpoint running on {}", secureEndpoint.getAddress());
-                    }
-                    if (insecureEndpoint != null) {
-                        LOG.info("coap/udp endpoint running on {}", insecureEndpoint.getAddress());
-                    }
-                    return ok;
-                });
+            return CompositeFuture
+                    .all(secureConfig, insecureConfig)
+                    .map(ok -> {
+                        final CoapServer startingServer = server == null ? new CoapServer(insecureConfig.result()) : server;
+                        addResources(startingServer);
+                        bindSecureEndpoint(startingServer, secureConfig.result());
+                        bindInsecureEndpoint(startingServer, insecureConfig.result());
+                        startingServer.start();
+                        if (secureEndpoint != null) {
+                            LOG.info("coaps/udp endpoint running on {}", secureEndpoint.getAddress());
+                        }
+                        if (insecureEndpoint != null) {
+                            LOG.info("coap/udp endpoint running on {}", insecureEndpoint.getAddress());
+                        }
+                        return ok;
+                    });
         }).compose(ok -> {
             try {
                 onStartupSuccess();
@@ -217,16 +230,27 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     private void bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
 
-        final CoapPreSharedKeyHandler pskHandler = new CoapPreSharedKeyHandler(context, getConfig(),
-                getCredentialsClientFactory());
-        authenticationHandlerMap.put(pskHandler.getType(), pskHandler);
+        final ApplicationLevelInfoSupplier deviceResolver = Optional
+                .ofNullable(honoDeviceResolver)
+                .orElse(new DefaultDeviceResolver(context, getConfig(), getCredentialsClientFactory()));
+        final PskStore store = Optional
+                .ofNullable(pskStore)
+                .orElseGet(() -> {
+                    if (deviceResolver instanceof PskStore) {
+                        return (PskStore) deviceResolver;
+                    } else {
+                        return new DefaultDeviceResolver(context, getConfig(), getCredentialsClientFactory());
+                    }
+                });
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
         dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
         dtlsConfig.setConnectionThreadCount(getConfig().getConnectorThreads());
         dtlsConfig.setAddress(
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
-        dtlsConfig.setPskStore(pskHandler);
+        dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
+        dtlsConfig.setPskStore(store);
+
         final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
         final PrivateKey pk = keyLoader.getPrivateKey();
         if (pk != null && keyLoader.getCertificateChain() != null) {
@@ -415,6 +439,41 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     protected Future<Void> postShutdown() {
         return Future.succeededFuture();
     }
+
+    /**
+     * Gets an authenticated device's identity for a CoAP request.
+     * 
+     * @param device The device that the data in the request payload originates from.
+     *               If {@code null}, the origin of the data is assumed to be the authenticated device.
+     * @param exchange The CoAP exchange with the authenticated device's principal.
+     * @return The device identity.
+     */
+    protected final Future<ExtendedDevice> getAuthenticatedExtendedDevice(final Device device, final CoapExchange exchange) {
+
+        final Future<ExtendedDevice> result = Future.future();
+        final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
+        if (peerIdentity instanceof ExtensiblePrincipal) {
+            @SuppressWarnings("unchecked")
+            final ExtensiblePrincipal<? extends Principal> extPrincipal = (ExtensiblePrincipal<? extends Principal>) peerIdentity;
+            final Device authenticatedDevice = extPrincipal.getExtendedInfo().get("hono-device", Device.class);
+            if (authenticatedDevice != null) {
+                final Device originDevice = Optional.ofNullable(device).orElse(authenticatedDevice);
+                result.complete(new ExtendedDevice(authenticatedDevice, originDevice));
+            } else {
+                result.fail(new ClientErrorException(
+                        HttpURLConnection.HTTP_UNAUTHORIZED,
+                        "DTLS session does not contain authenticated Device"));
+            }
+        } else {
+            result.fail(new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "DTLS session does not contain ExtensiblePrincipal"));
+
+        }
+
+        return result;
+    }
+
 
     /**
      * Forwards the body of a CoAP request to the south bound Telemetry API of the AMQP 1.0 Messaging Network.
