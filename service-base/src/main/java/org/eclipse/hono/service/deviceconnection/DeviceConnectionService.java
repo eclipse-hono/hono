@@ -18,14 +18,13 @@ import org.eclipse.hono.util.DeviceConnectionResult;
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.Verticle;
 
 /**
  * A service for keeping record of device connection information.
  *
  * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-connection-api/">Device Connection API</a>
  */
-public interface DeviceConnectionService extends Verticle {
+public interface DeviceConnectionService {
 
     /**
      * Sets the given gateway as the last gateway that acted on behalf of the given device.
