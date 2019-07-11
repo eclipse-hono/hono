@@ -243,7 +243,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
 
         // which is enabled for a tenant
-        givenAConfiguredTenant(TEST_TENANT_ID, true);
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // IF a device sends a 'fire and forget' telemetry message
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
@@ -260,6 +260,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
             verify(metrics).reportTelemetry(
                     eq(EndpointType.TELEMETRY),
                     eq(TEST_TENANT_ID),
+                    eq(tenantObject),
                     eq(ProcessingOutcome.FORWARDED),
                     eq(QoS.AT_MOST_ONCE),
                     eq(payload.length()),
@@ -282,7 +283,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(downstreamDelivery);
 
         // which is enabled for a tenant
-        givenAConfiguredTenant(TEST_TENANT_ID, true);
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // IF a device send telemetry data (with un-settled delivery)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
@@ -306,6 +307,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         verify(metrics).reportTelemetry(
                 eq(EndpointType.TELEMETRY),
                 eq(TEST_TENANT_ID),
+                eq(tenantObject),
                 eq(ProcessingOutcome.FORWARDED),
                 eq(QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
@@ -326,7 +328,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
 
         // AND given a tenant for which the AMQP Adapter is disabled
-        givenAConfiguredTenant(TEST_TENANT_ID, false);
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, false);
 
         // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
@@ -346,6 +348,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
             verify(metrics).reportTelemetry(
                     eq(EndpointType.TELEMETRY),
                     eq(TEST_TENANT_ID),
+                    eq(tenantObject),
                     eq(ProcessingOutcome.UNPROCESSABLE),
                     eq(QoS.AT_LEAST_ONCE),
                     eq(payload.length()),
@@ -565,7 +568,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture(delivery));
         // which is enabled for the test tenant
-        givenAConfiguredTenant(TEST_TENANT_ID, true);
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an unauthenticated device publishes a command response
         final String replyToAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID,
@@ -586,6 +589,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
             verify(metrics).reportCommand(
                 eq(Direction.RESPONSE),
                 eq(TEST_TENANT_ID),
+                eq(tenantObject),
                 eq(ProcessingOutcome.FORWARDED),
                 eq(payload.length()),
                 any());
@@ -660,6 +664,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(deviceLink.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
         // that has subscribed to commands
         final ProtonReceiver commandReceiver = mock(ProtonReceiver.class);
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an application sends a one-way command to the device
         final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
@@ -668,7 +673,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, commandReceiver, mock(Span.class));
-        adapter.onCommandReceived(deviceLink, context);
+        adapter.onCommandReceived(tenantObject, deviceLink, context);
         // and the device settles it
         final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
         verify(deviceLink).send(any(Message.class), deliveryUpdateHandler.capture());
@@ -683,6 +688,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         verify(metrics).reportCommand(
                 eq(Direction.ONE_WAY),
                 eq(TEST_TENANT_ID),
+                eq(tenantObject),
                 eq(expectedProcessingOutcome),
                 eq(payload.length()),
                 any());
@@ -781,7 +787,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
-
+        // which is enabled for a tenant
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
@@ -806,6 +813,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                     verify(metrics).reportTelemetry(
                             eq(EndpointType.TELEMETRY),
                             eq(TEST_TENANT_ID),
+                            eq(tenantObject),
                             eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
@@ -824,7 +832,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final DownstreamSender eventSender = givenAnEventSender(Future.future());
-
+        // which is enabled for a tenant
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
@@ -849,6 +858,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                     verify(metrics).reportTelemetry(
                             eq(EndpointType.EVENT),
                             eq(TEST_TENANT_ID),
+                            eq(tenantObject),
                             eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
@@ -868,7 +878,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-
+        // which is enabled for a tenant
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
@@ -897,6 +908,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                     verify(metrics).reportCommand(
                             eq(Direction.RESPONSE),
                             eq(TEST_TENANT_ID),
+                            eq(tenantObject),
                             eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(payload.length()),
                             any());
@@ -947,11 +959,12 @@ public class VertxBasedAmqpProtocolAdapterTest {
         return conn;
     }
 
-    private void givenAConfiguredTenant(final String tenantId, final boolean enabled) {
+    private TenantObject givenAConfiguredTenant(final String tenantId, final boolean enabled) {
         final TenantObject tenantConfig = TenantObject.from(tenantId, Boolean.TRUE);
         tenantConfig
                 .addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, enabled));
         when(tenantClient.get(eq(tenantId), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantConfig));
+        return tenantConfig;
     }
 
     private Message getFakeMessage(final String to, final Buffer payload) {

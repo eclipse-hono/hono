@@ -683,42 +683,38 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     addMicrometerSample(commandContext, timer);
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Command command = commandContext.getCommand();
+                    final Future<TenantObject> tenantTracker = getTenantConfiguration(sourceAddress.getTenantId(),
+                            commandContext.getTracingContext());
 
-                    if (!command.isValid()) {
-                        final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message");
-                        commandContext.reject(getErrorCondition(ex), 1);
+                    tenantTracker.compose(tenantObject -> {
+                        if (!command.isValid()) {
+                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                    "malformed command message"));
+                        }
+                        if (!sender.isOpen()) {
+                            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                    "sender link is not open"));
+                        }
+                        return checkMessageLimit(tenantObject, command.getPayloadSize());
+                    }).compose(success -> {
+                        onCommandReceived(tenantTracker.result(), sender, commandContext);
+                        return Future.succeededFuture();
+                    }).otherwise(failure -> {
+                        if (failure instanceof ClientErrorException) {
+                            // issue credit so that application(s) can send the next command
+                            commandContext.reject(getErrorCondition(failure), 1);
+                        } else {
+                            commandContext.release(1);
+                        }
                         metrics.reportCommand(
                                 command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 sourceAddress.getTenantId(),
-                                ProcessingOutcome.UNPROCESSABLE,
+                                tenantTracker.result(),
+                                ProcessingOutcome.from(failure),
                                 command.getPayloadSize(),
                                 timer);
-                    } else if (!sender.isOpen()) {
-                        commandContext.release(1);
-                        metrics.reportCommand(
-                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                sourceAddress.getTenantId(),
-                                ProcessingOutcome.UNDELIVERABLE,
-                                command.getPayloadSize(),
-                                timer);
-                    } else {
-                        getTenantConfiguration(sourceAddress.getTenantId(), commandContext.getTracingContext())
-                                .compose(tenantObject -> checkMessageLimit(tenantObject, command.getPayloadSize()))
-                                .setHandler(result -> {
-                                    if (result.succeeded()) {
-                                        onCommandReceived(sender, commandContext);
-                                    } else {
-                                        // issue credit so that application(s) can send the next command
-                                        commandContext.reject(getErrorCondition(result.cause()), 1);
-                                        metrics.reportCommand(
-                                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                                sourceAddress.getTenantId(),
-                                                ProcessingOutcome.from(result.cause()),
-                                                command.getPayloadSize(),
-                                                timer);
-                                    }
-                                });
-                    }
+                        return null;
+                    });
                 }, closeHandler -> {},
                 DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
     }
@@ -730,11 +726,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * This implementation simply forwards the command to the device
      * via the given link and flows a single credit back to the application.
      * 
+     * @param tenantObject The tenant configuration object.
      * @param sender The link for sending the command to the device.
      * @param commandContext The context in which the adapter receives the command message.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected void onCommandReceived(final ProtonSender sender, final CommandContext commandContext) {
+    protected void onCommandReceived(final TenantObject tenantObject, final ProtonSender sender, final CommandContext commandContext) {
 
         Objects.requireNonNull(sender);
         Objects.requireNonNull(commandContext);
@@ -777,6 +774,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             metrics.reportCommand(
                     command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                     command.getTenant(),
+                    tenantObject,
                     outcome,
                     command.getPayloadSize(),
                     getMicrometerSample(commandContext));
@@ -863,14 +861,15 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
                 context.getAuthenticatedDevice(), currentSpan.context());
-        final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
-                currentSpan.context())
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(resource.getTenantId(),
+                currentSpan.context());
+        final Future<TenantObject> tenantValidationTracker = tenantTracker
                         .compose(tenantObject -> CompositeFuture
                                 .all(isAdapterEnabled(tenantObject),
                                         checkMessageLimit(tenantObject, context.getPayloadSize()))
                                 .map(success -> tenantObject));
 
-        return CompositeFuture.all(tenantEnabledFuture, tokenFuture, senderFuture)
+        return CompositeFuture.all(tenantValidationTracker, tokenFuture, senderFuture)
                 .compose(ok -> {
 
                     final DownstreamSender sender = senderFuture.result();
@@ -878,7 +877,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             context.getMessage(),
                             ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
                             context.getAddress().toString(),
-                            tenantEnabledFuture.result(),
+                            tenantValidationTracker.result(),
                             tokenFuture.result(),
                             null); // no TTD
 
@@ -896,11 +895,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             context.getEndpoint().getCanonicalName(),
                             resource.getTenantId(),
                             resource.getResourceId(), t);
-                    final ProcessingOutcome outcome = t instanceof ClientErrorException ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
                     metrics.reportTelemetry(
                             context.getEndpoint(),
                             resource.getTenantId(),
-                            outcome,
+                            tenantTracker.result(),
+                            ProcessingOutcome.from(t),
                             context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
                             context.getPayloadSize(),
                             context.getTimer());
@@ -911,6 +910,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     metrics.reportTelemetry(
                             context.getEndpoint(),
                             resource.getTenantId(),
+                            tenantTracker.result(),
                             ProcessingOutcome.FORWARDED,
                             context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
                             context.getPayloadSize(),
@@ -924,64 +924,69 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ResourceIdentifier resource,
             final Span currentSpan) {
 
-        final Future<CommandResponse> response = Optional.ofNullable(CommandResponse.from(context.getMessage()))
+        final Future<CommandResponse> responseTracker = Optional.ofNullable(CommandResponse.from(context.getMessage()))
                 .map(r -> Future.succeededFuture(r))
                 .orElseGet(() -> {
-                    TracingHelper.logError(currentSpan, String.format("invalid message (correlationId: %s, address: %s, status: %s)",
-                                    context.getMessage().getCorrelationId(), context.getMessage().getAddress(), MessageHelper.getStatus(context.getMessage())));
+                    TracingHelper.logError(currentSpan,
+                            String.format("invalid message (correlationId: %s, address: %s, status: %s)",
+                                    context.getMessage().getCorrelationId(), context.getMessage().getAddress(),
+                                    MessageHelper.getStatus(context.getMessage())));
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                             "malformed command response message"));
                 });
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(resource.getTenantId(),
+                currentSpan.context());
 
-        return response.compose(commandResponse -> {
+        return CompositeFuture.all(tenantTracker, responseTracker)
+                .compose(ok -> {
+                    final CommandResponse commandResponse = responseTracker.result();
+                    LOG.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
+                            resource.getResourceId(), commandResponse.getStatus(), commandResponse.getCorrelationId(),
+                            commandResponse.getReplyToId());
 
-            LOG.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
-                    resource.getResourceId(), commandResponse.getStatus(), commandResponse.getCorrelationId(),
-                    commandResponse.getReplyToId());
+                    final Map<String, Object> items = new HashMap<>(3);
+                    items.put(Fields.EVENT, "sending command response");
+                    items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), commandResponse.getCorrelationId());
+                    items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
+                    currentSpan.log(items);
 
-            final Map<String, Object> items = new HashMap<>(3);
-            items.put(Fields.EVENT, "sending command response");
-            items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), commandResponse.getCorrelationId());
-            items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
-            currentSpan.log(items);
+                    final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
+                            resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
+                    final Future<TenantObject> tenantValidationTracker = CompositeFuture
+                            .all(isAdapterEnabled(tenantTracker.result()),
+                                    checkMessageLimit(tenantTracker.result(), context.getPayloadSize()))
+                            .map(success -> tenantTracker.result());
 
-            final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
-                    resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
-            final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
-                    currentSpan.context())
-                            .compose(tenantObject -> CompositeFuture
-                                    .all(isAdapterEnabled(tenantObject),
-                                            checkMessageLimit(tenantObject, context.getPayloadSize()))
-                                    .map(success -> tenantObject));
+                    return CompositeFuture.all(tenantValidationTracker, tokenFuture)
+                            .compose(success -> sendCommandResponse(resource.getTenantId(), commandResponse,
+                                    currentSpan.context()));
+                }).map(delivery -> {
 
-            return CompositeFuture.all(tenantEnabledFuture, tokenFuture)
-                    .compose(ok -> sendCommandResponse(resource.getTenantId(), commandResponse, currentSpan.context()));
-        }).map(delivery -> {
+                    LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
+                            resource.getTenantId(), resource.getResourceId());
+                    metrics.reportCommand(
+                            Direction.RESPONSE,
+                            resource.getTenantId(),
+                            tenantTracker.result(),
+                            ProcessingOutcome.FORWARDED,
+                            context.getPayloadSize(),
+                            context.getTimer());
+                    return delivery;
 
-            LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
-                    resource.getTenantId(), resource.getResourceId());
-            metrics.reportCommand(
-                    Direction.RESPONSE,
-                    resource.getTenantId(),
-                    ProcessingOutcome.FORWARDED,
-                    context.getPayloadSize(),
-                    context.getTimer());
-            return delivery;
+                }).recover(t -> {
 
-        }).recover(t -> {
+                    LOG.debug("cannot process command response from device [tenant: {}, device-id: {}]",
+                            resource.getTenantId(), resource.getResourceId(), t);
+                    metrics.reportCommand(
+                            Direction.RESPONSE,
+                            resource.getTenantId(),
+                            tenantTracker.result(),
+                            ProcessingOutcome.from(t),
+                            context.getPayloadSize(),
+                            context.getTimer());
 
-            LOG.debug("cannot process command response from device [tenant: {}, device-id: {}]",
-                    resource.getTenantId(), resource.getResourceId(), t);
-            final ProcessingOutcome outcome = t instanceof ClientErrorException ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
-            metrics.reportCommand(
-                    Direction.RESPONSE,
-                    resource.getTenantId(),
-                    outcome,
-                    context.getPayloadSize(),
-                    context.getTimer());
-
-            return Future.failedFuture(t);
-        });
+                    return Future.failedFuture(t);
+                });
     }
 
     /**
