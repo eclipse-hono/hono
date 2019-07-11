@@ -157,6 +157,41 @@ public class CommandTest {
     }
 
     /**
+     * Verifies that a command can be created from a valid message that has an empty reply-to property
+     * and no message-id and correlation-id properties.
+     * Verifies that the replyToId is {@code null} and the command reports that it is a one-way command.
+     */
+    @Test
+    public void testFromMessageSucceedsWithoutReplyToAndCorrelationId() {
+        final Message message = mock(Message.class);
+        when(message.getSubject()).thenReturn("doThis");
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getName(), is("doThis"));
+        assertThat(cmd.getCorrelationId(), is(nullValue()));
+        assertNull(cmd.getReplyToId());
+        assertTrue(cmd.isOneWay());
+    }
+
+    /**
+     * Verifies that a command can be created from a message with message id but no correlation id.
+     */
+    @Test
+    public void testFromMessageSucceedsWithMessageIdButNoCorrelationId() {
+        final String replyToId = "the-reply-to-id";
+        final String messageId = "the-message-id";
+        final Message message = mock(Message.class);
+        when(message.getApplicationProperties()).thenReturn(null);
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getMessageId()).thenReturn(messageId);
+        when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getCorrelationId(), is(messageId));
+    }
+
+    /**
      * Verifies that a command can be created from a valid message with application properties.
      * Verifies that the application properties are able to be retrieved from the message.
      */
@@ -204,7 +239,7 @@ public class CommandTest {
      * contains a message nor correlation ID.
      */
     @Test
-    public void testFromMessageFailsForMissingCorrelationId() {
+    public void testFromMessageFailsForMissingCorrelationOrMessageId() {
         final String replyToId = "the-reply-to-id";
         final Message message = mock(Message.class);
         when(message.getSubject()).thenReturn("doThis");
@@ -255,7 +290,7 @@ public class CommandTest {
         assertFalse(command.isValid());
         // verify the returned validation error contains all missing fields
         assertThat(command.getInvalidCommandReason(), containsString("subject"));
-        assertThat(command.getInvalidCommandReason(), containsString("message/correlation-id"));
+        assertThat(command.getInvalidCommandReason(), containsString("correlation-id"));
         assertThat(command.getInvalidCommandReason(), containsString("reply-to"));
     }
 
