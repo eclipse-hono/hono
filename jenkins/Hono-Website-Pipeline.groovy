@@ -46,7 +46,7 @@ def build() {
         echo "Cloning Hono repository..."
         sh ''' 
            echo "cloning Hono repository..."
-           git clone ssh://git@github.com/eclipse/hono.git $WORKSPACE/hono
+           git clone https://github.com/eclipse/hono.git $WORKSPACE/hono
            '''
     }
 
