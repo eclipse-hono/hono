@@ -95,7 +95,7 @@ public final class Command {
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @return The command.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static Command from(
             final Message message,
@@ -111,23 +111,17 @@ public final class Command {
             validationErrorJoiner.add("subject not set");
         }
 
-        final String correlationId = Optional.ofNullable(message.getCorrelationId()).map(obj -> {
-            if (obj instanceof String) {
-                return (String) obj;
+        String correlationId = null;
+        final Object correlationIdObj = MessageHelper.getCorrelationId(message);
+        if (correlationIdObj != null) {
+            if (correlationIdObj instanceof String) {
+                correlationId = (String) correlationIdObj;
             } else {
-                return null;
+                validationErrorJoiner.add("message/correlation-id is not of type string, actual type: " + correlationIdObj.getClass().getName());
             }
-        }).orElseGet(() -> {
-            final Object obj = message.getMessageId();
-            if (obj instanceof String) {
-                return (String) obj;
-            } else {
-                return null;
-            }
-        });
-
-        if (correlationId == null) {
-            validationErrorJoiner.add("message/correlation-id not set");
+        } else if (message.getReplyTo() != null) {
+            // correlation id is required if a command response is expected
+            validationErrorJoiner.add("neither message-id nor correlation-id is set");
         }
 
         String originalReplyToId = null;
@@ -255,7 +249,7 @@ public final class Command {
     /**
      * Gets the request identifier of this command.
      *
-     * @return The identifier.
+     * @return The identifier or {@code null} if not set.
      * @throws IllegalStateException if this command is invalid.
      */
     public String getRequestId() {
@@ -343,7 +337,7 @@ public final class Command {
     /**
      * Gets the ID to use for correlating a response to this command.
      *
-     * @return The identifier.
+     * @return The identifier or {@code null} if not set.
      * @throws IllegalStateException if this command is invalid.
      */
     public String getCorrelationId() {

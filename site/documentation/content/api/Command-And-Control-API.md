@@ -47,7 +47,7 @@ The following table provides an overview of the properties the *Business Applica
 | *to*             | yes       | *properties*             | *string*     | MUST contain the target address `command/${tenant_id}/${device_id}` of the message, where `${device_id}` is the ID of the device to send the message to. |
 | *subject*        | yes       | *properties*             | *string*     | The name of the command to be executed by the device. |
 | *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
-| *message-id*     | yes       | *properties*             | *string*     | An identifier that uniquely identifies the message at the sender side. |
+| *message-id*     | no        | *properties*             | *string*     | An identifier that uniquely identifies the message at the sender side. |
 
 The command message MAY contain arbitrary payload to be sent to the device in a single AMQP *Data* section. The value of the message's *subject* property may provide a hint to the device regarding the format, encoding and semantics of the payload data.
 
@@ -118,8 +118,8 @@ The following table provides an overview of the properties the *Business Applica
 | *to*             | yes       | *properties*             | *string*     | MUST contain the target address `command/${tenant_id}/${device_id}` of the message, where `${device_id}` is the ID of the device to send the message to. |
 | *subject*        | yes       | *properties*             | *string*     | MUST contain the command name to be executed by a device. |
 | *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
-| *correlation-id* | no        | *properties*             | *message-id* | If present, MUST contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. |
-| *message-id*     | yes       | *properties*             | *string*     | MUST contain an identifier that uniquely identifies the message at the sender side. |
+| *correlation-id* | no        | *properties*             | *string*     | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. Either this or the *message-id* property MUST be set. |
+| *message-id*     | no        | *properties*             | *string*     | MAY contain an identifier that uniquely identifies the message at the sender side. Either this or the *correlation-id* property MUST be set. |
 | *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the application expects to receive the response from. This address MUST be the same as the source address used for establishing the client's receiver link (see [Preconditions](./#receiver-link-precondition) above). |
 
 The command message MAY contain arbitrary payload to be sent to the device in a single AMQP *Data* section. The value of the command message's *subject* value may provide a hint to the device regarding the format, encoding and semantics of the payload data.
@@ -146,7 +146,7 @@ The following table provides an overview of the properties set on a message sent
 | Name             | Mandatory | Location                 | Type         | Description |
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *content-type*   | no        | *properties*             | *string*     | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
-| *correlation-id* | yes       | *properties*             | *message-id* | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
+| *correlation-id* | yes       | *properties*             | *string*     | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
 | *device_id*      | yes       | *application-properties* | *string*     | The identifier of the device that sent the response. |
 | *status*         | yes       | *application-properties* | *integer*    | MUST indicate the status of the execution. See table below for possible values. |
 | *tenant_id*      | yes       | *application-properties* | *string*     | The identifier of the tenant that the device belongs to. |
