@@ -8,6 +8,9 @@ title = "Release Notes"
 
 * Implementation of the new HTTP management API for tenants, devices and
   credentials.
+* The health check endpoints of services can now be called securely via TLS. 
+  Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}}) 
+  for the new parameters available.
 
 ### Fixes & Enhancements
 
@@ -30,9 +33,9 @@ title = "Release Notes"
   release. Also see [Device registry changes](#device-registry-changes) for
   more information.
 * The configuration parameters for the health check endpoint were moved from 
-  `hono.app` to `hono.healthCheck`. `hono.app.healthCheckPort` is now
-  `hono.healthCheck.port` and `hono.app.healthCheckBindAddress` is now 
-  `hono.healthCheck.BindAdress`. Please refer to the protocol adapter
+  `hono.app` to `hono.healthCheck` and renamed. `hono.app.healthCheckPort` is now
+  `hono.healthCheck.insecurePort` and `hono.app.healthCheckBindAddress` is now 
+  `hono.healthCheck.insecurePortBindAdress`. Please refer to the protocol adapter
   [configuration guides]({{% doclink "/admin-guide/" %}}) for additional
   information on the new naming.
 

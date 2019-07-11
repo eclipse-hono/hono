@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import io.vertx.core.CompositeFuture;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     private static final String URI_READINESS_PROBE = "/readiness";
 
     private HttpServer server;
+    private HttpServer insecureServer;
 
     private final HealthCheckHandler readinessHandler;
     private final HealthCheckHandler livenessHandler;
@@ -72,13 +74,21 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     public VertxBasedHealthCheckServer(final Vertx vertx, final ServerConfig config) {
         this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
-        if (config.getPort() == Constants.PORT_UNCONFIGURED) {
-            throw new IllegalArgumentException("Health check port not configured");
+        if (!isSecureEndpointConfigured() && !isInsecureEndpointConfigured()) {
+            throw new IllegalArgumentException("No health check configured");
         }
 
         readinessHandler = HealthCheckHandler.create(this.vertx);
         livenessHandler = HealthCheckHandler.create(this.vertx);
         router = Router.router(this.vertx);
+    }
+
+    private boolean isSecureEndpointConfigured() {
+        return config.getPort() != Constants.PORT_UNCONFIGURED && config.isSecurePortEnabled();
+    }
+
+    private boolean isInsecureEndpointConfigured() {
+        return config.getInsecurePort() != Constants.PORT_UNCONFIGURED && config.isInsecurePortEnabled();
     }
 
     /**
@@ -115,30 +125,77 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      */
     @Override
     public Future<Void> start() {
+        registerAdditionalResources();
 
         final Future<Void> result = Future.future();
-        final HttpServerOptions options = new HttpServerOptions()
-                .setPort(config.getPort())
-                .setHost(config.getBindAddress());
-        server = vertx.createHttpServer(options);
-
-        registerAdditionalResources();
-        router.get(URI_READINESS_PROBE).handler(readinessHandler);
-        router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
-
-        server.requestHandler(router).listen(startAttempt -> {
-            if (startAttempt.succeeded()) {
-                LOG.info("readiness probe available at http://{}:{}{}", options.getHost(), options.getPort(),
-                        URI_READINESS_PROBE);
-                LOG.info("liveness probe available at http://{}:{}{}", options.getHost(), options.getPort(),
-                        URI_LIVENESS_PROBE);
-                result.complete();
-            } else {
-                LOG.warn("failed to start health checks HTTP server: {}", startAttempt.cause().getMessage());
-                result.fail(startAttempt.cause());
-            }
-        });
+        CompositeFuture.all(bindSecureHttpServer(), bindInsecureHttpServer())
+                .compose(r -> result.complete(), result);
         return result;
+    }
+
+    private Future<Void> bindInsecureHttpServer() {
+        if (config.isInsecurePortEnabled()) {
+            final Future<Void> result = Future.future();
+
+            final HttpServerOptions options = new HttpServerOptions()
+                    .setPort(config.getInsecurePort())
+                    .setHost(config.getInsecurePortBindAddress());
+            insecureServer = vertx.createHttpServer(options);
+
+            router.get(URI_READINESS_PROBE).handler(readinessHandler);
+            router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
+
+            insecureServer.requestHandler(router).listen(startAttempt -> {
+                if (startAttempt.succeeded()) {
+                    LOG.info("Successfully started insecure health checks HTTP server");
+                    LOG.info("readiness probe available at http://{}:{}{}", options.getHost(), insecureServer.actualPort(),
+                            URI_READINESS_PROBE);
+                    LOG.info("liveness probe available at http://{}:{}{}", options.getHost(), insecureServer.actualPort(),
+                            URI_LIVENESS_PROBE);
+                    result.complete();
+                } else {
+                    LOG.warn("failed to start insecure health checks HTTP server: {}",
+                            startAttempt.cause().getMessage());
+                    result.fail(startAttempt.cause());
+                }
+            });
+            return result;
+        } else {
+            return Future.succeededFuture();
+        }
+    }
+
+    private Future<Void> bindSecureHttpServer() {
+        if (config.isSecurePortEnabled()) {
+            final Future<Void> result = Future.future();
+
+            final HttpServerOptions options = new HttpServerOptions()
+                    .setPort(config.getPort())
+                    .setHost(config.getBindAddress())
+                    .setKeyCertOptions(config.getKeyCertOptions())
+                    .setSsl(true);
+            server = vertx.createHttpServer(options);
+
+            router.get(URI_READINESS_PROBE).handler(readinessHandler);
+            router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
+
+            server.requestHandler(router).listen(startAttempt -> {
+                if (startAttempt.succeeded()) {
+                    LOG.info("Successfully started secure health checks HTTP server");
+                    LOG.info("readiness probe available at https://{}:{}{}", options.getHost(), server.actualPort(),
+                            URI_READINESS_PROBE);
+                    LOG.info("liveness probe available at https://{}:{}{}", options.getHost(), server.actualPort(),
+                            URI_LIVENESS_PROBE);
+                    result.complete();
+                } else {
+                    LOG.warn("failed to start secure health checks HTTP server: {}", startAttempt.cause().getMessage());
+                    result.fail(startAttempt.cause());
+                }
+            });
+            return result;
+        } else {
+            return Future.succeededFuture();
+        }
     }
 
     private void registerAdditionalResources() {
@@ -160,15 +217,36 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      */
     @Override
     public Future<Void> stop() {
+        final Future<Void> serverStopTracker = Future.future();
+        if (server != null) {
+            LOG.info("closing secure health check HTTP server [{}:{}]", config.getBindAddress(), server.actualPort());
+            server.close(serverStopTracker);
+        } else {
+            serverStopTracker.complete();
+        }
+
+        final Future<Void> insecureServerStopTracker = Future.future();
+        if (insecureServer != null) {
+            LOG.info("closing insecure health check HTTP server [{}:{}]", config.getInsecurePortBindAddress(),
+                    insecureServer.actualPort());
+            insecureServer.close(insecureServerStopTracker);
+        } else {
+            insecureServerStopTracker.complete();
+        }
 
         final Future<Void> result = Future.future();
-        if (server != null) {
-            LOG.info("closing health check HTTP server [{}:{}]", config.getBindAddress(), server.actualPort());
-            server.close(result);
-        } else {
-            result.complete();
-        }
+        CompositeFuture.all(serverStopTracker, insecureServerStopTracker)
+                .compose(s -> result.complete(), result);
+
         return result;
+    }
+
+    int getInsecurePort() {
+        return insecureServer.actualPort();
+    }
+
+    int getPort() {
+        return server.actualPort();
     }
 
 }

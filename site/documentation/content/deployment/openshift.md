@@ -604,13 +604,13 @@ should use the Jaeger agent:
              httpGet:
                path: /readiness
                port: 8088
-               scheme: HTTP
+               scheme: HTTPS
              initialDelaySeconds: 10
            livenessProbe:
              httpGet:
                path: /liveness
                port: 8088
-               scheme: HTTP
+               scheme: HTTPS
              initialDelaySeconds: 180
            resources:
              limits:

@@ -4,6 +4,8 @@ hono:
   healthCheck:
     port: ${vertx.health.port}
     bindAddress: 0.0.0.0
+    keyPath: /run/secrets/device-registry-key.pem
+    certPath: /run/secrets/device-registry-cert.pem
   auth:
     host: ${hono.auth.service}${service.suffix}
     port: 5671

@@ -4,6 +4,8 @@ hono:
   healthCheck:
     port: ${vertx.health.port}
     bindAddress: 0.0.0.0
+    keyPath: ${secret.path}/mqtt-adapter-key.pem
+    certPath: ${secret.path}/mqtt-adapter-cert.pem
   mqtt:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0

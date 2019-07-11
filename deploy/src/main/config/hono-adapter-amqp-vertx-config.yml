@@ -4,6 +4,8 @@ hono:
   healthCheck:
     port: ${vertx.health.port}
     bindAddress: 0.0.0.0
+    keyPath: ${secret.path}/amqp-adapter-key.pem
+    certPath: ${secret.path}/amqp-adapter-cert.pem
   amqp:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0

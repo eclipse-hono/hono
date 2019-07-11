@@ -90,6 +90,18 @@ public class ServerConfig extends AbstractConfig {
         }
     }
 
+
+    /**
+     * Checks if this service has been configured to bind to the secure port during startup.
+     * <p>
+     * Subclasses may override this method in order to do more sophisticated checks.
+     *
+     * @return {@code true} if <em>config</em> contains a valid key and certificate.
+     */
+    public boolean isSecurePortEnabled() {
+        return getKeyCertOptions() != null;
+    }
+
     /**
      * Checks if this server requires the usage of a native TLS implementation. Native TLS implementations offer in
      * general a better performance but may not be available on all platforms. If {@code true}, the server will require

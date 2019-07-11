@@ -74,13 +74,13 @@ spec:
           httpGet:
             path: /readiness
             port: {{ .Values.healthCheckPort }}
-            scheme: HTTP
+            scheme: HTTPS
           initialDelaySeconds: 10
         livenessProbe:
           httpGet:
             path: /liveness
             port: {{ .Values.healthCheckPort }}
-            scheme: HTTP
+            scheme: HTTPS
           initialDelaySeconds: 180
       volumes:
       - name: conf

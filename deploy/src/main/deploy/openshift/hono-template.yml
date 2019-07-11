@@ -326,6 +326,8 @@ objects:
         healthCheck:
           port: 8088
           bindAddress: 0.0.0.0
+          keyPath: /etc/tls/tls.key
+          certPath: /etc/tls/tls.crt
         vertx:
           preferNative: true
         amqp:
@@ -492,13 +494,13 @@ objects:
             httpGet:
               path: /readiness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 10
           livenessProbe:
             httpGet:
               path: /liveness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 180
           resources:
             limits:
@@ -664,6 +666,8 @@ objects:
         healthCheck:
           port: 8088
           bindAddress: 0.0.0.0
+          keyPath: /etc/tls/tls.key
+          certPath: /etc/tls/tls.crt
         vertx:
           preferNative: true
         mqtt:
@@ -828,13 +832,13 @@ objects:
             httpGet:
               path: /readiness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 10
           livenessProbe:
             httpGet:
               path: /liveness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 180
           resources:
             limits:
@@ -1032,6 +1036,8 @@ objects:
         healthCheck:
           port: 8088
           bindAddress: 0.0.0.0
+          keyPath: /etc/tls/tls.key
+          certPath: /etc/tls/tls.crt
         vertx:
           preferNative: true
         http:
@@ -1196,13 +1202,13 @@ objects:
             httpGet:
               path: /readiness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 10
           livenessProbe:
             httpGet:
               path: /liveness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 180
           resources:
             limits:
@@ -1351,6 +1357,8 @@ objects:
         healthCheck:
           bindAddress: 0.0.0.0
           port: 8088
+          keyPath: /etc/tls/tls.key
+          certPath: /etc/tls/tls.crt
         vertx:
           preferNative: true
         auth:
@@ -1528,13 +1536,13 @@ objects:
             httpGet:
               path: /readiness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 10
           livenessProbe:
             httpGet:
               path: /liveness
               port: 8088
-              scheme: HTTP
+              scheme: HTTPS
             initialDelaySeconds: 180
           ports:
           - containerPort: 8778 
@@ -1682,6 +1690,8 @@ objects:
         healthCheck:
           port: 8088
           bindAddress: 0.0.0.0
+          keyPath: /etc/tls/tls.key
+          certPath: /etc/tls/tls.crt
         vertx:
           preferNative: true
         auth:
