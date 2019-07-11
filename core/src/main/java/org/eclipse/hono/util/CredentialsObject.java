@@ -294,6 +294,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
                         checkHashedPassword(secret);
                         secretValidator.accept(getType(), secret);
                     });
+                    break;
                 default:
                     checkSecrets(secrets, secret -> {});
                 }

@@ -19,7 +19,7 @@ import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.util.Constants;
 
 /**
- * Default AQMP server for Hono's example device registry.
+ * Default AMQP server for Hono's example device registry.
  */
 public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {
 

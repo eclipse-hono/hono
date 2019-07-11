@@ -291,7 +291,7 @@ public class LegacyDeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeregisterDeviceFailsForNonExisingDevice(final TestContext ctx) {
+    public void testDeregisterDeviceFailsForNonExistingDevice(final TestContext ctx) {
 
         registry.deregisterDevice(TENANT, "non-existing-device").setHandler(ctx.asyncAssertFailure(t -> {
             ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
