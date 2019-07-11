@@ -42,7 +42,7 @@ import org.springframework.stereotype.Repository;
  * A device connection service that keeps all data in memory.
  */
 @Repository
-@Qualifier("serviceImpl")
+@Qualifier("backend")
 public final class MapBasedDeviceConnectionService extends AbstractVerticle implements DeviceConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(MapBasedDeviceConnectionService.class);

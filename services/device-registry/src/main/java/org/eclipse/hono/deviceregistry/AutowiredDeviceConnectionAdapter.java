@@ -31,7 +31,7 @@ public final class AutowiredDeviceConnectionAdapter extends EventBusDeviceConnec
     private DeviceConnectionService service;
 
     @Autowired
-    @Qualifier("serviceImpl")
+    @Qualifier("backend")
     public void setService(final DeviceConnectionService service) {
         this.service = service;
     }
