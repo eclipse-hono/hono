@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.service.metric;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -24,6 +25,7 @@ import java.util.stream.Stream;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -157,4 +159,59 @@ public class MicrometerBasedMetricsTest {
 
         verify(legacyMetrics).incrementProcessedMessages(eq(EndpointType.TELEMETRY), eq("tenant"));
     }
+
+    /**
+     * Verifies that the payload size is calculated based on the configured minimum message size 
+     * when reporting downstream telemetry messages.
+     * 
+     * @param registry The registry that the tests should be run against.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testPayloadSizeForTelemetryMessages(final MeterRegistry registry) {
+
+        final Metrics metrics = new MicrometerBasedMetrics(registry);
+        final TenantObject tenantObject = TenantObject.from("TEST_TENANT", true)
+                .setMinimumMessageSize(4 * 1024);
+
+        metrics.reportTelemetry(
+                MetricsTags.EndpointType.TELEMETRY,
+                "tenant",
+                tenantObject,
+                MetricsTags.ProcessingOutcome.FORWARDED,
+                MetricsTags.QoS.UNKNOWN,
+                1 * 1024,
+                MetricsTags.TtdStatus.NONE,
+                metrics.startTimer());
+
+        assertEquals(4 * 1024,
+                registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).summary().totalAmount());
+    }
+
+    /**
+     * Verifies that the payload size is calculated based on the configured minimum message size 
+     * when reporting command messages.
+     *
+     * @param registry The registry that the tests should be run against.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testPayloadSizeForCommandMessages(final MeterRegistry registry) {
+
+        final Metrics metrics = new MicrometerBasedMetrics(registry);
+        final TenantObject tenantObject = TenantObject.from("TEST_TENANT", true)
+                .setMinimumMessageSize(4 * 1024);
+
+        metrics.reportCommand(
+                MetricsTags.Direction.REQUEST,
+                "tenant",
+                tenantObject,
+                MetricsTags.ProcessingOutcome.FORWARDED,
+                1 * 1024,
+                metrics.startTimer());
+
+        assertEquals(4 * 1024,
+                registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).summary().totalAmount());
+    }
+
 }

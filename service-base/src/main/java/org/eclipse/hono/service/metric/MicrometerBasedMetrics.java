@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.DistributionSummary;
@@ -150,6 +151,18 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
+    public void reportTelemetry(
+            final MetricsTags.EndpointType type,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final Sample timer) {
+        reportTelemetry(type, tenantId, outcome, qos, calculatePayloadSize(payloadSize, tenantObject), timer);
+    }
+
+    @Override
     public final void reportTelemetry(
             final MetricsTags.EndpointType type,
             final String tenantId,
@@ -219,6 +232,20 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
+    public void reportTelemetry(
+            final MetricsTags.EndpointType type,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final MetricsTags.TtdStatus ttdStatus,
+            final Sample timer) {
+        reportTelemetry(type, tenantId, outcome, qos, calculatePayloadSize(payloadSize, tenantObject), ttdStatus,
+                timer);
+    }
+
+    @Override
     public void reportCommand(
             final Direction direction,
             final String tenantId,
@@ -263,6 +290,18 @@ public class MicrometerBasedMetrics implements Metrics {
         }
     }
 
+    @Override
+    public void reportCommand(
+            final Direction direction,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final int payloadSize,
+            final Sample timer) {
+
+        reportCommand(direction, tenantId, outcome, calculatePayloadSize(payloadSize, tenantObject), timer);
+    }
+
     /**
      * Gets a gauge value for a specific key.
      * <p>
@@ -305,5 +344,38 @@ public class MicrometerBasedMetrics implements Metrics {
             final Supplier<V> instanceSupplier) {
 
         return gaugeForKey(name, map, tenant, Tags.of(MetricsTags.getTenantTag(tenant)), instanceSupplier);
+    }
+
+    /**
+     * Calculates the payload size based on the configured minimum message size.
+     * <p>
+     * If no minimum message size is configured for a tenant then the actual
+     * payload size of the message is returned.
+     * <p>
+     * Example: The minimum message size for a tenant is configured as 4096 bytes (4KB).
+     * So the payload size of a message of size 1KB is calculated as 4KB and for
+     * message of size 10KB is calculated as 12KB.
+     *
+     * @param payloadSize The size of the message payload in bytes.
+     * @param tenantObject The TenantObject.
+     *
+     * @return The calculated payload size.
+     */
+    protected final int calculatePayloadSize(final int payloadSize, final TenantObject tenantObject) {
+
+        if (tenantObject == null) {
+            return payloadSize;
+        }
+
+        final int minimumMessageSize = tenantObject.getMinimumMessageSize();
+        if (minimumMessageSize > 0 && payloadSize > 0) {
+            final int modValue = payloadSize % minimumMessageSize;
+            if (modValue == 0) {
+                return payloadSize;
+            } else {
+                return payloadSize + (minimumMessageSize - modValue);
+            }
+        }
+        return payloadSize;
     }
 }
