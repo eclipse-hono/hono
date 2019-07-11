@@ -587,8 +587,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
 
                 final Device authenticatedDevice = getAuthenticatedDevice(ctx);
-                final Span currentSpan = tracer.buildSpan("upload " + endpoint.getCanonicalName())
-                        .asChildOf(TracingHandler.serverSpanContext(ctx))
+                final Span currentSpan = TracingHelper
+                        .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx),
+                                "upload " + endpoint.getCanonicalName())
                         .ignoreActiveSpan()
                         .withTag(Tags.COMPONENT.getKey(), getTypeName())
                         .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
@@ -1067,8 +1068,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 tenant, deviceId, commandRequestId, responseStatus);
 
         final Device authenticatedDevice = getAuthenticatedDevice(ctx);
-        final Span currentSpan = tracer.buildSpan("upload Command response")
-                .asChildOf(TracingHandler.serverSpanContext(ctx))
+        final Span currentSpan = TracingHelper
+                .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx), "upload Command response")
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)

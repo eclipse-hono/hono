@@ -33,7 +33,6 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -74,8 +73,7 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
     @Override
     public Future<String> getMappedGatewayDevice(final String tenantId, final String deviceId, final SpanContext context) {
 
-        final Span span = tracer.buildSpan("get mapped gateway")
-                .addReference(References.CHILD_OF, context)
+        final Span span = TracingHelper.buildChildSpan(tracer, context, "get mapped gateway")
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), GatewayMapper.class.getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)

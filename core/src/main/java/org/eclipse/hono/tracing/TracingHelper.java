@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 
+import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -301,5 +302,56 @@ public final class TracingHelper {
         Objects.requireNonNull(headers);
 
         return tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(headers));
+    }
+
+    /**
+     * Creates a span builder that is initialized with the given operation name and a child reference to the given span
+     * context (if set).
+     *
+     * @param tracer The Tracer to use.
+     * @param spanContext The span context to set as child reference (may be null).
+     * @param operationName The operation name to set for the span
+     * @return The span builder.
+     * @throws NullPointerException if tracer or operationName is {@code null}.
+     */
+    public static Tracer.SpanBuilder buildChildSpan(final Tracer tracer, final SpanContext spanContext,
+            final String operationName) {
+        return buildSpan(tracer, spanContext, operationName, References.CHILD_OF);
+    }
+
+    /**
+     * Creates a span builder that is initialized with the given operation name and a follows-from reference to the
+     * given span context (if set).
+     *
+     * @param tracer The Tracer to use.
+     * @param spanContext The span context to set as follows-from reference (may be null).
+     * @param operationName The operation name to set for the span
+     * @return The span builder.
+     * @throws NullPointerException if tracer or operationName is {@code null}.
+     */
+    public static Tracer.SpanBuilder buildFollowsFromSpan(final Tracer tracer, final SpanContext spanContext,
+            final String operationName) {
+        return buildSpan(tracer, spanContext, operationName, References.FOLLOWS_FROM);
+    }
+
+    /**
+     * Creates a span builder that is initialized with the given operation name and a reference to the given span
+     * context (if set).
+     *
+     * @param tracer The Tracer to use.
+     * @param spanContext The span context to set as reference (may be null).
+     * @param operationName The operation name to set for the span
+     * @param referenceType The type of reference towards the span context.
+     * @return The span builder.
+     * @throws NullPointerException if tracer or operationName or referenceType is {@code null}.
+     */
+    public static Tracer.SpanBuilder buildSpan(final Tracer tracer, final SpanContext spanContext,
+            final String operationName, final String referenceType) {
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(operationName);
+        Objects.requireNonNull(referenceType);
+        final Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
+                .addReference(referenceType, spanContext);
+        return spanBuilder;
     }
 }

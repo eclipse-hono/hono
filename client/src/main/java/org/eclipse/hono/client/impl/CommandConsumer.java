@@ -20,7 +20,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 
-import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -35,7 +34,7 @@ public abstract class CommandConsumer extends AbstractConsumer {
 
     /**
      * Creates a consumer for a connection and a receiver link.
-     * 
+     *
      * @param connection The connection to the AMQP Messaging Network over which
      *                   commands are received.
      * @param receiver The receiver link for command messages.
@@ -58,8 +57,7 @@ public abstract class CommandConsumer extends AbstractConsumer {
             final String deviceId, final Tracer tracer, final SpanContext spanContext) {
         // we set the component tag to the class name because we have no access to
         // the name of the enclosing component we are running in
-        return tracer.buildSpan(operationName)
-                .addReference(References.CHILD_OF, spanContext)
+        return TracingHelper.buildChildSpan(tracer, spanContext, operationName)
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), CommandConsumer.class.getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)

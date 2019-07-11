@@ -930,8 +930,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "command response topic contains invalid data"));
                } else {
 
-                   final Span currentSpan = tracer.buildSpan("upload Command response")
-                           .asChildOf(ctx.getTracingContext())
+                    final Span currentSpan = TracingHelper
+                           .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response")
                            .ignoreActiveSpan()
                            .withTag(Tags.COMPONENT.getKey(), getTypeName())
                            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
@@ -1003,8 +1003,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     String.format("Content-Type %s does not match payload", ctx.contentType())));
         } else {
 
-            final Span currentSpan = tracer.buildSpan("upload " + endpoint)
-                    .asChildOf(ctx.getTracingContext())
+            final Span currentSpan = TracingHelper.buildChildSpan(tracer, ctx.getTracingContext(), "upload " + endpoint)
                     .ignoreActiveSpan()
                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)

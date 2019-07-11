@@ -61,7 +61,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.contrib.vertx.ext.web.TracingHandler;
@@ -522,8 +521,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private void sendResponseToApplication(final Command command, final String loraDeviceId,
             final HttpResponse<Buffer> response, final SpanContext spanContext) {
-        final Span currentSpan = tracer.buildSpan("upload Command response").ignoreActiveSpan()
-                .addReference(References.FOLLOWS_FROM, spanContext)
+        final Span currentSpan = TracingHelper.buildFollowsFromSpan(tracer, spanContext, "upload Command response")
+                .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant())

@@ -25,7 +25,6 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 
-import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -176,8 +175,7 @@ public abstract class EventBusCredentialsAdapter<T> extends EventBusService<T> i
         Objects.requireNonNull(operationName);
         // we set the component tag to the class name because we have no access to
         // the name of the enclosing component we are running in
-        final Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
-                .addReference(References.CHILD_OF, spanContext)
+        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);

@@ -138,12 +138,12 @@ public abstract class AbstractHonoClient {
 
     private Span newSpan(final SpanContext parent, final String referenceType, final String operationName) {
 
-        return connection.getTracer().buildSpan(operationName)
-                    .addReference(referenceType, parent)
-                    .withTag(Tags.COMPONENT.getKey(), "hono-client")
-                    .withTag(Tags.PEER_HOSTNAME.getKey(), connection.getConfig().getHost())
-                    .withTag(Tags.PEER_PORT.getKey(), connection.getConfig().getPort())
-                    .start();
+        return TracingHelper.buildSpan(connection.getTracer(), parent, operationName, referenceType)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), "hono-client")
+                .withTag(Tags.PEER_HOSTNAME.getKey(), connection.getConfig().getHost())
+                .withTag(Tags.PEER_PORT.getKey(), connection.getConfig().getPort())
+                .start();
     }
 
     /**

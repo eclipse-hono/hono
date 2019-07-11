@@ -111,8 +111,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
         Objects.requireNonNull(deviceCredentials);
         Objects.requireNonNull(resultHandler);
 
-        final Span currentSpan = tracer.buildSpan("authenticate device")
-                .asChildOf(spanContext)
+        final Span currentSpan = TracingHelper.buildChildSpan(tracer, spanContext, "authenticate device")
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceCredentials.getTenantId())
@@ -159,8 +158,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             final CredentialsObject credentialsOnRecord,
             final SpanContext spanContext) {
 
-        final Span currentSpan = tracer.buildSpan("validate credentials")
-                .asChildOf(spanContext)
+        final Span currentSpan = TracingHelper.buildChildSpan(tracer, spanContext, "validate credentials")
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceCredentials.getTenantId())
