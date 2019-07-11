@@ -30,7 +30,7 @@ import java.util.Map;
 public interface LoraProvider {
 
     /**
-     * The name of this LoRaWAN provider. Will be used e.g. as an AQMP 1.0 message application property indicating the
+     * The name of this LoRaWAN provider. Will be used e.g. as an AMQP 1.0 message application property indicating the
      * the source provider of a LoRa Message.
      *
      * @return The name of this LoRaWAN provider.
