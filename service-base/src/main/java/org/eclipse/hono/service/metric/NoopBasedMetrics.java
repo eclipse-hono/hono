@@ -17,6 +17,7 @@ import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import org.eclipse.hono.util.TenantObject;
 
 /**
  * A no-op metrics implementation.
@@ -69,7 +70,30 @@ public class NoopBasedMetrics implements Metrics {
     public void reportTelemetry(
             final MetricsTags.EndpointType type,
             final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final Sample timer) {
+    }
+
+    @Override
+    public void reportTelemetry(
+            final MetricsTags.EndpointType type,
+            final String tenantId,
             final MetricsTags.ProcessingOutcome outcome,
+            final MetricsTags.QoS qos,
+            final int payloadSize,
+            final MetricsTags.TtdStatus ttdStatus,
+            final Sample timer) {
+    }
+
+    @Override
+    public void reportTelemetry(
+            final MetricsTags.EndpointType type,
+            final String tenantId,
+            final TenantObject tenantObject,
+            final ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
             final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
@@ -80,6 +104,16 @@ public class NoopBasedMetrics implements Metrics {
     public void reportCommand(
             final Direction direction,
             final String tenantId,
+            final ProcessingOutcome outcome,
+            final int payloadSize,
+            final Sample timer) {
+    }
+
+    @Override
+    public void reportCommand(
+            final Direction direction,
+            final String tenantId,
+            final TenantObject tenantObject,
             final ProcessingOutcome outcome,
             final int payloadSize,
             final Sample timer) {

@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.metric;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import org.eclipse.hono.util.TenantObject;
 
 /**
  * A collector for metrics.
@@ -83,6 +84,36 @@ public interface Metrics {
             Sample timer);
 
     /**
+     * Reports a telemetry message or event received from a device. 
+     * <p> 
+     * The payload size of the message is calculated based on the configured 
+     * minimum message size and the calculated size is reported. 
+     * <p>
+     * The configured minimum message size is retrieved from the tenant 
+     * configuration object.
+     * 
+     * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
+     * @param tenantId The tenant that the device belongs to.
+     * @param tenantObject The tenant configuration object or {@code null}.
+     * @param outcome The outcome of processing the message.
+     * @param qos The delivery semantics used for sending the message downstream.
+     * @param payloadSize The number of bytes contained in the message's payload.
+     * @param timer The timer indicating the amount of time used
+     *              for processing the message.
+     * @throws NullPointerException if any of the parameters except the tenant object are {@code null}.
+     * @throws IllegalArgumentException if type is neither telemetry nor event or
+     *                    if payload size is negative.
+     */
+    void reportTelemetry(
+            MetricsTags.EndpointType type,
+            String tenantId,
+            TenantObject tenantObject,
+            MetricsTags.ProcessingOutcome outcome,
+            MetricsTags.QoS qos,
+            int payloadSize,
+            Sample timer);
+
+    /**
      * Reports a telemetry message or event received from a device.
      *
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
@@ -107,6 +138,38 @@ public interface Metrics {
             Sample timer);
 
     /**
+     * Reports a telemetry message or event received from a device.
+     * <p> 
+     * The payload size of the message is calculated based on the configured 
+     * minimum message size and the calculated size is reported. 
+     * <p>
+     * The configured minimum message size is retrieved from the tenant 
+     * configuration object.
+     *     
+     * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
+     * @param tenantId The tenant that the device belongs to.
+     * @param tenantObject The tenant configuration object or {@code null}.
+     * @param outcome The outcome of processing the message.
+     * @param qos The delivery semantics used for sending the message downstream.
+     * @param payloadSize The number of bytes contained in the message's payload.
+     * @param ttdStatus The outcome of processing the TTD value contained in the message.
+     * @param timer The timer indicating the amount of time used
+     *              for processing the message.
+     * @throws NullPointerException if any of the parameters except the tenant object are {@code null}.
+     * @throws IllegalArgumentException if type is neither telemetry nor event or
+     *                    if payload size is negative.
+     */
+    void reportTelemetry(
+            MetricsTags.EndpointType type,
+            String tenantId,
+            TenantObject tenantObject,
+            MetricsTags.ProcessingOutcome outcome,
+            MetricsTags.QoS qos,
+            int payloadSize,
+            MetricsTags.TtdStatus ttdStatus,
+            Sample timer);
+
+    /**
      * Reports a command &amp; control message being transferred to/from a device.
      *
      * @param direction The command message's direction.
@@ -121,6 +184,33 @@ public interface Metrics {
     void reportCommand(
             MetricsTags.Direction direction,
             String tenantId,
+            MetricsTags.ProcessingOutcome outcome,
+            int payloadSize,
+            Sample timer);
+
+    /**
+     * Reports a command &amp; control message being transferred to/from a device.
+     * <p> 
+     * The payload size of the message is calculated based on the configured 
+     * minimum message size and the calculated size is reported. 
+     * <p>
+     * The configured minimum message size is retrieved from the tenant 
+     * configuration object.
+     *
+     * @param direction The command message's direction.
+     * @param tenantId The tenant that the device belongs to.
+     * @param tenantObject The tenant configuration object or {@code null}.
+     * @param outcome The outcome of processing the message.
+     * @param payloadSize The number of bytes contained in the message's payload.
+     * @param timer The timer indicating the amount of time used
+     *              for processing the message.
+     * @throws NullPointerException if any of the parameters except the tenant object are {@code null}.
+     * @throws IllegalArgumentException if payload size is negative.
+     */
+    void reportCommand(
+            MetricsTags.Direction direction,
+            String tenantId,
+            TenantObject tenantObject,
             MetricsTags.ProcessingOutcome outcome,
             int payloadSize,
             Sample timer);
