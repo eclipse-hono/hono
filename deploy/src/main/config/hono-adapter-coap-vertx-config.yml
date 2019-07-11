@@ -4,6 +4,8 @@ hono:
   healthCheck:
     port: ${vertx.health.port}
     bindAddress: 0.0.0.0
+    keyPath: ${secret.path}/coap-adapter-key.pem
+    certPath: ${secret.path}/coap-adapter-cert.pem
   coap:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0

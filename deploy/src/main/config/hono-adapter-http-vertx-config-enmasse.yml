@@ -4,6 +4,8 @@ hono:
   healthCheck:
     port: ${vertx.health.port}
     bindAddress: 0.0.0.0
+    keyPath: ${secret.path}/http-adapter-key.pem
+    certPath: ${secret.path}/http-adapter-cert.pem
   http:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0

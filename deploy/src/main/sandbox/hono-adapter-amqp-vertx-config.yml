@@ -4,6 +4,8 @@ hono:
   healthCheck:
     port: ${vertx.health.port}
     bindAddress: 0.0.0.0
+    keyPath: /run/secrets/hono.eclipse.org-key.pem
+    certPath: /run/secrets/hono.eclipse.org-cert.pem
   amqp:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0

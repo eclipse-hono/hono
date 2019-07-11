@@ -19,6 +19,7 @@ Within a Hono installation the following communication channels can be secured w
 1. *Protocol Adapter* to *Device Registry* - A protocol adapter connects to the Device Registry in order to retrieve assertions regarding the registration status of devices. This (internal) connection can be secured by configuring the protocol adapter and the Device Registry for TLS.
 1. *Protocol Adapter* connecting to *AMQP Messaging Network* - A protocol adapter connects to the messaging network in order to forward telemetry data and commands hence and forth between downstream components (client applications) and devices. This (internal) connection can be secured by configuring the Dispatch Router and the protocol adapters for TLS.
 1. *Devices* connecting to a *Protocol Adapter* - Devices use TLS to both authenticate the protocol adapter and to establish an encrypted channel that provides integrity and privacy when transmitting data. Note that the specifics of if and how TLS can be used with a particular protocol adapter is specific to the transport protocol the adapter uses for communicating with the devices.
+1. *Liveness/readiness probes* connecting to *Service Health Checks* - Systems like Kubernetes are periodically checking the health status of the individual services . This communication can be secured by configuring the health check of the individual services to expose a secure endpoint.
 
 ### Auth Server
 
