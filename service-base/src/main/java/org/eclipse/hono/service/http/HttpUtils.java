@@ -56,6 +56,12 @@ public final class HttpUtils {
      */
     public static final String CONTENT_TYPE_TEXT_UTF8 = "text/plain; charset=utf-8";
 
+    /**
+     * 429 Too Many Requests.
+     * Refer <a href="https://tools.ietf.org/html/rfc6585#section-4"> RFC 6585, Section 4 </a>.
+     */
+    public static final int HTTP_TOO_MANY_REQUESTS = 429;
+
     private HttpUtils() {
         // prevent instantiation
     }

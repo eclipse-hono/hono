@@ -12,16 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp.impl;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.apache.qpid.proton.amqp.transport.AmqpError;
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -29,7 +24,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 
 /**
  * A class that contains context information used by the AMQP Adapter when uploading messages to Hono. An instance of
@@ -37,7 +31,6 @@ import io.vertx.proton.ProtonHelper;
  */
 public class AmqpContext extends MapBasedExecutionContext {
 
-    private static final int HTTP_TOO_MANY_REQUESTS = 429;
     private ProtonDelivery delivery;
     private Message message;
     private ResourceIdentifier address;
@@ -188,29 +181,4 @@ public class AmqpContext extends MapBasedExecutionContext {
         return timer;
     }
 
-    /**
-     * Creates an AMQP error condition for an throwable.
-     * <p>
-     * Non {@link ServiceInvocationException} instances are mapped to {@link AmqpError#PRECONDITION_FAILED}.
-     *
-     * @param t The throwable to map to an error condition.
-     * @return The error condition.
-     */
-    static ErrorCondition getErrorCondition(final Throwable t) {
-        if (ServiceInvocationException.class.isInstance(t)) {
-            final ServiceInvocationException error = (ServiceInvocationException) t;
-            switch (error.getErrorCode()) {
-            case HttpURLConnection.HTTP_BAD_REQUEST:
-                return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, error.getMessage());
-            case HttpURLConnection.HTTP_FORBIDDEN:
-                return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, error.getMessage());
-            case HTTP_TOO_MANY_REQUESTS:
-                return ProtonHelper.condition(AmqpError.RESOURCE_LIMIT_EXCEEDED, error.getMessage());
-            default:
-                return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, error.getMessage());
-            }
-        } else {
-            return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, t.getMessage());
-        }
-    }
 }
