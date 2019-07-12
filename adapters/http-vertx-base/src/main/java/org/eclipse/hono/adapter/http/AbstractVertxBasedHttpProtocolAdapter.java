@@ -929,12 +929,28 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                         deviceId);
                                 commandContext.release();
                             } else {
-                                addMicrometerSample(commandContext, commandSample);
-                                // put command context to routing context and notify
-                                ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
-                                cancelCommandReceptionTimer(ctx);
-                                setTtdStatus(ctx, TtdStatus.COMMAND);
-                                responseReady.tryComplete();
+                                getTenantConfiguration(tenantId, commandContext.getTracingContext())
+                                        .compose(tenantObject -> checkMessageLimit(tenantObject,
+                                                command.getPayloadSize()))
+                                        .setHandler(result -> {
+                                            if (result.succeeded()) {
+                                                addMicrometerSample(commandContext, commandSample);
+                                                // put command context to routing context and notify
+                                                ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
+                                            } else {
+                                                // issue credit so that application(s) can send the next command
+                                                commandContext.reject(getErrorCondition(result.cause()), 1);
+                                                metrics.reportCommand(
+                                                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                                        tenantId,
+                                                        ProcessingOutcome.from(result.cause()),
+                                                        command.getPayloadSize(),
+                                                        commandSample);
+                                            }
+                                            cancelCommandReceptionTimer(ctx);
+                                            setTtdStatus(ctx, TtdStatus.COMMAND);                                            
+                                            responseReady.tryComplete();
+                                        });
                             }
                         } else {
                             getMetrics().reportCommand(
@@ -1097,7 +1113,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     authenticatedDevice,
                     currentSpan.context());
             final Future<Void> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                    .compose(tenantObject -> isAdapterEnabled(tenantObject).map(ok -> null));
+                    .compose(tenantObject -> CompositeFuture
+                            .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payload.length()))
+                            .map(ok -> null));
             return CompositeFuture.all(deviceRegistrationTracker, tenantEnabledTracker)
                     .compose(ok -> sendCommandResponse(tenant, commandResponse, currentSpan.context()))
                     .map(delivery -> {

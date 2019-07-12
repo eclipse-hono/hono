@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
@@ -49,6 +48,7 @@ import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -785,7 +785,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.uploadTelemetryMessage(routingContext, "my-tenant", "the-device", payload, "application/text");
 
         // THEN the device gets a 429
-        assertContextFailedWithClientError(routingContext, HttpResponseStatus.TOO_MANY_REQUESTS.code());
+        assertContextFailedWithClientError(routingContext, HttpUtils.HTTP_TOO_MANY_REQUESTS);
         // the message has been reported
         verify(metrics).reportTelemetry(
                 eq(EndpointType.TELEMETRY),
@@ -821,7 +821,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.uploadEventMessage(routingContext, "my-tenant", "the-device", payload, "application/text");
 
         // THEN the device gets a 429
-        assertContextFailedWithClientError(routingContext, HttpResponseStatus.TOO_MANY_REQUESTS.code());
+        assertContextFailedWithClientError(routingContext, HttpUtils.HTTP_TOO_MANY_REQUESTS);
         // the message has been reported
         verify(metrics).reportTelemetry(
                 eq(EndpointType.EVENT),
@@ -830,6 +830,46 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 eq(QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
                 eq(TtdStatus.NONE),
+                any());
+    }
+
+    /**
+     * Verifies that a command response message is rejected due to the limit exceeded.
+     *
+     */
+    @Test
+    public void testMessageLimitExceededForACommandResponseMessage() {
+
+        // GIVEN an adapter with a downstream application attached
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(
+                getHttpServer(false), null);
+        final Future<ProtonDelivery> outcome = Future.future();
+        givenACommandResponseSenderForOutcome(outcome);
+
+        // WHEN the message limit exceeds
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        // WHEN a device publishes a command response
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class),
+                response);
+        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+
+        adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
+
+        // THEN the device gets a 429
+        assertContextFailedWithClientError(ctx, HttpUtils.HTTP_TOO_MANY_REQUESTS);
+        // AND has reported the message as unprocessable
+        verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                eq(ProcessingOutcome.UNPROCESSABLE),
+                eq(payload.length()),
                 any());
     }
 
