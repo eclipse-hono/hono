@@ -17,6 +17,7 @@ import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUS
 import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -37,10 +38,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
@@ -55,6 +56,7 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.auth.device.AuthHandler;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
@@ -1122,7 +1124,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     // THEN the message has not been sent downstream
                     verify(sender, never()).send(any(Message.class));
                     // because the message limit is exceeded
-                    ctx.assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(),
+                    ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
                             ((ClientErrorException) t).getErrorCode());
                     // and the message has been reported as unprocessable
                     verify(metrics).reportTelemetry(
@@ -1166,7 +1168,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             // THEN the message has not been sent downstream
             verify(sender, never()).send(any(Message.class));
             // because the message limit is exceeded
-            ctx.assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(),
+            ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
                     ((ClientErrorException) t).getErrorCode());
             // and the message has been reported as unprocessable
             verify(metrics).reportTelemetry(
@@ -1177,6 +1179,48 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     anyInt(),
                     any());
         }));
+    }
+
+    /**
+     * Verifies that a command response message is rejected due to the limit exceeded.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testMessageLimitExceededForACommandResponseMessage(final TestContext ctx) {
+
+        // GIVEN an adapter
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
+                getMqttServer(false));
+        forceClientMocksToConnected();
+
+        // WHEN the message limit exceeds
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+
+        // WHEN a device of "tenant" publishes a command response message
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
+        when(msg.payload()).thenReturn(Buffer.buffer("test"));
+
+        adapter.uploadMessage(newMqttContext(msg, mockEndpoint()),
+                ResourceIdentifier.fromString(String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(),
+                        Command.getRequestId("cmd123", "to", "deviceId", false))),
+                msg)
+                .setHandler(ctx.asyncAssertFailure(t -> {
+
+                    // THEN the request fails with a 429 error
+                    assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
+                            ((ClientErrorException) t).getErrorCode());
+
+                    // AND has reported the message as unprocessable
+                    verify(metrics).reportCommand(
+                            eq(MetricsTags.Direction.RESPONSE),
+                            eq("tenant"),
+                            eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
+                            anyInt(),
+                            any());
+                }));
     }
 
     private String getCommandSubscriptionTopic(final String tenantId, final String deviceId) {
