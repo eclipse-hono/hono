@@ -90,6 +90,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             .replace(".", "_");
     private static final String MESSAGES_PAYLOAD_SIZE_METRIC_NAME = String.format("%s_bytes_sum",
             MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
+    private static final String COMMANDS_PAYLOAD_SIZE_METRIC_NAME = String.format("%s_bytes_sum",
+            MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD.replace(".", "_"));
     private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
     private static final String QUERY_URI = "/api/v1/query";
     private static final String LIMITS_CACHE_NAME = "resource-limits";
@@ -174,12 +176,20 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 return Future.succeededFuture(Boolean.FALSE);
             }
 
-            final String queryParams = String.format("floor(sum(increase(%s{status=~\"%s|%s\", tenant=\"%s\"} [%sd])))",
+            final String queryParams = String.format(
+                    "floor(sum(increase(%s{status=~\"%s|%s\", tenant=\"%s\"} [%sd]) or %s*0) + sum(increase(%s{status=~\"%s|%s\", tenant=\"%s\"} [%sd]) or %s*0))",
                     MESSAGES_PAYLOAD_SIZE_METRIC_NAME,
                     MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
                     MetricsTags.ProcessingOutcome.UNPROCESSABLE.asTag().getValue(),
                     tenant.getTenantId(),
-                    dataUsagePeriod);
+                    dataUsagePeriod,
+                    COMMANDS_PAYLOAD_SIZE_METRIC_NAME,
+                    COMMANDS_PAYLOAD_SIZE_METRIC_NAME,
+                    MetricsTags.ProcessingOutcome.FORWARDED.asTag().getValue(),
+                    MetricsTags.ProcessingOutcome.UNPROCESSABLE.asTag().getValue(),
+                    tenant.getTenantId(),
+                    dataUsagePeriod,
+                    MESSAGES_PAYLOAD_SIZE_METRIC_NAME);
             final String key = String.format("%s_bytes_consumed", tenant.getTenantId());
 
             return Optional.ofNullable(limitsCache)
