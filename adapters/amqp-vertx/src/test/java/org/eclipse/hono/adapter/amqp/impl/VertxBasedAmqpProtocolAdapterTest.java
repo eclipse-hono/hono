@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -62,6 +61,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -798,7 +798,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                     verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
                     verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
                     // because the message limit is exceeded
-                    ctx.assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(),
+                    ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
                             ((ClientErrorException) t).getErrorCode());
                     // AND notifies the device by sending back a REJECTED disposition
                     verify(delivery).disposition(any(Rejected.class), eq(true));
@@ -841,7 +841,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                     verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
                     verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
                     // because the message limit is exceeded
-                    ctx.assertEquals(HttpResponseStatus.TOO_MANY_REQUESTS.code(),
+                    ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
                             ((ClientErrorException) t).getErrorCode());
                     // AND notifies the device by sending back a REJECTED disposition
                     verify(delivery).disposition(any(Rejected.class), eq(true));
@@ -851,6 +851,53 @@ public class VertxBasedAmqpProtocolAdapterTest {
                             eq(TEST_TENANT_ID),
                             eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(QoS.AT_LEAST_ONCE),
+                            eq(payload.length()),
+                            any());
+                }));
+    }
+
+    /**
+     * Verifies that a command response message is rejected due to the limit exceeded.
+     *
+     * @param ctx The test context to use for running asynchronous tests.
+     */
+    @Test
+    public void testMessageLimitExceededForACommandResponseMessage(final TestContext ctx) {
+
+        // GIVEN an AMQP adapter
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+
+        // WHEN the message limit exceeds
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        // WHEN a device uploads a command response to the adapter
+        final String replyToAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID,
+                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE, false));
+        final Buffer payload = Buffer.buffer("payload");
+        final Message message = getFakeMessage(replyToAddress, payload);
+        when(message.getCorrelationId()).thenReturn("correlation-id");
+        final Map<String, Object> propertyMap = new HashMap<>();
+        propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
+        final ApplicationProperties props = new ApplicationProperties(propertyMap);
+        when(message.getApplicationProperties()).thenReturn(props);
+
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null))
+                .setHandler(ctx.asyncAssertFailure(t -> {
+                    // THEN the adapter does not send the message (regardless of the delivery mode).
+                    verify(responseSender, never()).send(any(Message.class), any());
+                    verify(responseSender, never()).sendAndWaitForOutcome(any(Message.class), any());
+                    // because the message limit is exceeded
+                    ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
+                            ((ClientErrorException) t).getErrorCode());
+                    // AND notifies the device by sending back a REJECTED disposition
+                    verify(delivery).disposition(any(Rejected.class), eq(true));
+                    // AND has reported the message as unprocessable
+                    verify(metrics).reportCommand(
+                            eq(Direction.RESPONSE),
+                            eq(TEST_TENANT_ID),
+                            eq(ProcessingOutcome.UNPROCESSABLE),
                             eq(payload.length()),
                             any());
                 }));
