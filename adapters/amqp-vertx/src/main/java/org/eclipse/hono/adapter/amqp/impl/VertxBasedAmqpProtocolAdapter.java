@@ -702,7 +702,22 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 command.getPayloadSize(),
                                 timer);
                     } else {
-                        onCommandReceived(sender, commandContext);
+                        getTenantConfiguration(sourceAddress.getTenantId(), commandContext.getTracingContext())
+                                .compose(tenantObject -> checkMessageLimit(tenantObject, command.getPayloadSize()))
+                                .setHandler(result -> {
+                                    if (result.succeeded()) {
+                                        onCommandReceived(sender, commandContext);
+                                    } else {
+                                        // issue credit so that application(s) can send the next command
+                                        commandContext.reject(getErrorCondition(result.cause()), 1);
+                                        metrics.reportCommand(
+                                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                                sourceAddress.getTenantId(),
+                                                ProcessingOutcome.from(result.cause()),
+                                                command.getPayloadSize(),
+                                                timer);
+                                    }
+                                });
                     }
                 }, closeHandler -> {},
                 DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
@@ -933,7 +948,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
                     resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
-                    currentSpan.context()).compose(tenantObject -> isAdapterEnabled(tenantObject));
+                    currentSpan.context())
+                            .compose(tenantObject -> CompositeFuture
+                                    .all(isAdapterEnabled(tenantObject),
+                                            checkMessageLimit(tenantObject, context.getPayloadSize()))
+                                    .map(success -> tenantObject));
 
             return CompositeFuture.all(tenantEnabledFuture, tokenFuture)
                     .compose(ok -> sendCommandResponse(resource.getTenantId(), commandResponse, currentSpan.context()));
