@@ -18,6 +18,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
+import org.apache.qpid.proton.amqp.transport.AmqpError;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -44,6 +46,7 @@ import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.plan.NoopResourceLimitChecks;
@@ -1597,6 +1600,31 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 });
     }
 
+    /**
+     * Creates an AMQP error condition for an throwable.
+     * <p>
+     * Non {@link ServiceInvocationException} instances are mapped to {@link AmqpError#PRECONDITION_FAILED}.
+     *
+     * @param t The throwable to map to an error condition.
+     * @return The error condition.
+     */
+    protected final ErrorCondition getErrorCondition(final Throwable t) {
+        if (ServiceInvocationException.class.isInstance(t)) {
+            final ServiceInvocationException error = (ServiceInvocationException) t;
+            switch (error.getErrorCode()) {
+            case HttpURLConnection.HTTP_BAD_REQUEST:
+                return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, error.getMessage());
+            case HttpURLConnection.HTTP_FORBIDDEN:
+                return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, error.getMessage());
+            case HttpUtils.HTTP_TOO_MANY_REQUESTS:
+                return ProtonHelper.condition(AmqpError.RESOURCE_LIMIT_EXCEEDED, error.getMessage());
+            default:
+                return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, error.getMessage());
+            }
+        } else {
+            return ProtonHelper.condition(AmqpError.PRECONDITION_FAILED, t.getMessage());
+        }
+    }
     /**
      * Gets the manager to use for connection limits.
      * @return The manager. May be {@code null}.

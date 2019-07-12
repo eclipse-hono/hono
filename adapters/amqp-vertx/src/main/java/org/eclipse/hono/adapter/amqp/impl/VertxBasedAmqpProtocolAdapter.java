@@ -375,7 +375,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }
             return null;
         }).otherwise(t -> {
-            con.setCondition(AmqpContext.getErrorCondition(t));
+            con.setCondition(getErrorCondition(t));
             con.close();
             TracingHelper.logError(span, t);
             return null;
@@ -541,7 +541,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             return d;
         }).recover(t -> {
             if (t instanceof ClientErrorException) {
-                final ErrorCondition condition = AmqpContext.getErrorCondition(t);
+                final ErrorCondition condition = getErrorCondition(t);
                 MessageHelper.rejected(ctx.delivery(), condition);
             } else {
                 ProtonHelper.released(ctx.delivery(), true);
@@ -686,7 +686,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                     if (!command.isValid()) {
                         final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message");
-                        commandContext.reject(AmqpContext.getErrorCondition(ex), 1);
+                        commandContext.reject(getErrorCondition(ex), 1);
                         metrics.reportCommand(
                                 command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 sourceAddress.getTenantId(),
@@ -788,7 +788,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Throwable t,
             final Span span) {
 
-        final ErrorCondition ec = AmqpContext.getErrorCondition(t);
+        final ErrorCondition ec = getErrorCondition(t);
         LOG.debug("closing link with error condition [symbol: {}, description: {}]", ec.getCondition(), ec.getDescription());
         link.setCondition(ec);
         link.close();
