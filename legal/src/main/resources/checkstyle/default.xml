@@ -54,6 +54,9 @@
     <module name="StringLiteralEquality" />
     <module name="FinalParameters"/>
     <module name="MissingOverride"/>
+    <module name="FallThrough">
+      <property name="reliefPattern" value="\$FALL-THROUGH\$"/>
+    </module>
 
     <!-- whitespaces, linebreaks -->
 

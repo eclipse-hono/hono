@@ -277,6 +277,7 @@ public abstract class EventBusCompleteCredentialsAdapter<T> extends EventBusCred
             default:
                 // pass
             }
+            break;
         default:
             // pass
         }
