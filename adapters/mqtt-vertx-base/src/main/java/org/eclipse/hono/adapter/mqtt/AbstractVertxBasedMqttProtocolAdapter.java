@@ -663,8 +663,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     final Sample timer = metrics.startTimer();
                     final Command command = commandContext.getCommand();
                     if (command.isValid()) {
-                        addMicrometerSample(commandContext, timer);
-                        onCommandReceived(mqttEndpoint, sub, commandContext, cmdHandler);
+                        getTenantConfiguration(sub.getTenant(), commandContext.getTracingContext())
+                                .compose(tenantObject -> checkMessageLimit(tenantObject, command.getPayloadSize()))
+                                .setHandler(result -> {
+                                    if (result.succeeded()) {
+                                        addMicrometerSample(commandContext, timer);
+                                        onCommandReceived(mqttEndpoint, sub, commandContext, cmdHandler);
+                                    } else {
+                                        // issue credit so that application(s) can send the next command
+                                        commandContext.reject(getErrorCondition(result.cause()), 1);
+                                        metrics.reportCommand(
+                                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                                sub.getTenant(),
+                                                ProcessingOutcome.from(result.cause()),
+                                                command.getPayloadSize(),
+                                                timer);
+                                    }
+                                });
                     } else {
                         // issue credit so that application(s) can send the next command
                         commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"), 1);
@@ -950,7 +965,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(
                     targetAddress.getTenantId(), currentSpan.context())
-                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
+                            .compose(tenantObject -> CompositeFuture.all(
+                                    isAdapterEnabled(tenantObject),
+                                    checkMessageLimit(tenantObject, ctx.message().payload().length()))
+                                    .map(success -> tenantObject));
 
             return CompositeFuture.all(tokenTracker, tenantEnabledTracker)
                     .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseFuture.result(),
