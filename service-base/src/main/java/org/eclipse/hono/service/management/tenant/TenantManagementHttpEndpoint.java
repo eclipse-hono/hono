@@ -75,7 +75,7 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
         router.post(path).handler(bodyHandler);
         router.post(path).handler(this::extractRequiredJsonPayload);
         router.post(path).handler(this::extractIfMatchVersionParam);
-        router.post(path).handler(this::addTenant);
+        router.post(path).handler(this::createTenant);
 
         final String pathWithTenant = String.format("/%s/:%s", getName(), PARAM_TENANT_ID);
 
@@ -84,7 +84,7 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
         router.post(pathWithTenant).handler(this::extractRequiredJsonPayload);
         router.post(pathWithTenant).handler(this::extractIfMatchVersionParam);
         router.post(pathWithTenant).handler(this::updatePayloadWithTenantId);
-        router.post(pathWithTenant).handler(this::addTenant);
+        router.post(pathWithTenant).handler(this::createTenant);
 
         // GET tenant
         router.get(pathWithTenant).handler(this::extractIfMatchVersionParam);
@@ -98,7 +98,7 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
 
         // REMOVE tenant
         router.delete(pathWithTenant).handler(this::extractIfMatchVersionParam);
-        router.delete(pathWithTenant).handler(this::removeTenant);
+        router.delete(pathWithTenant).handler(this::deleteTenant);
     }
 
     /**
@@ -129,7 +129,7 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
         return Optional.ofNullable(getTenantParam(ctx)).orElse(getTenantParamFromPayload(payload));
     }
 
-    private void addTenant(final RoutingContext ctx) {
+    private void createTenant(final RoutingContext ctx) {
 
         final String tenantId = getTenantIdFromContext(ctx);
         final String location = String.format("/%s/", getName());
@@ -159,7 +159,7 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
                         payload.getResourceVersion()));
     }
 
-    private void removeTenant(final RoutingContext ctx) {
+    private void deleteTenant(final RoutingContext ctx) {
 
         final String tenantId = getTenantIdFromContext(ctx);
 
