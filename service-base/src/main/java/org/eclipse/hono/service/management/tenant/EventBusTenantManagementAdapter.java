@@ -86,13 +86,13 @@ public abstract class EventBusTenantManagementAdapter<T> extends EventBusService
 
         switch (requestMessage.getOperation()) {
             case RegistryManagementConstants.ACTION_CREATE:
-                return processAddRequest(requestMessage);
+                return processCreateRequest(requestMessage);
             case RegistryManagementConstants.ACTION_GET:
                 return processGetRequest(requestMessage);
             case RegistryManagementConstants.ACTION_UPDATE:
                 return processUpdateRequest(requestMessage);
             case RegistryManagementConstants.ACTION_DELETE:
-                return processRemoveRequest(requestMessage);
+                return processDeleteRequest(requestMessage);
             default:
                 return processCustomTenantMessage(requestMessage);
         }
@@ -100,7 +100,7 @@ public abstract class EventBusTenantManagementAdapter<T> extends EventBusService
     }
 
 
-    private Future<EventBusMessage> processAddRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processCreateRequest(final EventBusMessage request) {
 
         final Optional<String> tenantId = Optional.ofNullable(request.getTenant());
         final JsonObject payload = getRequestPayload(request.getJsonPayload());
@@ -153,7 +153,7 @@ public abstract class EventBusTenantManagementAdapter<T> extends EventBusService
         }
     }
 
-    private Future<EventBusMessage> processRemoveRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processDeleteRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
@@ -369,7 +369,3 @@ public abstract class EventBusTenantManagementAdapter<T> extends EventBusService
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 }
-
-
-
-
