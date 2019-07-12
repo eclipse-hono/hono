@@ -904,90 +904,85 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Objects.requireNonNull(targetAddress);
 
         final String[] addressPath = targetAddress.getResourcePath();
+        Integer status = null;
+        String reqId = null;
 
+        final Future<CommandResponse> commandResponseFuture;
         if (addressPath.length <= CommandConstants.TOPIC_POSITION_RESPONSE_STATUS) {
-            metrics.reportCommand(
-                    Direction.RESPONSE,
-                    targetAddress.getTenantId(),
-                    ProcessingOutcome.UNPROCESSABLE,
-                    ctx.message().payload().length(),
-                    ctx.getTimer());
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "command response topic has too few segments"));
+            commandResponseFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "command response topic has too few segments"));
         } else {
             try {
-                final Integer status = Integer.parseInt(addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
-                final String reqId = addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
+                status = Integer.parseInt(addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
+            } catch (final NumberFormatException e) {
+                LOG.trace("got invalid status code [{}] [tenant-id: {}, device-id: {}]",
+                        addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS], targetAddress.getTenantId(), targetAddress.getResourceId());
+            }
+            if (status != null) {
+                reqId = addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
                 final CommandResponse commandResponse = CommandResponse.from(reqId, targetAddress.getTenantId(),
                         targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
 
-                if (commandResponse == null) {
-                    metrics.reportCommand(
-                            Direction.RESPONSE,
-                            targetAddress.getTenantId(),
-                            ProcessingOutcome.UNPROCESSABLE,
-                            ctx.message().payload().length(),
-                            ctx.getTimer());
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "command response topic contains invalid data"));
-               } else {
-
-                    final Span currentSpan = TracingHelper
-                           .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response")
-                           .ignoreActiveSpan()
-                           .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                           .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                           .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, targetAddress.getTenantId())
-                           .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, targetAddress.getResourceId())
-                           .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, status)
-                           .withTag(Constants.HEADER_COMMAND_REQUEST_ID, reqId)
-                           .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
-                           .start();
-                    final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
-                            targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
-                    final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(
-                            targetAddress.getTenantId(), currentSpan.context())
-                                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
-
-                    return CompositeFuture.all(tokenTracker, tenantEnabledTracker)
-                            .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponse,
-                                    currentSpan.context()))
-                           .map(delivery -> {
-                               LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
-                                       targetAddress.getTenantId(), targetAddress.getResourceId());
-                               metrics.reportCommand(
-                                       Direction.RESPONSE,
-                                       targetAddress.getTenantId(),
-                                       ProcessingOutcome.FORWARDED,
-                                       ctx.message().payload().length(),
-                                       ctx.getTimer());
-                               // check that the remote MQTT client is still connected before sending PUBACK
-                               if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                                   ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
-                               }
-                               currentSpan.finish();
-                               return (Void) null;
-                           }).recover(t -> {
-                               TracingHelper.logError(currentSpan, t);
-                               currentSpan.finish();
-                               metrics.reportCommand(
-                                       Direction.RESPONSE,
-                                       targetAddress.getTenantId(),
-                                       ProcessingOutcome.from(t),
-                                       ctx.message().payload().length(),
-                                       ctx.getTimer());
-                               return Future.failedFuture(t);
-                           });
-
-               }
-            } catch (final NumberFormatException e) {
-                metrics.reportCommand(
-                        Direction.RESPONSE,
-                        targetAddress.getTenantId(),
-                        ProcessingOutcome.UNPROCESSABLE,
-                        ctx.message().payload().length(),
-                        ctx.getTimer());
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "invalid status code"));
+                commandResponseFuture = commandResponse != null ? Future.succeededFuture(commandResponse)
+                        : Future.failedFuture(new ClientErrorException(
+                                HttpURLConnection.HTTP_BAD_REQUEST, "command response topic contains invalid data"));
+            } else {
+                // status code could not be parsed
+                commandResponseFuture = Future.failedFuture(
+                        new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "invalid status code"));
             }
         }
+
+        final Span currentSpan = TracingHelper
+                .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response")
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, targetAddress.getTenantId())
+                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, targetAddress.getResourceId())
+                .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, status)
+                .withTag(Constants.HEADER_COMMAND_REQUEST_ID, reqId)
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
+                .start();
+
+        final Future<Void> uploadMessageTracker = commandResponseFuture.compose(commandResponse -> {
+            final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
+                    targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
+            final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(
+                    targetAddress.getTenantId(), currentSpan.context())
+                    .compose(tenantObject -> isAdapterEnabled(tenantObject));
+
+            return CompositeFuture.all(tokenTracker, tenantEnabledTracker)
+                    .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseFuture.result(),
+                            currentSpan.context()))
+                    .map(delivery -> {
+                        LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
+                                targetAddress.getTenantId(), targetAddress.getResourceId());
+                        metrics.reportCommand(
+                                Direction.RESPONSE,
+                                targetAddress.getTenantId(),
+                                ProcessingOutcome.FORWARDED,
+                                ctx.message().payload().length(),
+                                ctx.getTimer());
+                        // check that the remote MQTT client is still connected before sending PUBACK
+                        if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                            ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
+                        }
+                        currentSpan.finish();
+                        return (Void) null;
+                    });
+        });
+        return uploadMessageTracker.recover(t -> {
+            TracingHelper.logError(currentSpan, t);
+            currentSpan.finish();
+            metrics.reportCommand(
+                    Direction.RESPONSE,
+                    targetAddress.getTenantId(),
+                    ProcessingOutcome.from(t),
+                    ctx.message().payload().length(),
+                    ctx.getTimer());
+            return Future.failedFuture(t);
+        });
     }
 
     private Future<Void> uploadMessage(
@@ -1001,72 +996,71 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         if (!isPayloadOfIndicatedType(payload, ctx.contentType())) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     String.format("Content-Type %s does not match payload", ctx.contentType())));
-        } else {
-
-            final Span currentSpan = TracingHelper.buildChildSpan(tracer, ctx.getTracingContext(), "upload " + endpoint)
-                    .ignoreActiveSpan()
-                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                    .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
-                    .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
-                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
-                    .start();
-
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
-                    ctx.authenticatedDevice(), currentSpan.context());
-            final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                    .compose(tenantObject -> CompositeFuture.all(
-                            isAdapterEnabled(tenantObject),
-                            checkMessageLimit(tenantObject, payload.length()))
-                            .map(success -> tenantObject));
-
-            return CompositeFuture.all(tokenTracker, tenantEnabledTracker, senderTracker).compose(ok -> {
-
-                    final DownstreamSender sender = senderTracker.result();
-                    final Message downstreamMessage = newMessage(
-                            ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
-                            ctx.message().topicName(),
-                            ctx.contentType(),
-                            payload,
-                            tenantEnabledTracker.result(),
-                            tokenTracker.result(),
-                            null);
-
-                    addRetainAnnotation(ctx, downstreamMessage, currentSpan);
-                    customizeDownstreamMessage(downstreamMessage, ctx);
-
-                    if (ctx.isAtLeastOnce()) {
-                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
-                    } else {
-                        return sender.send(downstreamMessage, currentSpan.context());
-                    }
-            }).compose(delivery -> {
-
-                LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
-                        ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
-                // check that the remote MQTT client is still connected before sending PUBACK
-                if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
-                    currentSpan.log("sending PUBACK");
-                    ctx.acknowledge();
-                }
-                currentSpan.finish();
-                return Future.<Void> succeededFuture();
-
-            }).recover(t -> {
-
-                if (ClientErrorException.class.isInstance(t)) {
-                    final ClientErrorException e = (ClientErrorException) t;
-                    LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]: {} - {}",
-                            endpoint, tenant, deviceId, e.getErrorCode(), e.getMessage());
-                } else {
-                    LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]",
-                            endpoint, tenant, deviceId, t);
-                }
-                TracingHelper.logError(currentSpan, t);
-                currentSpan.finish();
-                return Future.failedFuture(t);
-            });
         }
+
+        final Span currentSpan = TracingHelper.buildChildSpan(tracer, ctx.getTracingContext(), "upload " + endpoint)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
+                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
+                .start();
+
+        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
+                ctx.authenticatedDevice(), currentSpan.context());
+        final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
+                .compose(tenantObject -> CompositeFuture.all(
+                        isAdapterEnabled(tenantObject),
+                        checkMessageLimit(tenantObject, payload.length()))
+                        .map(success -> tenantObject));
+
+        return CompositeFuture.all(tokenTracker, tenantEnabledTracker, senderTracker).compose(ok -> {
+
+            final DownstreamSender sender = senderTracker.result();
+            final Message downstreamMessage = newMessage(
+                    ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
+                    ctx.message().topicName(),
+                    ctx.contentType(),
+                    payload,
+                    tenantEnabledTracker.result(),
+                    tokenTracker.result(),
+                    null);
+
+            addRetainAnnotation(ctx, downstreamMessage, currentSpan);
+            customizeDownstreamMessage(downstreamMessage, ctx);
+
+            if (ctx.isAtLeastOnce()) {
+                return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+            } else {
+                return sender.send(downstreamMessage, currentSpan.context());
+            }
+        }).compose(delivery -> {
+
+            LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
+                    ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
+            // check that the remote MQTT client is still connected before sending PUBACK
+            if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
+                currentSpan.log("sending PUBACK");
+                ctx.acknowledge();
+            }
+            currentSpan.finish();
+            return Future.<Void> succeededFuture();
+
+        }).recover(t -> {
+
+            if (ClientErrorException.class.isInstance(t)) {
+                final ClientErrorException e = (ClientErrorException) t;
+                LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]: {} - {}",
+                        endpoint, tenant, deviceId, e.getErrorCode(), e.getMessage());
+            } else {
+                LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]",
+                        endpoint, tenant, deviceId, t);
+            }
+            TracingHelper.logError(currentSpan, t);
+            currentSpan.finish();
+            return Future.failedFuture(t);
+        });
     }
 
     /**
