@@ -20,12 +20,25 @@ spec:
         version: "{{ .Chart.AppVersion }}"
         group: {{ .Values.project.groupId }}
     spec:
-      {{- if eq .Values.jaeger.enabled true}}
       initContainers:
+      {{- if eq .Values.jaeger.enabled true}}
         - name: wait-for-jaeger-agent
           image: busybox:1.28
           command: ['sh', '-c', 'until nslookup {{ .Values.jaeger.agentHost }}; do echo waiting for {{ .Values.jaeger.agentHost }}; sleep 2; done;']
       {{- end}}
+        - name: copy-example-data
+          image: busybox
+          command:
+            - sh
+            - -c
+            - cp -u /tmp/hono/example-device-identities.json /var/lib/hono/device-registry/device-identities.json;
+              cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json;
+              cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json
+          volumeMounts:
+            - mountPath: /tmp/hono
+              name: conf
+            - mountPath: /var/lib/hono/device-registry
+              name: registry
       containers:
       - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-service-device-registry:{{ .Values.honoImageTag }}
         imagePullPolicy: IfNotPresent
@@ -90,20 +103,6 @@ spec:
             port: {{ .Values.healthCheckPort }}
             scheme: HTTP
           initialDelaySeconds: 10
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - cp -u /tmp/hono/example-device-identities.json /var/lib/hono/device-registry/device-identities.json;
-          cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json;
-          cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json
-        image: busybox
-        name: copy-example-data
-        volumeMounts:
-        - mountPath: /tmp/hono
-          name: conf
-        - mountPath: /var/lib/hono/device-registry
-          name: registry
       volumes:
       - name: registry
         persistentVolumeClaim:
