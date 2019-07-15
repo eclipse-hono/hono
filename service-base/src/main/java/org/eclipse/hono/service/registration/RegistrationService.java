@@ -84,10 +84,6 @@ public interface RegistrationService {
      * Implementing classes should verify, that the gateway is authorized to get an assertion for the device.
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
-     * <br>
-     * In the case of a device configured with one or more <em>via</em> gateways, implementing classes should
-     * update the device's registration information with the given gateway in the form of a <em>last-via</em>
-     * property.
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
@@ -118,10 +114,6 @@ public interface RegistrationService {
      * Implementing classes should verify, that the gateway is authorized to get an assertion for the device.
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
-     * <br>
-     * In the case of a device configured with one or more <em>via</em> gateways, implementing classes should
-     * update the device's registration information with the given gateway in the form of a <em>last-via</em>
-     * property.
      * <p>
      * This default implementation simply returns the result of {@link #assertRegistration(String, String, String, Handler)}.
      *

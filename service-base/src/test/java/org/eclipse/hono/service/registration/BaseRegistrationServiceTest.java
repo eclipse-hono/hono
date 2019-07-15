@@ -238,56 +238,6 @@ public class BaseRegistrationServiceTest {
     }
 
     /**
-     * Verifies that the <em>assertRegistration</em> operation on a device with multiple 'via' entries updates
-     * the 'last-via' property.
-     *
-     * @param ctx The vert.x unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationUpdatesLastViaProperty(final VertxTestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device that is configured to
-        // be connected to an enabled gateway
-        final AbstractRegistrationService registrationService = spy(newRegistrationService());
-
-        // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-
-            ctx.completeNow();
-        })));
-    }
-
-    /**
-     * Verifies that the <em>assertRegistration</em> operation on a device with multiple 'via' entries updates
-     * the 'last-via' property - here in the case where no gateway id is passed to the assertRegistration method.
-     *
-     * @param ctx The vertx unit test context.
-     */
-    @Test
-    public void testAssertDeviceRegistrationWithoutGatewayUpdatesLastViaProperty(final VertxTestContext ctx) {
-
-        // GIVEN a registry that contains an enabled device that is configured to
-        // be connected to an enabled gateway
-        final AbstractRegistrationService registrationService = spy(newRegistrationService());
-
-        final Checkpoint assertion = ctx.checkpoint(1);
-
-        // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714",  ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-
-            assertion.flag();
-        })));
-    }
-
-    /**
      * Create a new BaseRegistrationService instance using the {@link #getDevice(String)} method to retrieve device data.
      *
      * @return New BaseRegistrationService instance.
@@ -310,8 +260,7 @@ public class BaseRegistrationServiceTest {
     }
 
     /**
-     * Create a BaseRegistrationService where the <em>getDevice</em> method is not overridden and the
-     * <em>updateDeviceLastVia</em> method returns a failed Future with a <em>HTTP_NOT_IMPLEMENTED</em> status.
+     * Create a BaseRegistrationService where the <em>getDevice</em> method is not implemented.
      *
      * @return New BaseRegistrationService instance.
      */

@@ -12,12 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
-import static org.eclipse.hono.util.Constants.JSON_FIELD_DEVICE_ID;
-
 import java.net.HttpURLConnection;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -270,20 +265,6 @@ public abstract class EventBusRegistrationAdapter<T> extends EventBusService<T> 
         return new JsonObject()
                 .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
                 .put(RegistrationConstants.FIELD_DATA, data);
-    }
-
-    /**
-     * Creates the JsonObject used as value for the <em>last-via</em> property.
-     *
-     * @param gatewayId The gateway id.
-     * @return JSON value for the <em>last-via</em> property.
-     */
-    protected final JsonObject createLastViaObject(final String gatewayId) {
-        final JsonObject lastViaObj = new JsonObject();
-        lastViaObj.put(JSON_FIELD_DEVICE_ID, gatewayId);
-        lastViaObj.put(RegistrationConstants.FIELD_LAST_VIA_UPDATE_DATE,
-                ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
-        return lastViaObj;
     }
 
 }

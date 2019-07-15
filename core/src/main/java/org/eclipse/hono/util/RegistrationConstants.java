@@ -52,16 +52,6 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      * the identifier of the gateway that it is connected to (either as string value or inside a JSON array).
      */
     public static final String FIELD_VIA = "via";
-    /**
-     * The name of the field in a device's registration information that contains
-     * the identifier of the gateway that it was last connected to as well as the date when this information was updated.
-     */
-    public static final String FIELD_LAST_VIA = "last-via";
-    /**
-     * The name of the field in a device's registration information that contains
-     * the date when the 'last-via' device id was last updated.
-     */
-    public static final String FIELD_LAST_VIA_UPDATE_DATE = "update-date";
 
     /**
      * The name of the Device Registration API endpoint.
