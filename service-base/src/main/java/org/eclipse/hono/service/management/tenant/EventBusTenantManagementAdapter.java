@@ -313,6 +313,9 @@ public abstract class EventBusTenantManagementAdapter<T> extends EventBusService
             return true;
         } else if (JsonObject.class.isInstance(trustConfig)) {
             return isValidTrustedCaSpec((JsonObject) trustConfig);
+        } else if (JsonArray.class.isInstance(trustConfig)) {
+            final JsonArray trustConfigs = (JsonArray) trustConfig;
+            return trustConfigs.size() > 0 && isValidTrustedCaSpec(trustConfigs);
         } else {
             return false;
         }
@@ -368,4 +371,11 @@ public abstract class EventBusTenantManagementAdapter<T> extends EventBusService
         log.debug("invalid operation in request message [{}]", request.getOperation());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
+
+    private boolean isValidTrustedCaSpec(final JsonArray trustConfigs) {
+        final boolean containsInvalidTrustedCa = trustConfigs.stream()
+                .anyMatch(trustedCa -> !JsonObject.class.isInstance(trustedCa) || !isValidTrustedCaSpec((JsonObject) trustedCa));
+        return !containsInvalidTrustedCa;
+    }
+
 }
