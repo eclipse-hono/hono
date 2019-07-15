@@ -9,6 +9,14 @@ title = "Release Notes"
 * Implementation of the new HTTP management API for tenants, devices and
   credentials.
 
+### Fixes & Enhancements
+
+* The automatic reconnect handling of the `HonoConnection` implementation has been
+  improved and now applies an exponential backoff algorithm. The behaviour can be
+  configured using the `${PREFIX}_RECONNECT_*` configuration variables. Please
+  refer to the [Hono Client Configuration guide](https://www.eclipse.org/hono/docs/latest/admin-guide/hono-client-configuration/)
+  for details regarding these new variables.
+
 ### API Changes
 
 * With the implementation of the new HTTP management API for the device registry,
