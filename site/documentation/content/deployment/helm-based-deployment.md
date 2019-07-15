@@ -114,8 +114,6 @@ The following command assigns the IP address of the device registry service to t
 export REGISTRY_IP=$(kubectl get service hono-service-device-registry-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n hono)
 ~~~
 
-If the above command reports `could not determine IP address of service` errors and if Minikube is used, make sure the `minikube tunnel` command has been invoked to emulate load balancers.
-
 The following command can then be used to check for the existence of the *DEFAULT_TENANT* which is created as part of the installation:
 
 ~~~sh
