@@ -37,7 +37,7 @@ All services are exposed via the same ports as used in the guide.
   We therefore **strongly suggest** that you use the secure ports only, if possible!
   When using the [Hono client](https://www.eclipse.org/hono/docs/latest/admin-guide/hono-client-configuration/) to access the sandbox'
   Telemetry and/or Event APIs, make sure to not set a trust store explicitly but instead set the *tlsEnabled* property to `true`.
-  The command line client binary is available from the [downloads page](https://www.eclipse.org/hono/download/#binaries) and
+  The command line client binary is available from the [downloads page]({{< relref "downloads#binaries" >}}) and
   can be used to consume telemetry/event messages from the sandbox as below:
   
         java -jar hono-cli-*-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver`
