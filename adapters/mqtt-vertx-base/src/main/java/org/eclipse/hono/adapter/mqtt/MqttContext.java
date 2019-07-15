@@ -22,6 +22,8 @@ import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -39,6 +41,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     private String contentType;
     private Sample timer;
     private MetricsTags.EndpointType endpoint;
+    private Span span;
 
     private MqttContext() {
     }
@@ -236,5 +239,31 @@ public final class MqttContext extends MapBasedExecutionContext {
      */
     public Sample getTimer() {
         return timer;
+    }
+
+    /**
+     * Gets the <em>OpenTracing</em> span used for tracking
+     * the processing of this context.
+     *
+     * @return The span or {@code null} if no tracing span is set.
+     */
+    public Span getTracingSpan() {
+        return span;
+    }
+
+    /**
+     * Sets the <em>OpenTracing</em> span used for tracking
+     * the processing of this context.
+     * <p>
+     * Also invokes {@link #setTracingContext(SpanContext)}
+     * with the context of the given span.
+     *
+     * @param span The span.
+     */
+    public void setTracingSpan(final Span span) {
+        this.span = span;
+        if (span != null) {
+            setTracingContext(span.context());
+        }
     }
 }

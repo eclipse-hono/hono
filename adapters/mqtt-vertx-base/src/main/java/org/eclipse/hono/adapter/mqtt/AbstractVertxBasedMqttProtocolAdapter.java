@@ -435,14 +435,16 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Span currentSpan) {
 
         final MqttContext context = MqttContext.fromConnectPacket(endpoint);
-        context.setTracingContext(currentSpan.context());
+        context.setTracingSpan(currentSpan);
         final Future<DeviceUser> authAttempt = authenticate(context, currentSpan);
         return authAttempt
                 .compose(authenticatedDevice -> CompositeFuture.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
-                            .compose(tenantObj -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObj),
-                                    checkConnectionLimit(tenantObj))),
+                                .compose(tenantObj -> {
+                                    applyTraceSamplingPriority(tenantObj, authenticatedDevice.getDeviceId(), currentSpan);
+                                    return CompositeFuture.all(isAdapterEnabled(tenantObj),
+                                            checkConnectionLimit(tenantObj));
+                                }),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(ok -> authenticatedDevice))
                 .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
@@ -707,7 +709,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             .withTag(Tags.COMPONENT.getKey(), getTypeName())
             .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
-        context.setTracingContext(span.context());
+        context.setTracingSpan(span);
         context.setTimer(getMetrics().startTimer());
 
         checkTopic(context)
@@ -960,35 +962,45 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-        final Future<Void> uploadMessageTracker = commandResponseFuture.compose(commandResponse -> {
-            final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
-                    targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
-            final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(
-                    targetAddress.getTenantId(), currentSpan.context())
-                            .compose(tenantObject -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObject),
-                                    checkMessageLimit(tenantObject, ctx.message().payload().length()))
-                                    .map(success -> tenantObject));
+        // get tenant information first in order to apply the trace sampling priority before further spans get created
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(
+                targetAddress.getTenantId(), currentSpan.context())
+                .compose(tenantObject -> {
+                    if (ctx.getTracingSpan() != null) {
+                        applyTraceSamplingPriority(tenantObject, targetAddress.getResourceId(), ctx.getTracingSpan());
+                        TracingHelper.adoptSamplingPriority(ctx.getTracingSpan(), currentSpan);
+                    }
+                    return CompositeFuture.all(
+                            isAdapterEnabled(tenantObject),
+                            checkMessageLimit(tenantObject, ctx.message().payload().length()))
+                            .map(success -> tenantObject);
+                });
 
-            return CompositeFuture.all(tokenTracker, tenantEnabledTracker)
-                    .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseFuture.result(),
-                            currentSpan.context()))
-                    .map(delivery -> {
-                        LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
-                                targetAddress.getTenantId(), targetAddress.getResourceId());
-                        metrics.reportCommand(
-                                Direction.RESPONSE,
-                                targetAddress.getTenantId(),
-                                ProcessingOutcome.FORWARDED,
-                                ctx.message().payload().length(),
-                                ctx.getTimer());
-                        // check that the remote MQTT client is still connected before sending PUBACK
-                        if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                            ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
-                        }
-                        currentSpan.finish();
-                        return (Void) null;
-                    });
+        final Future<Void> uploadMessageTracker = tenantTracker.compose(tenantObject -> {
+            return commandResponseFuture.compose(commandResponse -> {
+                final Future<JsonObject> registrationTracker = getRegistrationAssertion(targetAddress.getTenantId(),
+                        targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
+
+                return registrationTracker
+                        .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseFuture.result(),
+                                currentSpan.context()))
+                        .map(delivery -> {
+                            LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
+                                    targetAddress.getTenantId(), targetAddress.getResourceId());
+                            metrics.reportCommand(
+                                    Direction.RESPONSE,
+                                    targetAddress.getTenantId(),
+                                    ProcessingOutcome.FORWARDED,
+                                    ctx.message().payload().length(),
+                                    ctx.getTimer());
+                            // check that the remote MQTT client is still connected before sending PUBACK
+                            if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                                ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
+                            }
+                            currentSpan.finish();
+                            return (Void) null;
+                        });
+            });
         });
         return uploadMessageTracker.recover(t -> {
             TracingHelper.logError(currentSpan, t);
@@ -1025,47 +1037,59 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
-                ctx.authenticatedDevice(), currentSpan.context());
-        final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                .compose(tenantObject -> CompositeFuture.all(
-                        isAdapterEnabled(tenantObject),
-                        checkMessageLimit(tenantObject, payload.length()))
-                        .map(success -> tenantObject));
+        // get tenant information first in order to apply the trace sampling priority before further spans get created
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context())
+                .compose(tenantObject -> {
+                    if (ctx.getTracingSpan() != null) {
+                        applyTraceSamplingPriority(tenantObject, deviceId, ctx.getTracingSpan());
+                        TracingHelper.adoptSamplingPriority(ctx.getTracingSpan(), currentSpan);
+                    }
+                    return CompositeFuture.all(
+                            isAdapterEnabled(tenantObject),
+                            checkMessageLimit(tenantObject, payload.length()))
+                            .map(success -> tenantObject);
+                });
 
-        return CompositeFuture.all(tokenTracker, tenantEnabledTracker, senderTracker).compose(ok -> {
+        final Future<Void> uploadMessageTracker = tenantTracker.compose(tenantObject -> {
+            final Future<JsonObject> registrationTracker = getRegistrationAssertion(tenant, deviceId,
+                    ctx.authenticatedDevice(), currentSpan.context());
 
-            final DownstreamSender sender = senderTracker.result();
-            final Message downstreamMessage = newMessage(
-                    ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
-                    ctx.message().topicName(),
-                    ctx.contentType(),
-                    payload,
-                    tenantEnabledTracker.result(),
-                    tokenTracker.result(),
-                    null);
+            return CompositeFuture.all(registrationTracker, senderTracker).compose(ok -> {
 
-            addRetainAnnotation(ctx, downstreamMessage, currentSpan);
-            customizeDownstreamMessage(downstreamMessage, ctx);
+                final DownstreamSender sender = senderTracker.result();
+                final Message downstreamMessage = newMessage(
+                        ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
+                        ctx.message().topicName(),
+                        ctx.contentType(),
+                        payload,
+                        tenantObject,
+                        registrationTracker.result(),
+                        null);
 
-            if (ctx.isAtLeastOnce()) {
-                return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
-            } else {
-                return sender.send(downstreamMessage, currentSpan.context());
-            }
-        }).compose(delivery -> {
+                addRetainAnnotation(ctx, downstreamMessage, currentSpan);
+                customizeDownstreamMessage(downstreamMessage, ctx);
 
-            LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
-                    ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
-            // check that the remote MQTT client is still connected before sending PUBACK
-            if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
-                currentSpan.log("sending PUBACK");
-                ctx.acknowledge();
-            }
-            currentSpan.finish();
-            return Future.<Void> succeededFuture();
+                if (ctx.isAtLeastOnce()) {
+                    return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+                } else {
+                    return sender.send(downstreamMessage, currentSpan.context());
+                }
+            }).compose(delivery -> {
 
-        }).recover(t -> {
+                LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
+                        ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
+                // check that the remote MQTT client is still connected before sending PUBACK
+                if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
+                    currentSpan.log("sending PUBACK");
+                    ctx.acknowledge();
+                }
+                currentSpan.finish();
+                return Future.succeededFuture();
+
+            });
+        });
+
+        return uploadMessageTracker.recover(t -> {
 
             if (ClientErrorException.class.isInstance(t)) {
                 final ClientErrorException e = (ClientErrorException) t;

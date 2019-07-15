@@ -51,6 +51,7 @@ import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.plan.NoopResourceLimitChecks;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -66,6 +67,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
@@ -1639,5 +1641,24 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     public final void setConnectionLimitManager(final ConnectionLimitManager connectionLimitManager) {
         this.connectionLimitManager = connectionLimitManager;
+    }
+
+    /**
+     * Applies the sampling priority configured for the given tenant and device to the given span.
+     * <p>
+     * The sampling priority defines in how far <em>OpenTracing</em> spans created when processing
+     * messages for the tenant and device shall be recorded (sampled) by the tracing system.
+     *
+     * @param tenantObject The tenant configuration to get the sampling priority information from.
+     * @param deviceId The device id (may be null).
+     * @param span The span to apply the sampling priority to.
+     */
+    protected final void applyTraceSamplingPriority(final TenantObject tenantObject, final String deviceId, final Span span) {
+        tenantObject.getTraceSamplingPriority(deviceId)
+                .ifPresent(prio -> {
+                    LOG.trace("setting trace sampling prio to {} for tenant [{}], device [{}]", prio,
+                            tenantObject.getTenantId(), deviceId);
+                    TracingHelper.setTraceSamplingPriority(span, prio);
+                });
     }
 }

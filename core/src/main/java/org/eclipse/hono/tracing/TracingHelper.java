@@ -19,6 +19,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.References;
 import io.opentracing.Span;
@@ -97,6 +99,8 @@ public final class TracingHelper {
     private static final String JSON_KEY_SPAN_CONTEXT = "span-context";
 
     private static final String AMQP_ANNOTATION_NAME_TRACE_CONTEXT = "x-opt-trace-context";
+
+    private static final Logger LOG = LoggerFactory.getLogger(TracingHelper.class);
 
     private TracingHelper() {
         // prevent instantiation
@@ -305,11 +309,15 @@ public final class TracingHelper {
     }
 
     /**
-     * Creates a span builder that is initialized with the given operation name and a child reference to the given span
-     * context (if set).
+     * Creates a span builder that is initialized with the given operation name and a child-of reference to the given
+     * span context (if set).
+     * <p>
+     * If the given span context contains a "sampling.priority" baggage item, it is set as a tag in the returned span
+     * builder.
      *
      * @param tracer The Tracer to use.
-     * @param spanContext The span context to set as child reference (may be null).
+     * @param spanContext The span context that shall be the parent of the Span being built and that is used to derive
+     *            the sampling priority from (may be null).
      * @param operationName The operation name to set for the span
      * @return The span builder.
      * @throws NullPointerException if tracer or operationName is {@code null}.
@@ -322,9 +330,13 @@ public final class TracingHelper {
     /**
      * Creates a span builder that is initialized with the given operation name and a follows-from reference to the
      * given span context (if set).
+     * <p>
+     * If the given span context contains a "sampling.priority" baggage item, it is set as a tag in the returned span
+     * builder.
      *
      * @param tracer The Tracer to use.
-     * @param spanContext The span context to set as follows-from reference (may be null).
+     * @param spanContext The span context that the span being build shall have a follows-from reference to and that is
+     *            used to derive the sampling priority from (may be null).
      * @param operationName The operation name to set for the span
      * @return The span builder.
      * @throws NullPointerException if tracer or operationName is {@code null}.
@@ -337,9 +349,12 @@ public final class TracingHelper {
     /**
      * Creates a span builder that is initialized with the given operation name and a reference to the given span
      * context (if set).
+     * <p>
+     * If the given span context contains a "sampling.priority" baggage item, it is set as a tag in the returned span
+     * builder.
      *
      * @param tracer The Tracer to use.
-     * @param spanContext The span context to set as reference (may be null).
+     * @param spanContext The span context to set as reference and to derive the sampling priority from (may be null).
      * @param operationName The operation name to set for the span
      * @param referenceType The type of reference towards the span context.
      * @return The span builder.
@@ -352,6 +367,63 @@ public final class TracingHelper {
         Objects.requireNonNull(referenceType);
         final Tracer.SpanBuilder spanBuilder = tracer.buildSpan(operationName)
                 .addReference(referenceType, spanContext);
+        adoptSamplingPriorityFromContext(spanContext, spanBuilder);
         return spanBuilder;
+    }
+
+    /**
+     * Sets a "sampling.priority" tag and baggage item with the given samplingPriority value in the given span.
+     *
+     * @param span The span to set the tag in.
+     * @param samplingPriority The sampling priority to set.
+     * @throws NullPointerException if the given span is null.
+     */
+    public static void setTraceSamplingPriority(final Span span, final int samplingPriority) {
+        Objects.requireNonNull(span);
+        Tags.SAMPLING_PRIORITY.set(span, samplingPriority);
+        span.setBaggageItem(Tags.SAMPLING_PRIORITY.getKey(), Integer.toString(samplingPriority));
+    }
+
+    /**
+     * Gets a "sampling.priority" baggage item from the given span context (if set) and
+     * sets a corresponding tag in the given span builder.
+     *
+     * @param spanContext The span context (may be null).
+     * @param spanBuilder The span builder to set the tag in.
+     * @throws NullPointerException if the given spanBuilder is null.
+     */
+    public static void adoptSamplingPriorityFromContext(final SpanContext spanContext, final Tracer.SpanBuilder spanBuilder) {
+        Objects.requireNonNull(spanBuilder);
+        if (spanContext != null) {
+            for (Map.Entry<String, String> baggageItem : spanContext.baggageItems()) {
+                if (Tags.SAMPLING_PRIORITY.getKey().equals(baggageItem.getKey())) {
+                    spanBuilder.withTag(Tags.SAMPLING_PRIORITY.getKey(), baggageItem.getValue());
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Gets a "sampling.priority" baggage item from the given sourceSpan (if set) and
+     * sets a corresponding tag and baggage item in the given targetSpan.
+     *
+     * @param sourceSpan The span to get the baggage item from.
+     * @param targetSpan The span to set the tag in.
+     * @throws NullPointerException if any of the parameters is null.
+     */
+    public static void adoptSamplingPriority(final Span sourceSpan, final Span targetSpan) {
+        Objects.requireNonNull(sourceSpan);
+        Objects.requireNonNull(targetSpan);
+        final String samplingPriorityString = sourceSpan.getBaggageItem(Tags.SAMPLING_PRIORITY.getKey());
+        if (samplingPriorityString != null) {
+            try {
+                setTraceSamplingPriority(targetSpan, Integer.valueOf(samplingPriorityString));
+            } catch (final NumberFormatException ex) {
+                LOG.trace("cannot parse '{}' baggage item value as integer: {}", Tags.SAMPLING_PRIORITY.getKey(),
+                        samplingPriorityString);
+            }
+        }
+
     }
 }

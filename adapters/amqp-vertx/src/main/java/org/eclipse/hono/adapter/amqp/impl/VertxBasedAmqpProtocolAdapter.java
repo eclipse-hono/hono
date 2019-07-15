@@ -861,62 +861,68 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         LOG.trace("forwarding {} message", context.getEndpoint().getCanonicalName());
 
-        final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
-                context.getAuthenticatedDevice(), currentSpan.context());
-        final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
-                currentSpan.context())
-                        .compose(tenantObject -> CompositeFuture
-                                .all(isAdapterEnabled(tenantObject),
-                                        checkMessageLimit(tenantObject, context.getPayloadSize()))
-                                .map(success -> tenantObject));
+        // get tenant information first in order to apply the trace sampling priority before further spans get created
+        final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(), currentSpan.context())
+                        .compose(tenantObject -> {
+                            applyTraceSamplingPriority(tenantObject, resource.getResourceId(), currentSpan);
+                            return CompositeFuture
+                                    .all(isAdapterEnabled(tenantObject),
+                                            checkMessageLimit(tenantObject, context.getPayloadSize()))
+                                    .map(success -> tenantObject);
+                        });
+        final Future<ProtonDelivery> uploadMessageTracker = tenantEnabledFuture.compose(tenantObject -> {
+            final Future<JsonObject> registrationTracker = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
+                    context.getAuthenticatedDevice(), currentSpan.context());
+            return CompositeFuture.all(registrationTracker, senderFuture)
+                    .compose(ok -> {
 
-        return CompositeFuture.all(tenantEnabledFuture, tokenFuture, senderFuture)
-                .compose(ok -> {
+                        final DownstreamSender sender = senderFuture.result();
+                        final Message downstreamMessage = addProperties(
+                                context.getMessage(),
+                                ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
+                                context.getAddress().toString(),
+                                tenantEnabledFuture.result(),
+                                registrationTracker.result(),
+                                null); // no TTD
 
-                    final DownstreamSender sender = senderFuture.result();
-                    final Message downstreamMessage = addProperties(
-                            context.getMessage(),
-                            ResourceIdentifier.from(context.getEndpoint().getCanonicalName(), resource.getTenantId(), resource.getResourceId()),
-                            context.getAddress().toString(),
-                            tenantEnabledFuture.result(),
-                            tokenFuture.result(),
-                            null); // no TTD
+                        if (context.isRemotelySettled()) {
+                            // client uses AT_MOST_ONCE delivery semantics -> fire and forget
+                            return sender.send(downstreamMessage, currentSpan.context());
+                        } else {
+                            // client uses AT_LEAST_ONCE delivery semantics
+                            return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
+                        }
 
-                    if (context.isRemotelySettled()) {
-                        // client uses AT_MOST_ONCE delivery semantics -> fire and forget
-                        return sender.send(downstreamMessage, currentSpan.context());
-                    } else {
-                        // client uses AT_LEAST_ONCE delivery semantics
-                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
-                    }
+                    });
+        });
+        return uploadMessageTracker.recover(t -> {
 
-                }).recover(t -> {
+            LOG.debug("cannot process {} message from device [tenant: {}, device-id: {}]",
+                    context.getEndpoint().getCanonicalName(),
+                    resource.getTenantId(),
+                    resource.getResourceId(), t);
+            final ProcessingOutcome outcome = t instanceof ClientErrorException ? ProcessingOutcome.UNPROCESSABLE
+                    : ProcessingOutcome.UNDELIVERABLE;
+            metrics.reportTelemetry(
+                    context.getEndpoint(),
+                    resource.getTenantId(),
+                    outcome,
+                    context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
+                    context.getPayloadSize(),
+                    context.getTimer());
+            return Future.failedFuture(t);
 
-                    LOG.debug("cannot process {} message from device [tenant: {}, device-id: {}]",
-                            context.getEndpoint().getCanonicalName(),
-                            resource.getTenantId(),
-                            resource.getResourceId(), t);
-                    final ProcessingOutcome outcome = t instanceof ClientErrorException ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
-                    metrics.reportTelemetry(
-                            context.getEndpoint(),
-                            resource.getTenantId(),
-                            outcome,
-                            context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
-                            context.getPayloadSize(),
-                            context.getTimer());
-                    return Future.failedFuture(t);
+        }).map(delivery -> {
 
-                }).map(delivery -> {
-
-                    metrics.reportTelemetry(
-                            context.getEndpoint(),
-                            resource.getTenantId(),
-                            ProcessingOutcome.FORWARDED,
-                            context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
-                            context.getPayloadSize(),
-                            context.getTimer());
-                    return delivery;
-                });
+            metrics.reportTelemetry(
+                    context.getEndpoint(),
+                    resource.getTenantId(),
+                    ProcessingOutcome.FORWARDED,
+                    context.isRemotelySettled() ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE,
+                    context.getPayloadSize(),
+                    context.getTimer());
+            return delivery;
+        });
     }
 
     private Future<ProtonDelivery> doUploadCommandResponseMessage(
@@ -924,39 +930,47 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ResourceIdentifier resource,
             final Span currentSpan) {
 
-        final Future<CommandResponse> response = Optional.ofNullable(CommandResponse.from(context.getMessage()))
-                .map(r -> Future.succeededFuture(r))
-                .orElseGet(() -> {
-                    TracingHelper.logError(currentSpan, String.format("invalid message (correlationId: %s, address: %s, status: %s)",
-                                    context.getMessage().getCorrelationId(), context.getMessage().getAddress(), MessageHelper.getStatus(context.getMessage())));
-                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                            "malformed command response message"));
-                });
+        // get tenant information first in order to apply the trace sampling priority before further spans get created
+        final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
+                currentSpan.context()).compose(tenantObject -> {
+            applyTraceSamplingPriority(tenantObject, resource.getResourceId(), currentSpan);
+            return CompositeFuture
+                    .all(isAdapterEnabled(tenantObject),
+                            checkMessageLimit(tenantObject, context.getPayloadSize()))
+                    .map(success -> tenantObject);
+        });
 
-        return response.compose(commandResponse -> {
+        final Future<ProtonDelivery> uploadMessageTracker = tenantEnabledFuture.compose(tenantObject -> {
+            final Future<CommandResponse> response = Optional.ofNullable(CommandResponse.from(context.getMessage()))
+                    .map(r -> Future.succeededFuture(r))
+                    .orElseGet(() -> {
+                        TracingHelper.logError(currentSpan, String.format("invalid message (correlationId: %s, address: %s, status: %s)",
+                                context.getMessage().getCorrelationId(), context.getMessage().getAddress(), MessageHelper.getStatus(context.getMessage())));
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                "malformed command response message"));
+                    });
 
-            LOG.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
-                    resource.getResourceId(), commandResponse.getStatus(), commandResponse.getCorrelationId(),
-                    commandResponse.getReplyToId());
+            return response.compose(commandResponse -> {
 
-            final Map<String, Object> items = new HashMap<>(3);
-            items.put(Fields.EVENT, "sending command response");
-            items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), commandResponse.getCorrelationId());
-            items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
-            currentSpan.log(items);
+                LOG.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
+                        resource.getResourceId(), commandResponse.getStatus(), commandResponse.getCorrelationId(),
+                        commandResponse.getReplyToId());
 
-            final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(),
-                    resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
-            final Future<TenantObject> tenantEnabledFuture = getTenantConfiguration(resource.getTenantId(),
-                    currentSpan.context())
-                            .compose(tenantObject -> CompositeFuture
-                                    .all(isAdapterEnabled(tenantObject),
-                                            checkMessageLimit(tenantObject, context.getPayloadSize()))
-                                    .map(success -> tenantObject));
+                final Map<String, Object> items = new HashMap<>(3);
+                items.put(Fields.EVENT, "sending command response");
+                items.put(TracingHelper.TAG_CORRELATION_ID.getKey(), commandResponse.getCorrelationId());
+                items.put(MessageHelper.APP_PROPERTY_STATUS, commandResponse.getStatus());
+                currentSpan.log(items);
 
-            return CompositeFuture.all(tenantEnabledFuture, tokenFuture)
-                    .compose(ok -> sendCommandResponse(resource.getTenantId(), commandResponse, currentSpan.context()));
-        }).map(delivery -> {
+                final Future<JsonObject> registrationTracker = getRegistrationAssertion(resource.getTenantId(),
+                        resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
+
+                return registrationTracker
+                        .compose(ok -> sendCommandResponse(resource.getTenantId(), commandResponse, currentSpan.context()));
+            });
+        });
+
+        return uploadMessageTracker.map(delivery -> {
 
             LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
                     resource.getTenantId(), resource.getResourceId());

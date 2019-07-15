@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Optional;
+
 /**
  * Constants &amp; utility methods used throughout the Tenant API.
  */
@@ -79,6 +81,21 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_RESOURCE_LIMITS = "resource-limits";
 
     /**
+     * The name of the field that defines in how far spans created when processing
+     * messages for a tenant shall be recorded (sampled) by the tracing system.
+     * The field contains a {@link TraceSamplingMode} value.
+     */
+    public static final String FIELD_TRACE_SAMPLING_MODE = "trace-sampling-mode";
+    /**
+     * The name of the field that defines in how far spans created when processing
+     * messages for a tenant and a particular tenant shall be recorded (sampled)
+     * by the tracing system.
+     * The field contains a JsonObject with fields having a device id as name and
+     * a {@link TraceSamplingMode} value.
+     */
+    public static final String FIELD_TRACE_SAMPLING_MODE_PER_DEVICE = "trace-sampling-mode-per-device";
+
+    /**
      * Request actions that belong to the Tenant API.
      */
     public enum TenantAction {
@@ -117,6 +134,47 @@ public final class TenantConstants extends RequestResponseApiConstants {
                 }
             }
             return custom;
+        }
+    }
+
+    /**
+     * Value that defines in how far <em>OpenTracing</em> spans created when processing
+     * messages for a tenant shall be recorded (sampled) by the tracing system.
+     */
+    public enum TraceSamplingMode {
+        DEFAULT("default"),
+        ALL("all"),
+        ;
+
+        private final String fieldValue;
+
+        TraceSamplingMode(String fieldValue) {
+            this.fieldValue = fieldValue;
+        }
+
+        /**
+         * Construct a TraceSamplingMode from a value.
+         *
+         * @param value The value from which the TraceSamplingMode needs to be constructed.
+         * @return The TraceSamplingMode as enum, or {@link TraceSamplingMode#DEFAULT} otherwise.
+         */
+        public static TraceSamplingMode from(final String value) {
+            for (TraceSamplingMode mode : values()) {
+                if (mode.fieldValue.equals(value)) {
+                    return mode;
+                }
+            }
+            return DEFAULT;
+        }
+
+        /**
+         * Gets the value for the <em>sampling.priority</em> span tag.
+         *
+         * @return An <em>Optional</em> containing the value for the <em>sampling.priority</em> span tag or an empty
+         *         <em>Optional</em> if no such tag should be set.
+         */
+        public Optional<Integer> toSamplingPriority() {
+            return this.equals(ALL) ? Optional.of(1) : Optional.empty();
         }
     }
 

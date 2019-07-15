@@ -562,4 +562,32 @@ public final class TenantObject extends JsonBackedValueObject {
         setProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, Objects.requireNonNull(defaultProperties));
         return this;
     }
+
+    /**
+     * Gets the value for the <em>sampling.priority</em> span tag as encoded in the properties of this tenant.
+     *
+     * @param deviceId The device id (may be null).
+     * @return An <em>Optional</em> containing the value for the <em>sampling.priority</em> span tag or an empty
+     *         <em>Optional</em> if no priority should be set.
+     */
+    @JsonIgnore
+    public Optional<Integer> getTraceSamplingPriority(final String deviceId) {
+        String traceSamplingMode = null;
+        if (deviceId != null) {
+            // check device specific setting first
+            final JsonObject traceSamplingModePerDevice = getProperty(TenantConstants.FIELD_TRACE_SAMPLING_MODE_PER_DEVICE,
+                    JsonObject.class);
+            if (traceSamplingModePerDevice != null) {
+                traceSamplingMode = traceSamplingModePerDevice.getString(deviceId);
+            }
+        }
+        if (traceSamplingMode == null) {
+            // check tenant specific setting
+            traceSamplingMode = getProperty(TenantConstants.FIELD_TRACE_SAMPLING_MODE, String.class);
+        }
+        if (traceSamplingMode == null) {
+            return Optional.empty();
+        }
+        return TenantConstants.TraceSamplingMode.from(traceSamplingMode).toSamplingPriority();
+    }
 }
