@@ -42,7 +42,7 @@ After verifying the credentials, the number of existing connections is checked a
 
 ## Message Limits
 
-Before accepting any telemetry or event messages, the AMQP adapter verifies that the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+Before accepting any telemetry or event or command messages, the AMQP adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
 
 ## Link Establishment
 
@@ -249,6 +249,8 @@ The AMQP adapter supports devices to receive commands that have been sent by bus
 When a device has successfully opened a receiver link for commands, the adapter sends an [empty notification]({{< relref "/api/Event-API.md#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device closes the link or disconnects.
 
 Devices send their responses to commands by means of sending an AMQP message with properties specific to the command that has been executed. The AMQP adapter accepts responses being published using either *at most once* (QoS 0) or *at least once* (QoS 1) delivery semantics. The device must send the command response messages using the same (sender) link that it uses for sending telemetry data and events.
+
+The AMQP adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any command requests and responses. In case of incoming command requests from business applications or the command responses from devices, if the message limit is exceeded, the Adapter rejects the message with the reason `amqp:resource-limit-exceeded`. 
 
 ### Receiving Commands
 

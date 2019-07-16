@@ -40,7 +40,7 @@ After verifying the credentials, the number of existing connections is checked a
 
 ## Message Limits
 
-Before accepting any telemetry or event messages, the MQTT adapter verifies that the configured [message limit] ({{< ref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+Before accepting any telemetry or event or command messages, the MQTT adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
 
 ## Publishing Telemetry Data
 
@@ -183,6 +183,8 @@ When a device has successfully subscribed, the adapter sends an [empty notificat
 Commands can be sent following a *request/response* pattern or being *one-way*. 
 
 For *Request/Response* commands, devices send their responses to commands by means of sending an MQTT *PUBLISH* message to a topic that is specific to the command that has been executed. The MQTT adapter accepts responses being published using either QoS 0 or QoS 1.
+
+The MQTT adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any command requests and responses. In case of incoming command requests from business applications, if the message limit is exceeded, the Adapter rejects the message with the reason `amqp:resource-limit-exceeded`. And for the incoming command responses from devices, the Adapter rejects the message and closes the connection to the client. 
 
 The following sections define the topic filters/names to use for subscribing to and responding to commands. The following *shorthand* versions of topic path segments are supported:
 
