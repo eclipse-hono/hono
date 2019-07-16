@@ -52,7 +52,7 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process telemetry messages for the client's tenant and
 * the messages published by the client comply with the format defined by the Telemetry API.
 
-The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the the incoming telemetry message cannot be processed, the connection to the client is closed.
+The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the incoming telemetry message cannot be processed, the connection to the client is closed.
 
 ## Publish Telemetry Data (authenticated Device)
 
@@ -122,7 +122,7 @@ This requires that
 * the AMQP 1.0 Messaging Network has capacity to process events for the client's tenant and
 * the events published by the client comply with the format defined by the Event API.
 
-The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any telemetry messages. If the message limit is exceeded or the the incoming telemetry message cannot be processed, the connection to the client is closed.
+The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any event messages. If the message limit is exceeded or the incoming event message cannot be processed, the connection to the client is closed.
 
 ## Publish an Event (authenticated Device)
 
