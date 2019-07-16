@@ -65,7 +65,7 @@ public interface MessageSender extends CreditBasedSender {
      *         <p>
      *         The future will be succeeded if the message has been sent to the endpoint.
      *         The delivery will be locally settled only, if the implementing class
-     *         uses <em>at most once</em> delivery semantics. Otherwise, the the delivery
+     *         uses <em>at most once</em> delivery semantics. Otherwise, the delivery
      *         will be settled locally and remotely (<em>at least once</em> semantics).
      *         <p>
      *         The future will be failed with a {@link ServerErrorException} if the message

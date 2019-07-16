@@ -215,7 +215,7 @@ public final class HonoProtonHelper {
      * <p>
      * This method will invoke the given handler as soon as
      * <ul>
-     * <li>the the peer's <em>detach</em> frame has been received or</li>
+     * <li>the peer's <em>detach</em> frame has been received or</li>
      * <li>the given number of milliseconds have passed</li>
      * </ul>
      * After that the link's resources are freed up.

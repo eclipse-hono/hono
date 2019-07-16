@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
  * Enforces a limit of concurrent connections.
  * <p>
  * The limit can be configured in {@link ProtocolAdapterProperties#setMaxConnections(int)}.
- * If no value is configured explicitly, the limit is determined based on the the given strategy.
+ * If no value is configured explicitly, the limit is determined based on the given strategy.
  */
 public class DefaultConnectionLimitManager implements ConnectionLimitManager {
 

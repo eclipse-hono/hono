@@ -31,7 +31,7 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
      * Gets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
      * <p>
      * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
-     * within this time limit, then the command is settled with the the <em>released</em> outcome.
+     * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
@@ -45,7 +45,7 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
      * Sets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
      * <p>
      * This time out is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
-     * within this time limit, then the command is settled with the the <em>released</em> outcome.
+     * within this time limit, then the command is settled with the <em>released</em> outcome.
      * <p>
      * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
      *
