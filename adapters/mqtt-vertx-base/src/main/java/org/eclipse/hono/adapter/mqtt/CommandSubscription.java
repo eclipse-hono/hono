@@ -209,7 +209,7 @@ public class CommandSubscription {
      *
      * @param mqttTopicSub The MqttTopicSubscription request from device for command subscription.
      * @param authenticatedDevice The authenticated device or {@code null}.
-     * @param clientId The the client identifier as provided by the remote MQTT client.
+     * @param clientId The client identifier as provided by the remote MQTT client.
      * @return The CommandSubscription object or {@code null} if the topic does not match the rules.
      * @throws NullPointerException if topic is {@code null}.
      */

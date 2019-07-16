@@ -909,7 +909,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *         <p>
      *         The future will succeed if the message has been uploaded successfully.
      *         Otherwise, the future will fail with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public final Future<Void> uploadCommandResponseMessage(
             final MqttContext ctx,

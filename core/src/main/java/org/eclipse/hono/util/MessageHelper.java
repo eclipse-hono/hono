@@ -531,7 +531,7 @@ public final class MessageHelper {
      * <p>
      * The value will be stored in the message's  {@link #APP_PROPERTY_STATUS} application property.
      * 
-     * @param msg The message to to add the status to.
+     * @param msg The message to add the status to.
      * @param status The status to set.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */

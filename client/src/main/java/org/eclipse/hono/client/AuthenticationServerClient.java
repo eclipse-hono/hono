@@ -70,7 +70,7 @@ public final class AuthenticationServerClient {
      * @param authzid The identity to act as.
      * @param subjectDn The Subject DN.
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
-     *                                    the result contains a JWT with the the authenticated user's claims.
+     *                                    the result contains a JWT with the authenticated user's claims.
      */
     public void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
         // unsupported mechanism (until we get better control over client SASL params in vertx-proton)

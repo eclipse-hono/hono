@@ -239,7 +239,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     @Test
     public void testHandleWithFailureToCreateSender() {
 
-        // GIVEN a a scenario where sender creation fails
+        // GIVEN a scenario where sender creation fails
         delegateViaDownstreamPeerCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
                 tenantIdParam -> Future.failedFuture("expected sender creation failure"));
 
