@@ -16,7 +16,7 @@ The release archive contains all files necessary to deploy Hono to a Kubernetes 
 
 * [Eclipse Hono 0.9 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-deploy-0.9.tar.gz)
 
-Download and extract the archive and follow the [deployment guide](https://www.eclipse.org/hono/docs/latest/deployment/helm-based-deployment/).
+Download and extract the archive and follow the [deployment guide]({{% doclink "/deployment/helm-based-deployment/" %}}).
 
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
@@ -25,7 +25,7 @@ A Java based command line client for consuming telemetry data and events from Ho
 
 The client requires a Java 11 runtime environment to run.
 
-Please refer to the [Admin Guide](https://www.eclipse.org/hono/docs/latest/admin-guide/hono-client-configuration/) for details regarding the command line options that the client supports.
+Please refer to the [Admin Guide]({{% doclink "/admin-guide/hono-client-configuration/" %}}) for details regarding the command line options that the client supports.
 
 ### Latest Milestone
 
@@ -47,7 +47,7 @@ Installation works in the same way as for the latest stable release.
 ## Source Code
 
 The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded from the [Eclipse Hono GitHub repository]
-(https://github.com/eclipse/hono). The [Building from Source](https://www.eclipse.org/hono/docs/latest/dev-guide/building_hono/)
+(https://github.com/eclipse/hono). The [Building from Source]({{% doclink "/dev-guide/building_hono/" %}})
 guide provides instructions on how to build Hono locally.
 
 ## Release Notes

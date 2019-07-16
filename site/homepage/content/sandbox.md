@@ -35,7 +35,7 @@ All services are exposed via the same ports as used in the guide.
   certificate so you should not need to configure a specific trust store on your client in order to interact with them. Please note
   that when using the unsecured ports, the information you exchange with the sandbox might be exposed to eavesdroppers.
   We therefore **strongly suggest** that you use the secure ports only, if possible!
-  When using the [Hono client](https://www.eclipse.org/hono/docs/latest/admin-guide/hono-client-configuration/) to access the sandbox'
+  When using the [Hono client]({{% doclink "/admin-guide/hono-client-configuration/" %}}) to access the sandbox'
   Telemetry and/or Event APIs, make sure to not set a trust store explicitly but instead set the *tlsEnabled* property to `true`.
   The command line client binary is available from the [downloads page]({{< relref "downloads#binaries" >}}) and
   can be used to consume telemetry/event messages from the sandbox as below:
