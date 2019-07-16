@@ -18,7 +18,7 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 /**
- * Unit tests for {@link JsonBackedValueObject}.
+ * Unit tests for {@code JsonBackedValueObject}.
  */
 public class JsonBackedValueObjectTest {
 
