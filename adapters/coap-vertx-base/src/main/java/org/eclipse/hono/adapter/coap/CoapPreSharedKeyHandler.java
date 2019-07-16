@@ -20,9 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CompletionException;
 
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.elements.auth.PreSharedKeyIdentity;
@@ -169,10 +167,10 @@ public class CoapPreSharedKeyHandler implements PskStore, CoapAuthenticationHand
             });
         });
         try {
-            // timeout, don't block handshake too long
-            return secret.get(10000, TimeUnit.MILLISECONDS);
-        } catch (final InterruptedException | TimeoutException | CancellationException | ExecutionException e) {
-            LOG.info("failed to wait for key result", e);
+            // credentials client will time out
+            return secret.join();
+        } catch (final CompletionException | CancellationException e) {
+            LOG.info("failed to look up shared secret for key", e);
         }
         LOG.debug("no candidate PSK secret found for identity [{}]", identity);
         return null;
