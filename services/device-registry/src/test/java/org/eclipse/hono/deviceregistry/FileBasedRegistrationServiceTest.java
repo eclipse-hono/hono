@@ -260,7 +260,16 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
                         r -> {
                             assertEquals(HTTP_OK, r.getStatus());
                         }))
-                .setHandler(ctx.succeeding(s -> ctx.completeNow()));
+                .compose(ok -> assertDevice(TENANT, "4713", Optional.of(GW),
+                        r -> {
+                            assertEquals(HTTP_OK, r.getStatus());
+                            assertNotNull(r.getPayload());
+                            assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
+                        },
+                        r -> {
+                            assertEquals(HTTP_OK, r.getStatus());
+                        })
+                .setHandler(ctx.succeeding(s -> ctx.completeNow())));
 
         registrationService.start(startFuture);
 
