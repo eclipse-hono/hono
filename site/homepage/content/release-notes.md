@@ -16,6 +16,8 @@ title = "Release Notes"
   configured using the `${PREFIX}_RECONNECT_*` configuration variables. Please
   refer to the [Hono Client Configuration guide]({{% doclink "/admin-guide/hono-client-configuration/" %}})
   for details regarding these new variables.
+* The *message limit* checks is now extended to include command and control messages.
+  Please refer to the [resource limits] ({{% doclink "/concepts/resource-limits/" %}}) for details.  
 
 ### API Changes
 
