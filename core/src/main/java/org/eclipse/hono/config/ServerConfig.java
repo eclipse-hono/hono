@@ -137,7 +137,7 @@ public class ServerConfig extends AbstractConfig {
      * is guaranteed by the server that no opened port is insecure. If {@code true}, it enables the definition of an
      * insecure port (as the only port <u>or</u> additionally to the secure port).
      *
-     * @return {@code true} if the server guarantees that no opened port is insecure.
+     * @return {@code false} if the server guarantees that no opened port is insecure.
      */
     public final boolean isInsecurePortEnabled() {
         return insecurePortEnabled;
@@ -148,7 +148,7 @@ public class ServerConfig extends AbstractConfig {
      * guaranteed by the server that no opened port is insecure. If {@code true}, it enables the definition of an
      * insecure port (as the only port <u>or</u> additionally to the secure port).
      *
-     * @param insecurePortEnabled {@code true} if the server shall guarantee that no opened port is insecure.
+     * @param insecurePortEnabled {@code false} if the server shall guarantee that no opened port is insecure.
      */
     public final void setInsecurePortEnabled(final boolean insecurePortEnabled) {
         this.insecurePortEnabled = insecurePortEnabled;

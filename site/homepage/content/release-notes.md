@@ -21,6 +21,9 @@ title = "Release Notes"
   for details regarding these new variables.
 * The *message limit* checks is now extended to include command and control messages.
   Please refer to the [resource limits] ({{% doclink "/concepts/resource-limits/" %}}) for details.
+* The health check endpoint will now bind to a default  port value of 8088 if no values are specified in the configuration.
+  Starting both the secure and insecure healtCheck is also possible.
+  Refer to [Adapter Configuration guides]({{% doclink "/admin-guide/" %}}) for details about configuration values.
 
 ### API Changes
 
