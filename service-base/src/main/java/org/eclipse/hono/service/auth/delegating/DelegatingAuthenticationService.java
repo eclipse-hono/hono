@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,8 +87,11 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     }
 
     /**
-     * Registers a check which succeeds if a connection with the configured <em>Authentication</em> service can be established.
-     *
+     * Registers a check which succeeds if the configured <em>Authentication</em> service host name
+     * can be resolved via DNS.
+     * <p>
+     * If no DNS resolver is available, then no check will be registered.
+     * 
      * @param readinessHandler The health check handler to register the checks with.
      */
     @Override

@@ -7,8 +7,6 @@ hono:
   auth:
     host: ${hono.auth.service}${service.suffix}
     port: 5671
-    keyPath: /run/secrets/device-registry-key.pem
-    certPath: /run/secrets/device-registry-cert.pem
     trustStorePath: /run/secrets/trusted-certs.pem
     name: 'Hono Device Registry'
     validation:

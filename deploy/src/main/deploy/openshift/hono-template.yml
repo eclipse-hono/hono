@@ -1355,9 +1355,6 @@ objects:
           preferNative: true
         auth:
           port: 5671
-          keyPath: /etc/tls/tls.key
-          certPath: /etc/tls/tls.crt
-          keyFormat: PEM
           trustStorePath: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
           trustStoreFormat: PEM
           name: 'Hono Device Registry'
