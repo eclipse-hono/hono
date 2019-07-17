@@ -92,14 +92,14 @@ def build() {
             cd $WORKSPACE/hono/site/documentation
 
             function build_documentation_in_version {
+                VERSION="$1.$2"
+    
                 if [[ "$1" == "stable" ]]; then
                    WEIGHT="-20000"
                    VERSION="$1"
                 else
                    local pad=00
-                   local minor="${2//[!0-9]/}" # make sure that minor only contains numbers  
-                   WEIGHT="-$1${pad:${#minor}:${#pad}}${minor}"
-                   VERSION="$1.$2"
+                   WEIGHT="-$1${pad:${#2}:${#pad}}${2}"
                 fi
                 
                 echo "Going to check out version ${VERSION} from branch/tag $3"
@@ -117,7 +117,6 @@ EOS
 cat <<EOS > config_release_version.toml
 baseurl = "https://www.eclipse.org/hono/docs/${VERSION}/"
 [params]
-  urlPrefixOfVersionStable = "/hono/docs/stable/"
   honoVersion = "${VERSION}"
 EOS
 
@@ -131,11 +130,10 @@ EOS
               build_documentation_in_version "stable" "" ${TAG_STABLE}  # build stable version as "stable"  
             fi
             
-            git checkout master
             while IFS=";" read -r MAJOR MINOR BRANCH_OR_TAG
             do
               build_documentation_in_version ${MAJOR} ${MINOR} ${BRANCH_OR_TAG}
-            done < <(tail -n+3 $WORKSPACE/hono/site/homepage/versions_supported.csv)  # skip header line and comment
+            done < <(tail -n+4 $WORKSPACE/hono/site/homepage/versions_supported.csv)  # skip header line and comment
             
             git checkout master
          '''
