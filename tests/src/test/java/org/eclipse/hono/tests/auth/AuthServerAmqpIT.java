@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,46 +13,58 @@
 
 package org.eclipse.hono.tests.auth;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.client.AuthenticationServerClient;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Tests verifying behavior of a running Auth server.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class AuthServerAmqpIT {
 
     private static Vertx vertx = Vertx.vertx();
-
-    private static AuthenticationServerClient client;
+    private AuthenticationServerClient client;
 
     /**
-     * Sets up the server.
-     * 
-     * @param ctx The vertx test context.
+     * Creates the authentication server client.
      */
-    @BeforeClass
-    public static void prepareServer(final TestContext ctx) {
+    @BeforeEach
+    public void prepareClient() {
+
+        client = getClient();
+    }
+
+    private AuthenticationServerClient getClient() {
+        return getClient(IntegrationTestSupport.AUTH_HOST, IntegrationTestSupport.AUTH_PORT);
+    }
+
+    private AuthenticationServerClient getClient(final String host, final int port) {
 
         final ClientConfigProperties clientProps = new ClientConfigProperties();
-        clientProps.setHost(IntegrationTestSupport.AUTH_HOST);
-        clientProps.setPort(IntegrationTestSupport.AUTH_PORT);
+        clientProps.setHost(host);
+        clientProps.setPort(port);
         clientProps.setName("test-client");
 
         final ConnectionFactory clientFactory = new ConnectionFactoryImpl(vertx, clientProps);
-        client = new AuthenticationServerClient(vertx, clientFactory);
+        return new AuthenticationServerClient(vertx, clientFactory);
     }
 
     /**
@@ -62,9 +74,13 @@ public class AuthServerAmqpIT {
      * @param ctx The test context.
      */
     @Test
-    public void testTokenRetrievalSucceedsForAuthenticatedUser(final TestContext ctx) {
-        client.verifyPlain(null, "hono-client", "secret", ctx.asyncAssertSuccess(user -> {
-            ctx.assertNotNull(user.getToken());
+    public void testTokenRetrievalSucceedsForAuthenticatedUser(final VertxTestContext ctx) {
+
+        client.verifyPlain(null, "hono-client", "secret", ctx.succeeding(user -> {
+            ctx.verify(() -> {
+                assertThat(user.getToken()).isNotNull();
+            });
+            ctx.completeNow();
         }));
     }
 
@@ -74,7 +90,32 @@ public class AuthServerAmqpIT {
      * @param ctx The test context.
      */
     @Test
-    public void testTokenRetrievalFailsForUnauthenticatedUser(final TestContext ctx) {
-        client.verifyPlain(null, "no-such-user", "secret", ctx.asyncAssertFailure());
+    public void testTokenRetrievalFailsForUnauthenticatedUser(final VertxTestContext ctx) {
+        client.verifyPlain(null, "no-such-user", "secret", ctx.failing(t -> {
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ClientErrorException.class);
+                assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+            });
+            ctx.completeNow();
+        }));
     }
+
+    /**
+     * Verifies that an unauthenticated client can not retrieve a token.
+     * 
+     * @param ctx The test context.
+     */
+    @Test
+    public void testTokenRetrievalFailsForFailureToConnect(final VertxTestContext ctx) {
+
+        client = getClient("127.0.0.1", 13412);
+        client.verifyPlain(null, "hono-client", "secret", ctx.failing(t -> {
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+            });
+            ctx.completeNow();
+        }));
+    }
+
 }
