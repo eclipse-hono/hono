@@ -143,11 +143,11 @@ EOS
 cat  <<EOS > $WORKSPACE/hono-web-site/docs/index.html
 <!DOCTYPE html>
 <html>
-<head><title>https://www.eclipse.org/hono/docs/latest/</title>
-    <link rel="canonical" href="https://www.eclipse.org/hono/docs/latest/"/>
+<head><title>https://www.eclipse.org/hono/docs/stable/</title>
+    <link rel="canonical" href="https://www.eclipse.org/hono/docs/stable/"/>
     <meta name="robots" content="noindex">
     <meta charset="utf-8"/>
-    <meta http-equiv="refresh" content="0; url=https://www.eclipse.org/hono/docs/latest/"/>
+    <meta http-equiv="refresh" content="0; url=https://www.eclipse.org/hono/docs/stable/"/>
 </head>
 </html>
 EOS
