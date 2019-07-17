@@ -3,10 +3,10 @@
 
 [[menu.main]]
     name = "Documentation"
-    weight = -30000
+    weight = 120
 
 [[menu.main]]
     parent = "Documentation"
-    name = "Development"
+    name = "latest"
     url  = "/docs/latest"
     weight = -10000
