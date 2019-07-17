@@ -301,6 +301,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             .reportTelemetry(
                     any(MetricsTags.EndpointType.class),
                     anyString(),
+                    any(),
                     eq(MetricsTags.ProcessingOutcome.FORWARDED),
                     any(MetricsTags.QoS.class),
                     anyInt(),
@@ -351,6 +352,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             .reportTelemetry(
                     any(MetricsTags.EndpointType.class),
                     anyString(),
+                    any(),
                     eq(MetricsTags.ProcessingOutcome.FORWARDED),
                     any(MetricsTags.QoS.class),
                     anyInt(),
@@ -391,6 +393,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -404,6 +407,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.EVENT),
                 eq("tenant"),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
@@ -438,6 +442,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -478,6 +483,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics, never()).reportCommand(
                 eq(Direction.RESPONSE),
                 eq("tenant"),
+                any(),
                 eq(ProcessingOutcome.FORWARDED),
                 anyInt(),
                 any());
@@ -489,6 +495,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportCommand(
                 eq(Direction.RESPONSE),
                 eq("tenant"),
+                any(),
                 eq(ProcessingOutcome.FORWARDED),
                 eq(payload.length()),
                 any());
@@ -521,6 +528,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportCommand(
                 eq(Direction.RESPONSE),
                 eq("tenant"),
+                eq(to),
                 eq(ProcessingOutcome.UNPROCESSABLE),
                 eq(payload.length()),
                 any());
@@ -562,6 +570,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportCommand(
                 eq(Direction.RESPONSE),
                 eq("tenant"),
+                eq(to),
                 eq(ProcessingOutcome.UNPROCESSABLE),
                 eq(payload.length()),
                 any());
@@ -594,6 +603,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportCommand(
                 eq(Direction.RESPONSE),
                 eq("tenant"),
+                any(),
                 eq(ProcessingOutcome.UNPROCESSABLE),
                 eq(payload.length()),
                 any());
@@ -633,6 +643,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
@@ -677,6 +688,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportTelemetry(
                 eq(EndpointType.TELEMETRY),
                 eq("tenant"),
+                any(),
                 eq(ProcessingOutcome.FORWARDED),
                 eq(QoS.AT_MOST_ONCE),
                 eq(payload.length()),
@@ -719,6 +731,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 eq(EndpointType.EVENT),
                 anyString(),
+                any(),
                 any(ProcessingOutcome.class),
                 eq(QoS.AT_LEAST_ONCE),
                 anyInt(),
@@ -790,6 +803,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportTelemetry(
                 eq(EndpointType.TELEMETRY),
                 eq("my-tenant"),
+                any(),
                 eq(ProcessingOutcome.UNPROCESSABLE),
                 eq(QoS.AT_MOST_ONCE),
                 eq(payload.length()),
@@ -826,6 +840,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportTelemetry(
                 eq(EndpointType.EVENT),
                 eq("my-tenant"),
+                any(),
                 eq(ProcessingOutcome.UNPROCESSABLE),
                 eq(QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
@@ -868,6 +883,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(metrics).reportCommand(
                 eq(Direction.RESPONSE),
                 eq("tenant"),
+                any(),
                 eq(ProcessingOutcome.UNPROCESSABLE),
                 eq(payload.length()),
                 any());

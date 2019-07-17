@@ -65,7 +65,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Base class for a Vert.x based Hono protocol adapter that uses the HTTP protocol.
@@ -629,14 +628,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final int payloadSize = Optional.ofNullable(payload)
                 .map(ok -> payload.length())
                 .orElse(0);
-        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context())
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context());
+        final Future<TenantObject> tenantValidationTracker = tenantTracker
                 .compose(tenantObject -> CompositeFuture
                         .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payloadSize))
                         .map(success -> tenantObject));
 
         // we only need to consider TTD if the device and tenant are enabled and the adapter
         // is enabled for the tenant
-        final Future<Integer> ttdTracker = CompositeFuture.all(tokenTracker, tenantTracker)
+        final Future<Integer> ttdTracker = CompositeFuture.all(tenantValidationTracker, tokenTracker)
                 .compose(ok -> {
                     final Integer ttdParam = getTimeUntilDisconnectFromRequest(ctx);
                     return getTimeUntilDisconnect(tenantTracker.result(), ttdParam).map(effectiveTtd -> {
@@ -647,7 +647,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     });
                 });
         final Future<MessageConsumer> commandConsumerTracker = ttdTracker
-                .compose(ttd -> createCommandConsumer(ttd, tenant, deviceId, ctx, responseReady, currentSpan));
+                .compose(ttd -> createCommandConsumer(ttd, tenantTracker.result(), deviceId, ctx, responseReady,
+                        currentSpan));
 
         CompositeFuture.all(senderTracker, commandConsumerTracker)
                 .compose(ok -> {
@@ -708,6 +709,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         metrics.reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 tenant,
+                                tenantTracker.result(),
                                 ProcessingOutcome.FORWARDED,
                                 commandContext.getCommand().getPayloadSize(),
                                 getMicrometerSample(commandContext));
@@ -715,6 +717,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     metrics.reportTelemetry(
                             endpoint,
                             tenant,
+                            tenantTracker.result(),
                             ProcessingOutcome.FORWARDED,
                             qos,
                             payload.length(),
@@ -736,6 +739,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         metrics.reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 tenant,
+                                tenantTracker.result(),
                                 ProcessingOutcome.UNDELIVERABLE,
                                 commandContext.getCommand().getPayloadSize(),
                                 getMicrometerSample(commandContext));
@@ -777,6 +781,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             metrics.reportTelemetry(
                     endpoint,
                     tenant,
+                    tenantTracker.result(),
                     outcome,
                     qos,
                     payload.length(),
@@ -882,7 +887,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * Creates a consumer for command messages to be sent to a device.
      *
      * @param ttdSecs The number of seconds the device waits for a command.
-     * @param tenantId The tenant that the device belongs to.
+     * @param tenantObject The tenant configuration object.
      * @param deviceId The identifier of the device.
      * @param ctx The device's currently executing HTTP request.
      * @param responseReady A future to complete once one of the following conditions are met:
@@ -908,13 +913,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected final Future<MessageConsumer> createCommandConsumer(
             final Integer ttdSecs,
-            final String tenantId,
+            final TenantObject tenantObject,
             final String deviceId,
             final RoutingContext ctx,
             final Future<Void> responseReady,
             final Span currentSpan) {
 
-        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(responseReady);
@@ -927,7 +932,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         } else {
             currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
             return getCommandConsumerFactory().createCommandConsumer(
-                    tenantId,
+                    tenantObject.getTenantId(),
                     deviceId,
                     commandContext -> {
 
@@ -939,17 +944,16 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 // the timer has already fired, release the command
                                 getMetrics().reportCommand(
                                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                        tenantId,
+                                        tenantObject.getTenantId(),
+                                        tenantObject,
                                         ProcessingOutcome.UNDELIVERABLE,
                                         command.getPayloadSize(),
                                         commandSample);
-                                LOG.debug("command for device has already fired [tenantId: {}, deviceId: {}]", tenantId,
-                                        deviceId);
+                                LOG.debug("command for device has already fired [tenantId: {}, deviceId: {}]",
+                                        tenantObject.getTenantId(), deviceId);
                                 commandContext.release();
                             } else {
-                                getTenantConfiguration(tenantId, commandContext.getTracingContext())
-                                        .compose(tenantObject -> checkMessageLimit(tenantObject,
-                                                command.getPayloadSize()))
+                                checkMessageLimit(tenantObject, command.getPayloadSize())
                                         .setHandler(result -> {
                                             if (result.succeeded()) {
                                                 addMicrometerSample(commandContext, commandSample);
@@ -960,7 +964,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                                 commandContext.reject(getErrorCondition(result.cause()), 1);
                                                 metrics.reportCommand(
                                                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                                        tenantId,
+                                                        tenantObject.getTenantId(),
+                                                        tenantObject,
                                                         ProcessingOutcome.from(result.cause()),
                                                         command.getPayloadSize(),
                                                         commandSample);
@@ -973,7 +978,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         } else {
                             getMetrics().reportCommand(
                                     command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                    tenantId,
+                                    tenantObject.getTenantId(),
+                                    tenantObject,
                                     ProcessingOutcome.UNPROCESSABLE,
                                     command.getPayloadSize(),
                                     commandSample);
@@ -985,7 +991,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // only per HTTP request
                     },
                     remoteDetach -> {
-                        LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+                        LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantObject.getTenantId(), deviceId);
                         // command consumer is closed by closeHandler, no explicit close necessary here
                     }).map(consumer -> {
                         if (!responseReady.isComplete()) {
@@ -1117,54 +1123,58 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final CommandResponse cmdResponseOrNull = CommandResponse.from(commandRequestId, tenant, deviceId, payload,
                 contentType, responseStatus);
-
-        final Future<CommandResponse> commandResponseFuture = cmdResponseOrNull != null
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context());
+        final Future<CommandResponse> commandResponseTracker = cmdResponseOrNull != null
                 ? Future.succeededFuture(cmdResponseOrNull)
                 : Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                         String.format("command-request-id [%s] or status code [%s] is missing/invalid",
                                 commandRequestId, responseStatus)));
 
-        final Future<ProtonDelivery> uploadMessageTracker = commandResponseFuture.compose(commandResponse -> {
-            final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
-                    tenant,
-                    deviceId,
-                    authenticatedDevice,
-                    currentSpan.context());
-            final Future<Void> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                    .compose(tenantObject -> CompositeFuture
-                            .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payload.length()))
-                            .map(ok -> null));
-            return CompositeFuture.all(deviceRegistrationTracker, tenantEnabledTracker)
-                    .compose(ok -> sendCommandResponse(tenant, commandResponse, currentSpan.context()))
-                    .map(delivery -> {
-                        LOG.trace("delivered command response [command-request-id: {}] to application",
-                                commandRequestId);
-                        currentSpan.log("delivered command response to application");
-                        metrics.reportCommand(
-                                Direction.RESPONSE,
-                                tenant,
-                                ProcessingOutcome.FORWARDED,
-                                payload.length(),
-                                getMicrometerSample(ctx));
-                        ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
-                        ctx.response().end();
-                        return delivery;
-                    });
-        });
-        uploadMessageTracker.otherwise(t -> {
-            LOG.debug("could not send command response [command-request-id: {}] to application",
-                    commandRequestId, t);
-            TracingHelper.logError(currentSpan, t);
-            currentSpan.finish();
-            metrics.reportCommand(
-                    Direction.RESPONSE,
-                    tenant,
-                    ProcessingOutcome.from(t),
-                    payload.length(),
-                    getMicrometerSample(ctx));
-            ctx.fail(t);
-            return null;
-        });
+        CompositeFuture.all(tenantTracker, commandResponseTracker)
+                .compose(commandResponse -> {
+                    final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
+                            tenant,
+                            deviceId,
+                            authenticatedDevice,
+                            currentSpan.context());
+                    final Future<Void> tenantValidationTracker = CompositeFuture
+                            .all(isAdapterEnabled(tenantTracker.result()),
+                                    checkMessageLimit(tenantTracker.result(), payload.length()))
+                            .map(ok -> null);
+
+                    return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)
+                            .compose(ok -> sendCommandResponse(tenant, commandResponseTracker.result(),
+                                    currentSpan.context()))
+                            .map(delivery -> {
+                                LOG.trace("delivered command response [command-request-id: {}] to application",
+                                        commandRequestId);
+                                currentSpan.log("delivered command response to application");
+                                metrics.reportCommand(
+                                        Direction.RESPONSE,
+                                        tenant,
+                                        tenantTracker.result(),
+                                        ProcessingOutcome.FORWARDED,
+                                        payload.length(),
+                                        getMicrometerSample(ctx));
+                                ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
+                                ctx.response().end();
+                                return delivery;
+                            });
+                }).otherwise(t -> {
+                    LOG.debug("could not send command response [command-request-id: {}] to application",
+                            commandRequestId, t);
+                    TracingHelper.logError(currentSpan, t);
+                    currentSpan.finish();
+                    metrics.reportCommand(
+                            Direction.RESPONSE,
+                            tenant,
+                            tenantTracker.result(),
+                            ProcessingOutcome.from(t),
+                            payload.length(),
+                            getMicrometerSample(ctx));
+                    ctx.fail(t);
+                    return null;
+                });
     }
 
     private static MetricsTags.QoS getQoSLevel(final EndpointType endpoint, final String qosValue) {
