@@ -50,6 +50,8 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
     private static final String URI_LIVENESS_PROBE = "/liveness";
     private static final String URI_READINESS_PROBE = "/readiness";
+    private static final int DEFAULT_PORT = 8088;
+
 
     private HttpServer server;
     private HttpServer insecureServer;
@@ -69,26 +71,14 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      * @param config The application configuration instance.
      * @throws NullPointerException if vertx is {@code null}.
      * @throws NullPointerException if config is {@code null}.
-     * @throws IllegalArgumentException if health check port is not configured.
      */
     public VertxBasedHealthCheckServer(final Vertx vertx, final ServerConfig config) {
         this.vertx = Objects.requireNonNull(vertx);
         this.config = Objects.requireNonNull(config);
-        if (!isSecureEndpointConfigured() && !isInsecureEndpointConfigured()) {
-            throw new IllegalArgumentException("No health check configured");
-        }
 
         readinessHandler = HealthCheckHandler.create(this.vertx);
         livenessHandler = HealthCheckHandler.create(this.vertx);
         router = Router.router(this.vertx);
-    }
-
-    private boolean isSecureEndpointConfigured() {
-        return config.getPort() != Constants.PORT_UNCONFIGURED && config.isSecurePortEnabled();
-    }
-
-    private boolean isInsecureEndpointConfigured() {
-        return config.getInsecurePort() != Constants.PORT_UNCONFIGURED && config.isInsecurePortEnabled();
     }
 
     /**
@@ -128,17 +118,28 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
         registerAdditionalResources();
 
         final Future<Void> result = Future.future();
-        CompositeFuture.all(bindSecureHttpServer(), bindInsecureHttpServer())
-                .compose(r -> result.complete(), result);
+            bindSecureHttpServer().setHandler(res -> {
+                if (res.failed()){
+                    bindInsecureHttpServer().compose(r -> result.complete(), result);
+                } else if ( (config.isInsecurePortEnabled() && config.getInsecurePort(DEFAULT_PORT) != server.actualPort() )
+                        || (config.getInsecurePort() != Constants.PORT_UNCONFIGURED && config.getInsecurePort() != server.actualPort())) {
+                    bindInsecureHttpServer().compose(r -> result.complete(), result);
+                } else {
+                    result.complete();
+                }
+            });
         return result;
     }
 
     private Future<Void> bindInsecureHttpServer() {
-        if (config.isInsecurePortEnabled()) {
-            final Future<Void> result = Future.future();
+        final Future<Void> result = Future.future();
 
+        if (config.getInsecurePortBindAddress() == Constants.LOOPBACK_DEVICE_ADDRESS) {
+            LOG.warn("Won't start insecure health checks HTTP server: no bind address configured.");
+            return Future.failedFuture("NOT_ENABLED");
+        } else if (config.isInsecurePortEnabled() || config.getInsecurePort() != Constants.PORT_UNCONFIGURED) {
             final HttpServerOptions options = new HttpServerOptions()
-                    .setPort(config.getInsecurePort())
+                    .setPort(config.getInsecurePort(DEFAULT_PORT))
                     .setHost(config.getInsecurePortBindAddress());
             insecureServer = vertx.createHttpServer(options);
 
@@ -161,16 +162,20 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
             });
             return result;
         } else {
-            return Future.succeededFuture();
+            LOG.warn("Won't start insecure health checks HTTP server: no port configured.");
+            return Future.failedFuture("NOT_ENABLED");
         }
     }
 
     private Future<Void> bindSecureHttpServer() {
-        if (config.isSecurePortEnabled()) {
+        if (config.getBindAddress() == Constants.LOOPBACK_DEVICE_ADDRESS) {
+            LOG.warn("Won't start secure health checks HTTP server: no bind address configured.");
+            return Future.failedFuture("NOT_ENABLED");
+        } else if (config.isSecurePortEnabled()) {
             final Future<Void> result = Future.future();
 
             final HttpServerOptions options = new HttpServerOptions()
-                    .setPort(config.getPort())
+                    .setPort(config.getPort(DEFAULT_PORT))
                     .setHost(config.getBindAddress())
                     .setKeyCertOptions(config.getKeyCertOptions())
                     .setSsl(true);
@@ -194,7 +199,8 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
             });
             return result;
         } else {
-            return Future.succeededFuture();
+            LOG.warn("Cannot start secure health checks HTTP server: certificate path and/or key path are not correct.");
+            return Future.failedFuture("NOT_ENABLED");
         }
     }
 
