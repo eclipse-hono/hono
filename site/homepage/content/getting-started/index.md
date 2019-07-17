@@ -121,49 +121,65 @@ Before a device can connect to Hono and publish any data, the corresponding info
 
 ### Creating a new Tenant
 
-Choose a (random) tenant identifier and register it using the Device Registry's HTTP API (replace `my-tenant` with your identifier):
+Register a tenant using Hono's Device Registry's management HTTP API (a random tenant identifier will be generated):
 ~~~sh
-export MY_TENANT=my-tenant
-curl -i -H "content-type: application/json" --data-binary '{"tenant-id": "'$MY_TENANT'"}' http://$REGISTRY_IP:28080/tenant
+curl -i -X POST http://$REGISTRY_IP:28080/v1/tenants
 
 HTTP/1.1 201 Created
-Location:  /tenant/my-tenant
-Content-Length: 0
+etag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
+location: /v1/tenants/85f63e23-1b78-4156-8500-debcbd1a8d35
+content-type: application/json; charset=utf-8
+content-length: 45
+
+{"id":"85f63e23-1b78-4156-8500-debcbd1a8d35"}
 ~~~
 
-{{% note title="Conflict" %}}
-You will receive a response with a `409` status code if a tenant with the given identifier already exists.
-In this case, simply pick another (random) identifier and try again.
+{{% note title="Random tenant ID value" %}}
+{
+You will receive a randomly generated tenantId value. It will probably be different than the value given in this example.
+Make sure to export it to an environment variable to make the following steps easier.
+This can be done with  `export MY_TENANT=85f63e23-1b78-4156-8500-debcbd1a8d35`.
+}
 {{% /note %}}
 
 ### Adding a Device to the Tenant
 
-Choose a (random) device identifier and register it using the Device Registry's HTTP API (replace `my-device` with your identifier):
+Register a device using Hono's Device Registry's management HTTP API (a random device identifier will be assigned):
 ~~~sh
-export MY_DEVICE=my-device
-curl -i -H "content-type: application/json" --data-binary '{"device-id": "'$MY_DEVICE'"}' http://$REGISTRY_IP:28080/registration/$MY_TENANT
+curl -i -X POST http://$REGISTRY_IP:28080/v1/devices/$MY_TENANT
 
 HTTP/1.1 201 Created
-Location: /registration/my-tenant/my-device
-Content-Length: 0
+etag: 68eab243-3df9-457d-a0ab-b702e57c0c17
+location: /v1/devices/85f63e23-1b78-4156-8500-debcbd1a8d35/4412abe2-f219-4099-ae14-b446604ae9c6
+content-type: application/json; charset=utf-8
+content-length: 45
+
+{"id":"4412abe2-f219-4099-ae14-b446604ae9c6"}
 ~~~
+
+{{% note title="Random device ID value" %}}
+{
+You will receive a randomly generated deviceId value. It will probably be different than the value given in this example.
+Make sure to export it to an environment variable to make the following steps easier.
+This can be done with  `export MY_DEVICE=4412abe2-f219-4099-ae14-b446604ae9c6`.
+}
+{{% /note %}}
 
 ### Setting a Password for the Device
 
-Choose a (random) password and register it using the Device Registry's HTTP API (replace `my-pwd` with your password):
+Choose a (random) password and register it using Hono's Device Registry's management HTTP API (replace `my-pwd` with your password):
 ~~~sh
 export MY_PWD=my-pwd
-curl -i -H "content-type: application/json" --data-binary '{
-  "device-id": "'$MY_DEVICE'",
+curl -i -X PUT -H "content-type: application/json" --data-binary '[{
   "type": "hashed-password",
   "auth-id": "'$MY_DEVICE'",
   "secrets": [{
       "pwd-plain": "'$MY_PWD'"
   }]
-}' http://$REGISTRY_IP:28080/credentials/$MY_TENANT
+}]' http://$REGISTRY_IP:28080/v1/credentials/$MY_TENANT/$MY_DEVICE
 
-HTTP/1.1 201 Created
-Location: /credentials/my-tenant/my-device/hashed-password
+HTTP/1.1 204 Updated
+etag: cf91fd4d-7111-4e8a-af68-c703993a8be1
 Content-Length: 0
 ~~~
 
