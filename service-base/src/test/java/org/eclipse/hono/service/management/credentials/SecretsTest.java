@@ -13,11 +13,14 @@
 package org.eclipse.hono.service.management.credentials;
 
 
+import io.vertx.core.json.Json;
 import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS;
+import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_NOT_BEFORE;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_AUTH_ID;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_EXT;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_COMMENT;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_KEY;
+import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_PWD_HASH;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_SALT;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_TYPE;
@@ -34,16 +37,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-
+import java.time.temporal.ChronoUnit;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * Verifies {@link CommonSecret} and others.
@@ -58,8 +64,8 @@ public class SecretsTest {
 
         final PasswordSecret secret = new PasswordSecret();
 
-        secret.setNotAfter(Instant.EPOCH);
-        secret.setNotAfter(Instant.EPOCH.plusMillis(1));
+        secret.setNotBefore(Instant.EPOCH.truncatedTo(ChronoUnit.SECONDS));
+        secret.setNotAfter(Instant.EPOCH.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS));
 
         secret.setComment("setec astronomy");
 
@@ -156,6 +162,32 @@ public class SecretsTest {
 
         assertThat(credential.getAuthId(), is("authId1"));
         assertThat(((GenericCredential) credential).getType(), is("foo"));
+
+    }
+
+    /**
+     * Tests that secret dates are properly encoded and decoded.
+     * Both formats with timezone offset and without the offset are supported for encoding.
+     * For decoding the format without the offset is used.
+     */
+    @Test
+    public void testDateFormats() {
+
+        Json.mapper.registerModule(new JavaTimeModule());
+
+        final JsonObject json = new JsonObject()
+                .put(FIELD_SECRETS_COMMENT, "test")
+                .put(FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00")
+                .put(FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00Z");
+
+
+        final PasswordSecret secret = json.mapTo(PasswordSecret.class);
+        final LocalDateTime before = LocalDateTime.of(2017, 05, 01, 14, 00, 00);
+        assertEquals(before.toInstant(ZoneOffset.of("+01:00")), secret.getNotBefore());
+
+        final JsonObject decodedSecret = JsonObject.mapFrom(secret);
+        assertEquals("2017-05-01T13:00:00Z", decodedSecret.getValue("not-before"));
+        assertEquals("2037-06-01T14:00:00Z", decodedSecret.getValue("not-after"));
 
     }
 

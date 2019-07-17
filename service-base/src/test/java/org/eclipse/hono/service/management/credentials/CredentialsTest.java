@@ -23,10 +23,12 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,10 +45,12 @@ public class CredentialsTest {
     @Test
     public void testEncodePasswordCredential() {
 
+        Json.mapper.registerModule(new JavaTimeModule());
+
         final PasswordSecret secret = new PasswordSecret();
 
-        secret.setNotBefore(Instant.EPOCH);
-        secret.setNotAfter(Instant.EPOCH.plusMillis(1));
+        secret.setNotBefore(Instant.EPOCH.truncatedTo(ChronoUnit.SECONDS));
+        secret.setNotAfter(Instant.EPOCH.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS));
 
         secret.setPasswordHash("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f");
         secret.setSalt("abc");
@@ -144,6 +148,8 @@ public class CredentialsTest {
     @Test
     public void testDecodePasswordCredential() {
 
+        Json.mapper.registerModule(new JavaTimeModule());
+
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD)
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo")
@@ -151,8 +157,8 @@ public class CredentialsTest {
                 .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
                         .add(new JsonObject()
                             .put(RegistryManagementConstants.FIELD_ENABLED, true)
-                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, Instant.EPOCH)
-                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, Instant.EPOCH.plusMillis(1))
+                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, Instant.EPOCH.truncatedTo(ChronoUnit.SECONDS))
+                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, Instant.EPOCH.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS))
                             .put(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION, HASH_FUNCTION_SHA256)
                             .put(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH, "2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f")
                             .put(RegistryManagementConstants.FIELD_SECRETS_SALT, "abc")

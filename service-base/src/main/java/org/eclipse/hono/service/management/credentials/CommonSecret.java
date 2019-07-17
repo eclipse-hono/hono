@@ -16,17 +16,10 @@ import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_NO
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.Optional;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
@@ -39,8 +32,12 @@ public abstract class CommonSecret {
     @JsonProperty
     private Boolean enabled;
 
-    private OffsetDateTime notBefore;
-    private OffsetDateTime notAfter;
+    @JsonProperty(FIELD_SECRETS_NOT_BEFORE)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[XXX]", timezone = "UTC")
+    private Instant notBefore;
+    @JsonProperty(FIELD_SECRETS_NOT_AFTER)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[XXX]", timezone = "UTC")
+    private Instant notAfter;
     @JsonProperty
     private String comment;
 
@@ -61,77 +58,11 @@ public abstract class CommonSecret {
 
     /**
      * Gets the earliest instant in time that this secret may be used for authenticating a device.
-     * 
-     * @return The instant as an ISO string.
-     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
-     */
-    @JsonGetter(FIELD_SECRETS_NOT_BEFORE)
-    public String getNotBeforeAsString() {
-        return Optional.ofNullable(notBefore)
-                .map(nb -> {
-                    return nb.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-                })
-                .orElse(null);
-    }
-
-    /**
-     * Gets the earliest instant in time that this secret may be used for authenticating a device.
-     * 
+     *
      * @return The instant.
      */
-    @JsonIgnore
     public Instant getNotBefore() {
-        return Optional.ofNullable(notBefore)
-                .map(nb -> nb.toInstant())
-                .orElse(null);
-    }
-
-    /**
-     * Sets the earliest instant in time that this secret may be used for authenticating a device.
-     * 
-     * @param notBefore The instant as an ISO string.
-     * @return          a reference to this for fluent use.
-     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
-     */
-    @JsonSetter(FIELD_SECRETS_NOT_BEFORE)
-    public CommonSecret setNotBefore(final String notBefore) {
-        try {
-            this.notBefore = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(notBefore, OffsetDateTime::from);
-        } catch (DateTimeParseException e) {
-            this.notBefore = null;
-        }
-        return this;
-    }
-
-    /**
-     * Sets the earliest instant in time that this secret may be used for authenticating a device.
-     * 
-     * @param notBefore The start date/time in which this secret is valid.
-     * @return          a reference to this for fluent use.
-     */
-    @JsonIgnore
-    public CommonSecret setNotBefore(final Instant notBefore) {
-        if (notBefore == null) {
-            this.notBefore = null;
-        } else {
-            this.notBefore = OffsetDateTime.ofInstant(notBefore, ZoneId.systemDefault());;
-        }
-        return this;
-    }
-
-    /**
-     * Gets the latest instant in time that this secret may be used for authenticating a device.
-     * 
-     * @return The instant as an ISO string.
-     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
-     */
-    @JsonGetter(FIELD_SECRETS_NOT_AFTER)
-    public String getNotAfterAsString() {
-        return Optional.ofNullable(notAfter)
-                .map(na -> {
-                    return na.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-                })
-                .orElse(null);
+        return notBefore;
     }
 
     /**
@@ -139,43 +70,29 @@ public abstract class CommonSecret {
      * 
      * @return The end date/time in which this secret is valid.
      */
-    @JsonIgnore
     public Instant getNotAfter() {
-        return Optional.ofNullable(notAfter)
-                .map(na -> na.toInstant())
-                .orElse(null);
+        return notAfter;
     }
 
     /**
-     * Sets the latest instant in time that this secret may be used for authenticating a device.
-     * 
-     * @param notAfter The instant as an ISO string.
-     * @return         a reference to this for fluent use.
-     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
+     * Sets the earliest instant in time that this secret may be used for authenticating a device.
+     *
+     * @param notBefore The start date/time in which this secret is valid.
+     * @return          a reference to this for fluent use.
      */
-    @JsonSetter(FIELD_SECRETS_NOT_AFTER)
-    public CommonSecret setNotAfter(final String notAfter) {
-        try {
-            this.notAfter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(notAfter, OffsetDateTime::from);
-        } catch (DateTimeParseException e) {
-            this.notAfter = null;
-        }
+    public CommonSecret setNotBefore(final Instant notBefore) {
+        this.notBefore = notBefore;
         return this;
     }
 
     /**
      * Sets the latest instant in time that this secret may be used for authenticating a device.
-     * 
+     *
      * @param notAfter The end date/time in which this secret is valid.
      * @return         a reference to this for fluent use.
      */
-    @JsonIgnore
     public CommonSecret setNotAfter(final Instant notAfter) {
-        if (notAfter == null) {
-            this.notAfter = null;
-        } else {
-        this.notAfter = OffsetDateTime.ofInstant(notAfter, ZoneId.systemDefault());
-        }
+        this.notAfter = notAfter;
         return this;
     }
 
@@ -196,7 +113,7 @@ public abstract class CommonSecret {
 
     /**
      * Creator of {@link ToStringHelper}.
-     * 
+     *
      * @return A new instance, never returns {@code null}.
      */
     protected ToStringHelper toStringHelper() {
@@ -215,7 +132,7 @@ public abstract class CommonSecret {
 
     /**
      * Check if the secret is valid.
-     * 
+     *
      * @throws IllegalStateException if the secret is not valid.
      */
     public void checkValidity() {
