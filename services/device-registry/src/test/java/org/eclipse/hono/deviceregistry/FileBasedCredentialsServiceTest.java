@@ -27,10 +27,12 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
@@ -290,7 +292,6 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
     @SuppressWarnings({ "unchecked" })
     @Test
     public void testDoStartLoadsCredentials(final VertxTestContext ctx) {
-
         // GIVEN a service configured with a file name
         credentialsConfig.setFilename(CREDENTIALS_FILE_NAME);
         when(fileSystem.existsBlocking(credentialsConfig.getFilename())).thenReturn(Boolean.TRUE);
@@ -317,6 +318,17 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                 .compose(s -> assertRegistered(svc,
                         Constants.DEFAULT_TENANT, "sensor1",
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
+                .compose(s -> {
+                    final Future<OperationResult<List<CommonCredential>>> result = Future.future();
+                    getCredentialsManagementService().get(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE, result);
+                    return result.map(r -> {
+                        if (r.getStatus() == HttpURLConnection.HTTP_OK) {
+                            return null;
+                        } else {
+                            throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
+                        }
+                    });
+                })
                 .setHandler(ctx.completing());
 
         start(startFuture);
