@@ -23,9 +23,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -106,7 +106,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private MqttServer server;
     private MqttServer insecureServer;
     private AuthHandler<MqttContext> authHandler;
-    private final BiConsumer<CommandSubscription, CommandContext> afterCommandPubAckedConsumer = this::afterCommandPublished;
+    private final Function<TenantObject, BiConsumer<CommandSubscription, CommandContext>> afterCommandPublished = tenantObject -> (
+            subscription, commandContext) -> afterCommandPublished(tenantObject, subscription, commandContext);
     private ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider;
 
     /**
@@ -735,34 +736,36 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Sample timer = metrics.startTimer();
                     final Command command = commandContext.getCommand();
-                    if (command.isValid()) {
-                        getTenantConfiguration(sub.getTenant(), commandContext.getTracingContext())
-                                .compose(tenantObject -> checkMessageLimit(tenantObject, command.getPayloadSize()))
-                                .setHandler(result -> {
-                                    if (result.succeeded()) {
-                                        addMicrometerSample(commandContext, timer);
-                                        onCommandReceived(mqttEndpoint, sub, commandContext, cmdHandler);
-                                    } else {
-                                        // issue credit so that application(s) can send the next command
-                                        commandContext.reject(getErrorCondition(result.cause()), 1);
-                                        metrics.reportCommand(
-                                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                                sub.getTenant(),
-                                                ProcessingOutcome.from(result.cause()),
-                                                command.getPayloadSize(),
-                                                timer);
-                                    }
-                                });
-                    } else {
-                        // issue credit so that application(s) can send the next command
-                        commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"), 1);
+                    final Future<TenantObject> tenantTracker = getTenantConfiguration(sub.getTenant(),
+                            commandContext.getTracingContext());
+
+                    tenantTracker.compose(tenantObject -> {
+                        if (!command.isValid()) {
+                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                    "malformed command message"));
+                        }
+                        return checkMessageLimit(tenantObject, command.getPayloadSize());
+                    }).compose(success -> {
+                        addMicrometerSample(commandContext, timer);
+                        onCommandReceived(tenantTracker.result(), mqttEndpoint, sub, commandContext,
+                                cmdHandler);
+                        return Future.succeededFuture();
+                    }).otherwise(failure -> {
+                        if (failure instanceof ClientErrorException) {
+                            // issue credit so that application(s) can send the next command
+                            commandContext.reject(getErrorCondition(failure), 1);
+                        } else {
+                            commandContext.release(1);
+                        }
                         metrics.reportCommand(
                                 command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 sub.getTenant(),
-                                ProcessingOutcome.UNPROCESSABLE,
+                                tenantTracker.result(),
+                                ProcessingOutcome.from(failure),
                                 command.getPayloadSize(),
                                 timer);
-                    }
+                        return null;
+                    });
                 },
                 remoteClose -> {},
                 livenessCheckInterval);
@@ -887,38 +890,43 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String deviceId,
             final Buffer payload) {
 
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(payload);
+
         if (ctx.endpoint() != EndpointType.TELEMETRY) {
             throw new IllegalArgumentException("context does not contain telemetry message but " +
                 ctx.endpoint().getCanonicalName());
         }
 
         final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-        return uploadMessage(
-                Objects.requireNonNull(ctx),
-                Objects.requireNonNull(tenant),
-                Objects.requireNonNull(deviceId),
-                Objects.requireNonNull(payload),
-                getTelemetrySender(tenant),
-                ctx.endpoint()
-        ).map(success -> {
-            metrics.reportTelemetry(
-                    ctx.endpoint(),
-                    ctx.tenant(),
-                    MetricsTags.ProcessingOutcome.FORWARDED,
-                    qos,
-                    payload.length(),
-                    ctx.getTimer());
-            return success;
-        }).recover(t -> {
-            metrics.reportTelemetry(
-                    ctx.endpoint(),
-                    ctx.tenant(),
-                    ProcessingOutcome.from(t),
-                    qos,
-                    payload.length(),
-                    ctx.getTimer());
-            return Future.failedFuture(t);
-        });
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
+
+        return tenantTracker
+                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getTelemetrySender(tenant),
+                        ctx.endpoint()))
+                .compose(success -> {
+                    metrics.reportTelemetry(
+                            ctx.endpoint(),
+                            ctx.tenant(),
+                            tenantTracker.result(),
+                            MetricsTags.ProcessingOutcome.FORWARDED,
+                            qos,
+                            payload.length(),
+                            ctx.getTimer());
+                    return Future.<Void> succeededFuture();
+                }).recover(t -> {
+                    metrics.reportTelemetry(
+                            ctx.endpoint(),
+                            ctx.tenant(),
+                            tenantTracker.result(),
+                            ProcessingOutcome.from(t),
+                            qos,
+                            payload.length(),
+                            ctx.getTimer());
+                    return Future.failedFuture(t);
+                });
     }
 
     /**
@@ -942,38 +950,43 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final String deviceId,
             final Buffer payload) {
 
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(payload);
+
         if (ctx.endpoint() != EndpointType.EVENT) {
             throw new IllegalArgumentException("context does not contain event but " +
                 ctx.endpoint().getCanonicalName());
         }
 
         final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-        return uploadMessage(
-                Objects.requireNonNull(ctx),
-                Objects.requireNonNull(tenant),
-                Objects.requireNonNull(deviceId),
-                Objects.requireNonNull(payload),
-                getEventSender(tenant),
-                ctx.endpoint()
-        ).map(success -> {
-            metrics.reportTelemetry(
-                    ctx.endpoint(),
-                    ctx.tenant(),
-                    MetricsTags.ProcessingOutcome.FORWARDED,
-                    qos,
-                    payload.length(),
-                    ctx.getTimer());
-            return (Void) null;
-        }).recover(t -> {
-            metrics.reportTelemetry(
-                    ctx.endpoint(),
-                    ctx.tenant(),
-                    ProcessingOutcome.from(t),
-                    qos,
-                    payload.length(),
-                    ctx.getTimer());
-            return Future.failedFuture(t);
-        });
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
+
+        return tenantTracker
+                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getEventSender(tenant),
+                        ctx.endpoint()))
+                .compose(success -> {
+                    metrics.reportTelemetry(
+                            ctx.endpoint(),
+                            ctx.tenant(),
+                            tenantTracker.result(),
+                            MetricsTags.ProcessingOutcome.FORWARDED,
+                            qos,
+                            payload.length(),
+                            ctx.getTimer());
+                    return Future.<Void> succeededFuture();
+                }).recover(t -> {
+                    metrics.reportTelemetry(
+                            ctx.endpoint(),
+                            ctx.tenant(),
+                            tenantTracker.result(),
+                            ProcessingOutcome.from(t),
+                            qos,
+                            payload.length(),
+                            ctx.getTimer());
+                    return Future.failedFuture(t);
+                });
     }
 
     /**
@@ -998,9 +1011,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         Integer status = null;
         String reqId = null;
 
-        final Future<CommandResponse> commandResponseFuture;
+        final Future<CommandResponse> commandResponseTracker;
         if (addressPath.length <= CommandConstants.TOPIC_POSITION_RESPONSE_STATUS) {
-            commandResponseFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+            commandResponseTracker = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "command response topic has too few segments"));
         } else {
             try {
@@ -1014,12 +1027,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final CommandResponse commandResponse = CommandResponse.from(reqId, targetAddress.getTenantId(),
                         targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
 
-                commandResponseFuture = commandResponse != null ? Future.succeededFuture(commandResponse)
+                commandResponseTracker = commandResponse != null ? Future.succeededFuture(commandResponse)
                         : Future.failedFuture(new ClientErrorException(
                                 HttpURLConnection.HTTP_BAD_REQUEST, "command response topic contains invalid data"));
             } else {
                 // status code could not be parsed
-                commandResponseFuture = Future.failedFuture(
+                commandResponseTracker = Future.failedFuture(
                         new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "invalid status code"));
             }
         }
@@ -1036,52 +1049,52 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-        final Future<Void> uploadMessageTracker = commandResponseFuture.compose(commandResponse -> {
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
                     targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
-            final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(
-                    targetAddress.getTenantId(), currentSpan.context())
-                            .compose(tenantObject -> CompositeFuture.all(
-                                    isAdapterEnabled(tenantObject),
-                                    checkMessageLimit(tenantObject, ctx.message().payload().length()))
-                                    .map(success -> tenantObject));
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
+            final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
+                                    isAdapterEnabled(tenantTracker.result()),
+                                    checkMessageLimit(tenantTracker.result(), ctx.message().payload().length()))
+                                    .map(success -> tenantTracker.result());
 
-            return CompositeFuture.all(tokenTracker, tenantEnabledTracker)
-                    .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseFuture.result(),
-                            currentSpan.context()))
-                    .map(delivery -> {
-                        LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
-                                targetAddress.getTenantId(), targetAddress.getResourceId());
-                        metrics.reportCommand(
-                                Direction.RESPONSE,
-                                targetAddress.getTenantId(),
-                                ProcessingOutcome.FORWARDED,
-                                ctx.message().payload().length(),
-                                ctx.getTimer());
-                        // check that the remote MQTT client is still connected before sending PUBACK
-                        if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
-                            ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
-                        }
-                        currentSpan.finish();
-                        return (Void) null;
-                    });
-        });
-        return uploadMessageTracker.recover(t -> {
-            TracingHelper.logError(currentSpan, t);
-            currentSpan.finish();
-            metrics.reportCommand(
-                    Direction.RESPONSE,
-                    targetAddress.getTenantId(),
-                    ProcessingOutcome.from(t),
-                    ctx.message().payload().length(),
-                    ctx.getTimer());
-            return Future.failedFuture(t);
-        });
+        return CompositeFuture.all(tenantTracker, commandResponseTracker)
+                .compose(success -> CompositeFuture.all(tokenTracker, tenantValidationTracker))
+                .compose(ok -> sendCommandResponse(targetAddress.getTenantId(), commandResponseTracker.result(),
+                        currentSpan.context()))
+                .compose(delivery -> {
+                    LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
+                            targetAddress.getTenantId(), targetAddress.getResourceId());
+                    metrics.reportCommand(
+                            Direction.RESPONSE,
+                            targetAddress.getTenantId(),
+                            tenantTracker.result(),
+                            ProcessingOutcome.FORWARDED,
+                            ctx.message().payload().length(),
+                            ctx.getTimer());
+                    // check that the remote MQTT client is still connected before sending PUBACK
+                    if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
+                        ctx.deviceEndpoint().publishAcknowledge(ctx.message().messageId());
+                    }
+                    currentSpan.finish();
+                    return Future.<Void> succeededFuture();
+                })
+                .recover(t -> {
+                    TracingHelper.logError(currentSpan, t);
+                    currentSpan.finish();
+                    metrics.reportCommand(
+                            Direction.RESPONSE,
+                            targetAddress.getTenantId(),
+                            tenantTracker.result(),
+                            ProcessingOutcome.from(t),
+                            ctx.message().payload().length(),
+                            ctx.getTimer());
+                    return Future.failedFuture(t);
+                });
     }
 
     private Future<Void> uploadMessage(
             final MqttContext ctx,
-            final String tenant,
+            final TenantObject tenantObject,
             final String deviceId,
             final Buffer payload,
             final Future<DownstreamSender> senderTracker,
@@ -1096,28 +1109,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
+                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantObject.getTenantId())
                 .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenant, deviceId,
+        final Future<JsonObject> tokenTracker = getRegistrationAssertion(tenantObject.getTenantId(), deviceId,
                 ctx.authenticatedDevice(), currentSpan.context());
-        final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(tenant, currentSpan.context())
-                .compose(tenantObject -> CompositeFuture.all(
-                        isAdapterEnabled(tenantObject),
-                        checkMessageLimit(tenantObject, payload.length()))
-                        .map(success -> tenantObject));
+        final Future<?> tenantValidationTracker = CompositeFuture.all(
+                isAdapterEnabled(tenantObject),
+                checkMessageLimit(tenantObject, payload.length()));
 
-        return CompositeFuture.all(tokenTracker, tenantEnabledTracker, senderTracker).compose(ok -> {
+        return CompositeFuture.all(tokenTracker, tenantValidationTracker, senderTracker).compose(ok -> {
 
             final DownstreamSender sender = senderTracker.result();
             final Message downstreamMessage = newMessage(
-                    ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
+                    ResourceIdentifier.from(endpoint.getCanonicalName(), tenantObject.getTenantId(), deviceId),
                     ctx.message().topicName(),
                     ctx.contentType(),
                     payload,
-                    tenantEnabledTracker.result(),
+                    tenantObject,
                     tokenTracker.result(),
                     null);
 
@@ -1132,7 +1143,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }).compose(delivery -> {
 
             LOG.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
-                    ctx.message().topicName(), ctx.message().qosLevel(), tenant, deviceId);
+                    ctx.message().topicName(), ctx.message().qosLevel(), tenantObject.getTenantId(), deviceId);
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
                 currentSpan.log("sending PUBACK");
@@ -1146,10 +1157,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             if (ClientErrorException.class.isInstance(t)) {
                 final ClientErrorException e = (ClientErrorException) t;
                 LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]: {} - {}",
-                        endpoint, tenant, deviceId, e.getErrorCode(), e.getMessage());
+                        endpoint, tenantObject.getTenantId(), deviceId, e.getErrorCode(), e.getMessage());
             } else {
                 LOG.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]",
-                        endpoint, tenant, deviceId, t);
+                        endpoint, tenantObject.getTenantId(), deviceId, t);
             }
             TracingHelper.logError(currentSpan, t);
             currentSpan.finish();
@@ -1318,6 +1329,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     /**
      * Called for a command to be delivered to a device.
      *
+     * @param tenantObject The tenant configuration object.
      * @param endpoint The device that the command should be delivered to.
      * @param subscription The device's command subscription.
      * @param commandContext The command to be delivered.
@@ -1325,6 +1337,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected final void onCommandReceived(
+            final TenantObject tenantObject,
             final MqttEndpoint endpoint,
             final CommandSubscription subscription,
             final CommandContext commandContext,
@@ -1361,9 +1374,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         endpoint.publish(topic, command.getPayload(), subscription.getQos(), false, false, sentHandler -> {
             if (sentHandler.succeeded()) {
                 if (MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos())) {
-                    cmdHandler.addToWaitingForAcknowledgement(sentHandler.result(), subscription, commandContext);
+                    cmdHandler.addToWaitingForAcknowledgement(sentHandler.result(), tenantObject, subscription,
+                            commandContext);
                 } else {
-                    afterCommandPublished(subscription, commandContext);
+                    afterCommandPublished(tenantObject, subscription, commandContext);
                 }
             } else {
                 LOG.debug(
@@ -1375,6 +1389,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 metrics.reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                         subscription.getTenant(),
+                        tenantObject,
                         ProcessingOutcome.from(sentHandler.cause()),
                         command.getPayloadSize(),
                         getMicrometerSample(commandContext));
@@ -1384,12 +1399,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private void afterCommandPublished(
+            final TenantObject tenantObject,
             final CommandSubscription subscription,
             final CommandContext commandContext) {
 
         metrics.reportCommand(
                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                 subscription.getTenant(),
+                tenantObject,
                 ProcessingOutcome.FORWARDED,
                 commandContext.getCommand().getPayloadSize(),
                 getMicrometerSample(commandContext));
@@ -1437,7 +1454,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdHandler, traceSamplingPriority));
         endpoint.publishHandler(
                 message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
-        endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, afterCommandPubAckedConsumer));
+        endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, afterCommandPublished));
         endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdHandler,
                 traceSamplingPriority));
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg,
