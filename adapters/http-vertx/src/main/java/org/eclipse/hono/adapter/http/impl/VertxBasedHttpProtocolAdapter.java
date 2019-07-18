@@ -29,8 +29,12 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
+import org.eclipse.hono.service.http.HttpContext;
+import org.eclipse.hono.service.http.HttpContextTenantAndAuthIdProvider;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
 import org.eclipse.hono.service.http.X509AuthHandler;
+import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 
@@ -57,6 +61,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
+    private ExecutionContextTenantAndAuthIdProvider<HttpContext> tenantObjectWithAuthIdProvider;
 
     /**
      * Sets the provider to use for authenticating devices based on
@@ -84,6 +89,23 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      */
     public void setClientCertAuthProvider(final HonoClientBasedAuthProvider<SubjectDnCredentials> provider) {
         this.clientCertAuthProvider = Objects.requireNonNull(provider);
+    }
+
+    /**
+     * Sets the provider that determines the tenant and auth-id associated with a request.
+     *
+     * @param provider The provider to use.
+     * @throws NullPointerException if provider is {@code null}.
+     */
+    public void setTenantObjectWithAuthIdProvider(final ExecutionContextTenantAndAuthIdProvider<HttpContext> provider) {
+        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(provider);
+    }
+
+    @Override
+    protected TenantTraceSamplingHandler getTenantTraceSamplingHandler() {
+        return new TenantTraceSamplingHandler(
+                Optional.ofNullable(tenantObjectWithAuthIdProvider)
+                        .orElse(new HttpContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory(), PARAM_TENANT, PARAM_DEVICE_ID)));
     }
 
     /**
