@@ -226,6 +226,9 @@ public class VertxBasedHttpProtocolAdapterTest {
         doAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         }).when(tenantClient).get(anyString(), (SpanContext) any());
+        doAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        }).when(tenantClient).get(anyString());
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);

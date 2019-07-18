@@ -36,6 +36,7 @@ import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -295,11 +296,28 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Router router = Router.router(vertx);
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         router.route().handler(BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY).setBodyLimit(getConfig().getMaxPayloadSize()));
+        Optional.ofNullable(getTenantTraceSamplingHandler())
+                .ifPresent(tenantTraceSamplingHandler -> router.route().handler(tenantTraceSamplingHandler)
+                        .failureHandler(tenantTraceSamplingHandler));
         addTracingHandler(router, -5);
         // add default handler for failed routes
         router.route().order(-1).failureHandler(new DefaultFailureHandler());
 
         return router;
+    }
+
+    /**
+     * Gets a handler that determines the tenant associated with a request and applies the tenant specific trace
+     * sampling configuration (if set).
+     * <p>
+     * This method returns {@code null} by default.
+     * <p>
+     * Subclasses may override this method in order to return an appropriate handler.
+     * 
+     * @return The handler or {@code null}.
+     */
+    protected TenantTraceSamplingHandler getTenantTraceSamplingHandler() {
+        return null;
     }
 
     /**
