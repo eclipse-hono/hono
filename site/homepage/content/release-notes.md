@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 1.0-M6
+## 1.0-M6 (not yet released)
 
 ### New Features
 
@@ -17,7 +17,7 @@ title = "Release Notes"
   refer to the [Hono Client Configuration guide]({{% doclink "/admin-guide/hono-client-configuration/" %}})
   for details regarding these new variables.
 * The *message limit* checks is now extended to include command and control messages.
-  Please refer to the [resource limits] ({{% doclink "/concepts/resource-limits/" %}}) for details.  
+  Please refer to the [resource limits] ({{% doclink "/concepts/resource-limits/" %}}) for details.
 
 ### API Changes
 
@@ -32,9 +32,9 @@ title = "Release Notes"
 * The configuration parameters for the health check endpoint were moved from 
   `hono.app` to `hono.healthCheck`. `hono.app.healthCheckPort` is now
   `hono.healthCheck.port` and `hono.app.healthCheckBindAddress` is now 
-  `hono.healthCheck.BindAdress`. See the individual 
-  [Adapter Configuration guides]({{% doclink "/admin-guide/" %}}) 
-  for more information on the new naming.
+  `hono.healthCheck.BindAdress`. Please refer to the protocol adapter
+  [configuration guides]({{% doclink "/admin-guide/" %}}) for additional
+  information on the new naming.
 
 ### Device registry changes
 
