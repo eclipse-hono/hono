@@ -179,15 +179,27 @@ public class DeviceRegistrationHttpIT {
     }
 
     /**
-     * Verifies that a device cannot be registered if the request
+     * Verifies that a device can be registered if the request
      * does not contain a body.
      * 
      * @param ctx The vert.x test context
      */
     @Test
-    public void testAddDeviceFailsForMissingBody(final TestContext ctx) {
+    public void testAddDeviceSucceedsForEmptyBody(final TestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(ctx.asyncAssertSuccess());
+        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.asyncAssertSuccess());
+    }
+
+    /**
+     * Verifies that a device can be registered if the request
+     * does not contain a body nor a content type.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testAddDeviceSucceedsForEmptyBodyAndContentType(final TestContext ctx) {
+
+        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.asyncAssertSuccess());
     }
 
     /**

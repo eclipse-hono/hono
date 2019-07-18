@@ -73,21 +73,18 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
 
         // ADD tenant with auto-generated ID
         router.post(path).handler(bodyHandler);
-        router.post(path).handler(this::extractRequiredJsonPayload);
-        router.post(path).handler(this::extractIfMatchVersionParam);
+        router.post(path).handler(this::extractOptionalJsonPayload);
         router.post(path).handler(this::createTenant);
 
         final String pathWithTenant = String.format("/%s/:%s", getName(), PARAM_TENANT_ID);
 
         // ADD tenant
         router.post(pathWithTenant).handler(bodyHandler);
-        router.post(pathWithTenant).handler(this::extractRequiredJsonPayload);
-        router.post(pathWithTenant).handler(this::extractIfMatchVersionParam);
+        router.post(pathWithTenant).handler(this::extractOptionalJsonPayload);
         router.post(pathWithTenant).handler(this::updatePayloadWithTenantId);
         router.post(pathWithTenant).handler(this::createTenant);
 
         // GET tenant
-        router.get(pathWithTenant).handler(this::extractIfMatchVersionParam);
         router.get(pathWithTenant).handler(this::getTenant);
 
         // UPDATE tenant

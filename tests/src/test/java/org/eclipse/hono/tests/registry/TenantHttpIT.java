@@ -150,14 +150,14 @@ public class TenantHttpIT {
     }
 
     /**
-     * Verifies that the service returns a 400 status code for an add tenant request with an empty body.
+     * Verifies that the service successfully create a tenant from a request with an empty body.
      * 
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddTenantFailsForEmptyBody(final TestContext context) {
+    public void testAddTenantSucceedsForEmptyBody(final TestContext context) {
 
-        registry.addTenant(tenantId, null, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(tenantId, null, HttpURLConnection.HTTP_CREATED).setHandler(context.asyncAssertSuccess());
     }
 
     /**
