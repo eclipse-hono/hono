@@ -55,7 +55,9 @@ public final class DeviceManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
 
     @Override
     public String getName() {
-        return RegistryManagementConstants.DEVICES_HTTP_ENDPOINT;
+        return String.format("%s/%s",
+                RegistryManagementConstants.API_VERSION,
+                RegistryManagementConstants.DEVICES_HTTP_ENDPOINT);
     }
 
     @Override

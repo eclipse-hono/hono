@@ -60,7 +60,9 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
 
     @Override
     public String getName() {
-        return RegistryManagementConstants.TENANT_HTTP_ENDPOINT;
+        return String.format("%s/%s",
+                RegistryManagementConstants.API_VERSION,
+                RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
     }
 
     @Override
