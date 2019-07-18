@@ -48,6 +48,11 @@ def build() {
            echo "cloning Hono repository..."
            git clone https://github.com/eclipse/hono.git $WORKSPACE/hono
            '''
+        echo "Copying Homepage directory..."
+        sh ''' 
+           echo "Copying Homepage directory from master branch..."
+           cp -r $WORKSPACE/hono/site/homepage $WORKSPACE/hono-homepage-master
+           '''
     }
 
     stage('Cloning Hugo themes') {
@@ -59,11 +64,11 @@ def build() {
            '''
         echo "cloning Hugo Universal theme..."
         sh '''
-            git clone https://github.com/devcows/hugo-universal-theme.git $WORKSPACE/hono/site/homepage/themes/hugo-universal-theme
-            cd $WORKSPACE/hono/site/homepage/themes/hugo-universal-theme
+            git clone https://github.com/devcows/hugo-universal-theme.git $WORKSPACE/hono-homepage-master/themes/hugo-universal-theme
+            cd $WORKSPACE/hono-homepage-master/themes/hugo-universal-theme
             git checkout 1.0.0
             echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
-            rm $WORKSPACE/hono/site/homepage/themes/hugo-universal-theme/static/img/*
+            rm $WORKSPACE/hono-homepage-master/themes/hugo-universal-theme/static/img/*
            '''
     }
 
@@ -86,26 +91,24 @@ def build() {
             echo "building documentation using Hugo `/shared/common/hugo/latest/hugo version`"
             /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site/docs/latest
             '''
-        
+
         echo "building documentation for versions"
         sh '''#!/bin/bash
-            cd $WORKSPACE/hono/site/documentation
-
             function build_documentation_in_version {
-                VERSION="$1.$2"
-    
                 if [[ "$1" == "stable" ]]; then
                    WEIGHT="-20000"
                    VERSION="$1"
                 else
                    local pad=00
-                   WEIGHT="-$1${pad:${#2}:${#pad}}${2}"
+                   local minor="${2//[!0-9]/}" # make sure that minor only contains numbers  
+                   WEIGHT="-$1${pad:${#minor}:${#pad}}${minor}"
+                   VERSION="$1.$2"
                 fi
                 
                 echo "Going to check out version ${VERSION} from branch/tag $3"
                 git checkout $3
                 
-cat <<EOS >> $WORKSPACE/hono/site/homepage/menu_main.toml
+cat <<EOS >> $WORKSPACE/hono-homepage-master/menu_main.toml
 
 [[menu.main]]
   parent = "Documentation"
@@ -117,6 +120,7 @@ EOS
 cat <<EOS > config_release_version.toml
 baseurl = "https://www.eclipse.org/hono/docs/${VERSION}/"
 [params]
+  urlPrefixOfVersionStable = "/hono/docs/stable/"
   honoVersion = "${VERSION}"
 EOS
 
@@ -125,7 +129,9 @@ EOS
                 rm config_release_version.toml
             }
             
-            TAG_STABLE=$(cat "$WORKSPACE/hono/site/homepage/tag_stable.txt")
+            cd $WORKSPACE/hono/site/documentation
+
+            TAG_STABLE=$(cat "$WORKSPACE/hono-homepage-master/tag_stable.txt")
             if [[ -n "$TAG_STABLE" ]]; then
               build_documentation_in_version "stable" "" ${TAG_STABLE}  # build stable version as "stable"  
             fi
@@ -133,9 +139,7 @@ EOS
             while IFS=";" read -r MAJOR MINOR BRANCH_OR_TAG
             do
               build_documentation_in_version ${MAJOR} ${MINOR} ${BRANCH_OR_TAG}
-            done < <(tail -n+4 $WORKSPACE/hono/site/homepage/versions_supported.csv)  # skip header line and comment
-            
-            git checkout master
+            done < <(tail -n+3 $WORKSPACE/hono-homepage-master/versions_supported.csv)  # skip header line and comment
          '''
 
         echo "adding redirect from hono/docs/ to version stable"
@@ -157,7 +161,7 @@ EOS
     stage('Building homepage using Hugo') {
         echo "building homepage..."
         sh '''
-            cd $WORKSPACE/hono/site/homepage
+            cd $WORKSPACE/hono-homepage-master
             echo "building homepage using Hugo `/shared/common/hugo/latest/hugo version`"
             /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site --config config.toml,menu_main.toml
             '''
