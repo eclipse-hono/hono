@@ -60,7 +60,9 @@ public final class CredentialsManagementHttpEndpoint extends AbstractHttpEndpoin
 
     @Override
     public String getName() {
-        return RegistryManagementConstants.CREDENTIALS_HTTP_ENDPOINT;
+        return String.format("%s/%s",
+                RegistryManagementConstants.API_VERSION,
+                RegistryManagementConstants.CREDENTIALS_HTTP_ENDPOINT);
     }
 
     @Override

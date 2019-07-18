@@ -33,7 +33,6 @@ import org.eclipse.hono.service.management.credentials.X509CertificateCredential
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
@@ -59,17 +58,18 @@ public final class DeviceRegistryHttpClient {
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryHttpClient.class);
 
     private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
-    private static final String URI_ADD_TENANT = "/" + RegistryManagementConstants.TENANT_HTTP_ENDPOINT;
-    private static final String TEMPLATE_URI_TENANT_INSTANCE = String.format("/%s/%%s",
-            RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
+    private static final String URI_ADD_TENANT = String.format("/%s/%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
+    private static final String TEMPLATE_URI_TENANT_INSTANCE = String.format("/%s/%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
 
-    private static final String TEMPLATE_URI_REGISTRATION_INSTANCE = String.format("/%s/%%s/%%s",
-            RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT);
+    private static final String TEMPLATE_URI_REGISTRATION_INSTANCE = String.format("/%s/%s/%%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT);
 
-    private static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%%s/%%s/%%s",
-            CredentialsConstants.CREDENTIALS_ENDPOINT);
-    private static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%%s/%%s",
-            CredentialsConstants.CREDENTIALS_ENDPOINT);
+    private static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
+    private static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%s/%%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
 
     private final CrudHttpClient httpClient;
 
@@ -308,9 +308,10 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatus) {
 
         Objects.requireNonNull(tenantId);
-        String uri = String.format("/%s/%s", RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT, tenantId);
+        String uri = String.format(TEMPLATE_URI_TENANT_INSTANCE, tenantId);
+
         if (deviceId != null) {
-            uri = String.format("/%s/%s/%s", RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT, tenantId, deviceId);
+            uri = String.format(TEMPLATE_URI_REGISTRATION_INSTANCE, tenantId, deviceId);
         }
         return httpClient.create(uri, JsonObject.mapFrom(device), contentType,
                 response -> response.statusCode() == expectedStatus);
@@ -450,7 +451,7 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
-        final String uri = String.format("/%s/%s/%s", CredentialsConstants.CREDENTIALS_ENDPOINT, tenantId, deviceId);
+        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, tenantId, deviceId);
 
         return httpClient.get(uri, response -> response == HttpURLConnection.HTTP_OK)
                 .compose(body -> {

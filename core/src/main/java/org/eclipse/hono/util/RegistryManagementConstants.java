@@ -22,6 +22,11 @@ import java.util.Set;
 public final class RegistryManagementConstants extends RequestResponseApiConstants {
 
     /**
+     * The current version of the API.
+     */
+    public static final String API_VERSION = "v1";
+
+    /**
      * The vert.x event bus event message <em>subject</em> property to use for the <em>create</em> operations.
      */
     public static final String ACTION_CREATE = "create";
