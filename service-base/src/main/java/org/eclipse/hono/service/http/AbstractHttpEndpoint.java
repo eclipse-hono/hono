@@ -153,6 +153,23 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     }
 
     /**
+     * Check if the payload is not null and call \
+     * {@link #extractRequiredJson(RoutingContext, Function)}} to extract it accordingly.
+     * <p>
+     *
+     * @param ctx The routing context to retrieve the JSON request body from.
+     */
+    protected final void extractOptionalJsonPayload(final RoutingContext ctx) {
+
+        if (ctx.getBody().length() != 0) {
+            extractRequiredJson(ctx, RoutingContext::getBodyAsJson);
+        } else {
+            ctx.put(KEY_REQUEST_BODY, new JsonObject());
+            ctx.next();
+        }
+    }
+
+    /**
      * Check the Content-Type of the request to be 'application/json' and extract the payload if this check was
      * successful.
      * <p>

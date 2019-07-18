@@ -67,18 +67,16 @@ public final class DeviceManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
 
         // CREATE device with auto-generated deviceID
         router.post(pathWithTenant)
-                .handler(this::extractRequiredJsonPayload)
+                .handler(this::extractOptionalJsonPayload)
                 .handler(this::doCreateDevice);
 
         // CREATE device
         router.post(pathWithTenantAndDeviceId)
-                .handler(this::extractRequiredJsonPayload)
-                .handler(this::extractIfMatchVersionParam)
+                .handler(this::extractOptionalJsonPayload)
                 .handler(this::doCreateDevice);
 
         // GET device
         router.get(pathWithTenantAndDeviceId)
-                .handler(this::extractIfMatchVersionParam)
                 .handler(this::doGetDevice);
 
         // UPDATE existing device
