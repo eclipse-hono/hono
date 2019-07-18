@@ -18,6 +18,7 @@ import io.vertx.core.Vertx;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * A class that tracks command subscriptions, unsubscriptions and handles PUBACKs.
@@ -37,7 +39,7 @@ import java.util.function.BiConsumer;
 public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
     private static final Logger LOG = LoggerFactory.getLogger(CommandHandler.class);
     private final Map<String, TriTuple<CommandSubscription, MessageConsumer, Object>> subscriptions = new ConcurrentHashMap<>();
-    private final Map<Integer, TriTuple<Long, CommandSubscription, CommandContext>> waitingForAcknowledgement = new ConcurrentHashMap<>();
+    private final Map<Integer, PendingCommandRequest> waitingForAcknowledgement = new ConcurrentHashMap<>();
     private final Vertx vertx;
     private final T config;
 
@@ -57,19 +59,18 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
      *
      * @param msgId The msgId of the command published with QoS 1.
-     * @param consumer The consumer to be invoked if not {@code null} on arrival of PUBACK.
+     * @param afterCommandPublished The action to be invoked if not {@code null} on arrival of PUBACK.
      * @throws NullPointerException if msgId is {@code null}.
      */
-    public void handlePubAck(final Integer msgId, final BiConsumer<CommandSubscription, CommandContext> consumer) {
+    public void handlePubAck(final Integer msgId, final Function<TenantObject, BiConsumer<CommandSubscription, CommandContext>> afterCommandPublished) {
         Objects.requireNonNull(msgId);
         LOG.trace("Acknowledgement received for command [Msg-id: {}] that has been sent to device.", msgId);
         Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
-            cancelTimer(value.one());
+            cancelTimer(value.timerId);
 
-            final CommandSubscription subscription = value.two();
-            final CommandContext commandContext = value.three();
-            if (consumer != null) {
-                consumer.accept(subscription, commandContext);
+            final CommandSubscription subscription = value.subscription;
+            if (afterCommandPublished != null) {
+                afterCommandPublished.apply(value.tenantObject).accept(subscription, value.commandContext);
             }
             LOG.debug(
                     "Acknowledged [Msg-id: {}] command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
@@ -79,7 +80,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
             items.put(Fields.EVENT, "Published command has been acknowledged");
             items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());
             items.put(TracingHelper.TAG_QOS.getKey(), subscription.getQos().toString());
-            commandContext.getCurrentSpan().log(items);
+            value.commandContext.getCurrentSpan().log(items);
         });
     }
 
@@ -87,28 +88,33 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      * Stores the published message id along with command subscription and command context.
      *
      * @param msgId The id of the command (message) that has been published.
+     * @param tenantObject The tenant configuration object.
      * @param subscription The device's command subscription.
      * @param commandContext The commandContext of the command sent.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public void addToWaitingForAcknowledgement(final Integer msgId,
+            final TenantObject tenantObject,
             final CommandSubscription subscription,
             final CommandContext commandContext) {
 
         Objects.requireNonNull(msgId);
+        Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandContext);
 
-        waitingForAcknowledgement.put(msgId, TriTuple.of(startTimer(msgId), subscription, commandContext));
+        waitingForAcknowledgement.put(msgId,
+                PendingCommandRequest.from(startTimer(msgId), tenantObject, subscription, commandContext));
     }
 
     /**
      * Removes the entry from the waitingForAcknowledgement map for the given msgId.
      *
      * @param msgId The id of the command (message) that has been published.
-     * @return The trituple object containing timer-id, commandSubscription and commandContext for the given msgId.
+     * @return The PendingCommandRequest object containing timer-id, tenantObject, commandSubscription and 
+     *         commandContext for the given msgId.
      */
-    private TriTuple<Long, CommandSubscription, CommandContext> removeFromWaitingForAcknowledgement(
+    private PendingCommandRequest removeFromWaitingForAcknowledgement(
             final Integer msgId) {
         return waitingForAcknowledgement.remove(msgId);
     }
@@ -178,8 +184,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
         return vertx.setTimer(config.getCommandAckTimeout(), timerId -> {
 
             Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
-                final CommandSubscription subscription = value.two();
-                final CommandContext commandContext = value.three();
+                final CommandSubscription subscription = value.subscription;
                 LOG.debug(
                         "Timed out waiting for acknowledgment for command sent to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                         subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
@@ -188,8 +193,8 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
                 items.put(Fields.EVENT, "Timed out waiting for acknowledgment for command sent to device");
                 items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());
                 items.put(TracingHelper.TAG_QOS.getKey(), subscription.getQos().toString());
-                commandContext.getCurrentSpan().log(items);
-                commandContext.release(1);
+                value.commandContext.getCurrentSpan().log(items);
+                value.commandContext.release(1);
             });
         });
     }
@@ -197,5 +202,51 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
     private void cancelTimer(final Long timerId) {
         vertx.cancelTimer(timerId);
         LOG.trace("Canceled Timer [timer-id: {}}", timerId);
+    }
+
+    /**
+     * A class to facilitate storing of information in connection with the pending command requests.
+     * The pending command requests are tracked using a map in the enclosing class {@link CommandHandler}
+     * and is used to handle PUBACKs from devices.
+     */
+    private static class PendingCommandRequest {
+
+        private final Long timerId;
+        private final TenantObject tenantObject;
+        private final CommandSubscription subscription;
+        private final CommandContext commandContext;
+
+        private PendingCommandRequest(final Long timerId, final TenantObject tenantObject,
+                final CommandSubscription subscription, final CommandContext commandContext) {
+
+            Objects.requireNonNull(timerId);
+            Objects.requireNonNull(tenantObject);
+            Objects.requireNonNull(subscription);
+            Objects.requireNonNull(commandContext);
+
+            this.timerId = timerId;
+            this.tenantObject = tenantObject;
+            this.subscription = subscription;
+            this.commandContext = commandContext;
+        }
+
+        /**
+         * Creates a new PendingCommandRequest instance.
+         *
+         * @param timerId The unique ID of the timer.
+         * @param tenantObject The tenant configuration object.
+         * @param subscription The device's command subscription.
+         * @param commandContext The commandContext of the command sent.
+         * @throws NullPointerException if any of the parameters are {@code null}.
+         */        
+        private static PendingCommandRequest from(final Long timerId, final TenantObject tenantObject,
+                final CommandSubscription subscription, final CommandContext commandContext){
+            Objects.requireNonNull(timerId);
+            Objects.requireNonNull(tenantObject);
+            Objects.requireNonNull(subscription);
+            Objects.requireNonNull(commandContext);
+
+            return new PendingCommandRequest(timerId, tenantObject, subscription, commandContext);
+        }
     }
 }

@@ -508,6 +508,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -554,6 +555,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -600,6 +602,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -649,6 +652,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -727,6 +731,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -738,6 +743,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics).reportTelemetry(
                 eq(type),
                 eq("my-tenant"),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
@@ -780,6 +786,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         verify(metrics, never()).reportTelemetry(
                 any(MetricsTags.EndpointType.class),
                 anyString(),
+                any(),
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 any(MetricsTags.QoS.class),
                 anyInt(),
@@ -825,6 +832,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             verify(metrics).reportTelemetry(
                     eq(MetricsTags.EndpointType.TELEMETRY),
                     eq("my-tenant"),
+                    any(),
                     eq(MetricsTags.ProcessingOutcome.FORWARDED),
                     eq(MetricsTags.QoS.AT_LEAST_ONCE),
                     eq(payload.length()),
@@ -1137,6 +1145,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     verify(metrics).reportTelemetry(
                             any(MetricsTags.EndpointType.class),
                             anyString(),
+                            any(),
                             eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                             any(MetricsTags.QoS.class),
                             anyInt(),
@@ -1181,6 +1190,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
             verify(metrics).reportTelemetry(
                     any(MetricsTags.EndpointType.class),
                     anyString(),
+                    any(),
                     eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                     any(MetricsTags.QoS.class),
                     anyInt(),
@@ -1224,6 +1234,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     verify(metrics).reportCommand(
                             eq(MetricsTags.Direction.RESPONSE),
                             eq("tenant"),
+                            any(),
                             eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                             anyInt(),
                             any());
