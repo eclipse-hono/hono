@@ -249,6 +249,7 @@ public class MicrometerBasedMetrics implements Metrics {
     public void reportCommand(
             final Direction direction,
             final String tenantId,
+            final TenantObject tenantObject,
             final ProcessingOutcome outcome,
             final int payloadSize,
             final Sample timer) {
@@ -274,7 +275,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .minimumExpectedValue(0L)
             .tags(tags)
             .register(this.registry)
-            .record(payloadSize);
+            .record(calculatePayloadSize(payloadSize, tenantObject));
 
         if (legacyMetrics != null) {
 
@@ -288,18 +289,6 @@ public class MicrometerBasedMetrics implements Metrics {
                 break;
             }
         }
-    }
-
-    @Override
-    public void reportCommand(
-            final Direction direction,
-            final String tenantId,
-            final TenantObject tenantObject,
-            final ProcessingOutcome outcome,
-            final int payloadSize,
-            final Sample timer) {
-
-        reportCommand(direction, tenantId, outcome, calculatePayloadSize(payloadSize, tenantObject), timer);
     }
 
     /**

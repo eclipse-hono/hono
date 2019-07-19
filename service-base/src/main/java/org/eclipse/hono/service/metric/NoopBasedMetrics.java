@@ -104,15 +104,6 @@ public class NoopBasedMetrics implements Metrics {
     public void reportCommand(
             final Direction direction,
             final String tenantId,
-            final ProcessingOutcome outcome,
-            final int payloadSize,
-            final Sample timer) {
-    }
-
-    @Override
-    public void reportCommand(
-            final Direction direction,
-            final String tenantId,
             final TenantObject tenantObject,
             final ProcessingOutcome outcome,
             final int payloadSize,
