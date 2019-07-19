@@ -55,6 +55,7 @@ tags:
         url: https://www.eclipse.org/hono/docs/stable/concepts/device-identity/
    - name: credentials
      description: Device credentials
+
      externalDocs:
         description: Hono device identity
         url: https://www.eclipse.org/hono/docs/stable/concepts/device-identity/
@@ -343,6 +344,10 @@ paths:
             Get the credentials set of a device. As long as the device is
             registered and the user has read access to it, this call should
             never return "not found".
+            Depending on its implementation (or configuration), the device registry
+            can either return all credentials information including full secret details or
+            secret metadata along with the generated identifier (an `id` property).
+            The identifier can be used for the follow-up `update` operation).
          operationId: getAllCredentials
          responses:
             200:
@@ -351,6 +356,11 @@ paths:
                   application/json:
                      schema:
                         $ref: '#/components/schemas/CredentialsSet'
+                     examples:
+                        Full Credentials:
+                           $ref: '#/components/examples/HashedPasswordExample'
+                        Credentials Metadata:
+                           $ref: '#/components/examples/MetaPasswordExample'
                headers:
                   ETag:
                      description: Version of the resource
@@ -367,6 +377,9 @@ paths:
          tags:
             - credentials
          summary: Update credentials set for registered device
+         description: If the device registry is handling full secret details, the updated credential set
+                      will be an exact match of the provided content. If it is using secret metadata,
+                      data will be merged in based on the secret identities.
          operationId: setAllCredentials
          parameters:
             - $ref: '#/components/parameters/resourceVersion'
@@ -375,6 +388,11 @@ paths:
                application/json:
                   schema:
                      $ref: '#/components/schemas/CredentialsSet'
+                  examples:
+                     Hashed Password:
+                        $ref: '#/components/examples/HashedPasswordExample'
+                     Plain Password:
+                        $ref: '#/components/examples/PlainPasswordExample'
             required: true
          responses:
             204:
@@ -602,6 +620,10 @@ components:
          type: object
          additionalProperties: false
          properties:
+            "id":
+               type: string
+               description: The device registry can assign an identity to the secret.
+                            This value can be used to update secrets based on their metadata.
             "enabled":
                type: boolean
                default: true
@@ -629,12 +651,31 @@ components:
                  "hash-function":
                     type: string
                     example: sha-512
+                    description: The name of the hash function used to create the password hash (defined in `pwd-hash` property).
+                                 If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
+                                 This property should be empty when returning passwords from the device registry using only secret metadata.
+                                 In this case the id field must be set instead.
                  "pwd-hash":
                     type: string
                     format: byte
+                    description: The password hash created using the `hash-function` and optional `salt` values.
+                                 If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
+                                 This property should be empty when returning passwords from the device registry using only secret metadata.
+                                 In this case the id field must be set instead.
                  "salt":
                     type: string
                     format: byte
+                    description: The Base64 encoding of the salt used in the password hash (defined in the `pwd-hash` property).
+                                 If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
+                                 This property should be empty when returning passwords from the device registry using only secret metadata.
+                                 In this case the id field must be set instead.
+                 "pwd-plain":
+                    type: string
+                    format: byte
+                    description: The clear text value of the password to be hashed by the device registry.
+                                 If this property is specified, the device registry will ignore user-provided hash properties (`hash-function`, `pwd-hash` and `salt`).
+                                 This property should never be stored by the device registry.
+                                 This property should be empty when returning passwords from the device registry.
 
       PSKSecret:
          additionalProperties: false
@@ -792,3 +833,36 @@ components:
       BasicAuth:
          type: http
          scheme: basic
+
+   examples:
+      HashedPasswordExample:
+         value:
+            auth-id: sensor1
+            type: hashed-password
+            secrets: [{
+               "not-after": "2027-12-24T19:00:00Z",
+               "pwd-hash": "AQIDBAUGBwg=",
+               "salt": "Mq7wFw==",
+               "hash-function": "sha-512"
+            }]
+      PlainPasswordExample:
+         value:
+            auth-id: sensor1
+            type: hashed-password
+            secrets: [{
+               "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
+               "not-after": "2027-12-24T19:00:00Z",
+               "pwd-plain": "hono-secret"
+            }]
+      MetaPasswordExample:
+         value:
+            auth-id: sensor1
+            type: hashed-password
+            secrets: [{
+               "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
+               "not-after": "2027-12-24T19:00:00Z",
+               "pwd-plain": "",
+               "pwd-hash": "",
+               "salt": "",
+               "hash-function": ""
+            }]

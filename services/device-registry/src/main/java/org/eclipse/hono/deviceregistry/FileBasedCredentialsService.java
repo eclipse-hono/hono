@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.auth.BCryptHelper;
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.OperationResult;
@@ -95,9 +96,16 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     private boolean dirty = false;
     private FileBasedCredentialsConfigProperties config;
 
+    private HonoPasswordEncoder passwordEncoder;
+
     @Autowired
     public void setConfig(final FileBasedCredentialsConfigProperties configuration) {
         this.config = configuration;
+    }
+
+    @Autowired
+    public void setPasswordEncoder(final HonoPasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
     }
 
     public FileBasedCredentialsConfigProperties getConfig() {
@@ -542,7 +550,8 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         credential.checkValidity();
         if (credential instanceof PasswordCredential) {
             for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
-                checkHashedPassword(passwordSecret);
+                passwordSecret.encode(passwordEncoder);
+                passwordSecret.checkValidity();
                 switch (passwordSecret.getHashFunction()) {
                     case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
                         final String pwdHash = passwordSecret.getPasswordHash();

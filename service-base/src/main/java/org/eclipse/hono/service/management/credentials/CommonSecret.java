@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_NOT_AFTER;
-import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_NOT_BEFORE;
+import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER;
+import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;

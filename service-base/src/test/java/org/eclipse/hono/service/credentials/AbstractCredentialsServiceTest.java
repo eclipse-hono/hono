@@ -17,6 +17,7 @@ import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -197,6 +198,25 @@ public abstract class AbstractCredentialsServiceTest {
         return p;
     }
 
+    /**
+     * Create a password type based credential containing a plain password secret.
+     *
+     * @param authId The authentication to use.
+     * @param password The password to use.
+     * @return The fully populated credential.
+     */
+    public static PasswordCredential createPlainPasswordCredential(final String authId, final String password) {
+        final PasswordCredential p = new PasswordCredential();
+        p.setAuthId(authId);
+
+        final PasswordSecret secret = new PasswordSecret();
+        secret.setPasswordPlain(password);
+
+        p.setSecrets(Collections.singletonList(secret));
+
+        return p;
+    }
+
     private static PasswordCredential createPasswordCredential(final String authId, final String password) {
         return createPasswordCredential(authId, password, OptionalInt.empty());
     }
@@ -220,6 +240,20 @@ public abstract class AbstractCredentialsServiceTest {
         }
         s.setPasswordHash(encodedPwd.password);
         return s;
+    }
+
+    /**
+     * Verify that provided secret contains valid password.
+     * @param secret Secret to check.
+     * @param password Expected password.
+     * @param maxBcryptIterations Optional number of iteration to use for bcrypt.
+     * @return true only if provided password matches the secret.
+     */
+    public static boolean verifyPasswordSecret(final PasswordSecret secret, final String password, final OptionalInt maxBcryptIterations) {
+        final SpringBasedHonoPasswordEncoder encoder = new SpringBasedHonoPasswordEncoder(
+                maxBcryptIterations.orElse(SpringBasedHonoPasswordEncoder.DEFAULT_BCRYPT_STRENGTH));
+
+        return encoder.matches(password, JsonObject.mapFrom(secret));
     }
 
     /**
@@ -339,6 +373,51 @@ public abstract class AbstractCredentialsServiceTest {
                         assertGet(ctx, tenantId, deviceId, authId,
                                 CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                 r -> {
+                                    assertEquals(HTTP_OK, r.getStatus());
+                                },
+                                r -> {
+                                    assertEquals(HTTP_OK, r.getStatus());
+                                },
+                                ctx::completeNow);
+
+                    })));
+
+        });
+
+    }
+
+    /**
+     * Test creating a new plain password secret.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreatePlainPasswordSecret(final VertxTestContext ctx) {
+
+        final var tenantId = "tenant";
+        final var deviceId = UUID.randomUUID().toString();
+        final var authId = UUID.randomUUID().toString();
+        final var password = "bar";
+        final var secret = createPlainPasswordCredential(authId, password);
+
+        assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, () -> {
+
+            getCredentialsManagementService().set(tenantId, deviceId, Optional.empty(),
+                    Collections.singletonList(secret), NoopSpan.INSTANCE,
+                    ctx.succeeding(s2 -> ctx.verify(() -> {
+
+                        assertEquals(HTTP_NO_CONTENT, s2.getStatus());
+                        assertResourceVersion(s2);
+
+                        assertGet(ctx, tenantId, deviceId, authId,
+                                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                                r -> {
+                                    final List<CommonCredential> credentials = r.getPayload();
+                                    assertEquals(1, credentials.size());
+                                    final List<PasswordSecret> secrets = ((PasswordCredential) credentials.get(0)).getSecrets();
+                                    assertEquals(1, secrets.size());
+                                    assertEquals(true, verifyPasswordSecret(secrets.get(0), password, OptionalInt.empty()));
+                                    assertNull(secrets.get(0).getPasswordPlain());
                                     assertEquals(HTTP_OK, r.getStatus());
                                 },
                                 r -> {

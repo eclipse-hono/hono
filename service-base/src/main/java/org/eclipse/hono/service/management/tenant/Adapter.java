@@ -16,7 +16,7 @@ package org.eclipse.hono.service.management.tenant;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
-import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**
  * Adapters Information.
@@ -29,7 +29,7 @@ public class Adapter {
     @JsonProperty(required = true)
     private String type;
 
-    @JsonProperty(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)
+    @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)
     private Boolean deviceAuthenticationRequired;
 
     @JsonProperty("ext")
