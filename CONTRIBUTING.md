@@ -33,7 +33,7 @@ The easiest way to contribute code/patches/whatever is by creating a GitHub pull
 
 You do this by adding the `-s` flag when you make the commit(s), e.g.
 
-    git commit -s -m "Shave the yak some more"
+    git commit -s -m "[#3456] Shave the yak some more."
 
 You can find all the details in the [Contributing via Git](http://wiki.eclipse.org/Development_Resources/Contributing_via_Git) document on the Eclipse web site.
 
@@ -46,8 +46,9 @@ You can find all the details in the [Contributing via Git](http://wiki.eclipse.o
 * Make sure you include test cases for non-trivial features
 * Make sure the test suite passes after your changes
 * Commit your changes into that branch
-* Use descriptive and meaningful commit messages
-* If you have a lot of commits squash them into a single commit
+* Use descriptive and meaningful commit messages. In particular, start the first line of the commit message with the
+  number of the issue that the commit addresses, e.g. `[#9865] Add token based authentication.`
+* Squash multiple commits that are related to each other semantically into a single one
 * Make sure you use the `-s` flag when committing as explained above
 * Push your changes to your branch in your forked repository
 
