@@ -171,25 +171,6 @@ public interface Metrics {
 
     /**
      * Reports a command &amp; control message being transferred to/from a device.
-     *
-     * @param direction The command message's direction.
-     * @param tenantId The tenant that the device belongs to.
-     * @param outcome The outcome of processing the message.
-     * @param payloadSize The number of bytes contained in the message's payload.
-     * @param timer The timer indicating the amount of time used
-     *              for processing the message.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if payload size is negative.
-     */
-    void reportCommand(
-            MetricsTags.Direction direction,
-            String tenantId,
-            MetricsTags.ProcessingOutcome outcome,
-            int payloadSize,
-            Sample timer);
-
-    /**
-     * Reports a command &amp; control message being transferred to/from a device.
      * <p> 
      * The payload size of the message is calculated based on the configured 
      * minimum message size and the calculated size is reported. 
