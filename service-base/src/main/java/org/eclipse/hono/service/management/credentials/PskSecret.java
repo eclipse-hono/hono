@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_KEY;
+import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_KEY;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

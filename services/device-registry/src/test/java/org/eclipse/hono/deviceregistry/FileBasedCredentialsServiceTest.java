@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
@@ -108,6 +109,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         this.registrationService.init(this.vertx, ctx);
 
         this.credentialsService = new FileBasedCredentialsService();
+        this.credentialsService.setPasswordEncoder(new SpringBasedHonoPasswordEncoder());
         this.credentialsService.setConfig(credentialsConfig);
         this.credentialsService.init(this.vertx, ctx);
 

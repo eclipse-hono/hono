@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.util.CredentialsConstants.FIELD_AUTH_ID;
+import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_AUTH_ID;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -99,8 +99,6 @@ public abstract class CommonCredential {
 
     /**
      * Check if credential is valid.
-     * <p>
-     * This also calls {@link CommonSecret#checkValidity()} for all secrets.
      * 
      * @throws IllegalStateException if the credential is not valid.
      */
@@ -108,6 +106,5 @@ public abstract class CommonCredential {
         if (this.authId == null || this.authId.isEmpty()) {
             throw new IllegalStateException("missing auth ID");
         }
-        getSecrets().forEach(CommonSecret::checkValidity);
     }
 }

@@ -30,7 +30,6 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -104,7 +103,7 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
      * Check that the tenantId value is not blank then
      * update the payload (that was put to the RoutingContext ctx with the
      * key {@link #KEY_REQUEST_BODY}) with the tenant value retrieved from the RoutingContext.
-     * The tenantId value is associated with the key {@link TenantConstants#FIELD_PAYLOAD_TENANT_ID}.
+     * The tenantId value is associated with the key {@link RegistryManagementConstants#FIELD_PAYLOAD_TENANT_ID}.
      *
      * @param ctx The routing context to retrieve the JSON request body from.
      */
@@ -115,10 +114,10 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
 
         if (tenantId.isBlank()) {
             ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format("'%s' param cannot be empty", TenantConstants.FIELD_PAYLOAD_TENANT_ID)));
+                    String.format("'%s' param cannot be empty", RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)));
         }
 
-        payload.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+        payload.put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
         ctx.put(KEY_REQUEST_BODY, payload);
         ctx.next();
     }
@@ -186,6 +185,6 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {
-        return (payload != null ? (String) payload.remove(TenantConstants.FIELD_PAYLOAD_TENANT_ID) : null);
+        return (payload != null ? (String) payload.remove(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID) : null);
     }
 }

@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.service.management.credentials;
 
-import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.fasterxml.jackson.databind.DatabindContext;
@@ -50,11 +50,11 @@ public class CredentialTypeResolver extends TypeIdResolverBase {
         if (obj instanceof GenericCredential) {
             return ((GenericCredential) obj).getType();
         } else if (obj instanceof PasswordCredential) {
-            return CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
+            return RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD;
         } else if (obj instanceof PskCredential) {
-            return CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY;
+            return RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY;
         } else if (obj instanceof X509CertificateCredential) {
-            return CredentialsConstants.SECRETS_TYPE_X509_CERT;
+            return RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
         }
         return null;
     }
@@ -62,11 +62,11 @@ public class CredentialTypeResolver extends TypeIdResolverBase {
     @Override
     public JavaType typeFromId(final DatabindContext context, final String id) {
         switch (id) {
-        case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
+        case RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD:
             return context.constructSpecializedType(this.baseType, PasswordCredential.class);
-        case CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY:
+        case RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY:
             return context.constructSpecializedType(this.baseType, PskCredential.class);
-        case CredentialsConstants.SECRETS_TYPE_X509_CERT:
+        case RegistryManagementConstants.SECRETS_TYPE_X509_CERT:
             return context.constructSpecializedType(this.baseType, X509CertificateCredential.class);
         default:
             return context.constructSpecializedType(this.baseType, GenericCredential.class);

@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**
  * Tenant Information.
@@ -37,14 +37,14 @@ public class Tenant {
     @JsonInclude(Include.NON_EMPTY)
     private Map<String, Object> defaults = new HashMap<>();
 
-    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
+    @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS)
     @JsonInclude(Include.NON_EMPTY)
     private List<Adapter> adapters = new LinkedList<>();
 
     @JsonInclude(Include.NON_DEFAULT)
     private ResourceLimits limits;
 
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)
+    @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     private TrustedCertificateAuthority trustedCertificateAuthority;
 
     public void setEnabled(final Boolean enabled) {
