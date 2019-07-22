@@ -46,7 +46,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * Encapsulates the tenant information that was found by the get operation of the
- * <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/">Tenant API</a>.
+ * <a href="https://www.eclipse.org/hono/docs/api/tenant-api/">Tenant API</a>.
  */
 @JsonInclude(value = Include.NON_NULL)
 public final class TenantObject extends JsonBackedValueObject {

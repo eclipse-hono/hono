@@ -54,10 +54,29 @@
   color: var(--MAIN-LINK-HOVER-color) !important;
 }
 
-.old-version-hint {
+.old-version-hint p {
   background-color: #efff77;
-  font-size: large;
   font-weight: bolder;
   text-align: center;
-  padding: 5px;
+  padding: 10px !important;
+  width: 100%;
+  margin-top: 0;
+}
+
+.select-style svg {
+  fill: #f08712;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  margin: auto;
+}
+
+#select-box-wrapper {
+  text-align: right;
+  padding: 1rem;
+}
+
+#select-box {
+  border: 1px solid black;
+  border-radius: 4px;
 }

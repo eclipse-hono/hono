@@ -30,19 +30,11 @@
                       <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ .Name }} <span class="caret"></span></a>
                     <ul class="dropdown-menu">
                       {{ range .Children }}
-                        {{ if hasPrefix .URL "/hono/docs/" }}
-                          <li><a href="{{ .URL }}"  target="_blank">{{ .Name }} <i class="fas fa-external-link-alt"></i></a></li>
-                        {{ else }}
-                          <li><a href="{{ .URL }}">{{ .Name }}</a></li>
-                        {{ end }}
+                        <li><a href="{{ .URL }}">{{ .Name }}</a></li>
                       {{ end }}
                     </ul>
                     {{ else }}
-                      {{ if hasPrefix .URL "/hono/docs/" }}
-                        <li><a href="{{ .URL }}" target="_blank">{{ .Name }} <i class="fas fa-external-link-alt"></i></a></li>
-                      {{ else }}
-                        <li><a href="{{ .URL }}">{{ .Name }}</a></li>
-                      {{ end }}
+                    <a href="{{ .URL }}">{{ .Name }}</a>
                     {{ end  }}
                   </li>
                   {{ end }}

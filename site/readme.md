@@ -72,22 +72,22 @@ of a MINOR (+ MAJOR) version of Hono.
 
 Every *newly* released MINOR (or MAJOR) version is considered to be the stable version.
 
-The files `site/homepage/versions_supported.csv` and `site/homepage/tag_stable.txt` determine which versions of the
+The files `site/documentation/versions_supported.csv` and `site/documentation/tag_stable.txt` determine which versions of the
 documentation are published. They are _written_ by the release pipeline (`jenkins/Hono-Release-Pipeline.groovy`) and 
 _read_ by the website pipeline (`jenkins/Hono-Website-Pipeline.groovy`).
 
 The website pipeline builds the following versions:
 
-* `latest`: always built from the current `HEAD` of the master branch
-* each version in `site/homepage/versions_supported.csv`
-* `stable`: the version from the Git tag in the file `site/homepage/tag_stable.txt` (if the file exists and contains a Git tag)
+* `dev`: always built from the current `HEAD` of the master branch
+* `stable`: the version from the Git tag in the file `site/documentation/tag_stable.txt`
+* each version in `site/documentation/versions_supported.csv`
 
 ### What are the checkboxes in the release pipeline doing?
 
 If the checkbox *DEPLOY_DOCUMENTATION* is checked, the version that is being released is added (appended) to the file
- `site/homepage/versions_supported.csv`.
+ `site/documentation/versions_supported.csv`.
 If the checkbox *STABLE_DOCUMENTATION* is checked additionally the Git tag of the version that is being released is 
-written to the file `site/homepage/tag_stable.txt` (replaces the previous content). 
+written to the file `site/documentation/tag_stable.txt` (replaces the previous content). 
  
 NB: Even though a change only on the patch level is not considered a new version, don't forget to check the 
 checkboxes *DEPLOY_DOCUMENTATION* and *STABLE_DOCUMENTATION* in the release pipeline when releasing a patch for 
@@ -103,5 +103,5 @@ PATCH level on _stable_ version | 2.0.**1** | &#x2611;                  | &#x261
 PATCH level on older version    | 1.1.**1** | &#x2611;                  | &#x2610;       
 pre-release version             | 2.1.0-M1  | &#x2610;                  | &#x2610;       
 
-Versions that are no longer supported need to be manually removed from `site/homepage/versions_supported.csv`. Same goes
+Versions that are no longer supported need to be manually removed from `site/documentation/versions_supported.csv`. Same goes
 for old patch releases of a supported version. 

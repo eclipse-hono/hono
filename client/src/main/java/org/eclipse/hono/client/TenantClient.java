@@ -23,7 +23,7 @@ import io.vertx.core.Future;
 /**
  * A client for accessing Hono's Tenant API.
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api">
+ * See Hono's <a href="https://www.eclipse.org/hono/docs/api/tenant-api">
  * Tenant API specification</a> for a description of the result codes returned.
  * </p>
  */
@@ -37,7 +37,7 @@ public interface TenantClient extends RequestResponseClient {
      *         <ul>
      *         <li>The future will succeed if a response with status 200 has been received from the
      *         tenant service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
+     *         <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
      *         Get Tenant Information</a>.</li>
      *         <li>Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code returned by the service.</li>
@@ -60,7 +60,7 @@ public interface TenantClient extends RequestResponseClient {
      *         <ul>
      *         <li>The future will succeed if a response with status 200 has been received from the
      *         tenant service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
+     *         <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
      *         Get Tenant Information</a>.</li>
      *         <li>Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code returned by the service.</li>
@@ -85,7 +85,7 @@ public interface TenantClient extends RequestResponseClient {
      *         <ul>
      *         <li>The future will succeed if a response with status 200 has been received from the
      *         tenant service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
+     *         <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
      *         Get Tenant Information</a>.</li>
      *         <li>Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code returned by the service.</li>
@@ -114,7 +114,7 @@ public interface TenantClient extends RequestResponseClient {
      *         <ul>
      *         <li>The future will succeed if a response with status 200 has been received from the
      *         tenant service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/#get-tenant-information">
+     *         <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
      *         Get Tenant Information</a>.</li>
      *         <li>Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code returned by the service.</li>

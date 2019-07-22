@@ -1,15 +1,6 @@
 <nav id="sidebar" class="{{if $.Site.Params.showVisitedLinks }}showVisitedLinks{{end}}">
 
-<!--  SHOW ONLY PAGES AND SECTIONS INSIDE OF SECTION "DOCS"-->
-  {{ $currentNode := . }}
-  {{range .Site.Home.Sections.ByWeight}}
-    {{if eq .Section "docs"}}
-      {{ $currentNode.Scratch.Set "pages" (.Pages | union .Sections) }}
-    {{end}}
-  {{end}}
-  {{ $pages := ($currentNode.Scratch.Get "pages") }}
-<!---------------------------------->
-
+{{ $currentNode := . }}
 {{ $showvisitedlinks := .Site.Params.showVisitedLinks }}
   <div id="header-wrapper">
     <div id="header">
@@ -24,11 +15,11 @@
     <ul class="topics">
 
         {{if eq .Site.Params.ordersectionsby "title"}}  
-          {{range $pages.ByTitle }}
+          {{range .Site.Home.Sections.ByTitle}}
           {{ template "section-tree-nav" dict "sect" . "currentnode" $currentNode "showvisitedlinks" $showvisitedlinks}}
           {{end}}
         {{else}}
-          {{range $pages.ByWeight }}
+          {{range .Site.Home.Sections.ByWeight}}
           {{ template "section-tree-nav" dict "sect" . "currentnode" $currentNode "showvisitedlinks" $showvisitedlinks}}
           {{end}}
         {{end}} 
@@ -54,8 +45,10 @@
       <ul>
       {{ if and .Site.IsMultiLingual (not .Site.Params.DisableLanguageSwitchingButton)}}
         <li>
+          <div id="select-box-wrapper">
+          <div id="select-box">
           <a class="padding">
-            <i class="fas fa-language fa-fw"></i>
+            Version:&nbsp;
           <div class="select-style">
             <select id="select-language" onchange="location = this.value;">
           {{ $siteLanguages := .Site.Languages}}
@@ -84,6 +77,8 @@
         </svg>
         </div>
         </a>
+        </div>
+        </div>
         </li>
       {{end}}
       

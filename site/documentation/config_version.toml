@@ -1,0 +1,12 @@
+# Versions of the documentation are mapped on languages for Hugo.
+defaultContentLanguage = "stable" # selects the version and translation strings for theme (hono/site/documentation/i18n/stable.toml)  
+# one level above other versions in the URL path to improve SEO of stable version
+defaultContentLanguageInSubdir = "false"
+
+[Languages]
+  [Languages.dev]
+    title = "Eclipse Hono&trade; Vers.: dev"
+    weight = 0
+    languageName = "dev"
+    [Languages.dev.params]
+      honoVersion = "dev"

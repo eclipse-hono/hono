@@ -38,7 +38,7 @@ then
 fi
 
 echo "Going to build homepage in directory: $TARGET"
-hugo -v -d $TARGET --config config.toml,menu_main.toml
+hugo -v -d $TARGET
 cd .. 
 
 cd documentation/
@@ -50,5 +50,5 @@ then
   cd ../..
 fi
 
-echo "Going to build documentation in directory: $TARGET/docs/latest"
-hugo -v -d $TARGET/docs/latest
+echo "Going to build documentation in directory: $TARGET/docs"
+hugo -v -d $TARGET/docs

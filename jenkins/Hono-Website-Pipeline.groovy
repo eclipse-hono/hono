@@ -48,27 +48,27 @@ def build() {
            echo "cloning Hono repository..."
            git clone https://github.com/eclipse/hono.git $WORKSPACE/hono
            '''
-        echo "Copying Homepage directory..."
+        echo "Copying Documentation directory from master branch..."
         sh ''' 
-           echo "Copying Homepage directory from master branch..."
-           cp -r $WORKSPACE/hono/site/homepage $WORKSPACE/hono-homepage-master
+           cp -r $WORKSPACE/hono/site/documentation $WORKSPACE/hono-documentation-assembly
+           mkdir -p $WORKSPACE/hono-documentation-assembly/content_dirs
            '''
     }
 
     stage('Cloning Hugo themes') {
         echo "cloning Hugo Learn theme..."
         sh '''
-            git clone https://github.com/matcornic/hugo-theme-learn.git $WORKSPACE/hono/site/documentation/themes/hugo-theme-learn
-            cd $WORKSPACE/hono/site/documentation/themes/hugo-theme-learn
+            git clone https://github.com/matcornic/hugo-theme-learn.git $WORKSPACE/hono-documentation-assembly/themes/hugo-theme-learn
+            cd $WORKSPACE/hono-documentation-assembly/themes/hugo-theme-learn
             git checkout 2.2.0
            '''
         echo "cloning Hugo Universal theme..."
         sh '''
-            git clone https://github.com/devcows/hugo-universal-theme.git $WORKSPACE/hono-homepage-master/themes/hugo-universal-theme
-            cd $WORKSPACE/hono-homepage-master/themes/hugo-universal-theme
+            git clone https://github.com/devcows/hugo-universal-theme.git $WORKSPACE/hono/site/homepage/themes/hugo-universal-theme
+            cd $WORKSPACE/hono/site/homepage/themes/hugo-universal-theme
             git checkout 1.0.0
             echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
-            rm $WORKSPACE/hono-homepage-master/themes/hugo-universal-theme/static/img/*
+            rm $WORKSPACE/hono/site/homepage/themes/hugo-universal-theme/static/img/*
            '''
     }
 
@@ -85,85 +85,66 @@ def build() {
     }
 
     stage('Building documentation using Hugo') {
-        echo "building latest documentation from master..."
-        sh '''
-            cd $WORKSPACE/hono/site/documentation
-            echo "building documentation using Hugo `/shared/common/hugo/latest/hugo version`"
-            /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site/docs/latest
-            '''
-
-        echo "building documentation for versions"
-        sh '''#!/bin/bash
-            function build_documentation_in_version {
-                if [[ "$1" == "stable" ]]; then
-                   WEIGHT="-20000"
-                   VERSION="$1"
-                else
-                   local pad=00
-                   local minor="${2//[!0-9]/}" # make sure that minor only contains numbers  
-                   WEIGHT="-$1${pad:${#minor}:${#pad}}${minor}"
-                   VERSION="$1.$2"
-                fi
-                
-                echo "Going to check out version ${VERSION} from branch/tag $3"
+      echo "building documentation for versions"
+      sh '''#!/bin/bash
+            function prepare_stable {
+                VERSION="$1.$2"
+cat <<EOS >> $WORKSPACE/hono-documentation-assembly/config_version.toml
+  [Languages.stable]
+    weight = -20000
+    languageName = "stable ($VERSION)"
+    contentDir = "content_dirs/$VERSION"
+    [Languages.stable.params]
+      honoVersion = "stable ($VERSION)"
+EOS
                 git checkout $3
-                
-cat <<EOS >> $WORKSPACE/hono-homepage-master/menu_main.toml
-
-[[menu.main]]
-  parent = "Documentation"
-  name = "${VERSION}"
-  url  = "/docs/${VERSION}"
-  weight = $WEIGHT
+                cp -r $WORKSPACE/hono/site/documentation/content $WORKSPACE/hono-documentation-assembly/content_dirs/${VERSION}
+            }
+            
+            function prepare_docu_version {
+                local pad=00
+                local minor="${2//[!0-9]/}" # make sure that minor only contains numbers  
+                WEIGHT="-$1${pad:${#minor}:${#pad}}${minor}"
+                VERSION="$1.$2"
+                            
+cat <<EOS >> $WORKSPACE/hono-documentation-assembly/config_version.toml
+  [Languages."${VERSION}"]
+    title = "Eclipse Hono&trade; Vers.: ${VERSION}"
+    weight = $WEIGHT
+    languageName = "${VERSION}"
+    contentDir = "content_dirs/${VERSION}"
+    [Languages."${VERSION}".params]
+      honoVersion = "${VERSION}"
 EOS
-
-cat <<EOS > config_release_version.toml
-baseurl = "https://www.eclipse.org/hono/docs/${VERSION}/"
-[params]
-  urlPrefixOfVersionStable = "/hono/docs/stable/"
-  honoVersion = "${VERSION}"
-EOS
-
-                echo "Going to build documentation version ${VERSION} in: $WORKSPACE/hono-web-site/docs/${VERSION}"
-                /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site/docs/$VERSION --config config.toml,config_release_version.toml
-                rm config_release_version.toml
+                git checkout $3
+                cp -r $WORKSPACE/hono/site/documentation/content $WORKSPACE/hono-documentation-assembly/content_dirs/${VERSION}
             }
             
             cd $WORKSPACE/hono/site/documentation
-
-            TAG_STABLE=$(cat "$WORKSPACE/hono-homepage-master/tag_stable.txt")
-            if [[ -n "$TAG_STABLE" ]]; then
-              build_documentation_in_version "stable" "" ${TAG_STABLE}  # build stable version as "stable"  
-            fi
             
-            while IFS=";" read -r MAJOR MINOR BRANCH_OR_TAG
+            TAG_STABLE=$(cat "$WORKSPACE/hono-documentation-assembly/tag_stable.txt")
+            while IFS=";" read -r MAJOR MINOR TAG
             do
-              build_documentation_in_version ${MAJOR} ${MINOR} ${BRANCH_OR_TAG}
-            done < <(tail -n+3 $WORKSPACE/hono-homepage-master/versions_supported.csv)  # skip header line and comment
-         '''
-
-        echo "adding redirect from hono/docs/ to version stable"
-        sh '''
-cat  <<EOS > $WORKSPACE/hono-web-site/docs/index.html
-<!DOCTYPE html>
-<html>
-<head><title>https://www.eclipse.org/hono/docs/latest/</title>
-    <link rel="canonical" href="https://www.eclipse.org/hono/docs/latest/"/>
-    <meta name="robots" content="noindex">
-    <meta charset="utf-8"/>
-    <meta http-equiv="refresh" content="0; url=https://www.eclipse.org/hono/docs/latest/"/>
-</head>
-</html>
-EOS
-         '''
+              if [[ "${TAG}" == "${TAG_STABLE}" ]]; then
+                prepare_stable ${MAJOR} ${MINOR} ${TAG}
+              else
+                prepare_docu_version ${MAJOR} ${MINOR} ${TAG}
+              fi
+            done < <(tail -n+3 $WORKSPACE/hono-documentation-assembly/versions_supported.csv)  # skip header line and comment
+          
+          cd $WORKSPACE/hono-documentation-assembly
+          echo "building documentation using Hugo `/shared/common/hugo/latest/hugo version`"
+          /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site/docs --config config.toml,config_version.toml
+          '''
     }
 
     stage('Building homepage using Hugo') {
         echo "building homepage..."
         sh '''
-            cd $WORKSPACE/hono-homepage-master
+            cd $WORKSPACE/hono/site/homepage
+            git checkout master
             echo "building homepage using Hugo `/shared/common/hugo/latest/hugo version`"
-            /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site --config config.toml,menu_main.toml
+            /shared/common/hugo/latest/hugo -v -d $WORKSPACE/hono-web-site
             '''
     }
 

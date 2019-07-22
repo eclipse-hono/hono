@@ -23,7 +23,7 @@ import org.eclipse.hono.util.TenantResult;
  * This interface presents all the available operations on the API.
  * See {@link TenantService} for the mandatory only API.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/latest/api/tenant-api/">Tenant API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/tenant-api/">Tenant API</a>
  * @deprecated - Use {@link TenantService} and {@link org.eclipse.hono.service.management.tenant.TenantManagementService} instead.
  */
 @Deprecated
