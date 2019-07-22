@@ -19,11 +19,11 @@ import java.util.UUID;
 
 import javax.security.sasl.SaslException;
 
+import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -31,7 +31,6 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -99,9 +98,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         // GIVEN an existing tenant
         final String tenantId = helper.getRandomTenantId();
-        final TenantObject tenant = TenantObject.from(tenantId, true);
+        final Tenant tenant = new Tenant();
+        tenant.setEnabled(true);
 
-        helper.registry.addTenant(JsonObject.mapFrom(tenant))
+        helper.registry.addTenant(tenantId, tenant)
         .compose(ok ->
             // WHEN an unknown device tries to connect
             connectToAdapter(IntegrationTestSupport.getUsername("non-existing", tenantId), "secret"))
@@ -151,8 +151,8 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         // GIVEN a tenant for which the AMQP adapter is disabled
         final Tenant tenant = new Tenant();
-        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_HTTP, true);
-        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_AMQP, false);
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP).setEnabled(true));
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP).setEnabled(false));
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN a device that belongs to the tenant tries to connect to the adapter
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
@@ -228,7 +228,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())
                 .compose(cert -> {
-                    final var tenant = Tenants.createTenantForTrustAnchor(cert, keyPair.getPublic());
+                    final Tenant tenant = Tenants.createTenantForTrustAnchor(cert.getSubjectX500Principal(), keyPair.getPublic());
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
                 })
                 .compose(ok -> {

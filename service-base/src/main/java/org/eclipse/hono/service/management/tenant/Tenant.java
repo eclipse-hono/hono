@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**
@@ -125,17 +127,41 @@ public class Tenant {
     }
 
     /**
-     * Add a new extension entry to the Tenant.
+     * Adds an extension property to this tenant.
+     * <p>
+     * If an extension property already exist for the specified key, the old value is replaced by the specified value.
      *
      * @param key The key of the entry.
      * @param value The value of the entry.
-     * @return This instance, to allowed chained invocations.
+     * @return This instance, to allow chained invocations.
+     * @throws NullPointerException if any of the arguments is {@code null}.
      */
     public Tenant putExtension(final String key, final Object value) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
         if (this.extensions == null) {
             this.extensions = new HashMap<>();
         }
         this.extensions.put(key, value);
         return this;
     }
+
+    /**
+     * Adds the specified adapter to the list of adapters for this Tenant.
+     * 
+     * @param adapter The adapter to add for the tenant.
+     * @return        This instance, to allow chained invocations.
+     * @throws        NullPointerException if the specified adapter is {@code null}.
+     */
+    public Tenant addAdapterConfig(final Adapter adapter) {
+
+        Objects.requireNonNull(adapter);
+
+        if (adapters == null) {
+            adapters = new LinkedList<>();
+        }
+        adapters.add(adapter);
+        return this;
+    }
+
 }

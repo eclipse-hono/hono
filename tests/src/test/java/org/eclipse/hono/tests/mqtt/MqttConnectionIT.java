@@ -22,6 +22,7 @@ import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -35,7 +36,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -190,7 +190,7 @@ public class MqttConnectionIT extends MqttTestBase {
         helper.getCertificate(deviceCert.certificatePath())
                 .compose(cert -> {
                     final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                    return helper.registry.addTenant(tenantId, JsonObject.mapFrom(tenant));
+                    return helper.registry.addTenant(tenantId, tenant);
                 }).compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
                 .compose(ok -> {
                     final X509CertificateCredential credential = new X509CertificateCredential();
@@ -220,7 +220,7 @@ public class MqttConnectionIT extends MqttTestBase {
     public void testConnectFailsForDisabledAdapter(final TestContext ctx) {
 
         final Tenant tenant = new Tenant();
-        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_MQTT, false);
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT).setEnabled(false));
 
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
@@ -248,7 +248,7 @@ public class MqttConnectionIT extends MqttTestBase {
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
                     final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                    Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_MQTT, false);
+                    tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT).setEnabled(false));
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
         })
         // WHEN a device that belongs to the tenant tries to connect to the adapter
@@ -274,7 +274,7 @@ public class MqttConnectionIT extends MqttTestBase {
         final Tenant tenant = new Tenant();
 
         helper.registry
-                .addTenant(tenantId, JsonObject.mapFrom(tenant))
+                .addTenant(tenantId, tenant)
                 .compose(ok -> {
                     return helper.registry.registerDevice(tenantId, deviceId);
                 })
@@ -308,7 +308,7 @@ public class MqttConnectionIT extends MqttTestBase {
         final Tenant tenant = new Tenant();
 
         helper.registry
-                .addTenant(tenantId, JsonObject.mapFrom(tenant))
+                .addTenant(tenantId, tenant)
                 .compose(ok -> {
                     final var device = new Device();
                     device.setEnabled(false);

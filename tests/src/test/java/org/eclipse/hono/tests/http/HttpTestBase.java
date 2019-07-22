@@ -36,6 +36,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.tests.CrudHttpClient;
@@ -524,7 +525,7 @@ public abstract class HttpTestBase {
 
         // GIVEN a tenant for which the HTTP adapter is disabled
         final Tenant tenant = new Tenant();
-        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_HTTP, false);
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP).setEnabled(false));
 
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, PWD)

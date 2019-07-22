@@ -23,10 +23,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import io.vertx.core.json.JsonArray;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.hamcrest.collection.IsEmptyIterable;
 import org.junit.jupiter.api.Test;
@@ -219,27 +220,20 @@ class TenantTest {
     @Test
     public void testSerializeAdapters() {
 
-        final Adapter httpAdapter = new Adapter()
-                .setType("http")
-                .setEnabled(false)
-                .setDeviceAuthenticationRequired(true);
-        final Adapter mqttAdapter = new Adapter()
-                .setType("mqtt")
-                .setEnabled(true)
-                .setDeviceAuthenticationRequired(true);
-
-        final ArrayList<Adapter> adapters = new ArrayList<>();
-        adapters.add(httpAdapter);
-        adapters.add(mqttAdapter);
-
         final Tenant tenant = new Tenant();
         tenant.setEnabled(true);
-        tenant.setAdapters(adapters);
+        tenant
+            .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                    .setEnabled(false)
+                    .setDeviceAuthenticationRequired(true))
+            .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                    .setEnabled(true)
+                    .setDeviceAuthenticationRequired(true));
 
         final JsonArray result = JsonObject.mapFrom(tenant).getJsonArray(FIELD_ADAPTERS);
         assertNotNull(result);
-        assertEquals("http", result.getJsonObject(0).getString(FIELD_ADAPTERS_TYPE));
-        assertEquals("mqtt", result.getJsonObject(1).getString(FIELD_ADAPTERS_TYPE));
+        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, result.getJsonObject(0).getString(FIELD_ADAPTERS_TYPE));
+        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, result.getJsonObject(1).getString(FIELD_ADAPTERS_TYPE));
         assertEquals(false, result.getJsonObject(0).getBoolean(FIELD_ENABLED));
         assertEquals(true, result.getJsonObject(0).getBoolean(FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
     }

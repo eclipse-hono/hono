@@ -25,8 +25,11 @@ import java.util.concurrent.TimeUnit;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.service.management.tenant.Adapter;
+import org.eclipse.hono.service.management.tenant.ResourceLimits;
+import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
@@ -66,41 +69,64 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
     public void testGetTenant(final VertxTestContext ctx) {
 
         final JsonObject defaults = new JsonObject().put("ttl", 30);
-        final JsonObject resourceLimits = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 100000)
-                .put("data-volume", new JsonObject()
+
+        final JsonObject httpAdapterExtensions = new JsonObject()
+                .put("deployment", new JsonObject()
+                        .put("maxInstances", 4));
+
+        final JsonObject dataVolume = new JsonObject()
                         .put("max-bytes", 2147483648L)
                         .put("period-in-days", 30)
-                        .put("effective-since", "2019-04-27T12:00:00+00:00"));
-        final JsonArray adapterConfig = new JsonArray()
-                .add(new JsonObject()
-                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                        .put(TenantConstants.FIELD_ENABLED, true)
-                        .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true))
-                .add(new JsonObject()
-                        .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                        .put(TenantConstants.FIELD_ENABLED, true)
-                        .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true)
-                        .put("deployment", new JsonObject()
-                                .put("maxInstances", 4)));
+                        .put("effective-since", "2019-04-27T12:00:00+00:00");
+
+        final ResourceLimits resourceLimits = new ResourceLimits();
+        resourceLimits.setMaxConnections(100000);
+        resourceLimits.putExtension("data-volume", dataVolume.getMap());
+
         final String tenantId = getHelper().getRandomTenantId();
-        final TenantObject tenant = TenantObject.from(tenantId, true)
-                .setResourceLimits(resourceLimits)
+        final Tenant tenant = new Tenant();
+        tenant.setEnabled(true);
+        tenant.setResourceLimits(resourceLimits);
+        tenant.setDefaults(defaults.getMap());
+        tenant.putExtension("customer", "ACME Inc.");
+
+        tenant
+           .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .setEnabled(true)
+                .setDeviceAuthenticationRequired(false))
+           .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setEnabled(true)
+                .setDeviceAuthenticationRequired(true)
+                .setExtensions(httpAdapterExtensions.getMap()));
+
+        // expected tenant object
+        final TenantObject expectedTenantObject = TenantObject.from(tenantId, true)
                 .setDefaults(defaults)
-                .setAdapterConfigurations(adapterConfig)
-                .setProperty("customer", "ACME Inc.");
+                .setResourceLimits(new JsonObject()
+                        .put("max-connections", 100000)
+                        .put("ext", new JsonObject()
+                                .put("data-volume", dataVolume)))
+                .setAdapterConfigurations(new JsonArray()
+                        .add(new JsonObject()
+                                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                                .put(TenantConstants.FIELD_ENABLED, true)
+                                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, false))
+                        .add(new JsonObject()
+                                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                                .put(TenantConstants.FIELD_ENABLED, true)
+                                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true)
+                                .put("ext", httpAdapterExtensions))
+                        );
 
         getHelper().registry
-        .addTenant(JsonObject.mapFrom(tenant))
+        .addTenant(tenantId, tenant)
         .compose(ok -> getAdminClient().get(tenantId))
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
-                assertThat(tenantObject.isEnabled()).isTrue();
-                assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
-                assertThat(tenantObject.getResourceLimits()).isEqualTo(resourceLimits);
-                assertThat(tenantObject.getDefaults()).isEqualTo(defaults);
-                assertThat(tenantObject.getAdapterConfigurations()).isEqualTo(adapterConfig);
-                assertThat(tenantObject.getProperty("customer", String.class)).isEqualTo("ACME Inc.");
+                assertThat(tenantObject.getResourceLimits()).isEqualTo(expectedTenantObject.getResourceLimits());
+                assertThat(tenantObject.getDefaults()).isEqualTo(expectedTenantObject.getDefaults());
+                assertThat(tenantObject.getAdapterConfigurations()).isEqualTo(expectedTenantObject.getAdapterConfigurations());
+                assertThat(tenantObject.getProperty("ext", JsonObject.class).getString("customer")).isEqualTo("ACME Inc.");
             });
             ctx.completeNow();
         }));
@@ -117,10 +143,11 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
     public void testGetTenantFailsIfNotAuthorized(final VertxTestContext ctx) {
 
         final String tenantId = getHelper().getRandomTenantId();
-        final TenantObject payload = TenantObject.from(tenantId, true);
+        final var tenant = new Tenant();
+        tenant.setEnabled(true);
 
         getHelper().registry
-        .addTenant(JsonObject.mapFrom(payload))
+        .addTenant(tenantId, tenant)
         .compose(r -> getRestrictedClient().get(tenantId))
         .setHandler(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
@@ -158,11 +185,11 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         final String tenantId = getHelper().getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
         final PublicKey publicKey = getRandomPublicKey();
-        final TenantObject payload = TenantObject.from(tenantId, true)
-                .setTrustAnchor(publicKey, subjectDn);
+
+        final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, publicKey);
 
         getHelper().registry
-        .addTenant(JsonObject.mapFrom(payload))
+        .addTenant(tenantId, tenant)
         .compose(r -> getAdminClient().get(subjectDn))
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
@@ -188,11 +215,12 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         final String tenantId = getHelper().getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca-http,OU=Hono,O=Eclipse");
-        final TenantObject payload = TenantObject.from(tenantId, true)
-                .setTrustAnchor(getRandomPublicKey(), subjectDn);
+        final PublicKey publicKey = getRandomPublicKey();
+
+        final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, publicKey);
 
         getHelper().registry
-        .addTenant(JsonObject.mapFrom(payload))
+        .addTenant(tenantId, tenant)
         .compose(r -> getRestrictedClient().get(subjectDn))
         .setHandler(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
@@ -217,4 +245,5 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
             throw new IllegalStateException("JRE does not support RSA algorithm");
         }
     }
+
 }
