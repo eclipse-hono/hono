@@ -85,7 +85,12 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
     @Override
     public final void start(final Future<Void> startFuture) {
         registerConsumer();
-        doStart(startFuture);
+        final Future<Void> localStart = Future.future();
+        localStart.compose(ok -> {
+            log.info("service started successfully");
+            startFuture.complete();
+        }, startFuture);
+        doStart(localStart);
     }
 
     /**
@@ -94,7 +99,7 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
      * This default implementation performs nothing except for completing the Future.
      * </p>
      * <p>
-     * This method is invoked by {@link #start()} as part of the verticle deployment process.
+     * This method is invoked by {@link #start()} as part of the {@code Verticle} deployment process.
      * </p>
      *
      * @param startFuture future to invoke once start up is complete.
@@ -120,8 +125,13 @@ public abstract class EventBusService<C> extends ConfigurationSupportingVerticle
     public final void stop(final Future<Void> stopFuture) {
         if (requestConsumer != null) {
             requestConsumer.unregister();
-            log.info("unregistered Tenant API request consumer from event bus");
+            log.info("unregistered request consumer from event bus");
         }
+        final Future<Void> localStop = Future.future();
+        localStop.compose(ok -> {
+            log.info("service stopped successfully");
+            stopFuture.complete();
+        }, stopFuture);
         doStop(stopFuture);
     }
 
