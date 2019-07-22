@@ -22,7 +22,7 @@ import org.eclipse.hono.util.RegistrationResult;
  * A service for keeping record of device identities.
  * This interface presents all the available operations on the API.
  * 
- * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/">Device Registration API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>
  * @deprecated - Use {@link RegistrationService} and {@link org.eclipse.hono.service.management.device.DeviceManagementService} instead.
  */
 @Deprecated
@@ -80,7 +80,7 @@ public interface CompleteRegistrationService extends RegistrationService {
      *             registered for the tenant.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/latest/api/device-registration-api/#deregister-device">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/#deregister-device">
      *      Device Registration API - Deregister Device</a>
      */
     void removeDevice(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);

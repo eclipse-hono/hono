@@ -45,7 +45,7 @@ public interface CommandClient extends RequestResponseClient {
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
      *         the (error) status code. Status codes are defined at
-     *         <a href="https://www.eclipse.org/hono/docs/latest/api/command-and-control-api">Command and Control API</a>.
+     *         <a href="https://www.eclipse.org/hono/docs/api/command-and-control-api">Command and Control API</a>.
      * @throws NullPointerException if any of device ID or command are {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */
@@ -68,7 +68,7 @@ public interface CommandClient extends RequestResponseClient {
      *         The future will succeed if a response with status 2xx has been received from the device. If the response has no payload, the future will complete with {@code null}.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
-     *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/docs/latest/api/command-and-control-api">Command and Control API</a>.
+     *         the (error) status code. Status codes are defined at <a href="https://www.eclipse.org/hono/docs/api/command-and-control-api">Command and Control API</a>.
      * @throws NullPointerException if any of device ID or command are {@code null}.
      * @see RequestResponseClient#setRequestTimeout(long)
      */

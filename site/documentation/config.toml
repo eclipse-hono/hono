@@ -1,4 +1,4 @@
-baseurl = "https://www.eclipse.org/hono/docs/latest/" # might be overriden during build by value in site/documentation/config_release_version.toml
+baseurl = "https://www.eclipse.org/hono/docs/"
 
 languageCode = "en-us"
 title = "Eclipse Hono&trade;"
@@ -43,8 +43,6 @@ pluralizeListTitles = "false"
   ordersectionsby = "weight"
   # Change default color scheme with a variant one. Can be "red", "blue", "green".
   themeVariant = "hono"
-  urlPrefixOfVersionStable = "/hono/docs/stable/" # might be overriden during build by value in site/documentation/config_release_version.toml
-  honoVersion = "latest" # might be overriden during build by value in site/documentation/config_release_version.toml
   
   # Twitter
   twitter = "EclipseHono"

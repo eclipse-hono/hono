@@ -22,7 +22,7 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * An instance of this interface is always scoped to a specific tenant.
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/latest/api/device-connection-api/">
+ * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection-api/">
  * Device Connection API specification</a> for a description of the result codes returned.
  */
 public interface DeviceConnectionClient extends RequestResponseClient {

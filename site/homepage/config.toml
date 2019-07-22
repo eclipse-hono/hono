@@ -7,8 +7,10 @@ canonifyurls = false
 googleAnalytics = "GTM-5WLCZXC"
 pluralizeListTitles = "false"
 
-
-# The menu is defined in the file menu_main.toml
+[[menu.main]]
+    name = "Documentation"
+    weight = 120
+    url  = "/docs"
 
 [params]
     author = "The Eclipse Hono Project"
@@ -19,7 +21,7 @@ pluralizeListTitles = "false"
     defaultDescription = "A set of micro-services for connecting millions of devices."
 
     # used in shortcode "doclink" to create absoulte URLs for links into the documentation
-    docsBaseUrl = "https://www.eclipse.org/hono/docs/stable"
+    docsBaseUrl = "https://www.eclipse.org/hono/docs"
 
     # Twitter
     twitter = "EclipseHono"

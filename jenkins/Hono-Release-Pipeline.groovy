@@ -107,14 +107,14 @@ def setVersionForDocumentation() {
                MAJOR="${RELEASE_VERSION%%.*}" # before first dot
                rest="${RELEASE_VERSION#*.}" # after first dot
                MINOR="${rest%%.*}"  # before first dot of rest
-               echo "${MAJOR};${MINOR};${RELEASE_VERSION}" >> site/homepage/versions_supported.csv
-               git add site/homepage/versions_supported.csv
+               echo "${MAJOR};${MINOR};${RELEASE_VERSION}" >> site/documentation/versions_supported.csv
+               git add site/documentation/versions_supported.csv
                '''
             if (params.STABLE_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
                 echo "set as stable version"
                 sh ''' 
-                   echo "${RELEASE_VERSION}" > site/homepage/tag_stable.txt
-                   git add site/homepage/tag_stable.txt
+                   echo "${RELEASE_VERSION}" > site/documentation/tag_stable.txt
+                   git add site/documentation/tag_stable.txt
                    '''
             }
         } else {

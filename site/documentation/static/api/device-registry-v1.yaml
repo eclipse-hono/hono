@@ -47,18 +47,18 @@ tags:
      description: Tenant Management (optional)
      externalDocs:
         description: Hono Multi-Tenancy
-        url: https://www.eclipse.org/hono/docs/stable/concepts/tenancy/
+        url: https://www.eclipse.org/hono/docs/concepts/tenancy/
    - name: devices
      description: Device registration
      externalDocs:
         description: Hono device identity
-        url: https://www.eclipse.org/hono/docs/stable/concepts/device-identity/
+        url: https://www.eclipse.org/hono/docs/concepts/device-identity/
    - name: credentials
      description: Device credentials
 
      externalDocs:
         description: Hono device identity
-        url: https://www.eclipse.org/hono/docs/stable/concepts/device-identity/
+        url: https://www.eclipse.org/hono/docs/concepts/device-identity/
 
 servers:
    - url: '{corsProxy}{server}/v1'

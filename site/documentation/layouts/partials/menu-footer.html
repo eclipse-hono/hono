@@ -1,6 +1,6 @@
 <!-- The footer of the left menu -->
 {{ if .Site.Params.copyright }}
-<p>&copy; {{ now.Year }} <a href="https://www.eclipse.org/hono/" target="_blank">{{ .Site.Params.copyright }}</a></p>
+<p>&copy; {{ now.Year }} <a href="{{ .Site.Params.homeBaseUrl }}">{{ .Site.Params.copyright }}</a></p>
 {{ end }}
 <p>
     Documentation built with
