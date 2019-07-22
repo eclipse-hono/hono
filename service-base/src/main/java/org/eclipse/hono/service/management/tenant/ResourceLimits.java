@@ -13,7 +13,9 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -48,4 +50,25 @@ public class ResourceLimits {
     public Map<String, Object> getExtensions() {
         return this.extensions;
     }
+
+    /**
+     * Adds an extension property to this resource limit.
+     * <p>
+     * If an extension property already exist for the specified key, the old value is replaced by the specified value.
+     *
+     * @param key The key of the entry.
+     * @param value The value of the entry.
+     * @return This instance, to allow chained invocations.
+     * @throws NullPointerException if any of the arguments is {@code null}.
+     */
+    public ResourceLimits putExtension(final String key, final Object value) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        if (this.extensions == null) {
+            this.extensions = new HashMap<>();
+        }
+        this.extensions.put(key, value);
+        return this;
+    }
+
 }

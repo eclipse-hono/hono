@@ -20,12 +20,14 @@ import java.net.HttpURLConnection;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.service.management.tenant.ResourceLimits;
+import org.eclipse.hono.service.management.tenant.Adapter;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,7 +40,6 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
@@ -58,8 +59,7 @@ public class TenantHttpIT {
     private static final Vertx vertx = Vertx.vertx();
 
     private static DeviceRegistryHttpClient registry;
-
-    private String tenantId;
+    private static String tenantId;
 
     /**
      * Creates the HTTP client for accessing the registry.
@@ -116,8 +116,8 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantSucceeds(final VertxTestContext context) {
 
-        final JsonObject requestBodyAddTenant = buildTenantPayload();
-        registry.addTenant(tenantId, requestBodyAddTenant).setHandler(context.completing());
+        final Tenant tenant = buildTenantPayload();
+        registry.addTenant(tenantId, tenant).setHandler(context.completing());
     }
 
     /**
@@ -129,7 +129,7 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantRejectsDuplicateRegistration(final VertxTestContext context)  {
 
-        final JsonObject payload = buildTenantPayload();
+        final Tenant payload = buildTenantPayload();
 
         registry.addTenant(tenantId, payload).compose(ar -> {
             // now try to add the tenant again
@@ -172,9 +172,11 @@ public class TenantHttpIT {
     @Test
     public void testUpdateTenantSucceeds(final VertxTestContext context) {
 
-        final JsonObject orig = buildTenantPayload();
-        final JsonObject altered = orig.copy();
-        altered.put(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
+        final Tenant orig = buildTenantPayload();
+        final Tenant altered = new Tenant();
+        altered.setExtensions(orig.getExtensions());
+        altered.setAdapters(orig.getAdapters());
+        altered.setEnabled(Boolean.FALSE);
 
         registry.addTenant(tenantId, orig)
             .compose(ar -> registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NO_CONTENT))
@@ -196,7 +198,7 @@ public class TenantHttpIT {
     @Test
     public void testUpdateTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
-        final JsonObject altered = buildTenantPayload();
+        final Tenant altered = buildTenantPayload();
 
         registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NOT_FOUND)
             .setHandler(context.completing());
@@ -211,7 +213,7 @@ public class TenantHttpIT {
     @Test
     public void testRemoveTenantSucceeds(final VertxTestContext context) {
 
-        final JsonObject tenantPayload = buildTenantPayload();
+        final Tenant tenantPayload = buildTenantPayload();
         registry.addTenant(tenantId, tenantPayload)
             .compose(ar -> registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
             .setHandler(context.completing());
@@ -238,19 +240,20 @@ public class TenantHttpIT {
     @Test
     public void testGetAddedTenant(final VertxTestContext context)  {
 
-        final JsonObject requestBody = buildTenantPayload()
-                .put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
-                .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                        .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 1000));
+        final ResourceLimits resourceLimits = new ResourceLimits();
+        resourceLimits.setMaxConnections(1000);
+        final Tenant requestBody = buildTenantPayload();
+        requestBody.setMinimumMessageSize(2048);
+        requestBody.setResourceLimits(resourceLimits);
 
-        LOG.debug("registering tenant using Management API: {}", requestBody.encodePrettily());
+        LOG.debug("registering tenant using Management API: {}", JsonObject.mapFrom(requestBody).encodePrettily());
         registry.addTenant(tenantId, requestBody)
             .compose(ar -> registry.getTenant(tenantId))
             .setHandler(context.succeeding(b -> {
                 final JsonObject json = b.toJsonObject();
                 LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
                 context.verify(() -> {
-                    assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(json, requestBody));
+                    assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(json, JsonObject.mapFrom(requestBody)));
                 });
                 context.completeNow();
             }));
@@ -265,35 +268,32 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantFailsForMalformedTrustConfiguration(final VertxTestContext context) {
 
-        final JsonObject trustConfig = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
-                .put(TenantConstants.FIELD_PAYLOAD_CERT, "NotBased64Encoded");
-        final JsonObject requestBody = buildTenantPayload()
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustConfig);
-        registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST)
-        .setHandler(context.completing());
+        final Tenant requestBody = Tenants.createTenantForTrustAnchor("test-dn", "NotBased64Encoded".getBytes(), "RSA");
+
+        registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
     }
 
     /**
-     * Creates a tenant object for a tenantId.
+     * Creates a tenant payload.
      * <p>
-     * The tenant object created contains configurations for the http and the mqtt adapter.
+     * The tenant payload contains configurations for the http, mqtt and a custom adapter.
      *
      * @return The tenant object.
      */
-    private static JsonObject buildTenantPayload() {
+    private static Tenant buildTenantPayload() {
+        final Tenant tenant = new Tenant();
+        tenant.putExtension("plan", "unlimited");
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setEnabled(true)
+                .setDeviceAuthenticationRequired(true));
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .setEnabled(true)
+                .setDeviceAuthenticationRequired(true));
+        tenant.addAdapterConfig(new Adapter("custom")
+                .setEnabled(false)
+                .setDeviceAuthenticationRequired(false)
+                .putExtension("maxInstances", 4));
 
-        final JsonArray adapterConfigs = new JsonArray();
-        adapterConfigs.add(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, true)
-                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
-        adapterConfigs.add(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, true)
-                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
-        adapterConfigs.add(TenantObject.newAdapterConfig("custom", false)
-                .put(RegistryManagementConstants.FIELD_EXT, new JsonObject()
-                        .put("options", new JsonObject().put("maxInstances", 4))));
-        final TenantObject tenantPayload = TenantObject.from(true)
-                .setProperty(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"))
-                .setAdapterConfigurations(adapterConfigs);
-        return JsonObject.mapFrom(tenantPayload);
+        return tenant;
     }
 }

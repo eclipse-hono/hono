@@ -23,6 +23,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -343,7 +344,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final Tenant tenant = new Tenant();
         if (disableTenant) {
-            Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_AMQP, false);
+            tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP).setEnabled(false));
         }
 
         return helper.registry

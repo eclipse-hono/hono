@@ -15,7 +15,11 @@ package org.eclipse.hono.service.management.tenant;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**
@@ -35,6 +39,18 @@ public class Adapter {
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> extensions;
+
+    /**
+     * Creates a new adapter instance for the given type.
+     *
+     * @param type The adapter type.
+     * @throws NullPointerException if the type is null.
+     */
+    public Adapter(@JsonProperty("type") final String type) {
+        Objects.requireNonNull(type);
+
+        this.type = type;
+    }
 
     /**
      * Set the enabled property.
@@ -95,4 +111,25 @@ public class Adapter {
     public Map<String, Object> getExtensions() {
         return this.extensions;
     }
+
+    /**
+     * Adds an extension property to this adapter.
+     * <p>
+     * If an extension property already exist for the specified key, the old value is replaced by the specified value.
+     *
+     * @param key The key of the entry.
+     * @param value The value of the entry.
+     * @return This instance, to allow chained invocations.
+     * @throws NullPointerException if any of the arguments is {@code null}.
+     */
+    public Adapter putExtension(final String key, final Object value) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        if (this.extensions == null) {
+            this.extensions = new HashMap<>();
+        }
+        this.extensions.put(key, value);
+        return this;
+    }
+
 }

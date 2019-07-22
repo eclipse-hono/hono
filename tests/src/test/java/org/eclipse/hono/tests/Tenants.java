@@ -15,11 +15,9 @@ package org.eclipse.hono.tests;
 
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
-import java.util.LinkedList;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 
@@ -31,6 +29,7 @@ public final class Tenants {
     private Tenants() {
     }
 
+
     /**
      * Create a new tenant, based on a trust anchor.
      *
@@ -38,42 +37,36 @@ public final class Tenants {
      * @return The new tenant. Never returns {@code null}.
      */
     public static Tenant createTenantForTrustAnchor(final X509Certificate cert) {
-        return createTenantForTrustAnchor(cert, cert.getPublicKey());
+        return createTenantForTrustAnchor(cert.getSubjectX500Principal(), cert.getPublicKey());
     }
 
     /**
      * Create a new tenant, based on a trust anchor.
      *
-     * @param cert The trust anchor.
+     * @param subjectDn The subject DN of the trust anchor.
      * @param publicKey The public key for the anchor.
      * @return The new tenant. Never returns {@code null}.
      */
-    public static Tenant createTenantForTrustAnchor(final X509Certificate cert, final PublicKey publicKey) {
-        final var tenant = new Tenant();
-        final var trustedCa = new TrustedCertificateAuthority();
-        trustedCa.setSubjectDn(cert.getSubjectX500Principal().getName(X500Principal.RFC2253));
-        trustedCa.setPublicKey(publicKey.getEncoded());
-        trustedCa.setKeyAlgorithm(publicKey.getAlgorithm());
-        tenant.setTrustedCertificateAuthority(trustedCa);
-        return tenant;
+    public static Tenant createTenantForTrustAnchor(final X500Principal subjectDn, final PublicKey publicKey) {
+        return createTenantForTrustAnchor(subjectDn.getName(X500Principal.RFC2253), publicKey.getEncoded(), publicKey.getAlgorithm());
     }
 
     /**
-     * Create a new adapter section and set the enabled state.
+     * Create a new tenant, based on a trust anchor.
      * 
-     * @param tenant The tenant to process.
-     * @param type The adapter type to configure.
-     * @param state The enabled state.
+     * @param subjectDn  The subject DN of the trust anchor.
+     * @param publicKey  The public key for the anchor.
+     * @param algorithmn The public key algorithm.
+     * 
+     * @return The new tenant. Never returns {@code null}.
      */
-    public static void setAdapterEnabled(final Tenant tenant, final String type, final Boolean state) {
-        final Adapter adapter = new Adapter();
-        adapter.setType(type);
-        adapter.setEnabled(state);
-        if (tenant.getAdapters() == null) {
-            tenant.setAdapters(new LinkedList<>());
-        }
-        tenant.getAdapters().add(adapter);
-
+    public static Tenant createTenantForTrustAnchor(final String subjectDn, final byte[] publicKey, final String algorithmn) {
+        final var tenant = new Tenant();
+        final var trustedCa = new TrustedCertificateAuthority();
+        trustedCa.setSubjectDn(subjectDn);
+        trustedCa.setPublicKey(publicKey);
+        trustedCa.setKeyAlgorithm(algorithmn);
+        tenant.setTrustedCertificateAuthority(trustedCa);
+        return tenant;
     }
-
 }

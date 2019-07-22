@@ -54,9 +54,9 @@ import org.eclipse.hono.client.MessageConsumer;
 
 import org.eclipse.hono.service.management.credentials.GenericCredential;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -76,7 +76,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 
@@ -537,7 +536,7 @@ public abstract class CoapTestBase {
         credential.setType(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
         credential.getAdditionalProperties().put(CredentialsConstants.FIELD_SECRETS_KEY, "notBase64");
 
-        helper.registry.addTenant(tenantId, JsonObject.mapFrom(tenant))
+        helper.registry.addTenant(tenantId, tenant)
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
                 .compose(ok -> helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(credential)))
         .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
@@ -591,7 +590,7 @@ public abstract class CoapTestBase {
 
         // GIVEN a tenant for which the CoAP adapter is disabled
         final Tenant tenant = new Tenant();
-        Tenants.setAdapterEnabled(tenant, Constants.PROTOCOL_ADAPTER_TYPE_COAP, false);
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP).setEnabled(false));
 
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
                 .compose(ok -> {
