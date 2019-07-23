@@ -32,8 +32,14 @@ import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
@@ -76,13 +82,24 @@ public class SecretsTest {
      */
     @Test
     public void testEncodePskSecret() {
+
+        final Instant notBefore = Instant.from(OffsetDateTime.of(2018, 1, 1, 00, 00, 00, 0, ZoneOffset.ofHours(-4)));
+        final Instant notAfter = Instant.from(OffsetDateTime.of(2019, 7, 22, 14, 30, 15, 0, ZoneOffset.ofHours(2)));
         final PskSecret secret = new PskSecret();
         secret.setKey(new byte[] { 1, 2, 3 });
+        secret.setNotBefore(notBefore);
+        secret.setNotAfter(notAfter);
 
         final JsonObject json = JsonObject.mapFrom(secret);
         assertNotNull(json);
 
         assertArrayEquals(new byte[] { 1, 2, 3 }, json.getBinary(FIELD_SECRETS_KEY));
+        assertThat(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(json.getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE), OffsetDateTime::from).toInstant(),
+                is(notBefore));
+        assertThat(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(json.getString(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER), OffsetDateTime::from).toInstant(),
+                is(notAfter));
     }
 
     /**
@@ -109,11 +126,17 @@ public class SecretsTest {
      */
     @Test
     public void testDecodeGeneric() {
+
+        final OffsetDateTime notBefore = OffsetDateTime.of(2019, 4, 5, 13, 45, 07, 0, ZoneOffset.ofHours(-4));
+        final OffsetDateTime notAfter = OffsetDateTime.of(2020, 1, 1, 00, 00, 00, 0, ZoneOffset.ofHours(0));
+
         final CommonCredential credential = new JsonObject()
                 .put(FIELD_TYPE, "foo")
                 .put(FIELD_AUTH_ID, "authId1")
                 .put(FIELD_SECRETS, new JsonArray()
                         .add(new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, "2019-04-05T13:45:07-04:00")
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, "2020-01-01T00:00:00Z")
                                 .put("quote", "setec astronomy")))
                 .mapTo(CommonCredential.class);
 
@@ -128,6 +151,8 @@ public class SecretsTest {
         assertThat(secret.getAdditionalProperties(), notNullValue());
         assertThat(secret.getAdditionalProperties(), aMapWithSize(1));
         assertThat(secret.getAdditionalProperties(), hasEntry("quote", "setec astronomy"));
+        assertThat(secret.getNotBefore().atOffset(ZoneOffset.ofHours(-4)), is(notBefore));
+        assertThat(secret.getNotAfter().atOffset(ZoneOffset.ofHours(0)), is(notAfter));
 
         assertThat(credential.getAuthId(), is("authId1"));
         assertThat(((GenericCredential) credential).getType(), is("foo"));

@@ -16,9 +16,17 @@ import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_NOT_AFTER
 import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_NOT_BEFORE;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
@@ -31,10 +39,8 @@ public abstract class CommonSecret {
     @JsonProperty
     private Boolean enabled;
 
-    @JsonProperty(FIELD_SECRETS_NOT_BEFORE)
-    private Instant notBefore;
-    @JsonProperty(FIELD_SECRETS_NOT_AFTER)
-    private Instant notAfter;
+    private OffsetDateTime notBefore;
+    private OffsetDateTime notAfter;
     @JsonProperty
     private String comment;
 
@@ -46,20 +52,116 @@ public abstract class CommonSecret {
         this.enabled = enabled;
     }
 
+    /**
+     * Gets the earliest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @return The instant as an ISO string.
+     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
+     */
+    @JsonGetter(FIELD_SECRETS_NOT_BEFORE)
+    public String getNotBeforeAsString() {
+        return Optional.ofNullable(notBefore)
+                .map(nb -> {
+                    return nb.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                })
+                .orElse(null);
+    }
+
+    /**
+     * Gets the earliest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @return The instant.
+     */
+    @JsonIgnore
     public Instant getNotBefore() {
-        return notBefore;
+        return Optional.ofNullable(notBefore)
+                .map(nb -> nb.toInstant())
+                .orElse(null);
     }
 
+    /**
+     * Sets the earliest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @param notBefore The instant as an ISO string.
+     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
+     */
+    @JsonSetter(FIELD_SECRETS_NOT_BEFORE)
+    public void setNotBefore(final String notBefore) {
+        try {
+            this.notBefore = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(notBefore, OffsetDateTime::from);
+        } catch (DateTimeParseException e) {
+            this.notBefore = null;
+        }
+    }
+
+    /**
+     * Sets the earliest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @param notBefore The instant.
+     */
+    @JsonIgnore
     public void setNotBefore(final Instant notBefore) {
-        this.notBefore = notBefore;
+        if (notBefore == null) {
+            this.notBefore = null;
+        } else {
+            this.notBefore = OffsetDateTime.ofInstant(notBefore, ZoneId.systemDefault());;
+        }
     }
 
+    /**
+     * Gets the latest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @return The instant as an ISO string.
+     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
+     */
+    @JsonGetter(FIELD_SECRETS_NOT_AFTER)
+    public String getNotAfterAsString() {
+        return Optional.ofNullable(notAfter)
+                .map(na -> {
+                    return na.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                })
+                .orElse(null);
+    }
+
+    /**
+     * Gets the latest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @return The instant.
+     */
+    @JsonIgnore
     public Instant getNotAfter() {
-        return notAfter;
+        return Optional.ofNullable(notAfter)
+                .map(na -> na.toInstant())
+                .orElse(null);
     }
 
+    /**
+     * Sets the latest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @param notAfter The instant as an ISO string.
+     * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
+     */
+    @JsonSetter(FIELD_SECRETS_NOT_AFTER)
+    public void setNotAfter(final String notAfter) {
+        try {
+            this.notAfter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(notAfter, OffsetDateTime::from);
+        } catch (DateTimeParseException e) {
+            this.notAfter = null;
+        }
+    }
+
+    /**
+     * Sets the latest instant in time that this secret may be used for authenticating a device.
+     * 
+     * @param notAfter The instant.
+     */
+    @JsonIgnore
     public void setNotAfter(final Instant notAfter) {
-        this.notAfter = notAfter;
+        if (notAfter == null) {
+            this.notAfter = null;
+        } else {
+        this.notAfter = OffsetDateTime.ofInstant(notAfter, ZoneId.systemDefault());
+        }
     }
 
     public String getComment() {
