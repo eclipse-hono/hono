@@ -94,8 +94,9 @@ public class PasswordSecret extends CommonSecret {
     }
 
     /**
-     * Encodes the value in {@link #passwordPlain} using provided encoder.
-     * @param encoder Password encoder to use.
+     * Encodes a clear text password contained in the <em>pwd-plain</em> field.
+     * 
+     * @param encoder The password encoder to use.
      */
     public void encode(final HonoPasswordEncoder encoder) {
         if (!Strings.isNullOrEmpty(passwordPlain)) {
