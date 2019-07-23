@@ -35,6 +35,7 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
@@ -60,6 +61,7 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -126,6 +128,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     private CommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private Context context;
+    private ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider;
 
     /**
      * Creates clients for the needed micro services and sets the configuration to enable the insecure port.
@@ -192,6 +195,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
+
+        tenantObjectWithAuthIdProvider = mock(ExecutionContextTenantAndAuthIdProvider.class);
+        when(tenantObjectWithAuthIdProvider.get(any(MqttContext.class), any(SpanContext.class)))
+                .thenReturn(Future.failedFuture("not used here"));
     }
 
     /**
@@ -869,8 +876,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
         final CommandHandler<MqttProtocolAdapterProperties> cmdHandler = new CommandHandler<>(vertx, config);
-        endpoint.closeHandler(handler-> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdHandler));
-        adapter.onSubscribe(endpoint, null, msg, cmdHandler);
+        endpoint.closeHandler(handler-> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdHandler, Optional.empty()));
+        adapter.onSubscribe(endpoint, null, msg, cmdHandler, Optional.empty());
 
         // THEN the adapter creates a command consumer that is checked periodically
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong());
@@ -919,7 +926,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        adapter.onSubscribe(endpoint, null, msg, new CommandHandler<>(vertx, config));
+        adapter.onSubscribe(endpoint, null, msg, new CommandHandler<>(vertx, config), Optional.empty());
 
         // THEN the adapter sends a SUBACK packet to the device
         // which contains a failure status code for each unsupported filter
@@ -1310,6 +1317,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setAuthHandler(authHandler);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+        adapter.setTenantObjectWithAuthIdProvider(tenantObjectWithAuthIdProvider);
 
         if (server != null) {
             adapter.setMqttInsecureServer(server);
