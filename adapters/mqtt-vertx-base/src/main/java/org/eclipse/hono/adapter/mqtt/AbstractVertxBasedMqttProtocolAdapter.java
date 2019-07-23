@@ -49,6 +49,8 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
+import org.eclipse.hono.service.tenant.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -104,6 +106,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private MqttServer insecureServer;
     private AuthHandler<MqttContext> authHandler;
     private final BiConsumer<CommandSubscription, CommandContext> afterCommandPubAckedConsumer = this::afterCommandPublished;
+    private ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider;
 
     /**
      * Sets the authentication handler to use for authenticating devices.
@@ -113,6 +116,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      */
     public final void setAuthHandler(final AuthHandler<MqttContext> authHandler) {
         this.authHandler = Objects.requireNonNull(authHandler);
+    }
+
+    /**
+     * Sets the provider that determines the tenant and auth-id associated with a request.
+     *
+     * @param tenantObjectWithAuthIdProvider the provider.
+     * @throws NullPointerException if tenantObjectWithAuthIdProvider is {@code null}.
+     */
+    public void setTenantObjectWithAuthIdProvider(
+            final ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider) {
+        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(tenantObjectWithAuthIdProvider);
     }
 
     @Override
@@ -177,6 +191,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 getCredentialsClientFactory(),
                                 getConfig(),
                                 tracer), tracer));
+    }
+
+    /**
+     * Creates the provider that determines the tenant and auth-id associated with a request.
+     * <p>
+     * This default implementation creates a {@link MqttContextTenantAndAuthIdProvider}.
+     * <p>
+     * Subclasses may override this method in order to return a different implementation.
+     *
+     * @return The provider.
+     */
+    protected ExecutionContextTenantAndAuthIdProvider<MqttContext> createTenantAndAuthIdProvider() {
+        return new MqttContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory());
     }
 
     /**
@@ -290,6 +317,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }).compose(t -> {
                 if (authHandler == null) {
                     authHandler = createAuthHandler();
+                }
+                if (tenantObjectWithAuthIdProvider == null) {
+                    tenantObjectWithAuthIdProvider = createTenantAndAuthIdProvider();
                 }
                 startFuture.complete();
             }, startFuture);
@@ -419,14 +449,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * the {@linkplain MqttProtocolAdapterProperties#isAuthenticationRequired() authentication required} configuration
      * property to {@code false}.
      * <p>
-     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device, CommandHandler)}. Registers a publish
+     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device, CommandHandler, Optional)}. Registers a publish
      * handler on the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published
      * by the client. Accepts the connection request.
      * 
      * @param endpoint The MQTT endpoint representing the client.
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
-        registerHandlers(endpoint, null);
+        registerHandlers(endpoint, null, Optional.empty());
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
         return Future.succeededFuture();
     }
@@ -435,8 +465,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Span currentSpan) {
 
         final MqttContext context = MqttContext.fromConnectPacket(endpoint);
-        context.setTracingContext(currentSpan.context());
-        final Future<DeviceUser> authAttempt = authenticate(context, currentSpan);
+        final Future<Optional<Integer>> traceSamplingPriority = applyTenantTraceSamplingPriority(context, currentSpan);
+        final Future<DeviceUser> authAttempt = traceSamplingPriority.compose(v -> {
+            context.setTracingContext(currentSpan.context());
+            return authenticate(context, currentSpan);
+        });
         return authAttempt
                 .compose(authenticatedDevice -> CompositeFuture.all(
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
@@ -446,7 +479,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(ok -> authenticatedDevice))
                 .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
-                .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice))
+                .compose(authenticatedDevice -> registerHandlers(endpoint, authenticatedDevice, traceSamplingPriority.result()))
                 .recover(t -> {
                     if (authAttempt.failed()) {
                         LOG.debug("could not authenticate device", t);
@@ -455,6 +488,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 authAttempt.result().getTenantId(), authAttempt.result().getDeviceId(), t);
                     }
                     return Future.failedFuture(t);
+                });
+    }
+
+    /**
+     * Applies the trace sampling priority configured for the tenant derived from the given context to the given span.
+     *
+     * @param context The execution context.
+     * @param currentSpan The span to apply the configuration to.
+     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>Optional</em> with
+     *         the applied sampling priority or an empty <em>Optional</em> if no priority was applied.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected final Future<Optional<Integer>> applyTenantTraceSamplingPriority(final MqttContext context, final Span currentSpan) {
+        Objects.requireNonNull(context);
+        Objects.requireNonNull(currentSpan);
+        return tenantObjectWithAuthIdProvider.get(context, currentSpan.context())
+                .map(tenantObjectWithAuthId -> TenantTraceSamplingHelper
+                        .applyTraceSamplingPriority(tenantObjectWithAuthId, currentSpan))
+                .recover(t -> {
+                    return Future.succeededFuture(Optional.empty());
                 });
     }
 
@@ -481,23 +534,28 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *                            if the device has not been authenticated.
      * @param subscribeMsg The subscribe request received from the device.
      * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
-     * @throws NullPointerException if any of endpoint or subscribe message are {@code null}.
+     * @param traceSamplingPriority The sampling priority to be applied on the <em>OpenTracing</em> span
+     *                              created for this operation.
+     * @throws NullPointerException if any of the parameters except authenticatedDevice is {@code null}.
      */
     @SuppressWarnings("rawtypes")
     protected final void onSubscribe(
             final MqttEndpoint endpoint,
             final Device authenticatedDevice,
             final MqttSubscribeMessage subscribeMsg,
-            final CommandHandler<T> cmdHandler) {
+            final CommandHandler<T> cmdHandler,
+            final Optional<Integer> traceSamplingPriority) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(subscribeMsg);
+        Objects.requireNonNull(cmdHandler);
+        Objects.requireNonNull(traceSamplingPriority);
 
         final Map<String, Future> topicFilters = new HashMap<>();
         final Map<MqttTopicSubscription, Future> subscriptionOutcome = new LinkedHashMap<>(
                 subscribeMsg.topicSubscriptions().size());
 
-        final Span span = newSpan("SUBSCRIBE", endpoint, authenticatedDevice);
+        final Span span = newSpan("SUBSCRIBE", endpoint, authenticatedDevice, traceSamplingPriority);
 
         subscribeMsg.topicSubscriptions().forEach(subscription -> {
 
@@ -580,7 +638,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         });
     }
 
-    private Span newSpan(final String operationName, final MqttEndpoint endpoint, final Device authenticatedDevice) {
+    private Span newSpan(final String operationName, final MqttEndpoint endpoint, final Device authenticatedDevice,
+            final Optional<Integer> traceSamplingPriority) {
         final Span span = tracer.buildSpan(operationName)
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
@@ -593,6 +652,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
             span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
         }
+        traceSamplingPriority.ifPresent(prio -> {
+            TracingHelper.setTraceSamplingPriority(span, prio);
+        });
         return span;
     }
 
@@ -607,16 +669,25 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param endpoint The endpoint representing the connection to the device.
      * @param authenticatedDevice The authenticated identity of the device or {@code null}
      *                            if the device has not been authenticated.
-     * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      * @param unsubscribeMsg The unsubscribe request received from the device.
+     * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
+     * @param traceSamplingPriority The sampling priority to be applied on the <em>OpenTracing</em> span
+     *                              created for this operation.
+     * @throws NullPointerException if any of the parameters except authenticatedDevice is {@code null}.
      */
     protected final void onUnsubscribe(
             final MqttEndpoint endpoint,
             final Device authenticatedDevice,
             final MqttUnsubscribeMessage unsubscribeMsg,
-            final CommandHandler<T> cmdHandler) {
+            final CommandHandler<T> cmdHandler,
+            final Optional<Integer> traceSamplingPriority) {
 
-        final Span span = newSpan("UNSUBSCRIBE", endpoint, authenticatedDevice);
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(unsubscribeMsg);
+        Objects.requireNonNull(cmdHandler);
+        Objects.requireNonNull(traceSamplingPriority);
+
+        final Span span = newSpan("UNSUBSCRIBE", endpoint, authenticatedDevice, traceSamplingPriority);
 
         unsubscribeMsg.topics().forEach(topic -> {
             final CommandSubscription cmdSub = CommandSubscription.fromTopic(topic, authenticatedDevice);
@@ -636,7 +707,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 LOG.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
                 cmdHandler.removeSubscription(topic, (tenant, device) -> {
-                    final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice);
+                    final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice,
+                            traceSamplingPriority);
                     sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, span.context())
                             .setHandler(sendAttempt -> closeHandlerSpan.finish());
                 });
@@ -707,35 +779,38 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             .withTag(Tags.COMPONENT.getKey(), getTypeName())
             .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
-        context.setTracingContext(span.context());
         context.setTimer(getMetrics().startTimer());
 
-        checkTopic(context)
-            .compose(ok -> onPublishedMessage(context))
-            .setHandler(processing -> {
-                if (processing.succeeded()) {
-                    Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
-                    onMessageSent(context);
-                } else {
-                    if (processing.cause() instanceof ServiceInvocationException) {
-                        final ServiceInvocationException sie = (ServiceInvocationException) processing.cause();
-                        Tags.HTTP_STATUS.set(span, sie.getErrorCode());
+        applyTenantTraceSamplingPriority(context, span)
+                .compose(v -> {
+                    context.setTracingContext(span.context());
+                    return checkTopic(context);
+                })
+                .compose(ok -> onPublishedMessage(context))
+                .setHandler(processing -> {
+                    if (processing.succeeded()) {
+                        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
+                        onMessageSent(context);
                     } else {
-                        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
-                    }
-                    if (processing.cause() instanceof ClientErrorException) {
-                        // nothing to do
-                    } else {
-                        onMessageUndeliverable(context);
-                    }
+                        if (processing.cause() instanceof ServiceInvocationException) {
+                            final ServiceInvocationException sie = (ServiceInvocationException) processing.cause();
+                            Tags.HTTP_STATUS.set(span, sie.getErrorCode());
+                        } else {
+                            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_INTERNAL_ERROR);
+                        }
+                        if (processing.cause() instanceof ClientErrorException) {
+                            // nothing to do
+                        } else {
+                            onMessageUndeliverable(context);
+                        }
                         if (context.deviceEndpoint().isConnected()) {
                             TracingHelper.logError(span, processing.cause());
                             span.log("closing connection to device");
                             context.deviceEndpoint().close();
                         }
-                }
-                span.finish();
-            });
+                    }
+                    span.finish();
+                });
     }
 
     private Future<Void> checkTopic(final MqttContext context) {
@@ -1087,12 +1162,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @param endpoint The connection to close.
      * @param authenticatedDevice Optional authenticated device information, may be {@code null}.
      * @param cmdHandler The commandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
+     * @param traceSamplingPriority The sampling priority to be applied on the <em>OpenTracing</em> span
+     *                              created for this operation.
+     * @throws NullPointerException if any of the parameters except authenticatedDevice is {@code null}.
      */
-    protected final void close(final MqttEndpoint endpoint, final Device authenticatedDevice, final CommandHandler<T> cmdHandler) {
-        final Span span = newSpan("CLOSE", endpoint, authenticatedDevice);
+    protected final void close(final MqttEndpoint endpoint, final Device authenticatedDevice,
+            final CommandHandler<T> cmdHandler, final Optional<Integer> traceSamplingPriority) {
+
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(cmdHandler);
+        Objects.requireNonNull(traceSamplingPriority);
+
+        final Span span = newSpan("CLOSE", endpoint, authenticatedDevice, traceSamplingPriority);
         onClose(endpoint);
         cmdHandler.removeAllSubscriptions((tenant, device) -> {
-            final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice);
+            final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice,
+                    traceSamplingPriority);
             sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, span.context())
                     .setHandler(sendAttempt -> closeHandlerSpan.finish());
         });
@@ -1345,14 +1430,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 });
     }
 
-    private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice) {
+    private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice,
+            final Optional<Integer> traceSamplingPriority) {
         final CommandHandler<T> cmdHandler = new CommandHandler<>(vertx, getConfig());
-        endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdHandler));
+        endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdHandler, traceSamplingPriority));
         endpoint.publishHandler(
                 message -> handlePublishedMessage(MqttContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
         endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, afterCommandPubAckedConsumer));
-        endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdHandler));
-        endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg, cmdHandler));
+        endpoint.subscribeHandler(subscribeMsg -> onSubscribe(endpoint, authenticatedDevice, subscribeMsg, cmdHandler,
+                traceSamplingPriority));
+        endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg,
+                cmdHandler, traceSamplingPriority));
         if (authenticatedDevice == null) {
             metrics.incrementUnauthenticatedConnections();
         } else {
