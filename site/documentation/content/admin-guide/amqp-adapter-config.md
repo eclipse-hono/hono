@@ -34,10 +34,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_AMQP_PORT`<br>`--hono.amqp.port` | no | `4041` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AMQP_SECURE_PROTOCOLS`<br>`--hono.amqp.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
 | `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
-| `HONO_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.healthCheck.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure port, which exposes the service's health check resources, should be bound to. The HTTPS server will only be started if the required key material is present in the configuration. |
-| `HONO_HEALTH_CHECK_PORT`<br>`--hono.healthCheck.port` | no | `8088` | The secure port the HTTPS server, which exposes the service's health check resources, should listen on. The adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
-| `HONO_HEALTH_CHECK_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.healthCheck.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port, which exposes the service's health check resources, should be bound to. |
-| `HONO_HEALTH_CHECK_INSECURE_PORT`<br>`--hono.healthCheck.insecurePort` | no | `8088` | The insecure port of the HTTP server, which exposes the service's health check resources, should listen on. The adapter will expose a *readiness* probe at URI `/readiness` and a *liveness* probe at URI `/liveness`. |
 
 The variables only need to be set if the default values do not match your environment.
 
@@ -145,7 +141,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_PLAN_PROMETHEUS_BASED_CACHE_MIN_SIZE`<br>`--hono.plan.prometheusBased.cacheMinSize` | no | `20` | The minimum size of the cache to store the metrics data retrieved from the Prometheus server. The cache is used for storing the current amount of data exchanged with devices of tenants. |
 | `HONO_PLAN_PROMETHEUS_BASED_CACHE_MAX_SIZE`<br>`--hono.plan.prometheusBased.cacheMaxSize` | no | `1000` | The maximum size of the cache to store the metrics data retrieved from the Prometheus server. |
 | `HONO_PLAN_PROMETHEUS_BASED_CACHE_TIMEOUT`<br>`--hono.plan.prometheusBased.cacheTimeout` | no | `600` | The number of seconds after which the cached metrics data should be considered invalid. |
-
 
 ## Metrics Configuration
 

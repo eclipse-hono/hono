@@ -14,42 +14,48 @@ In a production environment, an operations team will usually want to keep track 
 
 Metrics usually provide insights into the past and current status of an individual component. The values can be aggregated to provide a picture of the overall system's status. As such, metrics provide a great way to *monitor* system health and, in particular, to anticipate resource shortages and use such knowledge to pro-actively prevent system failure.
 
-### Configuring Metrics
+### Configuring a Metrics Back End
 
 Hono uses [Micrometer](http://micrometer.io/) for providing metrics. It is
 possible to drop in any Micrometer compatible back end. Hono also uses the
 Micrometer integration with Spring Boot and Vert.x.
 
-### Selecting a Metrics Stack
-
-Please refer to In order to the [Micrometer documentation](http://micrometer.io/docs)
+Please refer to the [Micrometer documentation](http://micrometer.io/docs)
 for details regarding the configuration of a specific Micrometer back end.
 In most cases, you only need to add the back end specific jar files to the class path and
 add back end specific configuration to the `application.yml` file.
 
-The Hono build allows out of the box support for other metrics back ends. They
-can be enabled by activating a specific Maven profile. The following build
-profiles currently exist:
+The Hono build supports configuration of a specific metrics back end by means
+of Maven profiles. The following build profiles are currently supported:
 
+* `metrics-prometheus` – Enables the Prometheus backend.
 * `metrics-graphite` – Enables the Graphite backend.
 * `metrics-influxdb` – Enables the InfluxDB backend.
-* `metrics-prometheus` – Enables the Prometheus backend.
 
-Additionally to selecting a metrics back end, you may want to configure the
+Additionally to selecting a metrics back end, you may need to configure the
 back end using Spring configuration options. See the documentation mentioned
 above for more information.
 
-### Prometheus
+Note that none of the above profiles are active by default, i.e. you need to
+explicitly activate one of them when starting the build using Maven's `-p`
+command line parameter.
 
-For Prometheus you will need to configure the Spring actuator endpoint
-`prometheus` in order to let the Prometheus scraper pick up metrics data.
+### Using Prometheus
 
-This can be done manually or it is possible to use the provided Spring Boot
-profile `prometheus`. This profile will enable the management endpoint on
-port `8081` and only expose the Prometheus endpoint. It will, however, also
-disable security on this port, so it is not recommended to make this port
-publicly available, as it is intended to be used in a containerized environment
-only.
+Most of the metrics back ends have data being *pushed* to from the components
+reporting the metrics. However, Prometheus is different in that it *polls*
+(or *scrapes*) all components periodically for new metrics data.
+For this to work, the Prometheus server needs to be configured with the IP
+addresses of the components to monitor. In the example deployment that comes
+with Hono, the Kubernetes *pods* that the Hono components are running in are
+marked by means of a label. The Prometheus server then periodically queries
+the Kubernetes API to determine a list of pods (and their IP addresses) that
+have the corresponding label.
+The components themselves need to expose a corresponding HTTP endpoint that
+the Prometheus server can connect to for scraping the meter data. All
+Hono components that report metrics can be configured to expose such an
+endpoint via their [*Health Check* server]({{< relref "#health-check-server-configuration" >}})
+which already exposes endpoints for determining the component's readiness and liveness status.
 
 ### Legacy Metrics Support
 
@@ -71,6 +77,36 @@ the startup of the Hono components will fail.
 
 The names and semantics of the individual metrics being reported by the components
 are described in the [Legacy Metrics specification]({{< ref "/api/Metrics.md#legacy-metrics" >}}).
+
+## Health Check Server Configuration
+
+All of Hono's service components and protocol adapters contain a *Health Check* server which can be configured to
+expose several HTTP endpoints for determining the component's status.
+In particular, the server exposes a `/readiness`, a `/liveness` and an optional `/prometheus` URI endpoint.
+
+The former two endpoints are supposed to be used by container orchestration platforms like Kubernetes to monitor the runtime status of the containers
+that it manages. These endpoints are *always* exposed when the health check server is started.
+
+The `/prometheus` endpoint can be used by a Prometheus server to retrieve collected meter data from the component. It is *only* exposed if Prometheus has
+been configured as the metrics back end as described [above]({{< relref "#configuring-a-metrics-back-end" >}}).
+
+The health check server can be configured by means of the following environment variables:
+
+| Environment Variable<br>Command Line Option | Default Value | Description  |
+| :------------------------------------------ | :------------ | :------------|
+| `HONO_HEALTH_CHECK_BIND_ADDRESS`<br>`--hono.healthCheck.bindAddress` | `127.0.0.1` | The IP address of the network interface that the health check server's secure port should be bound to. The server will only be started if this property is set to some other than the default value and corresponding key material has been configured using the `HONO_HEALTH_CHECK_KEY_PATH` and `HONO_HEALTH_CHECK_CERT_PATH` variables. |
+| `HONO_HEALTH_CHECK_CERT_PATH`<br>`--hono.healthCheck.certPath` | - | The absolute path to the PEM file containing the certificate that the secure server should use for authenticating to clients. This option must be used in conjunction with `HONO_HEALTH_CHECK_KEY_PATH`.<br>Alternatively, the `HONO_HEALTH_CHECK_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_HEALTH_CHECK_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.healthCheck.insecurePortBindAddress` | `127.0.0.1` | The IP address of the network interface that the health check server's insecure port should be bound to. The server will only be started if this property is set to some other than the default value. |
+| `HONO_HEALTH_CHECK_INSECURE_PORT`<br>`--hono.healthCheck.insecurePort` | `8088` | The port that the insecure server should listen on. |
+| `HONO_HEALTH_CHECK_KEY_PATH`<br>`--hono.healthCheck.keyPath` | - | The absolute path to the (PKCS8) PEM file containing the private key that the secure server should use for authenticating to clients. This option must be used in conjunction with `HONO_HEALTH_CHECK_CERT_PATH`. Alternatively, the `HONO_HEALTH_CHECK_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_HEALTH_CHECK_PORT`<br>`--hono.healthCheck.port` | `8088` | The port that the secure server should listen on. |
+| `HONO_HEALTH_CHECK_KEY_STORE_PASSWORD`<br>`--hono.healthCheck.keyStorePassword` | - | The password required to read the contents of the key store. |
+| `HONO_HEALTH_CHECK_KEY_STORE_PATH`<br>`--hono.healthCheck.keyStorePath` | - | The absolute path to the Java key store containing the private key and certificate that the secure server should use for authenticating to clients. Either this option or the `HONO_HEALTH_CHECK_KEY_PATH` and `HONO_HEALTH_CHECK_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. The `HONO_HEALTH_CHECK_KEY_STORE_PASSWORD` variable can be used to set the password required for reading the key store. |
+
+
+{{% warning title="Failure to start" %}}
+The component/service will fail to start if neither the secure not the insecure server have been configured properly.
+{{% /warning %}}
 
 ## Tracing
 
