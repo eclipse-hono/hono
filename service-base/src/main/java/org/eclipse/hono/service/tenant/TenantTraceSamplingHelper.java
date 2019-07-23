@@ -14,7 +14,7 @@
 package org.eclipse.hono.service.tenant;
 
 import java.util.Objects;
-import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -39,15 +39,15 @@ public final class TenantTraceSamplingHelper {
      *
      * @param tenantObjectWithAuthId The tenant object combined with an auth-id.
      * @param span The span to apply the configuration to.
-     * @return An <em>Optional</em> containing the applied sampling priority or an empty
-     *         <em>Optional</em> if no priority was applied.
+     * @return An <em>OptionalInt</em> containing the applied sampling priority or an empty
+     *         <em>OptionalInt</em> if no priority was applied.
      * @throws NullPointerException if either of the parameters is {@code null}.
      */
-    public static Optional<Integer> applyTraceSamplingPriority(
+    public static OptionalInt applyTraceSamplingPriority(
             final TenantObjectWithAuthId tenantObjectWithAuthId, final Span span) {
         Objects.requireNonNull(tenantObjectWithAuthId);
         Objects.requireNonNull(span);
-        final Optional<Integer> traceSamplingPriority = tenantObjectWithAuthId.getTenantObject()
+        final OptionalInt traceSamplingPriority = tenantObjectWithAuthId.getTenantObject()
                 .getTraceSamplingPriority(tenantObjectWithAuthId.getAuthId());
         traceSamplingPriority.ifPresent(prio -> {
             LOG.trace("setting trace sampling prio to {} for tenant [{}], auth-id [{}]", prio,

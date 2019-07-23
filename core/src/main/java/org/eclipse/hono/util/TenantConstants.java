@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.util;
 
-import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Constants &amp; utility methods used throughout the Tenant API.
@@ -179,11 +179,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
         /**
          * Gets the value for the <em>sampling.priority</em> span tag.
          *
-         * @return An <em>Optional</em> containing the value for the <em>sampling.priority</em> span tag or an empty
-         *         <em>Optional</em> if no such tag should be set.
+         * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
+         *         <em>OptionalInt</em> if no such tag should be set.
          */
-        public Optional<Integer> toSamplingPriority() {
-            return this.equals(ALL) ? Optional.of(1) : Optional.empty();
+        public OptionalInt toSamplingPriority() {
+            return this.equals(ALL) ? OptionalInt.of(1) : OptionalInt.empty();
         }
     }
 

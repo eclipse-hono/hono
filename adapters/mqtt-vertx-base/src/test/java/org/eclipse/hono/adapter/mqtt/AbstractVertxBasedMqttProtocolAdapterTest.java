@@ -35,7 +35,7 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
@@ -876,8 +876,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
         final CommandHandler<MqttProtocolAdapterProperties> cmdHandler = new CommandHandler<>(vertx, config);
-        endpoint.closeHandler(handler-> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdHandler, Optional.empty()));
-        adapter.onSubscribe(endpoint, null, msg, cmdHandler, Optional.empty());
+        endpoint.closeHandler(handler-> adapter.close(endpoint, new Device("tenant", "deviceId"), cmdHandler, OptionalInt.empty()));
+        adapter.onSubscribe(endpoint, null, msg, cmdHandler, OptionalInt.empty());
 
         // THEN the adapter creates a command consumer that is checked periodically
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(Handler.class), anyLong());
@@ -926,7 +926,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        adapter.onSubscribe(endpoint, null, msg, new CommandHandler<>(vertx, config), Optional.empty());
+        adapter.onSubscribe(endpoint, null, msg, new CommandHandler<>(vertx, config), OptionalInt.empty());
 
         // THEN the adapter sends a SUBACK packet to the device
         // which contains a failure status code for each unsupported filter

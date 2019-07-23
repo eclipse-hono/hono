@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -567,11 +568,11 @@ public final class TenantObject extends JsonBackedValueObject {
      * Gets the value for the <em>sampling.priority</em> span tag as encoded in the properties of this tenant.
      *
      * @param authId The authentication identity of a device (may be null).
-     * @return An <em>Optional</em> containing the value for the <em>sampling.priority</em> span tag or an empty
-     *         <em>Optional</em> if no priority should be set.
+     * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
+     *         <em>OptionalInt</em> if no priority should be set.
      */
     @JsonIgnore
-    public Optional<Integer> getTraceSamplingPriority(final String authId) {
+    public OptionalInt getTraceSamplingPriority(final String authId) {
         String traceSamplingMode = null;
         if (authId != null) {
             // check device specific setting first
@@ -586,7 +587,7 @@ public final class TenantObject extends JsonBackedValueObject {
             traceSamplingMode = getProperty(TenantConstants.FIELD_TRACE_SAMPLING_MODE, String.class);
         }
         if (traceSamplingMode == null) {
-            return Optional.empty();
+            return OptionalInt.empty();
         }
         return TenantConstants.TraceSamplingMode.from(traceSamplingMode).toSamplingPriority();
     }

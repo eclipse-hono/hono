@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -449,14 +450,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * the {@linkplain MqttProtocolAdapterProperties#isAuthenticationRequired() authentication required} configuration
      * property to {@code false}.
      * <p>
-     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device, CommandHandler, Optional)}. Registers a publish
+     * Registers a close handler on the endpoint which invokes {@link #close(MqttEndpoint, Device, CommandHandler, OptionalInt)}. Registers a publish
      * handler on the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published
      * by the client. Accepts the connection request.
      * 
      * @param endpoint The MQTT endpoint representing the client.
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
-        registerHandlers(endpoint, null, Optional.empty());
+        registerHandlers(endpoint, null, OptionalInt.empty());
         LOG.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
         return Future.succeededFuture();
     }
@@ -465,7 +466,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Span currentSpan) {
 
         final MqttContext context = MqttContext.fromConnectPacket(endpoint);
-        final Future<Optional<Integer>> traceSamplingPriority = applyTenantTraceSamplingPriority(context, currentSpan);
+        final Future<OptionalInt> traceSamplingPriority = applyTenantTraceSamplingPriority(context, currentSpan);
         final Future<DeviceUser> authAttempt = traceSamplingPriority.compose(v -> {
             context.setTracingContext(currentSpan.context());
             return authenticate(context, currentSpan);
@@ -496,18 +497,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *
      * @param context The execution context.
      * @param currentSpan The span to apply the configuration to.
-     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>Optional</em> with
-     *         the applied sampling priority or an empty <em>Optional</em> if no priority was applied.
+     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>OptionalInt</em>
+     *         with the applied sampling priority or an empty <em>OptionalInt</em> if no priority was applied.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected final Future<Optional<Integer>> applyTenantTraceSamplingPriority(final MqttContext context, final Span currentSpan) {
+    protected final Future<OptionalInt> applyTenantTraceSamplingPriority(final MqttContext context, final Span currentSpan) {
         Objects.requireNonNull(context);
         Objects.requireNonNull(currentSpan);
         return tenantObjectWithAuthIdProvider.get(context, currentSpan.context())
                 .map(tenantObjectWithAuthId -> TenantTraceSamplingHelper
                         .applyTraceSamplingPriority(tenantObjectWithAuthId, currentSpan))
                 .recover(t -> {
-                    return Future.succeededFuture(Optional.empty());
+                    return Future.succeededFuture(OptionalInt.empty());
                 });
     }
 
@@ -544,7 +545,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Device authenticatedDevice,
             final MqttSubscribeMessage subscribeMsg,
             final CommandHandler<T> cmdHandler,
-            final Optional<Integer> traceSamplingPriority) {
+            final OptionalInt traceSamplingPriority) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(subscribeMsg);
@@ -639,7 +640,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private Span newSpan(final String operationName, final MqttEndpoint endpoint, final Device authenticatedDevice,
-            final Optional<Integer> traceSamplingPriority) {
+            final OptionalInt traceSamplingPriority) {
         final Span span = tracer.buildSpan(operationName)
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
@@ -680,7 +681,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Device authenticatedDevice,
             final MqttUnsubscribeMessage unsubscribeMsg,
             final CommandHandler<T> cmdHandler,
-            final Optional<Integer> traceSamplingPriority) {
+            final OptionalInt traceSamplingPriority) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(unsubscribeMsg);
@@ -1167,7 +1168,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * @throws NullPointerException if any of the parameters except authenticatedDevice is {@code null}.
      */
     protected final void close(final MqttEndpoint endpoint, final Device authenticatedDevice,
-            final CommandHandler<T> cmdHandler, final Optional<Integer> traceSamplingPriority) {
+            final CommandHandler<T> cmdHandler, final OptionalInt traceSamplingPriority) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(cmdHandler);
@@ -1431,7 +1432,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private Future<Device> registerHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice,
-            final Optional<Integer> traceSamplingPriority) {
+            final OptionalInt traceSamplingPriority) {
         final CommandHandler<T> cmdHandler = new CommandHandler<>(vertx, getConfig());
         endpoint.closeHandler(v -> close(endpoint, authenticatedDevice, cmdHandler, traceSamplingPriority));
         endpoint.publishHandler(
