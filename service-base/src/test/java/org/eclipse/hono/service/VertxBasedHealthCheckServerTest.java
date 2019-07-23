@@ -57,11 +57,26 @@ class VertxBasedHealthCheckServerTest {
      * @param ctx The test context.
      */
     @Test
-    void testHealthCheckServerWithInsecureEndpoint(final Vertx vertx, final VertxTestContext ctx) {
-        final Checkpoint testComplete = ctx.checkpoint();
+    void testHealthCheckServerWithNoBindAddressFailsToStart(final Vertx vertx, final VertxTestContext ctx) {
 
         final ServerConfig config = new ServerConfig();
-        config.setInsecurePortEnabled(true);
+
+        server = new VertxBasedHealthCheckServer(vertx, config);
+        registerHealthChecks(ctx, server, 1);
+
+        server.start().setHandler(ctx.failing(error -> ctx.completeNow()));
+    }
+
+
+    /**
+     * Tests that a health check server can be configured with an insecure port.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    void testHealthCheckServerWithInsecureEndpoint(final Vertx vertx, final VertxTestContext ctx) {
+
+        final ServerConfig config = new ServerConfig();
         config.setInsecurePort(0);
         config.setInsecurePortBindAddress(HOST);
 
@@ -71,7 +86,7 @@ class VertxBasedHealthCheckServerTest {
         server.start().compose(result -> Future.succeededFuture(getWebClient(vertx, server, false)))
                 .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
                 .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-                .setHandler(result -> testComplete.flag());
+                .setHandler(ctx.completing());
     }
 
     /**
@@ -81,7 +96,6 @@ class VertxBasedHealthCheckServerTest {
      */
     @Test
     void testHealthCheckServerWithSecureEndpoint(final Vertx vertx, final VertxTestContext ctx) {
-        final Checkpoint testComplete = ctx.checkpoint();
 
         final ServerConfig config = new ServerConfig();
         config.setPort(0);
@@ -95,7 +109,7 @@ class VertxBasedHealthCheckServerTest {
         server.start().compose(result -> Future.succeededFuture(getWebClient(vertx, server, true)))
                 .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
                 .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-                .setHandler(result -> testComplete.flag());
+                .setHandler(ctx.completing());
     }
 
     /**
@@ -105,14 +119,12 @@ class VertxBasedHealthCheckServerTest {
      */
     @Test
     void testHealthCheckServerWithSecureAndInsecureEndpoint(final Vertx vertx, final VertxTestContext ctx) {
-        final Checkpoint testComplete = ctx.checkpoint();
 
         final ServerConfig config = new ServerConfig();
         config.setPort(0);
         config.setBindAddress(HOST);
         config.setInsecurePort(0);
         config.setInsecurePortBindAddress(HOST);
-        config.setInsecurePortEnabled(true);
         config.setKeyStorePath(KEY_STORE_PATH);
         config.setKeyStorePassword(STORE_PASSWORD);
 
@@ -125,7 +137,7 @@ class VertxBasedHealthCheckServerTest {
                 .compose(result -> Future.succeededFuture(getWebClient(vertx, server, false)))
                 .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
                 .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-                .setHandler(result -> testComplete.flag());
+                .setHandler(ctx.completing());
     }
 
     private void registerHealthChecks(final VertxTestContext ctx, final VertxBasedHealthCheckServer server,
