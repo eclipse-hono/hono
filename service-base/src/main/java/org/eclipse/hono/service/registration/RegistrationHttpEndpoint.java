@@ -104,6 +104,7 @@ public final class RegistrationHttpEndpoint extends AbstractHttpEndpoint<Service
             switch (status) {
                 case HttpURLConnection.HTTP_OK:
                     HttpUtils.setResponseBody(ctx.response(), registrationResult.getJsonPayload());
+                    // falls through intentionally
                 default:
                     response.end();
                 }

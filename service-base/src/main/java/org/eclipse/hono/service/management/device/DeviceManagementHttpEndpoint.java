@@ -111,6 +111,7 @@ public final class DeviceManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
                 ctx.response()
                         .putHeader(HttpHeaders.ETAG, result.getResourceVersion());
                 HttpUtils.setResponseBody(ctx.response(), result.getJsonPayload());
+                // falls through intentionally
             default:
                 response.end();
             }

@@ -54,6 +54,7 @@
     <module name="StringLiteralEquality" />
     <module name="FinalParameters"/>
     <module name="MissingOverride"/>
+    <module name="FallThrough" />
 
     <!-- whitespaces, linebreaks -->
 
