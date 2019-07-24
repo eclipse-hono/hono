@@ -139,18 +139,6 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     @Override
-    public final void reportTelemetry(
-            final MetricsTags.EndpointType type,
-            final String tenantId,
-            final MetricsTags.ProcessingOutcome outcome,
-            final MetricsTags.QoS qos,
-            final int payloadSize,
-            final Sample timer) {
-
-        reportTelemetry(type, tenantId, outcome, qos, payloadSize, MetricsTags.TtdStatus.NONE, timer);
-    }
-
-    @Override
     public void reportTelemetry(
             final MetricsTags.EndpointType type,
             final String tenantId,
@@ -159,13 +147,14 @@ public class MicrometerBasedMetrics implements Metrics {
             final MetricsTags.QoS qos,
             final int payloadSize,
             final Sample timer) {
-        reportTelemetry(type, tenantId, outcome, qos, calculatePayloadSize(payloadSize, tenantObject), timer);
+        reportTelemetry(type, tenantId, tenantObject, outcome, qos, payloadSize, MetricsTags.TtdStatus.NONE, timer);
     }
 
     @Override
     public final void reportTelemetry(
             final MetricsTags.EndpointType type,
             final String tenantId,
+            final TenantObject tenantObject,
             final MetricsTags.ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
             final int payloadSize,
@@ -199,7 +188,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .minimumExpectedValue(0L)
             .tags(tags)
             .register(this.registry)
-            .record(payloadSize);
+            .record(calculatePayloadSize(payloadSize, tenantObject));
 
         if (legacyMetrics != null) {
 
@@ -229,20 +218,6 @@ public class MicrometerBasedMetrics implements Metrics {
                 // nothing to do
             }
         }
-    }
-
-    @Override
-    public void reportTelemetry(
-            final MetricsTags.EndpointType type,
-            final String tenantId,
-            final TenantObject tenantObject,
-            final ProcessingOutcome outcome,
-            final MetricsTags.QoS qos,
-            final int payloadSize,
-            final MetricsTags.TtdStatus ttdStatus,
-            final Sample timer) {
-        reportTelemetry(type, tenantId, outcome, qos, calculatePayloadSize(payloadSize, tenantObject), ttdStatus,
-                timer);
     }
 
     @Override
