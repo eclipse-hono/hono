@@ -77,6 +77,7 @@ public class MicrometerBasedMetricsTest {
         metrics.reportTelemetry(
                 MetricsTags.EndpointType.TELEMETRY,
                 "tenant",
+                TenantObject.from("tenant", true),
                 MetricsTags.ProcessingOutcome.FORWARDED,
                 MetricsTags.QoS.AT_LEAST_ONCE,
                 1024,
@@ -97,6 +98,7 @@ public class MicrometerBasedMetricsTest {
         metrics.reportTelemetry(
                 MetricsTags.EndpointType.TELEMETRY,
                 "tenant",
+                TenantObject.from("tenant", true),
                 MetricsTags.ProcessingOutcome.FORWARDED,
                 MetricsTags.QoS.UNKNOWN,
                 1024,
@@ -119,6 +121,7 @@ public class MicrometerBasedMetricsTest {
         metrics.reportTelemetry(
                 MetricsTags.EndpointType.TELEMETRY,
                 "tenant",
+                TenantObject.from("tenant", true),
                 MetricsTags.ProcessingOutcome.FORWARDED,
                 MetricsTags.QoS.UNKNOWN,
                 1024,
@@ -151,6 +154,7 @@ public class MicrometerBasedMetricsTest {
         metrics.reportTelemetry(
                 MetricsTags.EndpointType.TELEMETRY,
                 "tenant",
+                TenantObject.from("tenant", true),
                 MetricsTags.ProcessingOutcome.FORWARDED,
                 MetricsTags.QoS.UNKNOWN,
                 1024,

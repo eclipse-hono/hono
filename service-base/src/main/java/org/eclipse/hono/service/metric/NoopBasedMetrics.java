@@ -60,31 +60,10 @@ public class NoopBasedMetrics implements Metrics {
     public void reportTelemetry(
             final MetricsTags.EndpointType type,
             final String tenantId,
-            final MetricsTags.ProcessingOutcome outcome,
-            final MetricsTags.QoS qos,
-            final int payloadSize,
-            final Sample timer) {
-    }
-
-    @Override
-    public void reportTelemetry(
-            final MetricsTags.EndpointType type,
-            final String tenantId,
             final TenantObject tenantObject,
             final ProcessingOutcome outcome,
             final MetricsTags.QoS qos,
             final int payloadSize,
-            final Sample timer) {
-    }
-
-    @Override
-    public void reportTelemetry(
-            final MetricsTags.EndpointType type,
-            final String tenantId,
-            final MetricsTags.ProcessingOutcome outcome,
-            final MetricsTags.QoS qos,
-            final int payloadSize,
-            final MetricsTags.TtdStatus ttdStatus,
             final Sample timer) {
     }
 
