@@ -76,7 +76,7 @@ def checkOut() {
                   doGenerateSubmoduleConfigurations: false,
                   extensions                       : [[$class: 'WipeWorkspace'],
                                                       [$class: 'LocalBranch']],
-                  userRemoteConfigs                : [[credentialsId: "${params.CREDENTIALS_ID}", url: 'ssh://github.com/eclipse/hono.git']]])
+                  userRemoteConfigs                : [[credentialsId: "${params.CREDENTIALS_ID}", url: 'ssh://git@github.com/eclipse/hono.git']]])
     }
 }
 

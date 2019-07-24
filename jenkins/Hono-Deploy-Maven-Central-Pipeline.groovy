@@ -37,7 +37,7 @@ node {
                     trim: true)
     ])])
     try {
-        utils.checkOutRepoWithCredentials("${params.RELEASE_VERSION}", "${params.CREDENTIALS_ID}", "ssh://github.com/eclipse/hono.git")
+        utils.checkOutRepoWithCredentials("${params.RELEASE_VERSION}", "${params.CREDENTIALS_ID}", "ssh://git@github.com/eclipse/hono.git")
         buildAndDeploy(utils)
         currentBuild.result = 'SUCCESS'
     } catch (err) {
