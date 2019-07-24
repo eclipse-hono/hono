@@ -75,6 +75,17 @@ Metrics provided by the protocol adapters are:
 | *hono.messages.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *qos*, *ttd*         | The time it took to process a message conveying telemetry data or an event. |
 | *hono.messages.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*                       | The number of bytes conveyed in the payload of a telemetry or event message. |
 
+#### Minimum Message Size
+
+If a minimum message size is configured for a [tenant]({{< relref "Tenant-API.md/#tenant-information-format" >}}), 
+then the payload size of the telemetry, event and command messages are calculated in accordance with the configured 
+value and then reported to the metrics by the AMQP, HTTP and MQTT protocol adapters. If minimum message size is not 
+configured for a tenant then the actual message payload size is reported.
+
+Assume that the minimum message size for a tenant is configured as 4096 bytes (4KB). The payload size of 
+an incoming message with size 1KB is calculated as 4KB by the protocol adapters and reported to the metrics system.
+For an incoming message of size 10KB, it is reported as 12KB.
+
 ### Service Metrics
 
 Hono's service components do not report any metrics at the moment.
