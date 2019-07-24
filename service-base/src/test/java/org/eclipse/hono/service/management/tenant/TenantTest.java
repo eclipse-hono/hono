@@ -27,6 +27,7 @@ import java.util.ArrayList;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.hamcrest.collection.IsEmptyIterable;
 import org.junit.jupiter.api.Test;
 
@@ -98,6 +99,26 @@ class TenantTest {
         final var adapters = tenant.getAdapters();
         assertNotNull(adapters);
         assertEquals( "http", adapters.get(0).getType());
+    }
+
+    /**
+     * Decode tenant with "minimum-message-size=4096".
+     */
+    @Test
+    public void testDecodeMinimumMessageSize() {
+        final var tenant = Json.decodeValue("{\"minimum-message-size\": 4096}", Tenant.class);
+        assertNotNull(tenant);
+        assertEquals(4096, tenant.getMinimumMessageSize());
+    }
+
+    /**
+     * Decode Tenant without setting "minimum-message-size".
+     */
+    @Test
+    public void testDecodeWithoutMinimumMessageSize() {
+        final var tenant = Json.decodeValue("{}", Tenant.class);
+        assertNotNull(tenant);
+        assertEquals(RegistryManagementConstants.DEFAULT_MINIMUM_MESSAGE_SIZE, tenant.getMinimumMessageSize());
     }
 
     /**
@@ -176,6 +197,18 @@ class TenantTest {
         assertNotNull(json);
         assertFalse(json.getBoolean("enabled"));
         assertNull(json.getJsonObject("ext"));
+    }
+
+    /**
+     * Encode tenant with "minimum-message-size=4096".
+     */
+    @Test
+    public void testEncodeMinimumMessageSize() {
+        final var tenant = new Tenant();
+        tenant.setMinimumMessageSize(4096);
+        final var json = JsonObject.mapFrom(tenant);
+        assertNotNull(json);
+        assertEquals(4096, json.getInteger("minimum-message-size"));
     }
 
     /**

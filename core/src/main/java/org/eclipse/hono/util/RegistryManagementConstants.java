@@ -186,7 +186,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * an upstream command.
      */
     public static final int DEFAULT_MAX_TTD = 60; // seconds
-
+    /**
+     * The default message size is set to 0, which implies no minimum size is defined.
+     */
+    public static final int DEFAULT_MINIMUM_MESSAGE_SIZE = 0;
     /**
      *  Messages that are sent by the Hono client for the Tenant API use this as a prefix for the messageId.
      */
@@ -211,6 +214,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * adapters should use for a tenant.
      */
     public static final String FIELD_MAX_TTD = "max-ttd";
+    /**
+     * The name of the property that contains the minimum message size in bytes.
+     */
+    public static final String FIELD_MINIMUM_MESSAGE_SIZE = "minimum-message-size";
     /**
      * The name of the property that contains the algorithm used for a public key.
      */

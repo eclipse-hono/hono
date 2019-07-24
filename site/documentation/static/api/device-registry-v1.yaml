@@ -453,6 +453,13 @@ components:
                   $ref: '#/components/schemas/Adapter'
             "defaults":
                $ref: '#/components/schemas/DefaultProperties'
+            "minimum-message-size":
+               type: integer
+               default: 0
+               description: The minimum message size in bytes. If it is set
+                            then the payload size of the telemetry, event and
+                            command messages are calculated in accordance with
+                            the configured value and then reported to the metrics.
             "limits":
                $ref: '#/components/schemas/ResourceLimit'
             "trusted-ca":
