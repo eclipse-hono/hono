@@ -21,6 +21,9 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.time.Instant;
+import java.security.cert.TrustAnchor;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
@@ -212,9 +215,15 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .compose(r -> getAdminClient().get(subjectDn))
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
+                final Set<X500Principal> subjectNames = tenantObject.getTrustedCaSubjectDns();
+                assertThat(subjectNames).isNotNull();
+                assertThat(subjectNames.size()).isEqualTo(1);
                 assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
-                assertThat(tenantObject.getTrustedCaSubjectDn()).isEqualTo(subjectDn);
-                assertThat(tenantObject.getTrustAnchor().getCAPublicKey()).isEqualTo(publicKey);
+                assertThat(subjectNames.contains(subjectDn)).isTrue();
+                final List<TrustAnchor> anchors = tenantObject.getTrustAnchors();
+                assertThat(anchors).isNotNull();
+                assertThat(anchors.size()).isEqualTo(1);
+                assertThat(anchors.get(0).getCAPublicKey()).isEqualTo(publicKey);
             });
             ctx.completeNow();
         }));
@@ -234,6 +243,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         final String tenantId = getHelper().getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca-http,OU=Hono,O=Eclipse");
+
         final PublicKey publicKey = getRandomPublicKey();
 
         final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, publicKey);

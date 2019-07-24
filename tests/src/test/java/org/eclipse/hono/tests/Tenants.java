@@ -15,6 +15,7 @@ package org.eclipse.hono.tests;
 
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -64,6 +65,10 @@ public final class Tenants {
                 .setSubjectDn(subjectDn)
                 .setPublicKey(publicKey)
                 .setKeyAlgorithm(algorithmn);
-        return new Tenant().setTrustedCertificateAuthority(trustedCa);
+
+        final var trustedAuthorities = new ArrayList<TrustedCertificateAuthority>();
+        trustedAuthorities.add(trustedCa);
+
+        return new Tenant().setTrustedAuthorities(trustedAuthorities);
     }
 }

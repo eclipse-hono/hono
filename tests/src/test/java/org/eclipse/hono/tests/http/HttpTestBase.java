@@ -19,6 +19,7 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -505,31 +506,37 @@ public abstract class HttpTestBase {
 
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
+                .compose(cert -> {
 
-            final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority()
-                    .setSubjectDn(cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                    .setPublicKey(keyPair.getPublic().getEncoded())
-                    .setKeyAlgorithm(keyPair.getPublic().getAlgorithm());
-            tenant.setTrustedCertificateAuthority(trustedCertificateAuthority);
+                    final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority();
 
-            return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-        })
-        // WHEN a device tries to upload data and authenticate with a client
-        // certificate that has not been signed with the configured trusted CA
-        .compose(ok -> httpClientWithClientCert.create(
-                getEndpointUri(),
-                Buffer.buffer("hello"),
-                requestHeaders,
-                response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED))
-        // THEN the request fails with a 401
-        .setHandler(ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ServiceInvocationException.class);
-                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
-            });
-            ctx.completeNow();
-        }));
+                    trustedCertificateAuthority
+                            .setSubjectDn(cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                            .setPublicKey(keyPair.getPublic().getEncoded())
+                            .setKeyAlgorithm(keyPair.getPublic().getAlgorithm());
+
+                    final var trustedAuthorities = new ArrayList<TrustedCertificateAuthority>();
+                    trustedAuthorities.add(trustedCertificateAuthority);
+                    tenant.setTrustedAuthorities(trustedAuthorities);
+
+                    return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+                })
+                // WHEN a device tries to upload data and authenticate with a client
+                // certificate that has not been signed with the configured trusted CA
+                .compose(ok -> httpClientWithClientCert.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED))
+                // THEN the request fails with a 401
+                .setHandler(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(ServiceInvocationException.class);
+                        assertThat(((ServiceInvocationException) t).getErrorCode())
+                                .isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

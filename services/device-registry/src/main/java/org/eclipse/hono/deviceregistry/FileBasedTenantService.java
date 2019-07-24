@@ -14,11 +14,18 @@
 package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
+
+import io.vertx.core.AbstractVerticle;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -44,7 +51,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -389,9 +395,9 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             }
             final Versioned<TenantObject> tenant = new Versioned<>(tenantSpec.mapTo(TenantObject.class));
             tenant.getValue().setTenantId(tenantId);
-            final Versioned<TenantObject> conflictingTenant = getByCa(tenant.getValue().getTrustedCaSubjectDn());
+            final List<TenantObject> conflictingTenants = getByCa(tenant.getValue().getTrustedCaSubjectDns());
 
-            if (conflictingTenant != null) {
+            if (conflictingTenants != null && !conflictingTenants.isEmpty()) {
                 // we are trying to use the same CA as an already existing tenant
                 TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
                 return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
@@ -449,8 +455,8 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 try {
                     final TenantObject newTenantData = tenantSpec.mapTo(TenantObject.class);
                     newTenantData.setTenantId(tenantId);
-                    final Versioned<TenantObject> conflictingTenant = getByCa(newTenantData.getTrustedCaSubjectDn());
-                    if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getValue().getTenantId())) {
+                    final List<TenantObject> conflictingTenants = getByCa(newTenantData.getTrustedCaSubjectDns());
+                    if (hasConflict(conflictingTenants, tenantId)) {
                         // we are trying to use the same CA as another tenant
                         TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
                         return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
@@ -482,6 +488,16 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         }
     }
 
+    private boolean hasConflict(final List<TenantObject> tenants, final String tenantId) {
+        if (tenants == null || tenants.isEmpty()) {
+            return false;
+        } else {
+            final boolean hasConflict = tenants.stream()
+                    .anyMatch(conflictingTenant -> !tenantId.equals(conflictingTenant.getTenantId()));
+            return hasConflict;
+        }
+    }
+
     static Tenant convertTenantObject(final TenantObject tenantObject) {
 
         if (tenantObject == null) {
@@ -503,9 +519,8 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         Optional.ofNullable(tenantObject.getResourceLimits())
                 .ifPresent(tenant::setResourceLimits);
 
-        Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class))
-                .map(json -> json.mapTo(TrustedCertificateAuthority.class))
-                .ifPresent(tenant::setTrustedCertificateAuthority);
+        Optional.ofNullable(tenantObject.getTrustedCAs())
+                .ifPresent(trustConfigs -> setTrustAuthorities(tenant, trustConfigs));
 
         Optional.ofNullable(tenantObject.getMinimumMessageSize())
                 .ifPresent(tenant::setMinimumMessageSize);
@@ -517,15 +532,38 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         return tenant;
     }
 
-    private Versioned<TenantObject> getByCa(final X500Principal subjectDn) {
+    private static void setTrustAuthorities(final Tenant tenant, final List<JsonObject> trustConfigs) {
+        final List<TrustedCertificateAuthority> authorities = 
+                trustConfigs.stream()
+                .map(trustConfig -> trustConfig.mapTo(TrustedCertificateAuthority.class))
+                .collect(Collectors.toList());
+        tenant.setTrustedAuthorities(authorities);
+    }
 
-        if (subjectDn == null) {
+    private List<TenantObject> getByCa(final Set<X500Principal> subjectDns) {
+        if (subjectDns == null) {
             return null;
         } else {
-            return tenants.values().stream()
-                    .filter(t -> subjectDn.equals(t.getValue().getTrustedCaSubjectDn()))
-                    .findFirst().orElse(null);
+            final List<TenantObject> existingSubjectDns = new ArrayList<>();
+            subjectDns.stream().forEach(subjectDn -> {
+                final var tenant = getByCa(subjectDn);
+                if (tenant != null) {
+                    existingSubjectDns.add(tenant.getValue());
+                }
+            });
+            return existingSubjectDns;
         }
+    }
+
+    private Versioned<TenantObject> getByCa(final X500Principal subjectDn) {
+        Objects.requireNonNull(subjectDn);
+
+        return tenants.values()
+                .stream()
+                .filter(t -> Objects.nonNull(t.getValue().getTrustedCaSubjectDns()))
+                .filter(t -> t.getValue().getTrustedCaSubjectDns().contains(subjectDn))
+                .findFirst().orElse(null);
+
     }
 
     private CacheDirective getCacheDirective() {

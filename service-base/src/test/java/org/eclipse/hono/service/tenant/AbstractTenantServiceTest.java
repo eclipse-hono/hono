@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
@@ -381,7 +382,9 @@ public abstract class AbstractTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertEquals("tenant", obj.getTenantId());
-                final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
+                final List<JsonObject> trustConfigs = obj.getTrustedCAs();
+                assertEquals(1, trustConfigs.size());
+                final JsonObject ca = trustConfigs.get(0);
                 assertEquals(trustedCa, ca);
                 ctx.completeNow();
             })));

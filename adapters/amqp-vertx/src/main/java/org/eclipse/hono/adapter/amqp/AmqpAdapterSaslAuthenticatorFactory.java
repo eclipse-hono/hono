@@ -334,7 +334,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         try {
                             return certValidator.validate(
                                     Collections.singletonList(deviceCert),
-                                    tenant.getTrustAnchor()).map(ok -> tenant);
+                                    tenant.getTrustAnchors().get(0)).map(ok -> tenant);
                         } catch (final GeneralSecurityException e) {
                             LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);
                             return Future.failedFuture(new CredentialException("validation of client certificate failed"));

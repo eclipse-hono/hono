@@ -154,9 +154,9 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
             final Future<TenantObject> tenantTracker = getTenant(deviceCert, span);
             return tenantTracker
-                    .compose(tenant -> {
+                    .compose(tenantObject -> {
                         try {
-                            final TrustAnchor trustAnchor = tenant.getTrustAnchor();
+                            final TrustAnchor trustAnchor = tenantObject.getTrustAnchors().get(0);
                             final List<X509Certificate> chainToValidate = Collections.singletonList(deviceCert);
                             return certPathValidator.validate(chainToValidate, trustAnchor)
                                     .recover(t -> Future.failedFuture(UNAUTHORIZED));

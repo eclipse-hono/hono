@@ -115,6 +115,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
 | *tracing*                | *no*      | *object*      | A set of options regarding the tracing of messages for the tenant. See [Tracing Format]({{< relref "#tracing-format" >}}) for a definition of the content model of the object. |
 | *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
+| *trusted-ca*             | *no*      | *array*     | The list of trusted certificate authorities to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. **NB** If the element is provided then the list MUST NOT be empty. **NB** If the element is present, then the list MUST contain JSON objects. |
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names which can be of a scalar or a complex type.
 This allows for future *well-known* additions and also allows to add further information which might be relevant to a *custom* adapter only.
@@ -170,17 +171,37 @@ The table below provides an overview of the members defined for the *tracing* JS
 
 ### Trusted CA Format
 
-The table below provides an overview of the members defined for the *trusted-ca* JSON object:
+If the *trusted-ca* property is provided, then it MUST contain a non-empty array of JSON objects, were each JSON object represents a single trusted CA. The table below provides an overview of the members of a JSON object representing a trusted CA:
 
 | Name                     | Mandatory  | Type          | Default Value | Description |
 | :------------------------| :--------: | :------------ | :------------ | :---------- |
-| *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
-| *cert*                   | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root X.509 certificate. |
-| *public-key*             | *no*       | *string*      |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
+| *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). Trusted CAs of the same tenant MAY share the same subject DN (e.g. allowing for the definition of overlapping validity periods). However, trusted CAs of different tenants MUST NOT share the same subject DN in order to allow for the look up of a tenant by the subject DN of one of its trusted CAs. |
+| *public-key*             | *yes*       | *string*     |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
+| *not-before*             | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid before the given date. The value MUST be an **ISO 8601 compliant** [*combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations) in extended format. |
+| *not-after*              | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid after the given date. The value MUST be an **ISO 8601 compliant** [*combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations) in extended format.|
 | *algorithm*              | *no*       | *string*      | `RSA`        | The name of the public key algorithm. Supported values are `RSA` and `EC`. This property is ignored if the *cert* property is used to store a certificate. |
 
-* The *subject-dn* MUST be unique among all registered tenants.
-* Either the *cert* or the *public-key* MUST be set.
+**Examples**
+
+Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. The tenant is configured with two valid trusted certificate authorities having the same *public-key* and *subject-dn* but with overlapping validity periods.
+
+~~~json
+ {
+   "tenant-id" : "TEST_TENANT",
+   "enabled" : true,
+   "trusted-ca": [ {
+           "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
+           "public-key": "NOTAPUBLICKEY==",
+           "not-before": "2015-01-01T00:00:00+0000",
+           "not-after": "2025-01-01T00:00:00+0000"
+         }, {
+           "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
+           "public-key": "NOTAPUBLICKEY==",
+           "not-before": "2024-01-01T00:00:00+0000",
+           "not-after": "2034-01-01T00:00:00+0000"
+         } ]
+ }
+~~~
 
 ### Adapter Configuration Format
 
@@ -232,6 +253,8 @@ The table below contains the properties which are used to configure a tenant's d
 | *effective-since*        | *yes*     | *string*      | `-`           | The point in time at which the current settings became effective, i.e. the start of the first accounting period based on these settings. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).|
 | *max-bytes*              | *no*      | *number*      | `-1`          | The maximum number of bytes allowed for the tenant for each accounting period. MUST be an integer. A negative value indicates that no limit is set. |
 | *period*                 | *no*      | *object*      | `-`          | The mode and length of an accounting period, i.e. the data usage can limited based on the defined number of days or on a monthly basis. |
+| *period-in-days*         | *no*      | *number*      | `30`          | The length of an accounting period, i.e. the number of days over which the data usage is to be limited. MUST be a positive integer. |
+| *effective-since*        | *yes*     | *string*      | `-`           | The point in time at which the current settings became effective, i.e. the start of the first accounting period based on these settings. The value MUST be an **ISO 8601 compliant** [*combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations) in extended format.
 
 Protocol adapters SHOULD use this information to determine if a message originating from or destined to a device should be accepted for processing.
 

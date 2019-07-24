@@ -60,7 +60,8 @@ public class Tenant {
     private TenantTracingConfig tracing;
 
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
-    private TrustedCertificateAuthority trustedCertificateAuthority;
+    @JsonInclude(Include.NON_EMPTY)
+    private List<TrustedCertificateAuthority> trustedAuthorities = new LinkedList<>();
 
     /**
      * Sets the enabled property.
@@ -181,8 +182,8 @@ public class Tenant {
         this.tracing = tracing;
     }
 
-    public TrustedCertificateAuthority getTrustedCertificateAuthority() {
-        return trustedCertificateAuthority;
+    public List<TrustedCertificateAuthority> getTrustedAuthorities() {
+        return trustedAuthorities;
     }
 
     /**
@@ -191,8 +192,8 @@ public class Tenant {
      * @param trustedCertificateAuthority  The trust configurations to set.
      * @return  This instance, to allow chained invocations.
      */
-    public Tenant setTrustedCertificateAuthority(final TrustedCertificateAuthority trustedCertificateAuthority) {
-        this.trustedCertificateAuthority = trustedCertificateAuthority;
+    public Tenant setTrustedAuthorities(final List<TrustedCertificateAuthority> trustedAuthorities) {
+        this.trustedAuthorities = trustedAuthorities;
         return this;
     }
 

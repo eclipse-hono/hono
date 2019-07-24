@@ -14,10 +14,21 @@
 package org.eclipse.hono.service.management.tenant;
 
 import static org.hamcrest.Matchers.is;
+
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -28,11 +39,12 @@ import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
-import org.eclipse.hono.util.TenantConstants;
 import org.hamcrest.collection.IsEmptyIterable;
 import org.junit.jupiter.api.Test;
+
 
 import io.vertx.core.json.JsonArray;
 
@@ -92,18 +104,18 @@ class TenantTest {
     @Test
     public void testDecodeAdapters() {
         final JsonArray adapterJson = new JsonArray().add(
-                    new JsonObject()
-                            .put("type", "http")
-                            .put("enabled", false)
-                            .put("device-authentication-required", true));
+                new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
+                        .put("enabled", false)
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
 
-        final var tenant = Json.decodeValue( new JsonObject().put("adapters", adapterJson).toString(), Tenant.class);
+        final var tenant = Json.decodeValue(new JsonObject().put(RegistryManagementConstants.FIELD_ADAPTERS, adapterJson).toString(), Tenant.class);
         assertNotNull(tenant);
         assertNull(tenant.getEnabled());
 
         final var adapters = tenant.getAdapters();
         assertNotNull(adapters);
-        assertEquals( "http", adapters.get(0).getType());
+        assertEquals("http", adapters.get(0).getType());
     }
 
     /**
@@ -179,22 +191,38 @@ class TenantTest {
      */
     @Test
     public void testDecodeTrustedCA() {
-        final JsonObject ca = new JsonObject()
-                .put("subject-dn", "org.eclipse")
-                .put("public-key", "abc123".getBytes(StandardCharsets.UTF_8))
-                .put("algorithm", "def456")
-                .put("cert", "xyz789".getBytes(StandardCharsets.UTF_8));
 
-        final var tenant = Json.decodeValue( new JsonObject().put("trusted-ca", ca).toString(), Tenant.class);
+        final var notBefore = LocalDateTime.of(2015,  Month.JUNE, 05, 18, 00, 05)
+                .atOffset(ZoneOffset.of("-02:00"));
+        final var notAfter = LocalDateTime.of(2020,  Month.JUNE, 05, 18, 00, 05)
+                .atOffset(ZoneOffset.of("-05:00"));
+
+        final JsonArray trustedCaJson = new JsonArray().add(
+                new JsonObject()
+                        .put("subject-dn", "org.eclipse")
+                        .put("public-key", "abc123".getBytes(StandardCharsets.UTF_8))
+                        .put("not-before", "2015-06-05T20:00:05Z")
+                        .put("not-after", "2020-06-05T23:00:05Z")
+                        .put("algorithm", "def456")
+                        .put("cert", "xyz789".getBytes(StandardCharsets.UTF_8)));
+
+        final var tenant = Json.decodeValue(
+                new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCaJson).toString(),
+                Tenant.class);
         assertNotNull(tenant);
         assertNull(tenant.getEnabled());
 
-        final var storedCa = tenant.getTrustedCertificateAuthority();
-        assertNotNull(storedCa);
+        final var storedAuthorities = tenant.getTrustedAuthorities();
+        assertNotNull(storedAuthorities);
+        assertEquals(1, storedAuthorities.size());
+
+        final var storedCa = storedAuthorities.get(0);
         assertEquals("org.eclipse", storedCa.getSubjectDn());
         assertArrayEquals("abc123".getBytes(StandardCharsets.UTF_8), storedCa.getPublicKey());
-        assertArrayEquals("xyz789".getBytes(StandardCharsets.UTF_8), storedCa.getCertificate());
+        assertEquals(notBefore.toInstant(), storedCa.getNotBefore());
+        assertEquals(notAfter.toInstant(), storedCa.getNotAfter());
         assertEquals("def456", storedCa.getKeyAlgorithm());
+        assertArrayEquals("xyz789".getBytes(StandardCharsets.UTF_8), storedCa.getCertificate());
     }
 
     /**
@@ -314,4 +342,50 @@ class TenantTest {
         assertEquals(false, result.getJsonObject(0).getBoolean(TenantConstants.FIELD_ENABLED));
         assertEquals(true, result.getJsonObject(0).getBoolean(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
     }
+
+    /**
+     * Verify that a Tenant instance containing multiple trust configurations can be serialized to JSON.
+     *
+     */
+    @Test
+    public void testSerializeTrustedAuthorities() {
+
+        final var notBefore = LocalDateTime.of(2015, Month.JANUARY, 01, 15, 00, 00)
+                .atOffset(ZoneOffset.of("+02:00"));
+
+        final var notAfter = LocalDateTime.of(2025,  Month.JANUARY, 01, 15, 00, 00)
+                .atOffset(ZoneOffset.of("+05:00"));
+
+        final TrustedCertificateAuthority ca1 = new TrustedCertificateAuthority()
+                .setSubjectDn("subjectDn-one")
+                .setPublicKey("aGFsbG8gT21hCg==".getBytes())
+                .setNotBefore(notBefore.toInstant())
+                .setNotAfter(notAfter.toInstant());
+
+        final TrustedCertificateAuthority ca2 = new TrustedCertificateAuthority()
+                .setSubjectDn("subjectDn-two")
+                .setPublicKey("aGFsbG8gT21hCg==".getBytes())
+                .setNotBefore(notBefore.toInstant())
+                .setNotAfter(notAfter.toInstant());
+
+        final List<TrustedCertificateAuthority> trustAuthorities = new ArrayList<>();
+        trustAuthorities.add(ca1);
+        trustAuthorities.add(ca2);
+
+        final Tenant tenant = new Tenant();
+        tenant.setEnabled(true);
+        tenant.setTrustedAuthorities(trustAuthorities);
+
+        final JsonArray jsonArray = JsonObject.mapFrom(tenant).getJsonArray(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
+        assertNotNull(jsonArray);
+        assertEquals("subjectDn-one", jsonArray.getJsonObject(0).getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
+        assertEquals("subjectDn-two", jsonArray.getJsonObject(1).getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN));
+
+        assertEquals("2015-01-01T13:00:00Z",
+                jsonArray.getJsonObject(0).getString(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE));
+        assertEquals("2025-01-01T10:00:00Z",
+                jsonArray.getJsonObject(1).getString(TenantConstants.FIELD_PAYLOAD_NOT_AFTER));
+
+    }
+
 }

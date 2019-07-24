@@ -101,6 +101,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
     /**
+<<<<<<< HEAD
      * The name of the property that contains the period details for which the data usage is calculated.
      */
     public static final String FIELD_PERIOD = "period";
@@ -113,6 +114,15 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * is calculated.
      */
     public static final String FIELD_PERIOD_MODE = "mode";    
+    /*
+     * The name of the property indicating the valid starting date of the trusted root certificate.
+     */
+    public static final String FIELD_PAYLOAD_NOT_BEFORE = "not-before";
+    /**
+     * The name of the propety indicating the end date in which the trusted root certificate is valid.
+     */
+    public static final String FIELD_PAYLOAD_NOT_AFTER = "not-after";
+
     /**
      * The name of the property that contains the minimum message size in bytes.
      */

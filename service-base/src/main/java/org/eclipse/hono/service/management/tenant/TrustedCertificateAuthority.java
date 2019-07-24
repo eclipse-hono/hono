@@ -13,8 +13,11 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.time.Instant;
+
 import org.eclipse.hono.util.TenantConstants;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -34,6 +37,14 @@ public class TrustedCertificateAuthority {
 
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_CERT)
     private byte[] certificate;
+
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[XXX]", timezone = "UTC")
+    private Instant notBefore;
+
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_NOT_AFTER)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[XXX]", timezone = "UTC")
+    private Instant notAfter;
 
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM)
     private String keyAlgorithm;
@@ -81,6 +92,38 @@ public class TrustedCertificateAuthority {
 
     public byte[] getCertificate() {
         return certificate;
+    }
+
+    /**
+     * Sets the not-before property.
+     * 
+     * @param notBefore The not-before value to assign.
+     * 
+     * @return A reference to this API so it can be used fluently.
+     */
+    public TrustedCertificateAuthority setNotBefore(final Instant notBefore) {
+        this.notBefore = notBefore;
+        return this;
+    }
+
+    public Instant getNotBefore() {
+        return notBefore;
+    }
+
+    /**
+     * Sets the not-after property.
+     * 
+     * @param notAfter The not-after value to assign.
+     *
+     * @return A reference to this API so it can be used fluently.
+     */
+    public TrustedCertificateAuthority setNotAfter(final Instant notAfter) {
+        this.notAfter = notAfter;
+        return this;
+    }
+
+    public Instant getNotAfter() {
+        return notAfter;
     }
 
     /**
