@@ -11,6 +11,11 @@ title = "Release Notes"
 * The health check endpoints of services can now be called securely via TLS. 
   Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}}) 
   for the new parameters available.
+* The [Tenant API]({{% doclink "/api/tenant-api/#resource-limits-configuration-format" %}}) now optionally allows 
+  specifying *minimum message size*. If it is specified, then the payload size of the incoming telemetry, event 
+  and command messages are calculated in accordance with the *minimum message size* by the AMQP, HTTP and MQTT 
+  protocol adapters and then recorded in the metrics system.
+  See [Metrics]({{% doclink "/api/metrics/#minimum-message-size" %}}) for more details.
 
 ### Fixes & Enhancements
 
