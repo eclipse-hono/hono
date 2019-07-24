@@ -20,13 +20,6 @@
   <artifactId>hono-service-auth</artifactId>
   <name>Hono Auth</name>
   <description>A default identity provider for authenticating Hono components and consumers.</description>
-  <dependencies>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-unit</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
 
   <build>
     <plugins>

@@ -24,11 +24,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-junit5</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-base</artifactId>
       <version>${project.version}</version>

@@ -33,6 +33,8 @@ import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.proton.ProtonConnection;
@@ -47,13 +49,28 @@ import io.vertx.proton.ProtonSender;
  */
 public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
 
-    private static final Symbol CAPABILITY_ADDRESS_AUTHZ = Symbol.valueOf("ADDRESS-AUTHZ");
-    private static final Symbol PROPERTY_ADDRESS_AUTHZ = Symbol.valueOf("address-authz");
-    private static final Symbol PROPERTY_AUTH_IDENTITY = Symbol.valueOf("authenticated-identity");
+    /**
+     * The AMQP symbol used to indicate support for Qpid Dispatch Router's
+     * <em>Authentication Server</em> functionality.
+     */
+    public static final Symbol CAPABILITY_ADDRESS_AUTHZ = Symbol.valueOf("ADDRESS-AUTHZ");
+    /**
+     * The AMQP symbol used as key for the collection of authorities granted to a client.
+     */
+    public static final Symbol PROPERTY_ADDRESS_AUTHZ = Symbol.valueOf("address-authz");
+    /**
+     * The AMQP symbol used as key for the authenticated client's authorization identity.
+     */
+    public static final Symbol PROPERTY_AUTH_IDENTITY = Symbol.valueOf("authenticated-identity");
+    /**
+     * The AMQP symbol used as key for the Qpid Dispatch Router version.
+     */
+    public static final Symbol PROPERTY_CLIENT_VERSION = Symbol.valueOf("version");
 
     private static final int IDX_MAJOR_VERSION = 0;
     private static final int IDX_MINOR_VERSION = 1;
     private static final int IDX_PATCH_VERSION = 2;
+    private static final Logger LOG = LoggerFactory.getLogger(SimpleAuthenticationServer.class);
 
     @Autowired
     @Override
@@ -152,7 +169,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
     private boolean isLegacyClient(final ProtonConnection con) {
 
         return Optional.ofNullable(con.getRemoteProperties()).map(props -> {
-            final Object obj = props.get(Symbol.getSymbol("version"));
+            final Object obj = props.get(PROPERTY_CLIENT_VERSION);
             if (obj instanceof String) {
                 final int[] version = parseVersionString((String) obj);
                 return version[IDX_MAJOR_VERSION] == 1 && version[IDX_MINOR_VERSION] < 4;
@@ -165,21 +182,24 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
     private int[] parseVersionString(final String version) {
 
         final int[] result = new int[] { 0, 0, 0 };
-        final String[] versionNumbers = version.split(".", 3);
+        final String[] versionNumbers = version.split("\\.", 3);
         try {
-            switch(versionNumbers.length) {
-            case 1:
+            if (versionNumbers.length > IDX_MAJOR_VERSION) {
                 result[IDX_MAJOR_VERSION] = Integer.parseInt(versionNumbers[IDX_MAJOR_VERSION]);
-            case 2:
+            }
+            if (versionNumbers.length > IDX_MINOR_VERSION) {
                 result[IDX_MINOR_VERSION] = Integer.parseInt(versionNumbers[IDX_MINOR_VERSION]);
-            case 3:
+            }
+            if (versionNumbers.length > IDX_PATCH_VERSION) {
                 result[IDX_PATCH_VERSION] = Integer.parseInt(versionNumbers[IDX_PATCH_VERSION]);
-            default:
-                // return 0.0.0
             }
         } catch (final NumberFormatException e) {
-            // return 0.0.0
+            // return current result
         }
+        LOG.debug("client Dispatch Router version [major: {}, minor: {}, patch: {}]",
+                result[IDX_MAJOR_VERSION],
+                result[IDX_MINOR_VERSION],
+                result[IDX_PATCH_VERSION]);
         return result;
     }
 
