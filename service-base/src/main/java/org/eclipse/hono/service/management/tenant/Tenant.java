@@ -41,6 +41,10 @@ public class Tenant {
     @JsonInclude(Include.NON_EMPTY)
     private List<Adapter> adapters = new LinkedList<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE)
+    @JsonInclude(Include.NON_DEFAULT)
+    private int minimumMessageSize = RegistryManagementConstants.DEFAULT_MINIMUM_MESSAGE_SIZE;
+
     @JsonInclude(Include.NON_DEFAULT)
     private ResourceLimits limits;
 
@@ -77,6 +81,29 @@ public class Tenant {
 
     public void setAdapters(final List<Adapter> adapters) {
         this.adapters = adapters;
+    }
+
+    /**
+     * Gets the minimum message size in bytes.
+     *
+     * @return The minimum message size in bytes or 
+     *         {@link RegistryManagementConstants#DEFAULT_MINIMUM_MESSAGE_SIZE} if not set.
+     */
+    public Integer getMinimumMessageSize() {
+        return minimumMessageSize;
+    }
+
+    /**
+     * Sets the minimum message size in bytes.
+     *
+     * @param minimumMessageSize The minimum message size.
+     * @throws IllegalArgumentException if the minimum message size is negative.
+     */
+    public void setMinimumMessageSize(final Integer minimumMessageSize) {
+        if (minimumMessageSize == null || minimumMessageSize < 0) {
+            throw new IllegalArgumentException("minimum message size must be >= 0");
+        }
+        this.minimumMessageSize = minimumMessageSize;
     }
 
     public ResourceLimits getLimits() {
