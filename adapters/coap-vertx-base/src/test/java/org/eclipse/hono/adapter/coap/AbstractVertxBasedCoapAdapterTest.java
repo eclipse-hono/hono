@@ -18,6 +18,7 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -54,6 +55,7 @@ import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -102,6 +104,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private CommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private ResourceLimitChecks resourceLimitChecks;
+    private CoapAdapterMetrics metrics;
 
     /**
      * Sets up common fixture.
@@ -112,6 +115,8 @@ public class AbstractVertxBasedCoapAdapterTest {
         config = new CoapAdapterProperties();
         config.setInsecurePortEnabled(true);
         config.setAuthenticationRequired(false);
+
+        metrics = mock(CoapAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject();
@@ -170,7 +175,6 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true,
                 s -> onStartupSuccess.complete());
-        adapter.setMetrics(mock(CoapAdapterMetrics.class));
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
@@ -199,7 +203,6 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Resource resource = mock(Resource.class);
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
-        adapter.setMetrics(mock(CoapAdapterMetrics.class));
         adapter.setResources(Collections.singleton(resource));
 
         // WHEN starting the adapter
@@ -241,7 +244,6 @@ public class AbstractVertxBasedCoapAdapterTest {
         };
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
-        adapter.setMetrics(mock(CoapAdapterMetrics.class));
         adapter.setResources(Collections.singleton(resource));
 
         final Async startup = ctx.async();
@@ -353,6 +355,14 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.TELEMETRY),
+                eq("my-tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
+                eq(MetricsTags.QoS.AT_MOST_ONCE),
+                eq(payload.length()),
+                any());        
     }
 
     /**
@@ -383,6 +393,14 @@ public class AbstractVertxBasedCoapAdapterTest {
         // until the event has been accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(coapExchange).respond(ResponseCode.CHANGED);
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.EVENT),
+                eq("tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -413,6 +431,14 @@ public class AbstractVertxBasedCoapAdapterTest {
         verify(coapExchange).respond(captor.capture());
         assertThat("response with bad request", captor.getValue().getCode(),
                 is(ResponseCode.BAD_REQUEST));
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.EVENT),
+                eq("tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                any());        
     }
 
     /**
@@ -443,6 +469,14 @@ public class AbstractVertxBasedCoapAdapterTest {
         // until the telemetry message has been accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(coapExchange).respond(ResponseCode.CHANGED);
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.TELEMETRY),
+                eq("tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                eq(MetricsTags.QoS.AT_MOST_ONCE),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -473,6 +507,14 @@ public class AbstractVertxBasedCoapAdapterTest {
         // until the telemetry message has been accepted
         outcome.complete(mock(ProtonDelivery.class));
         verify(coapExchange).respond(ResponseCode.CHANGED);
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.TELEMETRY),
+                eq("tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                any());        
     }
 
     /**
@@ -504,6 +546,14 @@ public class AbstractVertxBasedCoapAdapterTest {
         final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
         verify(coapExchange).respond(captor.capture());
         assertThat(captor.getValue().getCode(), is(ResponseCode.TOO_MANY_REQUESTS));
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.TELEMETRY),
+                eq("tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
+                eq(MetricsTags.QoS.AT_MOST_ONCE),
+                eq(payload.length()),
+                any());
     }
 
     /**
@@ -535,6 +585,14 @@ public class AbstractVertxBasedCoapAdapterTest {
         final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
         verify(coapExchange).respond(captor.capture());
         assertThat(captor.getValue().getCode(), is(ResponseCode.TOO_MANY_REQUESTS));
+        verify(metrics).reportTelemetry(
+                eq(MetricsTags.EndpointType.EVENT),
+                eq("tenant"),
+                any(),
+                eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
+                eq(MetricsTags.QoS.AT_LEAST_ONCE),
+                eq(payload.length()),
+                any());        
     }
 
     private static CoapExchange newCoapExchange(final Buffer payload) {
@@ -597,7 +655,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         }
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
-        adapter.setMetrics(mock(CoapAdapterMetrics.class));
+        adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         adapter.init(vertx, mock(Context.class));
 
