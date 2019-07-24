@@ -49,15 +49,16 @@ a few standard ports only.
 You can verify if you can access the relevant ports of the Sandbox by running the following command and comparing the output:
 
 ~~~sh
-curl -sIX GET http://hono.eclipse.org:28080/tenant/DEFAULT_TENANT
+curl -sIX GET http://hono.eclipse.org:28080/v1/tenants/DEFAULT_TENANT
 ~~~
 
 If you get output like this
 
 ~~~sh
 HTTP/1.1 200 OK
+etag: 89d40d26-5956-4cc6-b978-b15fda5d1823
 content-type: application/json; charset=utf-8
-content-length: 45
+content-length: 260
 ~~~
 
 you can use the Sandbox. Run the following commands to set some environment variables which will be used during the guide
@@ -68,7 +69,7 @@ export HTTP_ADAPTER_IP=hono.eclipse.org
 export MQTT_ADAPTER_IP=hono.eclipse.org
 ~~~
 
-and then proceed to the [Overview of Hono Components](#overview).
+and then proceed to the [Overview of Hono Components]({{< relref "#overview" >}}).
 
 However, if the `curl` command yielded different output, you will need to set up Hono locally as described in the next section.
 
@@ -122,6 +123,7 @@ Before a device can connect to Hono and publish any data, the corresponding info
 ### Creating a new Tenant
 
 Register a tenant using Hono's Device Registry's management HTTP API (a random tenant identifier will be generated):
+
 ~~~sh
 curl -i -X POST http://$REGISTRY_IP:28080/v1/tenants
 
@@ -135,16 +137,18 @@ content-length: 45
 ~~~
 
 {{% note title="Random tenant ID value" %}}
-{
 You will receive a randomly generated tenantId value. It will probably be different than the value given in this example.
-Make sure to export it to an environment variable to make the following steps easier.
-This can be done with  `export MY_TENANT=85f63e23-1b78-4156-8500-debcbd1a8d35`.
-}
+Make sure to export it to an environment variable to make the following steps easier:
+
+~~~sh
+export MY_TENANT=85f63e23-1b78-4156-8500-debcbd1a8d35
+~~~
 {{% /note %}}
 
 ### Adding a Device to the Tenant
 
 Register a device using Hono's Device Registry's management HTTP API (a random device identifier will be assigned):
+
 ~~~sh
 curl -i -X POST http://$REGISTRY_IP:28080/v1/devices/$MY_TENANT
 
@@ -158,16 +162,18 @@ content-length: 45
 ~~~
 
 {{% note title="Random device ID value" %}}
-{
 You will receive a randomly generated deviceId value. It will probably be different than the value given in this example.
-Make sure to export it to an environment variable to make the following steps easier.
-This can be done with  `export MY_DEVICE=4412abe2-f219-4099-ae14-b446604ae9c6`.
-}
+Make sure to export it to an environment variable to make the following steps easier:
+
+~~~sh
+export MY_DEVICE=4412abe2-f219-4099-ae14-b446604ae9c6
+~~~
 {{% /note %}}
 
 ### Setting a Password for the Device
 
 Choose a (random) password and register it using Hono's Device Registry's management HTTP API (replace `my-pwd` with your password):
+
 ~~~sh
 export MY_PWD=my-pwd
 curl -i -X PUT -H "content-type: application/json" --data-binary '[{
@@ -393,14 +399,16 @@ The client will prompt the user to enter the command's name, the payload to send
 
 The example below illustrates how a command to set the volume with a JSON payload is sent to device `4711`.
 
-    >>>>>>>>> Enter name of command for device [<TenantId>:<DeviceId>] (prefix with 'ow:' to send one-way command):
-    setVolume
-    >>>>>>>>> Enter command payload:
-    {"level": 50}
-    >>>>>>>>> Enter content type:
-    application/json
-    
-    INFO  org.eclipse.hono.cli.Commander - Command sent to device... [Command request will timeout in 60 seconds]
+~~~sh
+>>>>>>>>> Enter name of command for device [<TenantId>:<DeviceId>] (prefix with 'ow:' to send one-way command):
+setVolume
+>>>>>>>>> Enter command payload:
+{"level": 50}
+>>>>>>>>> Enter content type:
+application/json
+
+INFO  org.eclipse.hono.cli.Commander - Command sent to device... [Command request will timeout in 60 seconds]
+~~~
 
 In the above example, the client waits up to 60 seconds for the response from the device before giving up.
 For more information on how to connect devices, receive commands and send responses refer to [Commands using HTTP]({{% doclink "/user-guide/http-adapter/#specifying-the-time-a-device-will-wait-for-a-response" %}}) and [Commands using MQTT]({{% doclink "/user-guide/mqtt-adapter/#command-control" %}}).

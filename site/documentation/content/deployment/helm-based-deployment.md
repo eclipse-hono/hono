@@ -82,7 +82,7 @@ kubectl apply -f ./eclipse-hono -R
 ## Verifying the Installation
 
 Once deployment has completed, Hono's external API endpoints are exposed via corresponding Kubernetes *Services*.
-The following command lists all services and their endpoints:
+The following command lists all services and their endpoints (replace `hono` with the namespace that you have deployed to):
 
 ~~~sh
 kubectl get service -n hono
@@ -117,11 +117,12 @@ export REGISTRY_IP=$(kubectl get service hono-service-device-registry-ext --outp
 The following command can then be used to check for the existence of the *DEFAULT_TENANT* which is created as part of the installation:
 
 ~~~sh
-curl -sIX GET http://$REGISTRY_IP:28080/tenant/DEFAULT_TENANT
+curl -sIX GET http://$REGISTRY_IP:28080/v1/tenants/DEFAULT_TENANT
 
 HTTP/1.1 200 OK
+etag: 89d40d26-5956-4cc6-b978-b15fda5d1823
 content-type: application/json; charset=utf-8
-content-length: 289
+content-length: 260
 ~~~
 
 <a name="dashboard"></a>
