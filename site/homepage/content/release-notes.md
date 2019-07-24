@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 1.0-M6 (not yet released)
+## 1.0-M6
 
 ### New Features
 
@@ -20,15 +20,17 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The automatic reconnect handling of the `HonoConnection` implementation has been
-  improved and now applies an exponential backoff algorithm. The behaviour can be
+  improved and now applies an exponential back-off algorithm. The behavior can be
   configured using the `${PREFIX}_RECONNECT_*` configuration variables. Please
   refer to the [Hono Client Configuration guide]({{% doclink "/admin-guide/hono-client-configuration/" %}})
   for details regarding these new variables.
 * The *message limit* checks is now extended to include command and control messages.
   Please refer to the [resource limits] ({{% doclink "/concepts/resource-limits/" %}}) for details.
-* The health check endpoint will now bind to a default  port value of 8088 if no values are specified in the configuration.
-  Starting both the secure and insecure healtCheck is also possible.
-  Refer to [Adapter Configuration guides]({{% doclink "/admin-guide/" %}}) for details about configuration values.
+* The health check server endpoint will now bind to a default port value of 8088 if no values
+  are set explicitly in the configuration. It is also possible to start both a secure and an insecure
+  server (using different ports)
+  Refer to the [Monitoring configuration guide]({{% doclink "/admin-guide/monitoring-tracing-config.md" %}})
+  for details.
 
 ### API Changes
 
@@ -40,6 +42,9 @@ title = "Release Notes"
   classes for services got deprecated, and are planned to be removed in a future
   release. Also see [Device registry changes](#device-registry-changes) for
   more information.
+* The example Device Registry that comes with Hono now implements the new
+  HTTP management API. Consequently, the URI endpoints for managing the content
+  of the registry have changed accordingly.
 * The configuration parameters for the health check endpoint were moved from 
   `hono.app` to `hono.healthCheck` and renamed. `hono.app.healthCheckPort` is now
   `hono.healthCheck.insecurePort` and `hono.app.healthCheckBindAddress` is now 
