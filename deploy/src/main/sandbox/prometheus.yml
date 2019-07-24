@@ -9,6 +9,9 @@ scrape_configs:
 
 - job_name: hono-service-auth
   metrics_path: /prometheus
+  scheme: https
+  tls_config:
+    insecure_skip_verify: true
   dns_sd_configs:
   - names:
       - tasks.${hono.auth.service}${service.suffix}
@@ -18,6 +21,9 @@ scrape_configs:
 
 - job_name: hono-service-device-registry
   metrics_path: /prometheus
+  scheme: https
+  tls_config:
+    insecure_skip_verify: true
   dns_sd_configs:
   - names:
       - tasks.${hono.registration.service}${service.suffix}
@@ -27,6 +33,7 @@ scrape_configs:
 
 - job_name: hono-adapter-amqp-vertx
   metrics_path: /prometheus
+  scheme: https
   dns_sd_configs:
   - names:
       - tasks.${hono.adapter-amqp.service}${service.suffix}
@@ -36,6 +43,7 @@ scrape_configs:
 
 - job_name: hono-adapter-http-vertx
   metrics_path: /prometheus
+  scheme: https
   dns_sd_configs:
   - names:
       - tasks.${hono.adapter-http.service}${service.suffix}
@@ -45,6 +53,7 @@ scrape_configs:
 
 - job_name: hono-adapter-mqtt-vertx
   metrics_path: /prometheus
+  scheme: https
   dns_sd_configs:
   - names:
       - tasks.${hono.adapter-mqtt.service}${service.suffix}
@@ -54,6 +63,7 @@ scrape_configs:
 
 - job_name: hono-adapter-kura-vertx
   metrics_path: /prometheus
+  scheme: https
   dns_sd_configs:
   - names:
       - tasks.${hono.adapter-kura.service}${service.suffix}
