@@ -568,18 +568,19 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     device.getTenantId(), device.getDeviceId(),
                     authenticatedDevice,
                     null);
-            final Future<TenantObject> tenantEnabledTracker = getTenantConfiguration(device.getTenantId(), null)
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(device.getTenantId(), null);
+            final Future<TenantObject> tenantValidationTracker = tenantTracker
                     .compose(tenantObject -> CompositeFuture
                             .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payload.length()))
                             .map(success -> tenantObject));
-            CompositeFuture.all(tokenTracker, senderTracker, tenantEnabledTracker).compose(ok -> {
+            CompositeFuture.all(tokenTracker, senderTracker, tenantValidationTracker).compose(ok -> {
                     final DownstreamSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(), device.getDeviceId()),
                             "/" + context.getExchange().getRequestOptions().getUriPathString(),
                             contentType,
                             payload,
-                            tenantEnabledTracker.result(),
+                            tenantValidationTracker.result(),
                             tokenTracker.result(),
                             null);
                     customizeDownstreamMessage(downstreamMessage, context);
@@ -595,6 +596,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 metrics.reportTelemetry(
                         endpoint,
                         device.getTenantId(),
+                        tenantTracker.result(),
                         MetricsTags.ProcessingOutcome.FORWARDED,
                         waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
                         payload.length(),
@@ -607,6 +609,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 metrics.reportTelemetry(
                         endpoint,
                         device.getTenantId(),
+                        tenantTracker.result(),
                         ClientErrorException.class.isInstance(t) ? MetricsTags.ProcessingOutcome.UNPROCESSABLE : MetricsTags.ProcessingOutcome.UNDELIVERABLE,
                         waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
                         payload.length(),
