@@ -62,6 +62,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -195,28 +196,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }, startFuture);
     }
 
-    /**
-     * Adds a handler for adding an OpenTracing {@code Span}
-     * and a Micrometer {@code Timer.Sample} to the routing context.
-     *
-     * @param router The router to add the handler to.
-     * @param position The position to add the tracing handler at.
-     */
-    private void addTracingHandler(final Router router, final int position) {
-        final Map<String, String> customTags = new HashMap<>();
-        customTags.put(Tags.COMPONENT.getKey(), getTypeName());
-        addCustomTags(customTags);
-        final List<WebSpanDecorator> decorators = new ArrayList<>();
-        decorators.add(new ComponentMetaDataDecorator(customTags));
-        addCustomSpanDecorators(decorators);
-        final TracingHandler tracingHandler = new TracingHandler(tracer, decorators);
-        router.route().order(position).handler(tracingHandler).failureHandler(tracingHandler);
-        router.route().order(position - 1).handler(ctx -> {
-            ctx.put(KEY_MICROMETER_SAMPLE, getMetrics().startTimer());
-            ctx.next();
-        });
-    }
-
     private Sample getMicrometerSample(final RoutingContext ctx) {
         return ctx.get(KEY_MICROMETER_SAMPLE);
     }
@@ -228,6 +207,16 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private TtdStatus getTtdStatus(final RoutingContext ctx) {
         return Optional.ofNullable((TtdStatus) ctx.get(TtdStatus.class.getName()))
                 .orElse(TtdStatus.NONE);
+    }
+
+    private TracingHandler createTracingHandler() {
+        final Map<String, String> customTags = new HashMap<>();
+        customTags.put(Tags.COMPONENT.getKey(), getTypeName());
+        addCustomTags(customTags);
+        final List<WebSpanDecorator> decorators = new ArrayList<>();
+        decorators.add(new ComponentMetaDataDecorator(customTags));
+        addCustomSpanDecorators(decorators);
+        return new TracingHandler(tracer, decorators);
     }
 
     /**
@@ -283,9 +272,16 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Creates the router for handling requests.
      * <p>
-     * This method creates a router instance with the following routes:
+     * This method creates a router instance along with a route matching all request. That route is initialized with the
+     * following handlers and failure handlers:
      * <ol>
-     * <li>A default route limiting the body size of requests to the maximum payload size set in the <em>config</em> properties.</li>
+     * <li>a handler to add a Micrometer {@code Timer.Sample} to the routing context,</li>
+     * <li>a handler and failure handler that creates tracing data for all server requests,</li>
+     * <li>a default failure handler,</li>
+     * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
+     * properties,</li>
+     * <li>(optional) a handler that applies the trace sampling priority configured for the tenant/auth-id of a
+     * request.</li>
      * </ol>
      *
      * @return The newly created router (never {@code null}).
@@ -293,15 +289,29 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     protected Router createRouter() {
 
         final Router router = Router.router(vertx);
-        LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        router.route().handler(BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY).setBodyLimit(getConfig().getMaxPayloadSize()));
-        Optional.ofNullable(getTenantTraceSamplingHandler())
-                .ifPresent(tenantTraceSamplingHandler -> router.route().handler(tenantTraceSamplingHandler)
-                        .failureHandler(tenantTraceSamplingHandler));
-        addTracingHandler(router, -5);
-        // add default handler for failed routes
-        router.route().order(-1).failureHandler(new DefaultFailureHandler());
+        final Route matchAllRoute = router.route();
+        // the handlers and failure handlers are added here in a specific order!
+        // 1. handler to start the metrics timer
+        matchAllRoute.handler(ctx -> {
+            ctx.put(KEY_MICROMETER_SAMPLE, getMetrics().startTimer());
+            ctx.next();
+        });
+        // 2. tracing handler
+        final TracingHandler tracingHandler = createTracingHandler();
+        matchAllRoute.handler(tracingHandler).failureHandler(tracingHandler);
 
+        // 3. default handler for failed routes
+        matchAllRoute.failureHandler(new DefaultFailureHandler());
+
+        // 4. BodyHandler with request size limit
+        LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
+        final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY)
+                .setBodyLimit(getConfig().getMaxPayloadSize());
+        matchAllRoute.handler(bodyHandler);
+
+        // 5. handler to set the trace sampling priority
+        Optional.ofNullable(getTenantTraceSamplingHandler())
+                .ifPresent(tenantTraceSamplingHandler -> matchAllRoute.handler(tenantTraceSamplingHandler));
         return router;
     }
 
