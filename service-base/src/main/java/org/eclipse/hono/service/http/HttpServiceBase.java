@@ -36,6 +36,7 @@ import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 
@@ -159,11 +160,13 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Creates the router for handling requests.
      * <p>
-     * This method creates a router instance with
+     * This method creates a router instance along with a route matching all request. That route is initialized with the
+     * following handlers and failure handlers:
      * <ul>
-     * <li>a default route limiting the body size of requests to the maximum
-     * payload size set in the <em>config</em> properties,</li>
-     * <li>a default failure handler.</li>
+     * <li>a handler and failure handler that creates tracing data for all server requests,</li>
+     * <li>a default failure handler,</li>
+     * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
+     * properties.</li>
      * </ul>
      *
      * @return The newly created router (never {@code null}).
@@ -171,28 +174,27 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     protected Router createRouter() {
 
         final Router router = Router.router(vertx);
+        final Route matchAllRoute = router.route();
+        // the handlers and failure handlers are added here in a specific order!
+        // 1. tracing handler
+        final TracingHandler tracingHandler = createTracingHandler();
+        matchAllRoute.handler(tracingHandler).failureHandler(tracingHandler);
+        // 2. default handler for failed routes
+        matchAllRoute.failureHandler(new DefaultFailureHandler());
+        // 3. BodyHandler with request size limit
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        router.route().handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY).setBodyLimit(getConfig().getMaxPayloadSize()));
-        addTracingHandler(router, -5);
-        // add default handler for failed routes
-        router.route().order(-1).failureHandler(new DefaultFailureHandler());
+        matchAllRoute.handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY)
+                .setBodyLimit(getConfig().getMaxPayloadSize()));
 
         return router;
     }
 
-    /**
-     * Adds a handler for adding an OpenTracing {@code Span} to the routing context.
-     *
-     * @param router The router to add the handler to.
-     * @param position The position to add the handler at.
-     */
-    private void addTracingHandler(final Router router, final int position) {
+    private TracingHandler createTracingHandler() {
         final Map<String, String> customTags = new HashMap<>();
         customTags.put(Tags.COMPONENT.getKey(), getClass().getSimpleName());
         addCustomTags(customTags);
         final List<WebSpanDecorator> decorators = Collections.singletonList(new ComponentMetaDataDecorator(customTags));
-        final TracingHandler tracingHandler = new TracingHandler(tracer, decorators);
-        router.route().order(position).handler(tracingHandler).failureHandler(tracingHandler);
+        return new TracingHandler(tracer, decorators);
     }
 
     /**
