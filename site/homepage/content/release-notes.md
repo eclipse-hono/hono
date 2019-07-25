@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 1.0-M7 (not yet released)
+
+### API Changes
+* The obsolete method variants of `reportTelemetry` in `org.eclipse.hono.service.metric.Metrics` 
+  have been removed. The new variants of this method accept an additional parameter of type `TenantObject`.
+
 ## 1.0-M6
 
 ### New Features
