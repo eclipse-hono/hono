@@ -3,7 +3,7 @@ title = "HTTP Adapter"
 weight = 210
 +++
 
-The HTTP protocol adapter exposes an HTTP based API for Eclipse Hono&trade;'s Telemetry and Event endpoints.
+The HTTP protocol adapter exposes HTTP based endpoints for Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
 ## Device Authentication
@@ -36,22 +36,25 @@ Before accepting any telemetry or event or command messages, the HTTP adapter ve
 * URI: `/telemetry`
 * Method: `POST`
 * Request Headers:
-  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) `Content-Type`: The type of payload contained in the request body.
-  * (optional) `hono-ttd`: The number of seconds the device will wait for the response. (since 0.6)
-  * (optional) `QoS-Level`: The QoS level for publishing telemetry messages. Only QoS 1 is supported by the adapter. (since 0.6)
+  * (optional) `authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
+  * (required) `content-type`: The type of payload contained in the request body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `qos-level`: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`) and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
-  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
-  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
 * Status Codes:
   * 200 (OK): The telemetry data has been accepted for processing. The response contains a command for the device to execute.
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers. However, if the QoS-Level header is set to `1` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 2xx status code to the device.
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `qos-level` request header is omitted (*at most once* semantics),
+    this status code does **not** mean that the message has been delivered to any potential consumer. However, if the QoS level header is set to `1`
+    (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a downstream consumer before responding with
+    this status code.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
         * The content type header is missing.
         * The request body is empty.
@@ -60,7 +63,7 @@ Before accepting any telemetry or event or command messages, the HTTP adapter ve
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.  
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -70,30 +73,30 @@ This is the preferred way for devices to publish telemetry data. It is available
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 Publish some JSON data for device `4711` using *at least once* QoS:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 
 HTTP/1.1 200 OK
 hono-command: set
 hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
-Content-Length: 23
+content-length: 23
 
 {
   "brightness" : 87
@@ -104,7 +107,7 @@ Publish some JSON data for device `4711` using a client certificate for authenti
 
 ~~~sh
 # in base directory of Hono repository:
-curl -i --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cacert demo-certs/certs/trusted-certs.pem -H 'Content-Type: application/json' --data-binary '{"temp": 5}' https://localhost:8443/telemetry
+curl -i --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cacert demo-certs/certs/trusted-certs.pem -H 'content-type: application/json' --data-binary '{"temp": 5}' https://localhost:8443/telemetry
 
 HTTP/1.1 202 Accepted
 content-length: 0
@@ -117,21 +120,24 @@ content-length: 0
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `hono-ttd`: The number of seconds the device will wait for the response. (since 0.6)
-  * (optional) `QoS-Level`: The QoS level for publishing telemetry messages. Only QoS 1 is supported by the adapter. (since 0.6)
+  * (required) `content-type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `qos-level`: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`) and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
-  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
-  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
 * Status Codes:
   * 200 (OK): The telemetry data has been accepted for processing. The response contains a command for the device to execute.
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers. However, if the QoS-Level header is set to `1` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 2xx status code to the device.
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `qos-level` request header is omitted (*at most once* semantics),
+    this status code does **not** mean that the message has been delivered to any potential consumer. However, if the QoS level header is set to `1`
+    (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a downstream consumer before responding with
+    this status code.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
         * The content type header is missing.
         * The request body is empty.
@@ -140,7 +146,7 @@ content-length: 0
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.  
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -150,30 +156,30 @@ This resource MUST be used by devices that have not authenticated to the protoco
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+curl -i -X PUT -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 Publish some JSON data for device `4711` using *at least once* QoS:
 
 ~~~sh
-curl -i -X PUT -H 'Content-Type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
+curl -i -X PUT -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 
 HTTP/1.1 200 OK
 hono-command: set
 hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
-Content-Length: 23
+content-length: 23
 
 {
   "brightness" : 87
@@ -185,23 +191,26 @@ Content-Length: 23
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
+  * (optional) `authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
 * Request Headers:
-  * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `hono-ttd`: The number of seconds the device will wait for the response. (since 0.6)
-  * (optional) `QoS-Level`: The QoS level for publishing telemetry messages. Only QoS 1 is supported by the adapter. (since 0.6)
+  * (required) `content-type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `qos-level`: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`) and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
-  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
-  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
 * Status Codes:
   * 200 (OK): The telemetry data has been accepted for processing. The response contains a command for the device to execute.
-  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `QoS-Level` request header is missing, the adapter does not *guarantee* successful delivery to potential consumers. However, if the QoS-Level header is set to `1` (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a downstream peer before responding with a 2xx status code to the device.
+  * 202 (Accepted): The telemetry data has been accepted for processing. Note that if the `qos-level` request header is omitted (*at most once* semantics),
+    this status code does **not** mean that the message has been delivered to any potential consumer. However, if the QoS level header is set to `1`
+    (*at least once* semantics), then the adapter waits for the message to be delivered and accepted by a downstream consumer before responding with
+    this status code.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
         * The content type header is missing.
         * The request body is empty.
@@ -213,7 +222,7 @@ Content-Length: 23
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
@@ -225,30 +234,30 @@ The protocol adapter checks the gateway's authority to publish data on behalf of
 Publish some JSON data for device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 Publish some JSON data for device `4712` using *at least once* QoS:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 Publish some JSON data for device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4712
 
 HTTP/1.1 200 OK
 hono-command: set
 hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
-Content-Length: 23
+content-length: 23
 
 {
   "brightness" : 87
@@ -262,15 +271,15 @@ Content-Length: 23
 * URI: `/event`
 * Method: `POST`
 * Request Headers:
-  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `hono-ttd`: The number of seconds the device will wait for the response. (since 0.6)
+  * (optional) `authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
+  * (required) `content-type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
-  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
-  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
@@ -284,7 +293,7 @@ Content-Length: 23
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
@@ -294,10 +303,10 @@ This is the preferred way for devices to publish events. It is available only if
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 ## Publish an Event (unauthenticated Device)
@@ -305,14 +314,14 @@ Content-Length: 0
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) `Content-Type`: The type of payload contained in the body.
-  * (optional) `hono-ttd`: The number of seconds the device will wait for the response. (since 0.6)
+  * (required) `content-type`: The type of payload contained in the body.
+  * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
-  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
-  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
@@ -326,7 +335,7 @@ Content-Length: 0
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
@@ -336,10 +345,10 @@ This resource MUST be used by devices that have not authenticated to the protoco
 Publish some JSON data for device `4711`:
 
 ~~~sh
-curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
+curl -i -X PUT -H 'content-type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 ## Publish an Event (authenticated Gateway)
@@ -347,15 +356,15 @@ Content-Length: 0
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) `Content-Type`: The type of payload contained in the body.
+  * (optional) `authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
+  * (required) `content-type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `Content-Type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data. (since 0.7)
-  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
-  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device. (since 0.6)
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
@@ -372,7 +381,7 @@ Content-Length: 0
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
@@ -384,10 +393,10 @@ The protocol adapter checks the gateway's authority to publish data on behalf of
 Publish some JSON data for device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4712
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 **NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
@@ -403,10 +412,10 @@ The (optional) *hono-ttd* header can be set in requests for publishing telemetry
 Example:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' -H 'hono-ttd: 60' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 60' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 ### Using a Query Parameter
@@ -414,10 +423,10 @@ Content-Length: 0
 Alternatively the *hono-ttd* query parameter can be used:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=60
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=60
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 ## Sending a Response to a Command (authenticated Device)
@@ -426,20 +435,20 @@ Content-Length: 0
 * URI: `/command/res/${commandRequestId}` or `/command/res/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `POST`
 * Request Headers:
-  * (optional) `Authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
-  * (optional) `Content-Type`: A media type describing the semantics and format of the payload contained in the request body. This header may be set if the result of processing the command on the device is non-empty. In this case the result data is contained in the request body. (since 0.7)
+  * (optional) `authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
+  * (optional) `content-type`: A media type describing the semantics and format of the payload contained in the request body. This header may be set if the result of processing the command on the device is non-empty. In this case the result data is contained in the request body.
   * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
     as request parameter at the end.
 * Request Body:
   * (optional) Arbitrary data representing the result of processing the command on the device.
 * Status Codes:
-  * 202 (Accepted): The response has been accepted and was successfully delivered to the application.
+  * 202 (Accepted): The response has been successfully delivered to the application that has sent the command.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.  
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.  
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
          * The application has already given up on waiting for a response.
@@ -455,10 +464,10 @@ Previous versions of Hono used `control` instead of `command` as prefix in the c
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4711`:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/req-id-uuid?hono-cmd-status=200
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/req-id-uuid?hono-cmd-status=200
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 ## Sending a Response to a Command (unauthenticated Device)
@@ -467,20 +476,19 @@ Content-Length: 0
 * URI: `/command/res/${tenantId}/${deviceId}/${commandRequestId}` or `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
-  * (optional) `Content-Type`: A media type describing the semantics and format of the payload contained in the request body (the outcome of processing the command). (since 0.7)
+  * (optional) `content-type`: A media type describing the semantics and format of the payload contained in the request body (the outcome of processing the command).
   * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
     as request parameter at the end.
 * Request Body:
   * (optional) Arbitrary data representing the result of processing the command on the device.
 * Status Codes:
-  * 200 (OK): The event has been accepted and put to a persistent store for delivery to consumers. The response contains a command for the device to execute.
-  * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
+  * 202 (Accepted): The response has been successfully delivered to the application that has sent the command.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.  
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
          * The application has already given up on waiting for a response.
@@ -496,10 +504,10 @@ Previous versions of Hono used `control` instead of `command` as prefix in the c
 Send a response to a previously received command with the command-request-id `req-id-uuid` for the unauthenticated device `4711`:
 
 ~~~sh
-curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
+curl -i -X PUT -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 ## Sending a Response to a Command (authenticated Gateway)
@@ -508,14 +516,14 @@ Content-Length: 0
 * URI: `/command/res/${tenantId}/${deviceId}/${commandRequestId}` or `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
-  * (optional) `Authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
-  * (optional) `Content-Type`: A media type describing the semantics and format of the payload contained in the request body (the outcome of processing the command). (since 0.7)
+  * (optional) `authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
+  * (optional) `content-type`: A media type describing the semantics and format of the payload contained in the request body (the outcome of processing the command).
   * (optional) `hono-cmd-status`: The status of the command execution. If not set, the adapter expects that the URI contains it
     as request parameter at the end.
 * Request Body:
   * (optional) Arbitrary data representing the result of processing the command on the device.
 * Status Codes:
-  * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
+  * 202 (Accepted): The response has been successfully delivered to the application that has sent the command.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this might be:
         * The given tenant is not allowed to use this protocol adapter.
@@ -523,7 +531,7 @@ Content-Length: 0
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 429 (Too Many Requests): The request cannot be processed because the message limit for the current period is exceeded.
+  * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
          * The application has already given up on waiting for a response.
@@ -541,10 +549,10 @@ Previous versions of Hono used `control` instead of `command` as prefix in the c
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'Content-Type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200
 
 HTTP/1.1 202 Accepted
-Content-Length: 0
+content-length: 0
 ~~~
 
 **NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
@@ -576,4 +584,4 @@ The following properties are (currently) supported:
 | Name               | Type       | Default Value | Description                                                     |
 | :----------------- | :--------- | :------------ | :-------------------------------------------------------------- |
 | *enabled*          | *boolean*  | `true`       | If set to `false` the adapter will reject all data from devices belonging to the tenant. |
-| *max-ttd*          | *integer*  | `60`         | Defines a tenant specific upper limit for the *time until disconnect* property that devices may include in requests for uploading telemetry data or events. Please refer to the [Command & Control concept page]]({{< relref "/concepts/command-and-control.md" >}}) for a discussion of this parameter's purpose and usage.<br>If this property is not set for the `hono-http` adapter type, the adapter will try to read this property from the tenant level configuration. |
+| *max-ttd*          | *integer*  | `60`         | Defines a tenant specific upper limit for the *time until disconnect* property that devices may include in requests for uploading telemetry data or events. Please refer to the [Command & Control concept page]({{< relref "/concepts/command-and-control.md" >}}) for a discussion of this parameter's purpose and usage.<br>If this property is not set for the `hono-http` adapter type, the adapter will try to read this property from the tenant level configuration. |
