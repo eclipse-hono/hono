@@ -61,7 +61,7 @@ tags:
         url: https://www.eclipse.org/hono/docs/concepts/device-identity/
 
 servers:
-   - url: '{corsProxy}{server}/v1'
+   - url: '{corsProxy}{server}'
      variables:
         server:
            default: http://hono.eclipse.org:28080
@@ -76,7 +76,7 @@ paths:
 
 # Tenant API
 
-   /tenants:
+   /v1/tenants:
 
       post:
          tags:
@@ -100,7 +100,7 @@ paths:
             403:
                $ref: '#/components/responses/NotAllowed'
 
-   /tenants/{tenantId}:
+   /v1/tenants/{tenantId}:
 
       parameters:
          - $ref: '#/components/parameters/tenantId'
@@ -202,7 +202,7 @@ paths:
 
 # Device API
 
-   /devices/{tenantId}:
+   /v1/devices/{tenantId}:
 
       parameters:
          - $ref: '#/components/parameters/tenantId'
@@ -229,7 +229,7 @@ paths:
             403:
                $ref: '#/components/responses/NotAllowed'
 
-   /devices/{tenantId}/{deviceId}:
+   /v1/devices/{tenantId}/{deviceId}:
 
       parameters:
          - $ref: '#/components/parameters/tenantId'
@@ -330,7 +330,7 @@ paths:
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
 
-   /credentials/{tenantId}/{deviceId}:
+   /v1/credentials/{tenantId}/{deviceId}:
 
       parameters:
          - $ref: '#/components/parameters/tenantId'
