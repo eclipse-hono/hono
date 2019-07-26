@@ -1,8 +1,8 @@
-+++
-title = "Device Registration API Specification"
-linkTitle = "Device Registration API"
-weight = 425
-+++
+---
+title: "Device Registration API Specification"
+linkTitle: "Device Registration API"
+weight: 425
+---
 
 The *Device Registration API* is used by Hono's protocol adapters to get information about devices connecting to the adapters.
 <!--more-->
@@ -16,7 +16,7 @@ The Device Registration API is defined by means of AMQP 1.0 message exchanges, i
 2. Client has established an AMQP link in role *sender* on the connection using target address `registration/${tenant_id}`. This link is used by the client to send request messages to the Device Registration service.
 3. Client has established an AMQP link in role *receiver* on the connection using source address `registration/${tenant_id}/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to the Device Registration service. This link's source address is also referred to as the *reply-to* address for the request messages.
 
-{{< figure src="../connectToDeviceRegistration.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Device Registration service" title="Client connecting to Device Registration service" >}}
+{{< figure src="preconditions.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Device Registration service" title="Client connecting to Device Registration service" >}}
 
 ## Assert Device Registration
 
@@ -26,7 +26,7 @@ Clients use this command to verify that a device is registered for a particular 
 
 The following sequence diagram illustrates the flow of messages involved in a *Client* asserting a device's registration status.
 
-{{< figure src="../assertDeviceRegistration_Success.svg" title="Client asserting a device's registration status" alt="A client sends a request message for asserting a device's registration status and receives a response containing the registration status" >}}
+{{< figure src="assert_success.svg" title="Client asserting a device's registration status" alt="A client sends a request message for asserting a device's registration status and receives a response containing the registration status" >}}
 
 
 **Request Message Format**

@@ -3,7 +3,7 @@ title = "Device Registry"
 weight = 205
 +++
 
-The Device Registry component provides exemplary implementations of Hono's [Tenant API]({{< relref "/api/Tenant-API.md" >}}), [Device Registration API]({{< relref "/api/Device-Registration-API.md" >}}) and [Credentials API]({{< relref "/api/credentials" >}}).
+The Device Registry component provides exemplary implementations of Hono's [Tenant API]({{< relref "/api/Tenant-API.md" >}}), [Device Registration API]({{< relref "/api/device-registration" >}}) and [Credentials API]({{< relref "/api/credentials" >}}).
 
 <!--more-->
 As such it exposes AMQP 1.0 based endpoints for retrieving the relevant information and persists data in the local filesystem. 
@@ -142,7 +142,7 @@ The following command disables the MQTT adapter for devices that belong to the t
 
 ## Managing Device Registration Information
 
-The following sections describe the resources representing the operations of the [Device Registration API]({{< relref "/api/Device-Registration-API.md" >}}) and how they can be used to manage device registration information.
+The following sections describe the resources representing the operations of the [Device Registration API]({{< relref "/api/device-registration" >}}) and how they can be used to manage device registration information.
 Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1.yaml) for the specific elements that are explained in detail there.
 
 ### Register Device

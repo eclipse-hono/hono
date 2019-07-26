@@ -159,7 +159,7 @@ which got deprecated, are planned to be dropped in 1.1.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 * The optional methods of the 
-  [Device Registration API]({{% doclink "/api/device-registration-api/" %}}) have been 
+  [Device Registration API]({{% doclink "/api/device-registration/" %}}) have been 
   removed. Implementations of the Device Registration API are encouraged to expose the *devices* endpoint defined by
   [Hono's HTTP based management API]({{% doclink "/api/device-registry-v1.yaml" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
@@ -817,7 +817,7 @@ and
    * All methods that had previously accepted a `Handler<AsyncResult>` have been changed to return a `Future` instead. This makes orchestration of these methods and their results using `Future.compose`, `Future.map` etc. much easier.
 * The `org.eclipse.hono.client.CredentialsClient` interface has been changed:
    * All methods that had previously accepted a `Handler<AsyncResult>` have been changed to return a `Future` instead. This makes orchestration of these methods and their results using `Future.compose`, `Future.map` etc. much easier.
-* The [assert Device Registration]({{% doclink "/api/device-registration-api/#assert-device-registration" %}}) operation of the Device Registration API has been extended with an optional *gateway_id* parameter which can be used to get a registration status assertion on behalf of another device. This is mainly intended to support use cases where devices do not connect to a protocol adapter directly but are connected to a *gateway* component which *acts on behalf of* its connected devices when publishing data to a protocol adapter.
+* The [assert Device Registration]({{% doclink "/api/device-registration/#assert-device-registration" %}}) operation of the Device Registration API has been extended with an optional *gateway_id* parameter which can be used to get a registration status assertion on behalf of another device. This is mainly intended to support use cases where devices do not connect to a protocol adapter directly but are connected to a *gateway* component which *acts on behalf of* its connected devices when publishing data to a protocol adapter.
 A corresponding *assertRegistration* operation has been added to the `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.service.registration.RegistrationService` interfaces which require both a device ID and a gateway ID being passed in as parameters.
 
 ## 0.5-M10

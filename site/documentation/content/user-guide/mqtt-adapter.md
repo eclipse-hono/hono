@@ -294,7 +294,7 @@ The adapter includes the following meta data in messages being sent downstream:
 | *orig_address*     | *application*           | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
 | *x-opt-retain*     | * *message-annotations* | *boolean* | Contains `true` if the device has published an event or telemetry message with its *retain* flag set to `1` |
 
-The adapter also considers *defaults* registered for the device at either the [tenant]({{< ref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< ref "/api/Device-Registration-API.md#payload-format" >}}). The values of the default properties are determined as follows:
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
 
 1. If the message already contains a non-empty property of the same name, the value if unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.

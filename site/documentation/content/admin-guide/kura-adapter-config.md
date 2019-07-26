@@ -101,7 +101,7 @@ If the response doesn't contain a *cache directive* no data will be cached.
 
 ## Device Registration Service Connection Configuration
 
-The adapter requires a connection to an implementation of Hono's [Device Registration API]({{< ref "Device-Registration-API.md" >}}) in order to retrieve registration status assertions for connected devices.
+The adapter requires a connection to an implementation of Hono's [Device Registration API]({{< relref "/api/device-registration" >}}) in order to retrieve registration status assertions for connected devices.
 
 The connection to the Device Registration Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_REGISTRATION`.

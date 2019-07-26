@@ -16,7 +16,7 @@ Hono supports the logical partitioning of devices into groups called *tenants*. 
 
 ## Device Registration
 
-Hono components use the [Device Registration API]({{< relref "/api/Device-Registration-API.md" >}}) to access device registration information. The API defines the mandatory to implement *assert Registration* operation for verifying a device's registration status. In addition to that, it defines optional CRUD operations to register, update and remove device registration information. These operations are optional because Hono components do not require them during runtime. From a Hono perspective, it is not important how devices have been registered or how they are managed.
+Hono components use the [Device Registration API]({{< relref "/api/device-registration" >}}) to access device registration information. The API defines the mandatory to implement *assert Registration* operation for verifying a device's registration status. In addition to that, it defines optional CRUD operations to register, update and remove device registration information. These operations are optional because Hono components do not require them during runtime. From a Hono perspective, it is not important how devices have been registered or how they are managed.
 
 In many real world scenarios there will already be a component in place which keeps track of devices and which supports the particular *provisioning process* being used to bring devices into life. In such cases it makes sense to simply implement the mandatory operation of Hono's Device Registration API as a *facade* on top of the existing component.
 

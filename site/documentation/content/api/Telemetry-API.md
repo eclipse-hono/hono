@@ -20,7 +20,7 @@ The following operations can be used by *Protocol Adapters* to forward telemetry
 
 1. Adapter has established an AMQP connection with the AMQP Messaging Network.
 1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload telemetry data for. 
-1. The device for which the adapter wants to send telemetry data has been registered (see [Device Registration API]({{< relref "Device-Registration-API.md" >}})).
+1. The device for which the adapter wants to send telemetry data has been registered (see [Device Registration API]({{< relref "/api/device-registration" >}})).
 
 The adapter indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment.
 

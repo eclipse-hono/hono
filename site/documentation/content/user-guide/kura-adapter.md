@@ -30,7 +30,7 @@ The adapter includes the following meta data in messages being sent downstream:
 | *orig_adapter*     | *application*   | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The Kura adapter's type name is `hono-kura-mqtt`. |
 | *orig_address*     | *application*   | *string*  | Contains the name of the MQTT topic that the Kura gateway has originally published the data to. |
 
-The adapter also considers *defaults* registered for the device at either the [tenant]({{< ref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< ref "/api/Device-Registration-API.md#payload-format" >}}). The values of the default properties are determined as follows:
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
 
 1. If the message already contains a non-empty property of the same name, the value if unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.
