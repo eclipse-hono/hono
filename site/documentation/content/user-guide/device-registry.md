@@ -49,6 +49,8 @@ Add a tenant that has all adapters set to enabled:
     ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
     Location: /v1/tenants/tenantAllAdapters
     Content-Type: application/json; charset=utf-8
+    
+    {"id": "tenantAllAdapters"}
 
 Add a tenant that can only use the MQTT adapter:
 
@@ -63,7 +65,7 @@ Add a tenant that can only use the MQTT adapter:
     ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
     Location:  /v1/tenants/tenantMqttAdapter
     Content-Type: application/json; charset=utf-8
-
+    
     {"id": "tenantMqttAdapter"}
 
 ### Get configuration details of a Tenant
@@ -158,7 +160,7 @@ Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1
 
 **Example**
 
-The following command registers a device with ID `4711`
+The following command registers a device with ID `4711` for tenant `DEFAULT_TENANT`
 
     curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
         "ext": {
@@ -172,7 +174,8 @@ like this:
     HTTP/1.1 201 Created
     Location: /v1/devices/DEFAULT_TENANT/4711
     ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
-
+    Content-Type: application/json; charset=utf-8
+    
     {"id": "4711"}
 
 ### Read Device
