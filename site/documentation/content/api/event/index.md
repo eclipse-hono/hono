@@ -1,8 +1,11 @@
-+++
-title = "Event API Specification"
-linkTitle = "Event API"
-weight = 410
-+++
+---
+title: "Event API Specification"
+linkTitle: "Event API"
+weight: 410
+resources:
+  - src: forward.svg
+  - src: consume.svg
+---
 
 The *Event* API is used by *Protocol Adapters* to send event messages downstream.
 *Business Applications* and other consumers use the API to receive messages published by devices belonging to a particular tenant.
@@ -31,7 +34,7 @@ The AMQP messages used to forward events to the AMQP Messaging Network MUST have
 
 The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* forwarding an event to the downstream AMQP Messaging Network.
 
-{{< figure src="../forwardEvent.svg" title="Forward event flow" >}}
+{{< figure src="forward.svg" title="Forward event flow" >}}
 
 1. *Device* `4711` publishes an event using MQTT QoS 1.
    1. *MQTT Adapter* transfers data to *AMQP 1.0 Messaging Network*.
@@ -64,7 +67,7 @@ Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client theref
 The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving an event data message from Hono. 
 
 
-{{< figure src="../consumeEvent_Success.svg" title="Receive event data flow (success)" >}}
+{{< figure src="consume.svg" title="Receive event data flow (success)" >}}
 
 1. *AMQP 1.0 Messaging Network* delivers event message to *Business Application*.
    1. *Business Application* acknowledges reception of message.

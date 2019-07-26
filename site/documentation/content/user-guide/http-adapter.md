@@ -288,7 +288,7 @@ content-length: 23
   * 202 (Accepted): The event has been accepted for processing.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
         * The content type header is missing.
-        * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/Event-API.md#empty-notification" >}}).
+        * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/event#empty-notification" >}}).
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
@@ -330,7 +330,7 @@ content-length: 0
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
         * The content type header is missing.
-        * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/Event-API.md#empty-notification" >}}).
+        * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/event#empty-notification" >}}).
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
@@ -373,7 +373,7 @@ content-length: 0
   * 202 (Accepted): The event has been accepted and put to a persistent store for delivery to consumers.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
         * The content type header is missing.
-        * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/Event-API.md#empty-notification" >}}).
+        * The request body is empty but the event is not of type [empty-notification]({{< relref "/api/event#empty-notification" >}}).
   * 401 (Unauthorized): The request cannot be processed because the request does not contain valid credentials.
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.

@@ -246,7 +246,7 @@ In this example, we are using message address `e/DEFAULT_TENANT/4711` which cont
 
 The AMQP adapter supports devices to receive commands that have been sent by business applications by means of opening a receiver link using a device specific *source address* as described below. When a device no longer wants to receive commands anymore, it can simply close the link.
 
-When a device has successfully opened a receiver link for commands, the adapter sends an [empty notification]({{< relref "/api/Event-API.md#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device closes the link or disconnects.
+When a device has successfully opened a receiver link for commands, the adapter sends an [empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device closes the link or disconnects.
 
 Devices send their responses to commands by means of sending an AMQP message with properties specific to the command that has been executed. The AMQP adapter accepts responses being published using either *at most once* (QoS 0) or *at least once* (QoS 1) delivery semantics. The device must send the command response messages using the same (sender) link that it uses for sending telemetry data and events.
 

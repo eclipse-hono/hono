@@ -25,7 +25,7 @@ All interactions between the components are based on AMQP 1.0 message exchanges 
 * [Device Registration API]({{< relref "/api/device-registration" >}}),
 * [Command & Control API]({{< relref "/api/command-and-control" >}}),
 * [Telemetry API]({{< relref "/api/telemetry" >}}) and
-* [Event API]({{< relref "/api/Event-API.md" >}}).
+* [Event API]({{< relref "/api/event" >}}).
 
 ## Device Registry
 

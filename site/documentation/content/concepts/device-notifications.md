@@ -14,12 +14,12 @@ weight = 190
 The *ttd* property value indicates the time that the device will stay connected to the protocol adapter.
 Using this value together with the *creation-time* of the message, an application can determine whether an attempt to send a command to the device has a reasonable chance of succeeding.
 
-The *ttd* property can be included in any regular telemetry or event message. However, if a device does not have any telemetry data or event to upload to the adapter, it can also use an [empty notification]({{< relref "Event-API#empty-notification" >}}) instead.
+The *ttd* property can be included in any regular telemetry or event message. However, if a device does not have any telemetry data or event to upload to the adapter, it can also use an [empty notification]({{< relref "/api/event#empty-notification" >}}) instead.
 
 Hono includes utility classes that application developers can use to register a callback to be notified when a device sends a *ttd* notification.
 See Hono's example module for details where such a notification callback is used.
 
-Please refer to the [Telemetry API]({{< relref "/api/telemetry" >}}) and the [Event API]({{< relref "Event-API" >}}) for further details.
+Please refer to the [Telemetry API]({{< relref "/api/telemetry" >}}) and the [Event API]({{< relref "/api/event" >}}) for further details.
 
 The following table defines the possible values of the *ttd* property and their semantics:
 

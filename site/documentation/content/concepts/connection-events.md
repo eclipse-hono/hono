@@ -28,5 +28,5 @@ might as well be up and running (i.e. not sleeping) and simply have no data wort
 The mechanism of firing connection events is pluggable with the default implementation
 simply forwarding connection status information to the logging framework.
 Hono also comes with an alternative implementation which forwards connection status
-information by means of [Connection Events]({{< relref "Event-API.md#connection-event" >}})
+information by means of [Connection Events]({{< relref "/api/event#connection-event" >}})
 via the *Events* API.
