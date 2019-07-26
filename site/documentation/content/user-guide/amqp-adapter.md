@@ -29,7 +29,7 @@ The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT`
 When a device uses a client certificate for authentication, the TLS handshake is initiated during TCP connection establishment. If no trust anchor is configured for the AMQP adapter, the TLS handshake will succeed only if the certificate has not yet expired. Once the TLS handshake completes and a secure connection is established, the certificate's signature is checked during the SASL handshake. To complete the SASL handshake and authenticate the client, the adapter performs the following steps:
 
 * Adapter extracts the client certificate's *Issuer DN* and uses it to
-* us the Tenant service to look up the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/Tenant-API.md#trusted-ca-format" >}}).
+* us the Tenant service to look up the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/tenant#trusted-ca-format" >}}).
 * If the lookup succeeds, the Tenant service returns the tenant, thus implicitly establishing the tenant that the device belongs to.
 * Adapter validates the device’s client certificate using the registered trust anchor for the tenant.
 * Finally, adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter uses the client certificate’s *Subject DN* (as authentication identifier) and `x509-cert` (for the credentials type) in order to determine the device ID.
@@ -329,7 +329,7 @@ The adapter includes the following meta data in the application properties of me
 | *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The AMQP adapter's type name is `hono-amqp`. |
 | *orig_address*     | *string*  | Contains the AMQP *target address* that the device has used to send the data. |
 
-The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
 
 1. If the message already contains a non-empty property of the same name, the value if unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.
@@ -339,7 +339,7 @@ Note that of the standard AMQP 1.0 message properties only the *content-type* an
 
 ## Tenant specific Configuration
 
-The adapter uses the [Tenant API]({{< ref "/api/Tenant-API.md#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-amqp`.
+The adapter uses the [Tenant API]({{< ref "/api/tenant#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-amqp`.
 The following properties are (currently) supported:
 
 | Name               | Type       | Default Value | Description                                                     |

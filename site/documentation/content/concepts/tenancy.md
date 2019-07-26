@@ -18,7 +18,7 @@ In the following the different aspects of multi-tenancy in Hono are addressed an
 
 ## The Tenant API
 
-By means of the [Tenant API]({{< relref "Tenant-API.md" >}}) Hono handles tenants as own *entities*.
+By means of the [Tenant API]({{< relref "/api/tenant" >}}) Hono handles tenants as own *entities*.
 
 The API defines how to *retrieve* the details of a specific tenant. This offers the possibility to handle arbitrary
 properties on the level of a tenant (see e.g. [Protocol adapter configuration]({{< relref "#protocol-adapter-configuration" >}})).
@@ -48,7 +48,7 @@ only a subset of Hono's functionality. This feature is foreseen to be especially
 - but is not allowed to use the HTTP protocol adapter
 
 
-Please refer to the [Tenant API]({{< relref "Tenant-API.md" >}}) to find out which protocol adapter properties are
+Please refer to the [Tenant API]({{< relref "/api/tenant" >}}) to find out which protocol adapter properties are
 configurable on a tenant level. The number of such properties may grow during further development of Hono.
 
 ## AMQP 1.0 Endpoints
@@ -64,7 +64,7 @@ etc.
 
 This separates the AMQP endpoints from each other on a tenant level.
 
-The only exception to this is the [Tenant API]({{< relref "Tenant-API.md" >}}), which does not follow this scheme since it
+The only exception to this is the [Tenant API]({{< relref "/api/tenant" >}}), which does not follow this scheme since it
 is addressing the tenants themselves.   
 
 ## Devices and Tenants

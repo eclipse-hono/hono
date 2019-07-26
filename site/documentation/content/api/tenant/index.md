@@ -1,8 +1,11 @@
-+++
-title = "Tenant API Specification"
-linkTitle = "Tenant API"
-weight = 420
-+++
+---
+title: "Tenant API Specification"
+linkTitle: "Tenant API"
+weight: 420
+resources:
+  - src: preconditions.svg
+  - src: get_tenant_success.svg
+---
 
 The *Tenant API* is used by Hono's protocol adapters to retrieve information that affects all devices belonging to a particular tenant.
 A tenant is a logical entity, which groups together a set of devices. The information registered for a tenant is used for example to
@@ -10,7 +13,7 @@ determine if devices belonging to the tenant are allowed to connect to a certain
 <!--more-->
 
 This document *describes* the Tenant API's operations and the payload data format used by them.
-Please refer to [Multi Tenancy]({{< ref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
+Please refer to [Multi Tenancy]({{< relref "/concepts/tenancy.md" >}}) for details regarding the way Hono supports multiple tenants.
 
 The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
@@ -21,7 +24,7 @@ The Tenant API is defined by means of AMQP 1.0 message exchanges, i.e. a client 
 1. Client has established an AMQP link in role *sender* on the connection using target address `tenant`. This link is used by the client to send request messages to the Tenant service.
 1. Client has established an AMQP link in role *receiver* on the connection using source address `tenant/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to the Tenant service. This link's source address is also referred to as the *reply-to* address for the request messages.
 
-{{< figure src="../tenant_ConnectToTenant.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Tenant service" title="Client connecting to Tenant service" >}}
+{{< figure src="preconditions.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Tenant service" title="Client connecting to Tenant service" >}}
 
 ## Get Tenant Information
 
@@ -31,7 +34,7 @@ Clients use this operation to *retrieve* information about a tenant.
 
 The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving tenant information.
 
-{{< figure src="../tenant_GetTenantSuccess.svg" title="Client retrieving tenant information" alt="A client sends a request message for retrieving tenant information and receives a response containing the information" >}}
+{{< figure src="get_tenant_success.svg" title="Client retrieving tenant information" alt="A client sends a request message for retrieving tenant information and receives a response containing the information" >}}
 
 **Request Message Format**
 
@@ -107,7 +110,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *adapters*               | *no*      | *array*       | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
 | *defaults*               | *no*      | *object*      |  Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or time-to-live. |
 | *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *minimum-message-size*   | *no*      | *number*      | The minimum message size in bytes. If it is set then the payload size of the telemetry, event and command messages are calculated in accordance with the configured value and then reported to the metrics. See [Metrics]({{< relref "Tenant-API.md/#minimum-message-size" >}}) for more details.| 
+| *minimum-message-size*   | *no*      | *number*      | The minimum message size in bytes. If it is set then the payload size of the telemetry, event and command messages are calculated in accordance with the configured value and then reported to the metrics. See [Metrics]({{< relref "/api/Metrics.md#minimum-message-size" >}}) for more details.| 
 | *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections and the maximum data volume for a given period. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
 | *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |

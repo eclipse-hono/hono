@@ -30,7 +30,7 @@ The adapter includes the following meta data in messages being sent downstream:
 | *orig_adapter*     | *application*   | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The Kura adapter's type name is `hono-kura-mqtt`. |
 | *orig_address*     | *application*   | *string*  | Contains the name of the MQTT topic that the Kura gateway has originally published the data to. |
 
-The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/Tenant-API.md#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
 
 1. If the message already contains a non-empty property of the same name, the value if unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.
@@ -40,7 +40,7 @@ Note that of the standard AMQP 1.0 message properties only the *content-type* an
 
 ## Tenant specific Configuration
 
-The adapter uses the [Tenant API]({{< ref "/api/Tenant-API.md#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-kura-mqtt`.
+The adapter uses the [Tenant API]({{< ref "/api/tenant#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-kura-mqtt`.
 The following properties are (currently) supported:
 
 | Name               | Type       | Default Value | Description                                                     |

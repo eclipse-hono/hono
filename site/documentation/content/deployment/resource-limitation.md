@@ -86,8 +86,8 @@ The `resources` property defines the overall limit of 256 MB of memory that the 
 
 ## Limiting the Number of Device Connections
 
-Hono supports limiting the overall number of simultaneously connected devices per tenant. Please refer to the [connections limit concept]({{< relref "/concepts/resource-limits.md#connections-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/Tenant-API.md#tenant-information-format" >}}) for configuration details.
+Hono supports limiting the overall number of simultaneously connected devices per tenant. Please refer to the [connections limit concept]({{< relref "/concepts/resource-limits.md#connections-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/tenant#tenant-information-format" >}}) for configuration details.
 
 ## Limiting the Number of Messages
 
-Hono supports limiting the number of messages that devices of a tenant can publish to Hono during a given time interval. Please refer to the [messages limit concept] ({{< relref "/concepts/resource-limits.md#messages-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/Tenant-API.md#tenant-information-format" >}}) for configuration details.
+Hono supports limiting the number of messages that devices of a tenant can publish to Hono during a given time interval. Please refer to the [messages limit concept] ({{< relref "/concepts/resource-limits.md#messages-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/tenant#tenant-information-format" >}}) for configuration details.

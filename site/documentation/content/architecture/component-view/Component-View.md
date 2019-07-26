@@ -21,7 +21,7 @@ The *Device Registry* uses the *Auth Server* to authenticate the protocol adapte
 All interactions between the components are based on AMQP 1.0 message exchanges as defined by the
 
 * [Credentials API]({{< relref "/api/credentials" >}}),
-* [Tenant API]({{< relref "/api/Tenant-API.md" >}}),
+* [Tenant API]({{< relref "/api/tenant" >}}),
 * [Device Registration API]({{< relref "/api/device-registration" >}}),
 * [Command & Control API]({{< relref "/api/command-and-control" >}}),
 * [Telemetry API]({{< relref "/api/Telemetry-API.md" >}}) and
@@ -33,7 +33,7 @@ The diagram below provides an overview of the *Device Registry* component's inte
 
 {{< figure src="../device-registry.png" width="100%" >}}
 
-The *Device Registry* component implements the [Credentials API]({{< relref "/api/credentials" >}}), [Tenant API]({{< relref "/api/Tenant-API.md" >}}) and [Device Registration API]({{< relref "/api/device-registration" >}}). Clients opening a connection to *SimpleDeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port. The *FileBasedCredentialsService*, *FileBasedTenantService* and *FileBasedRegistrationService* store all data in the local file system. The *Device Registry* is therefore not recommended to be used in production environments because the component cannot easily scale out horizontally. It is mainly intended to be used for demonstration purposes and PoCs. In real world scenarios, a more sophisticated implementation should be used that is designed to scale out, e.g. using a persistent store for keeping device registration information that can be shared by multiple instances.
+The *Device Registry* component implements the [Credentials API]({{< relref "/api/credentials" >}}), [Tenant API]({{< relref "/api/tenant" >}}) and [Device Registration API]({{< relref "/api/device-registration" >}}). Clients opening a connection to *SimpleDeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port. The *FileBasedCredentialsService*, *FileBasedTenantService* and *FileBasedRegistrationService* store all data in the local file system. The *Device Registry* is therefore not recommended to be used in production environments because the component cannot easily scale out horizontally. It is mainly intended to be used for demonstration purposes and PoCs. In real world scenarios, a more sophisticated implementation should be used that is designed to scale out, e.g. using a persistent store for keeping device registration information that can be shared by multiple instances.
 
 ## AMQP 1.0 Messaging Network
 

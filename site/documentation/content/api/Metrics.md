@@ -14,7 +14,7 @@ and how to interpret actual values.
 
 Hono uses [Micrometer](https://micrometer.io/) in combination with Spring Boot
 to internally collect metrics. Those metrics can be exported to different
-back ends. Please refer to [Configuring Metrics]({{< ref "/admin-guide/monitoring-tracing-config.md#configuring-metrics" >}})
+back ends. Please refer to [Configuring Metrics]({{< relref "/admin-guide/monitoring-tracing-config.md#configuring-metrics" >}})
 for details.
 
 The example deployment by default uses [Prometheus](https://prometheus.io/) as the metrics back end.
@@ -77,7 +77,7 @@ Metrics provided by the protocol adapters are:
 
 #### Minimum Message Size
 
-If a minimum message size is configured for a [tenant]({{< relref "Tenant-API.md/#tenant-information-format" >}}), 
+If a minimum message size is configured for a [tenant]({{< relref "/api/tenant#tenant-information-format" >}}), 
 then the payload size of the telemetry, event and command messages are calculated in accordance with the configured 
 value and then reported to the metrics by the AMQP, HTTP and MQTT protocol adapters. If minimum message size is not 
 configured for a tenant then the actual message payload size is reported.

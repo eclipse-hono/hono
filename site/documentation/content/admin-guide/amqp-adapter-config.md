@@ -90,7 +90,7 @@ with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses be
 
 ## Tenant Service Connection Configuration
 
-The adapter requires a connection to an implementation of Hono's [Tenant API]({{< ref "Tenant-API.md" >}}) in order to retrieve information for a tenant.
+The adapter requires a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}}) in order to retrieve information for a tenant.
 
 The connection to the Tenant Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.

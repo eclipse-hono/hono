@@ -24,7 +24,7 @@ title = "Release Notes"
 * The health check endpoints of services can now be called securely via TLS. 
   Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}}) 
   for the new parameters available.
-* The [Tenant API]({{% doclink "/api/tenant-api/#resource-limits-configuration-format" %}}) now optionally allows 
+* The [Tenant API]({{% doclink "/api/tenant/#resource-limits-configuration-format" %}}) now optionally allows 
   specifying *minimum message size*. If it is specified, then the payload size of the incoming telemetry, event 
   and command messages are calculated in accordance with the *minimum message size* by the AMQP, HTTP and MQTT 
   protocol adapters and then recorded in the metrics system.
@@ -153,7 +153,7 @@ which got deprecated, are planned to be dropped in 1.1.
 
 ### API Changes
 
-* The optional methods of the [Tenant API]({{% doclink "/api/tenant-api/" %}}) have been
+* The optional methods of the [Tenant API]({{% doclink "/api/tenant/" %}}) have been
   removed. Implementations of the Tenant API are encouraged to expose the *tenants* endpoint defined by
   [Hono's HTTP based management API]({{% doclink "/api/device-registry-v1.yaml" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
@@ -517,7 +517,7 @@ which got deprecated, are planned to be dropped in 1.1.
   `org.eclipse.hono.auth.HonoPasswordEncoder` to be passed into its constructor.
   The `org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder` has been added as a default implementation for
   this purpose.
-* The [Tenant API]({{% doclink "/api/tenant-api/#trusted-ca-format" %}}) now optionally allows specifying an
+* The [Tenant API]({{% doclink "/api/tenant/#trusted-ca-format" %}}) now optionally allows specifying an
   X.509 certificate instead of a public key when defining a trusted CA.
 
 ## 0.8
@@ -731,7 +731,7 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
 
 ### API Changes
 
-* The Tenant API's *get Tenant Information* operation has been changed to expect search criteria in the request message's payload instead of the application-properties. This change has been made in order to support other search criteria than just the tenant identifier. In particular, the *get Tenant Information* operation can now be used to find a tenant based on the subject DN of a trusted certificate authority that has been configured for the tenant. See [get Tenant Information]({{% doclink "/api/tenant-api/#get-tenant-information" %}}) for details.
+* The Tenant API's *get Tenant Information* operation has been changed to expect search criteria in the request message's payload instead of the application-properties. This change has been made in order to support other search criteria than just the tenant identifier. In particular, the *get Tenant Information* operation can now be used to find a tenant based on the subject DN of a trusted certificate authority that has been configured for the tenant. See [get Tenant Information]({{% doclink "/api/tenant/#get-tenant-information" %}}) for details.
 * The result type of `org.eclipse.hono.util.MessageHelper.getPayload(Message msg)` has been changed from `String` to the more generic `io.vertx.core.buffer.Buffer` to be able to handle e.g. binary data. 
 
 * The default way how `HonoClient` instances are being created has changed.
@@ -765,14 +765,14 @@ and
 ### New Features
 
 * The MQTT protocol adapter now supports publishing telemetry data using either QoS 0 or QoS 1. In case of QoS 1 the adapter will send an MQTT *PUBACK* to the device once the downstream peer has settled the message with the AMQP *accepted* outcome.
-* Hono now specifies a [Tenant API]({{% doclink "/api/tenant-api/" %}}) and contains an exemplary implementation of this API.
+* Hono now specifies a [Tenant API]({{% doclink "/api/tenant/" %}}) and contains an exemplary implementation of this API.
   The purpose of the API is to make Hono aware of the tenants that are available in an installation. This comprises of:
   * a file-based version of the Tenant API service that implements all mandatory and optional operations
   * the implementation of the AMQP 1.0 endpoint as part of the device registry component
   * the AMQP 1.0 based implementation of the mandatory **get** operation of the API
   * an HTTP endpoint to support CRUD operations for tenants (GET, POST, PUT, DELETE) for convenience
 * `org.eclipse.hono.client.impl.AbstractRequestResponseClient` now supports generic caching of responses to service invocations based on *cache directives*. See [Hono Client Configuration]({{% doclink "/admin-guide/hono-client-configuration/" %}}) for details.
-* The protocol adapters now can be enabled/disabled *per tenant* using the [Tenant API]({{% doclink "/api/tenant-api/" %}}). A protocol adapter that has been disabled for a tenant will reject telemetry messages and events published by any device that belongs to the particular tenant.
+* The protocol adapters now can be enabled/disabled *per tenant* using the [Tenant API]({{% doclink "/api/tenant/" %}}). A protocol adapter that has been disabled for a tenant will reject telemetry messages and events published by any device that belongs to the particular tenant.
 
 ### Fixes & Enhancements
 
