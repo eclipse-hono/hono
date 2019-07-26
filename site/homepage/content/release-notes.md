@@ -138,7 +138,7 @@ which got deprecated, are planned to be dropped in 1.1.
 * Hono's protocol adapters and the other components now support using ECC based server certificates.
   The protocol adapters also support authenticating devices which present an ECC based client certificate.
   The example configuration now uses ECC based certificates by default.
-* Hono now specifies a [Device Connection API]({{% doclink "/api/device-connection-api/" %}}) and
+* Hono now specifies a [Device Connection API]({{% doclink "/api/device-connection/" %}}) and
   contains an exemplary implementation of this API included in the device registry component. The purpose of the API is
   to be able to set and retrieve information about the connections from devices or gateways to the protocol adapters.
 * This version implements the new HTTP management API for tenants, devices, and credentials.
