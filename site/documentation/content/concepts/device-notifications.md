@@ -19,7 +19,7 @@ The *ttd* property can be included in any regular telemetry or event message. Ho
 Hono includes utility classes that application developers can use to register a callback to be notified when a device sends a *ttd* notification.
 See Hono's example module for details where such a notification callback is used.
 
-Please refer to the [Telemetry API]({{< relref "Telemetry-API" >}}) and the [Event API]({{< relref "Event-API" >}}) for further details.
+Please refer to the [Telemetry API]({{< relref "/api/telemetry" >}}) and the [Event API]({{< relref "Event-API" >}}) for further details.
 
 The following table defines the possible values of the *ttd* property and their semantics:
 

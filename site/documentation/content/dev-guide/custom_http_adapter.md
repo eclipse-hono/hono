@@ -51,7 +51,7 @@ place holders available as request parameters. See [Capturing path parameters](h
 
 The route for events looks very similar to the route for telemetry data. It forwards the event message payload to the `uploadEventMessage()` method.
 
-Please refer to the [Telemetry API]({{< relref "/api/Telemetry-API.md" >}}) and [Event API]({{< relref "/api/Event-API.md" >}}) 
+Please refer to the [Telemetry API]({{< relref "/api/telemetry" >}}) and [Event API]({{< relref "/api/Event-API.md" >}}) 
 for details about the different Hono APIs.
 
 In the custom HTTP protocol adapter adapt the routes according to your needs.

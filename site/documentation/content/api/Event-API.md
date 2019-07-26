@@ -42,7 +42,7 @@ When the AMQP Messaging Network fails to settle the transfer of an event message
 
 **Message Format**
 
-See [Telemetry API]({{< relref "Telemetry-API.md#upload-telemetry-data" >}}) for definition of message format.
+See [Telemetry API]({{< relref "/api/telemetry#upload-telemetry-data" >}}) for definition of message format.
 
 ## Northbound Operations
 
@@ -71,7 +71,7 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 
 **Message Format**
 
-See [*Telemetry API*]({{< relref "Telemetry-API.md" >}}) for definition of message format. 
+See [*Telemetry API*]({{< relref "/api/telemetry" >}}) for definition of message format. 
 
 
 ## Well-known Event Message Types
@@ -82,14 +82,14 @@ Hono defines several *well-known* event types which have specific semantics. Eve
 
 An AMQP message containing this type of event does not have any payload so the body of the message MUST be empty.
 
-The AMQP 1.0 properties an event sender needs to set for an *empty notification* event are defined in the [*Telemetry API*]({{< relref "Telemetry-API.md" >}}). 
+The AMQP 1.0 properties an event sender needs to set for an *empty notification* event are defined in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). 
 
 The relevant properties are listed again in the following table:
 
 | Name           | Mandatory        | Location                 | Type      | Description |
 | :------------- | :--------------: | :----------------------- | :-------- | :---------- |
 | *content-type* | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
-| *ttd*          | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "Telemetry-API.md" >}}). |
+| *ttd*          | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). |
 
 NB: An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. *Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
 

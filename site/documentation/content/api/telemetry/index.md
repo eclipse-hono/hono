@@ -1,8 +1,12 @@
-+++
-title = "Telemetry API Specification"
-linkTitle = "Telemetry API"
-weight = 405
-+++
+---
+title: "Telemetry API Specification"
+linkTitle: "Telemetry API"
+weight: 405
+resources:
+  - src: forward_qos0.svg
+  - src: forward_qos1.svg
+  - src: consume.svg
+---
 
 The *Telemetry* API is used by *Protocol Adapters* to send telemetry data downstream.
 *Business Applications* and other consumers use the API to receive data published by devices belonging to a particular tenant.
@@ -39,7 +43,7 @@ Hono's HTTP adapter allows devices to indicate, which delivery semantics they wa
 
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
 
-{{< figure src="../forwardTelemetry_qos0.svg" title="Forward telemetry data flow (AT MOST ONCE)" >}}
+{{< figure src="forward_qos0.svg" title="Forward telemetry data flow (AT MOST ONCE)" >}}
 
 1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*
    1. *HTTP Adapter* transfers telemetry data to *AMQP 1.0 Messaging Network*.
@@ -53,7 +57,7 @@ If the messaging network had sent a disposition frame with the *rejected* instea
 
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT LEAST ONCE* delivery semantics.
 
-{{< figure src="../forwardTelemetry_qos1.svg" title="Forward telemetry data flow (AT LEAST ONCE)" >}}
+{{< figure src="forward_qos1.svg" title="Forward telemetry data flow (AT LEAST ONCE)" >}}
 
 1. *Device* `4711` PUTs telemetry data to the *HTTP Adapter*, indicating *QoS Level* 1.
    1. *HTTP Adapter* transfers telemetry data to *AMQP 1.0 Messaging Network*.
@@ -101,7 +105,7 @@ In addition a client MAY include a boolean link property `ordering-required` wit
 
 The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving a telemetry data message from Hono. The delivery mode used is *AT LEAST ONCE*.
 
-{{< figure src="../consumeTelemetry_Success.svg" title="Receive Telemetry Data" >}}
+{{< figure src="consume.svg" title="Receive Telemetry Data" >}}
 
 1. *AMQP 1.0 Messaging Network* delivers telemetry message to *Business Application*.
    1. *Business Application* acknowledges reception of message.

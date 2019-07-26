@@ -194,7 +194,7 @@ Content-Length: 0
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
 In this guide we will use the Hono command line client to simulate such an application.
-The client will connect to Hono's north bound [Telemetry]({{% doclink "/api/telemetry-api/" %}}) and [Event API]({{% doclink "/api/event-api/" %}})s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event messages and log the messages to the console.
+The client will connect to Hono's north bound [Telemetry]({{% doclink "/api/telemetry/" %}}) and [Event API]({{% doclink "/api/event-api/" %}})s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event messages and log the messages to the console.
 
 Open a new terminal window and set the `AMQP_NETWORK_IP` environment variable.
 If you are using the Sandbox server:
