@@ -94,7 +94,7 @@ This enables a *Business application* to limit the rate at which it consumes AMQ
  
 ## Authorization at Tenant Level
 
-Hono's components authenticate each other by means of the [Authentication API]({{< ref "/api/Authentication-API.md" >}}).
+Hono's components authenticate each other by means of the [Authentication API]({{< ref "/api/authentication" >}}).
 
 The returned token for a successful authentication contains authorization information that is addressing the AMQP 1.0
 endpoints. Since the endpoints (as outlined above) are scoped to a tenant, this enables to configure tenants that are

@@ -1,8 +1,10 @@
-+++
-title = "Authentication API Specification"
-linkTitle = "Authentication API"
-weight = 435
-+++
+---
+title: "Authentication API Specification"
+linkTitle: "Authentication API"
+weight: 435
+resources:
+  - src: get-token.svg
+---
 
 The *Authentication API* is used to retrieve a *token* asserting a subject's identity and granted authorities. Other service implementations use such a token to make authorization decisions on a client's request to read or write from/to a resource or to invoke a certain operation.
 <!--more-->
@@ -24,7 +26,7 @@ Clients use this operation to
 
 The following sequence diagram illustrates the flow of messages involved in a *Client* retrieving a token.
 
-{{< figure src="../get-token.svg" title="Get Token message flow" >}}
+{{< figure src="get-token.svg" title="Get Token message flow" >}}
 
 1. The *Client* and *Authentication* service have agreed to use the SASL PLAIN mechanism for authenticating the client. The *Client* therefore sends the credentials of the identity it wants to retrieve a token for. The *Authentication* service successfully verifies the credentials and establishes the *authorization ID*.
    1. The *Authentication* service completes the SASL exchange with a successful outcome (SASL OK).
