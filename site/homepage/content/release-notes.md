@@ -10,6 +10,10 @@ title = "Release Notes"
 * The already deprecated `org.eclipse.hono.service.AbstractProtocolAdapterBase.getRegistrationAssertion`
   method has been removed. The alternate variant of the `getRegistrationAssertion` method which accepts an 
   additional OpenTracing span parameter should be used.
+* The already deprecated `getRegistrationAssertion`, `getTenantConfiguration`, `sendConnectedTtdEvent`,
+  `sendDisconnectedTtdEvent` and `sendTtdEvent` methods in `org.eclipse.hono.service.AbstractProtocolAdapterBase` 
+  have been removed. The alternate variant of these methods which accepts an additional OpenTracing span parameter 
+  should be used.  
 
 ## 1.0-M6
 

@@ -1010,28 +1010,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">Tenant API</a>.
      *
      * @param tenantId The tenant to retrieve information for.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will fail if the information cannot be retrieved. The cause will be a
-     *         {@link ServiceInvocationException} containing a corresponding error code.
-     *         <p>
-     *         Otherwise the future will contain the configuration information.
-     * @throws NullPointerException if tenant ID is {@code null}.
-     * @deprecated Use {@link #getTenantConfiguration(String, SpanContext)} instead.
-     */
-    @Deprecated
-    protected final Future<TenantObject> getTenantConfiguration(final String tenantId) {
-        Objects.requireNonNull(tenantId);
-        return getTenantClient().compose(client -> client.get(tenantId));
-    }
-
-    /**
-     * Gets configuration information for a tenant.
-     * <p>
-     * The returned JSON object contains information as defined by Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">Tenant API</a>.
-     *
-     * @param tenantId The tenant to retrieve information for.
      * @param context The currently active OpenTracing span that is used to
      *                trace the retrieval of the tenant configuration.
      * @return A future indicating the outcome of the operation.
@@ -1320,31 +1298,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenant The tenant that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
      * @param authenticatedDevice The authenticated device or {@code null}.
-     * @return A future indicating the outcome of the operation. The future will be
-     *         succeeded if the TTD event has been sent downstream successfully.
-     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of tenant or device ID are {@code null}.
-     * @deprecated Use {@link #sendConnectedTtdEvent(String, String, Device, SpanContext)} instead.
-     */
-    @Deprecated
-    protected final Future<ProtonDelivery> sendConnectedTtdEvent(
-            final String tenant,
-            final String deviceId,
-            final Device authenticatedDevice) {
-
-        return sendConnectedTtdEvent(tenant, deviceId, authenticatedDevice, null);
-    }
-
-    /**
-     * Sends an <em>empty notification</em> event for a device that will remain
-     * connected for an indeterminate amount of time.
-     * <p>
-     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
-     * with a TTD of {@code -1}.
-     * 
-     * @param tenant The tenant that the device belongs to, who owns the device.
-     * @param deviceId The device for which the TTD is reported.
-     * @param authenticatedDevice The authenticated device or {@code null}.
      * @param context The currently active OpenTracing span that is used to
      *                trace the sending of the event.
      * @return A future indicating the outcome of the operation. The future will be
@@ -1371,31 +1324,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenant The tenant that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
      * @param authenticatedDevice The authenticated device or {@code null}.
-     * @return A future indicating the outcome of the operation. The future will be
-     *         succeeded if the TTD event has been sent downstream successfully.
-     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of tenant or device ID are {@code null}.
-     * @deprecated Use {@link #sendDisconnectedTtdEvent(String, String, Device, SpanContext)} instead.
-     */
-    @Deprecated
-    protected final Future<ProtonDelivery> sendDisconnectedTtdEvent(
-            final String tenant,
-            final String deviceId,
-            final Device authenticatedDevice) {
-
-        return sendDisconnectedTtdEvent(tenant, deviceId, authenticatedDevice, null);
-    }
-
-    /**
-     * Sends an <em>empty notification</em> event for a device that has disconnected
-     * from a protocol adapter.
-     * <p>
-     * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
-     * with a TTD of {@code 0}.
-     * 
-     * @param tenant The tenant that the device belongs to, who owns the device.
-     * @param deviceId The device for which the TTD is reported.
-     * @param authenticatedDevice The authenticated device or {@code null}.
      * @param context The currently active OpenTracing span that is used to
      *                trace the sending of the event.
      * @return A future indicating the outcome of the operation. The future will be
@@ -1410,30 +1338,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final SpanContext context) {
 
         return sendTtdEvent(tenant, deviceId, authenticatedDevice, 0, context);
-    }
-
-    /**
-     * Sends an <em>empty notification</em> containing a given <em>time until disconnect</em> for
-     * a device.
-     *
-     * @param tenant The tenant that the device belongs to, who owns the device.
-     * @param deviceId The device for which the TTD is reported.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @param ttd The time until disconnect (seconds).
-     * @return A future indicating the outcome of the operation. The future will be
-     *         succeeded if the TTD event has been sent downstream successfully.
-     *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of tenant, device ID or TTD are {@code null}.
-     * @deprecated Use {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)} instead.
-     */
-    @Deprecated
-    protected final Future<ProtonDelivery> sendTtdEvent(
-            final String tenant,
-            final String deviceId,
-            final Device authenticatedDevice,
-            final Integer ttd) {
-
-        return sendTtdEvent(tenant, deviceId, authenticatedDevice, ttd, null);
     }
 
     /**
