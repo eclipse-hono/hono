@@ -96,7 +96,9 @@ public abstract class CoapTestBase {
      * for managing tenants/devices/credentials.
      */
     protected static IntegrationTestSupport helper;
-
+    /**
+     * The period of time in milliseconds after which test cases should time out.
+     */
     protected static final long TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
 
     private static final Vertx VERTX = Vertx.vertx();

@@ -14,7 +14,7 @@
 package org.eclipse.hono.tests.coap;
 
 /**
- * A dedicated exception for coap failures.
+ * A dedicated exception for CoAP failures.
  *
  */
 @SuppressWarnings("serial")
@@ -43,7 +43,12 @@ public class CoapResultException extends Exception {
         this.errorCode = errorCode;
     }
 
-    public int getErrorCode() {
+    /**
+     * Gets the error code.
+     * 
+     * @return The code.
+     */
+    public final int getErrorCode() {
         return this.errorCode;
     }
 

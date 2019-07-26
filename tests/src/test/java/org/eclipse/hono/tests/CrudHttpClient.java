@@ -41,7 +41,9 @@ import org.slf4j.LoggerFactory;
  *
  */
 public final class CrudHttpClient {
-
+    /**
+     * The content type indicating an application specific JSON payload.
+     */
     public static final String CONTENT_TYPE_JSON = "application/json";
 
     private final Logger LOGGER = LoggerFactory.getLogger(getClass());
