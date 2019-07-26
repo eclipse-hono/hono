@@ -170,7 +170,7 @@ which got deprecated, are planned to be dropped in 1.1.
   the operation is invoked.
 * The methods for invoking the optional operations of the Device Registration API have been removed
   from `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.client.impl.RegistrationClientImpl`.
-* The optional methods of the [Credentials API]({{% doclink "/api/credentials-api/" %}}) 
+* The optional methods of the [Credentials API]({{% doclink "/api/credentials/" %}}) 
   have been removed. Implementations of the Credentials API are encouraged to expose the *credentials* endpoint defined
   by [Hono's HTTP based management API]({{% doclink "/api/device-registry-v1.yaml" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
@@ -637,7 +637,7 @@ Since 0.8-M1 missed an important artifact, the first 0.8 milestone is available 
 ### New Features
 
 * The MQTT protocol adapter now supports Command and Control. Please refer to [MQTT adapter User Guide]({{% doclink "/user-guide/mqtt-adapter/" %}}) for details.
-* The Credentials API now explicitly defines [Bcrypt](https://de.wikipedia.org/wiki/Bcrypt) as a supported hash function for [*hashed-password* credentials]({{% doclink "/api/credentials-api/#hashed-password" %}}). The protocol adapters also support verification of username/password credentials against Bcrypt hashes.
+* The Credentials API now explicitly defines [Bcrypt](https://de.wikipedia.org/wiki/Bcrypt) as a supported hash function for [*hashed-password* credentials]({{% doclink "/api/credentials/#hashed-password" %}}). The protocol adapters also support verification of username/password credentials against Bcrypt hashes.
 * Hono's HTTP and MQTT protocol adapters and HonoClient have been instrumented using [OpenTracing](http://opentracing.io) in order to support tracing of the interactions between Hono components that are involved in the processing of messages as they flow through the system. The new [Monitoring & Tracing]({{% doclink "/admin-guide/monitoring-tracing-config/" %}}) admin guide has the details.
 * Hono now contains an initial version of an AMQP protocol adapter which can be used to connect devices to Hono using the AMQP 1.0 protocol. The adapter currently exposes Telemetry and Event endpoints only. Support for Command & Control will be added in a future release. Please refer to the AMQP adapter's [Admin Guide]({{% doclink "/admin-guide/amqp-adapter-config/" %}}) and [User Guide]({{% doclink "/user-guide/amqp-adapter/" %}}) for details regarding how to set up and use the new adapter.
 
@@ -715,7 +715,7 @@ instance. It also makes more use of ConfigMaps and service key/cert management.
   implementation which sends out events to the *Hono Event API*.  
   **Note**: This feature is part of the Eclipse IoT integration effort and not
   yet considered a public API.
-* The HTTP protocol adapter now supports authentication of devices based on X.509 client certificates. Each tenant can be configured with an individual trust anchor which the HTTP adapter will retrieve using the Tenant API when a device tries to authenticate with a certificate as part of a TLS handshake. The Credentials API now supports a [new credentials type]({{% doclink "/api/credentials-api/#x-509-certificate" %}}) for registering a mapping of the certificate's *subject DN* to the device identifier. Please consult the [HTTP adapter User Guide]({{% doclink "/user-guide/http-adapter/#device-authentication" %}}) for details regarding usage.
+* The HTTP protocol adapter now supports authentication of devices based on X.509 client certificates. Each tenant can be configured with an individual trust anchor which the HTTP adapter will retrieve using the Tenant API when a device tries to authenticate with a certificate as part of a TLS handshake. The Credentials API now supports a [new credentials type]({{% doclink "/api/credentials/#x-509-certificate" %}}) for registering a mapping of the certificate's *subject DN* to the device identifier. Please consult the [HTTP adapter User Guide]({{% doclink "/user-guide/http-adapter/#device-authentication" %}}) for details regarding usage.
 * The HTTP adapter now supports uploading telemetry messages using QoS 1 (`AT_LEAST_ONCE`). Clients must set the `QoS-Level` request header if they want the HTTP adapter to upload telemetry messages using QoS 1.
 * The concept and implementation of *Device notifications* were added. It enables devices to signal that they are ready to receive an upstream message by specifying a `time til disconnect` parameter with any downstream message. Please see [Device notifications]({{% doclink "/concepts/device-notifications/" %}}) for details.
 * **Tech preview**: *Command and Control* is now available for the HTTP protocol adapter (NB: currently without responses from the device to the application). 

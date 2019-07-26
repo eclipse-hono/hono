@@ -1,8 +1,12 @@
-+++
-title = "Credentials API Specification"
-linkTitle = "Credentials API"
-weight = 430
-+++
+---
+title: "Credentials API Specification"
+linkTitle: "Credentials API"
+weight: 430
+resources:
+  - src: preconditions.svg
+  - src: get-credentials-success.svg
+  - src: mqtt_adapter_device_authentication.svg
+---
 
 The *Credentials API* is used by *Protocol Adapters* to retrieve credentials used to authenticate *Devices* connecting to the adapter. In particular, the API supports the look up *shared secrets* which are often used by IoT devices by means of *username/password* based authentication schemes.
 <!--more-->
@@ -18,7 +22,7 @@ The Credentials API is defined by means of AMQP 1.0 message exchanges, i.e. a cl
 2. Client has established an AMQP link in role *sender* on the connection using target address `credentials/${tenant_id}`. This link is used by the client to send commands to the Credentials service.
 3. Client has established an AMQP link in role *receiver* on the connection using source address `credentials/${tenant_id}/${reply-to}` where *reply-to* may be any arbitrary string chosen by the client. This link is used by the client to receive responses to the requests it has sent to the Credentials service. This link's source address is also referred to as the *reply-to* address for the request messages.
 
-{{< figure src="../connectToCredentials.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Credentials service" title="Client connecting to Credentials service" >}}
+{{< figure src="preconditions.svg" alt="A client establishes an AMQP connection and the links required to invoke operations of the Credentials service" title="Client connecting to Credentials service" >}}
 
 ## Get Credentials
 
@@ -170,7 +174,7 @@ The following sequence diagram illustrates the flow of messages involved in a *P
 This is shown for the *MQTT Protocol Adapter* as example how a device authenticates with a username and a hashed-password.
 The mechanism can be transferred to other protocols in a similar manner.
 
-{{< figure src="../protocolAdapterDeviceAuthentication_Success.svg" title="MQTT Adapter authenticates device using the Credentials service" alt="The MQTT Adapter sends a request message for looking up credentials presented by a device and receives a response containing the credentials for verification" >}}
+{{< figure src="mqtt_adapter_device_authentication.svg" title="MQTT Adapter authenticates device using the Credentials service" alt="The MQTT Adapter sends a request message for looking up credentials presented by a device and receives a response containing the credentials for verification" >}}
 
 Protocol adapters MUST comply with the following rules when verifying credentials presented by a device:
 

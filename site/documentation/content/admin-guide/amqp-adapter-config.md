@@ -110,7 +110,7 @@ If the response doesn't contain a *cache directive* no data will be cached.
 
 ## Credentials Service Connection Configuration
 
-The adapter requires a connection to an implementation of Hono's [Credentials API]({{< ref "Credentials-API.md" >}}) in order to retrieve credentials stored for devices that needs to be authenticated. During connection establishment, the adapter uses the Credentials API to retrieve the credentials on record for the device and matches that with the credentials provided by a device.
+The adapter requires a connection to an implementation of Hono's [Credentials API]({{< relref "/api/credentials" >}}) in order to retrieve credentials stored for devices that needs to be authenticated. During connection establishment, the adapter uses the Credentials API to retrieve the credentials on record for the device and matches that with the credentials provided by a device.
 
 The connection to the Credentials Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_CREDENTIALS`.

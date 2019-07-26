@@ -23,7 +23,7 @@ NB: The HTTP adapter needs to be [configured for TLS]({{< relref "/admin-guide/s
 The *username* provided in the header must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials that the [configured Credentials service]({{< relref "/admin-guide/http-adapter-config.md#credentials-service-connection-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
 
 The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
-Please refer to the [Credentials API]({{< relref "Credentials-API.md#standard-credential-types" >}}) for details regarding the different types of secrets.
+Please refer to the [Credentials API]({{< relref "/api/credentials#standard-credential-types" >}}) for details regarding the different types of secrets.
 
 **NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 
