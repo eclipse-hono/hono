@@ -1,8 +1,16 @@
-+++
-title = "Command & Control API Specification"
-linkTitle = "Command & Control API"
-weight = 415
-+++
+---
+title: "Command & Control API Specification"
+linkTitle: "Command & Control API"
+weight: 415
+resources:
+  - src: device_not_connected.svg
+  - src: malformed_message.svg
+  - src: one_way_success.svg
+  - src: receive_preconditions.svg
+  - src: response_time_out.svg
+  - src: send_preconditions.svg
+  - src: control_success.svg
+---
 
 The *Command & Control* API of Eclipse Hono&trade; is used by *Business Applications* to send commands to connected devices.
 
@@ -26,7 +34,7 @@ Business Applications use this operation to send a command to a device for which
 
 The following sequence diagram illustrates the establishment of the required link:
 
-{{< figure src="../command_control_send_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
+{{< figure src="send_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
 
 {{% note title="Deprecation" %}}
 Previous versions of Hono required applications to
@@ -69,15 +77,15 @@ Hono indicates the outcome of the operation by means of the following AMQP deliv
 
 The following sequence diagram shows the successful delivery of a one-way command called `switchOn` to device `4711` of the `DEFAULT_TENANT`:
 
-{{< figure src="../command_control_one_way_success.svg" title="Successfully send a One-Way Command" >}}
+{{< figure src="one_way_success.svg" title="Successfully send a One-Way Command" >}}
 
 The following sequence diagram shows how the delivery of the same one-way command fails because the device is not connected:
 
-{{< figure src="../command_control_device_not_connected.svg" title="Device not connected" >}}
+{{< figure src="device_not_connected.svg" title="Device not connected" >}}
 
 The following sequence diagram illustrates how a malformed command sent by a *Business Application* gets rejected:
 
-{{< figure src="../command_control_malformed_message.svg" title="Malformed Command message" >}}
+{{< figure src="malformed_message.svg" title="Malformed Command message" >}}
 
 
 
@@ -96,7 +104,7 @@ This link is used by the *Business Application* to receive the response to the c
 
 The following sequence diagram illustrates the establishment of the required links:
 
-{{< figure src="../command_control_receive_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
+{{< figure src="receive_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
 
 {{% note title="Deprecation" %}}
 Previous versions of Hono required applications to
@@ -167,8 +175,8 @@ If a command message response contains a payload, the body of the message MUST c
 
 The following sequence diagram illustrates how a *Business Application* sends a command called `getReading` to device `4711` of the `DEFAULT_TENANT` and receives a response from the device:
 
-{{< figure src="../command_control_success.svg" title="Successfully send a Command" >}}
+{{< figure src="request_response_success.svg" title="Successfully send a Command" >}}
 
 The sending of a command may fail for the same reasons as those illustrated for sending a one-way command. Additionally, the sending of a command may be considered unsuccessful by an application if it does not receive the response from the device in a reasonable amount of time:
 
-{{< figure src="../command_control_response_time_out.svg" title="Command times out" >}}
+{{< figure src="response_time_out.svg" title="Command times out" >}}

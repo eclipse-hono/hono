@@ -285,7 +285,7 @@ The table below provides an overview of the properties that must be set on a com
 | :--------------  | :-------------: | :----------------------- | :----------- | :---------- |
 | *to*             | yes             | *properties*             | *string*     | MUST contain the value of the *reply-to* property of the command request message. |
 | *correlation-id* | yes             | *properties*             | *string*     | MUST contain the value of the *correlation-id* property of the command request message. |
-| *status*         | yes             | *application-properties* | *integer*    | MUST contain a status code indicating the outcome of processing the command at the device (see [Command & Control API]({{< ref "/api/Command-And-Control-API.md" >}}) for details). |
+| *status*         | yes             | *application-properties* | *integer*    | MUST contain a status code indicating the outcome of processing the command at the device (see [Command & Control API]({{< relref "/api/command-and-control" >}}) for details). |
 
 ### Examples
 

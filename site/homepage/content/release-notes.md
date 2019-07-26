@@ -611,7 +611,7 @@ Since 0.8-M1 missed an important artifact, the first 0.8 milestone is available 
 
 ### New Features
 
-* A new message exchange pattern - called *one-way commands* - is fully specified for the [Command & Control API]({{% doclink "/api/command-and-control-api/" %}}).
+* A new message exchange pattern - called *one-way commands* - is fully specified for the [Command & Control API]({{% doclink "/api/command-and-control/" %}}).
   Note that currently there is no implementation included, this is planned for the following milestone.
 
 ### Fixes & Enhancements

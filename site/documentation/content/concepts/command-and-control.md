@@ -3,7 +3,7 @@ title = "Command & Control"
 weight = 196
 +++
 
-*Business applications* can send commands to devices following the [Command & Control API]({{< ref "/api/Command-And-Control-API.md" >}}). This concept page describes how this API is used by applications to send commands to devices that connected to one of Hono's protocol adapters.
+*Business applications* can send commands to devices following the [Command & Control API]({{< relref "/api/command-and-control" >}}). This concept page describes how this API is used by applications to send commands to devices that connected to one of Hono's protocol adapters.
  
 <!--more-->
 
