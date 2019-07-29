@@ -12,30 +12,32 @@
  *******************************************************************************/
 package org.eclipse.hono.service.tenant;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+import java.net.HttpURLConnection;
+import java.util.Optional;
+
+import javax.security.auth.x500.X500Principal;
+
+import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.service.management.Id;
+import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantResult;
+import org.junit.jupiter.api.Test;
+
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
-import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.service.management.tenant.TenantManagementService;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantResult;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import org.junit.jupiter.api.Test;
-
-import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.service.management.Id;
-
-import javax.security.auth.x500.X500Principal;
-import java.net.HttpURLConnection;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Abstract class used as a base for verifying behavior of {@link TenantService} and the {@link TenantManagementService}
@@ -287,22 +289,47 @@ public abstract class AbstractTenantServiceTest {
     }
 
     /**
-     * Verifies that the service returns an existing tenant.
+     * Verifies that a tenant object returned by the service via its {@link TenantService}
+     * API contains the same data as the JSON object added using the {@link TenantManagementService}
+     * API.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testGetTenantSucceedsForExistingTenant(final VertxTestContext ctx) {
 
-        addTenant("tenant").map(ok -> {
-            getTenantService().get("tenant", null, ctx.succeeding(s -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-                assertEquals("tenant", s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
-                assertEquals(Boolean.TRUE, s.getPayload().getBoolean(TenantConstants.FIELD_ENABLED));
-                ctx.completeNow();
-            })));
-            return null;
-        });
+        final JsonObject tenantSpec = buildTenantPayload("tenant")
+            .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"));
+
+        // GIVEN a tenant that has been added via the Management API
+        addTenant("tenant", tenantSpec)
+        .compose(ok -> {
+            ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
+            });
+            final Future<TenantResult<JsonObject>> result = Future.future();
+            // WHEN retrieving the tenant using the Tenant API
+            getTenantService().get("tenant", null, result);
+            return result;
+        })
+        .setHandler(ctx.succeeding(response -> {
+            // THEN the properties of the originally registered tenant
+            // all show up in the tenant retrieved using the Tenant API
+            ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
+                assertEquals("tenant", response.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+                assertEquals(
+                        tenantSpec.getValue(RegistryManagementConstants.FIELD_ENABLED),
+                        response.getPayload().getValue(TenantConstants.FIELD_ENABLED));
+                assertEquals(
+                        tenantSpec.getValue(RegistryManagementConstants.FIELD_EXT),
+                        response.getPayload().getValue(RegistryManagementConstants.FIELD_EXT));
+                assertEquals(
+                        tenantSpec.getJsonArray(RegistryManagementConstants.FIELD_ADAPTERS),
+                        response.getPayload().getJsonArray(TenantConstants.FIELD_ADAPTERS));
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -410,7 +437,7 @@ public abstract class AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateTenantsSucceeds(final VertxTestContext ctx) {
+    public void testUpdateTenantSucceeds(final VertxTestContext ctx) {
 
         final JsonObject updatedPayload = buildTenantPayload("tenant");
         updatedPayload.put("custom-prop", "something");
@@ -422,8 +449,10 @@ public abstract class AbstractTenantServiceTest {
             getTenantManagementService().update("tenant", updatedPayload.copy(), Optional.empty(), NoopSpan.INSTANCE, updateResult);
             return updateResult;
         }).compose(updateResult -> {
-            assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
-            update.flag();
+            ctx.verify(() -> {
+                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
+                update.flag();
+            });
             final Future<TenantResult<JsonObject>> getResult = Future.future();
             getTenantService().get("tenant", null, getResult);
             return getResult;
@@ -541,7 +570,7 @@ public abstract class AbstractTenantServiceTest {
     }
 
     /**
-     * Creates a tenant object for a tenantId.
+     * Creates a tenant management object for a tenantId.
      * <p>
      * The tenant object created contains configurations for the http and the mqtt adapter.
      *
@@ -551,17 +580,17 @@ public abstract class AbstractTenantServiceTest {
     private static JsonObject buildTenantPayload(final String tenantId) {
 
         final JsonObject adapterDetailsHttp = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
+                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
         final JsonObject adapterDetailsMqtt = new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE);
+                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
+                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
         final JsonObject tenantPayload = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
+                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE)
+                .put(RegistryManagementConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
         return tenantPayload;
     }
 }

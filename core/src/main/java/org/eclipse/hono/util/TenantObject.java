@@ -26,7 +26,6 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +52,7 @@ import io.vertx.core.json.JsonObject;
 public final class TenantObject extends JsonBackedValueObject {
 
     @JsonIgnore
-    private Map<String, JsonObject> adapterConfigurations;
+    private List<Map<String, Object>> adapterConfigurations;
     @JsonIgnore
     private TrustAnchor trustAnchor;
 
@@ -297,9 +296,7 @@ public final class TenantObject extends JsonBackedValueObject {
         if (adapterConfigurations == null) {
             return null;
         } else {
-            final List<Map<String, Object>> result = new LinkedList<>();
-            adapterConfigurations.values().forEach(config -> result.add(config.getMap()));
-            return result;
+            return adapterConfigurations;
         }
     }
 
@@ -317,7 +314,7 @@ public final class TenantObject extends JsonBackedValueObject {
             return null;
         } else {
             final JsonArray result = new JsonArray();
-            adapterConfigurations.values().forEach(config -> result.add(config));
+            adapterConfigurations.stream().forEach(config -> result.add(new JsonObject(config)));
             return result;
         }
     }
@@ -328,12 +325,19 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param type The adapter's type.
      * @return The configuration properties or {@code null} if no specific
      *         properties have been set.
+     * @throws NullPointerException if type is {@code null}.
      */
     public JsonObject getAdapterConfiguration(final String type) {
+
+        Objects.requireNonNull(type);
         if (adapterConfigurations == null) {
             return null;
         } else {
-            return adapterConfigurations.get(type);
+            return adapterConfigurations.stream()
+                    .filter(entry -> type.equalsIgnoreCase((String) entry.get(TenantConstants.FIELD_ADAPTERS_TYPE)))
+                    .findFirst()
+                    .map(entry -> new JsonObject(entry))
+                    .orElse(null);
         }
     }
 
@@ -345,7 +349,6 @@ public final class TenantObject extends JsonBackedValueObject {
      *                              for each configured adapter. The list's content will be
      *                              copied into a new list in order to prevent modification
      *                              of the list after this method has been invoked.
-     * @throws NullPointerException if the list is {@code null}.
      * @return This tenant for command chaining.
      */
     @JsonProperty(TenantConstants.FIELD_ADAPTERS)
@@ -353,10 +356,7 @@ public final class TenantObject extends JsonBackedValueObject {
         if (configurations == null) {
             this.adapterConfigurations = null;
         } else {
-            configurations.stream().forEach(map -> {
-                final JsonObject config = new JsonObject(map);
-                addAdapterConfiguration(config);
-            });
+            this.adapterConfigurations = new LinkedList<>(configurations);
         }
         return this;
     }
@@ -375,7 +375,7 @@ public final class TenantObject extends JsonBackedValueObject {
         if (configurations == null) {
             this.adapterConfigurations = null;
         } else {
-            this.adapterConfigurations = new HashMap<>();
+            this.adapterConfigurations = new LinkedList<>();
             configurations.stream().filter(obj -> JsonObject.class.isInstance(obj)).forEach(config -> {
                 addAdapterConfiguration((JsonObject) config);
             });
@@ -397,9 +397,9 @@ public final class TenantObject extends JsonBackedValueObject {
         final Object type = config.getValue(TenantConstants.FIELD_ADAPTERS_TYPE);
         if (String.class.isInstance(type)) {
             if (adapterConfigurations == null) {
-                adapterConfigurations= new HashMap<>();
+                adapterConfigurations = new LinkedList<>();
             }
-            adapterConfigurations.put((String) type, config);
+            adapterConfigurations.add(config.getMap());
         } else {
             throw new IllegalArgumentException("adapter configuration must contain type field");
         }
