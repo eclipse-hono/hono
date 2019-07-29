@@ -19,6 +19,21 @@ artemisImageName: ${artemis.image.name}
 deviceRegistryDeployExample: true
 
 
+# dataGridDeployExample indicates whether the example data grid
+# should be deployed and used.
+dataGridDeployExample: false
+# dataGridServerImage contains the name (including tag)
+# of the container image to use for the example data grid.
+dataGridServerImage: ${infinispan.image.name}
+# dataGridConfigFile contains the path to an XML file that should be used for configuring
+# the Infinispan Servers forming the example data grid.
+# The file's content needs to follow the syntax and semantics defined by
+# https://infinispan.org/docs/stable/server_guide/server_guide.html#server_config
+# If no path is set, a default configuration is used
+# (see templates/example-data-grid/configmap.yaml).
+#dataGridConfigFile:
+
+
 # jaegerBackendDeployExample indicates whether the example Jaeger all-in-one
 # back end should be deployed and used.
 jaegerBackendDeployExample: false
@@ -110,6 +125,26 @@ adapters:
   # Please refer to the Spring Boot documentation for the supported syntax:
   # https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-conversion-duration
   inactiveLinkTimeout: 1h
+
+deviceConnectionService:
+
+  # enabled indicates if the data grid based Device Connection service implementation
+  # should be deployed and used. If set to false (the default), the example implementation
+  # that is part of the example Device Registry is used instead, if "deviceRegistryDeployExample"
+  # is set to true.
+  enabled: false
+
+  # remoteSpec contains properties for configuring the Infinispan Hotrod connection
+  # to the data grid that should be used for storing the device connection data.
+  # This property MUST be set if "enabled" is set to true and "dataGridDeployExample"
+  # is set to false (the default).
+  # Please refer to https://docs.jboss.org/infinispan/9.4/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description
+  # for a list of configuration properties.
+  #remoteSpec:
+  #  serverList: hono-data-grid:11222
+  #  authServerName: hono-data-grid
+  #  authUsername: hono
+  #  authPassword: hono-secret
 
 prometheus:
   # createInstance indicates whether a Prometheus server should be created

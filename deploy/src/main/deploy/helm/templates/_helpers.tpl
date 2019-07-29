@@ -138,7 +138,7 @@ messaging:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- required "A .Values.adapters.amqpMessagingNetworkSpec needs to be set when not using the example AMQP Messaging Network" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml }}
+  {{- required "A .Values.adapters.amqpMessagingNetworkSpec needs to be set when not using the example AMQP Messaging Network" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml | indent 2 }}
 {{- end }}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 command:
@@ -152,7 +152,7 @@ command:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.adapters.commandAndControlSpec }}
+  {{- .dot.Values.adapters.commandAndControlSpec | toYaml | indent 2}}
 {{- end }}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 tenant:
@@ -164,7 +164,7 @@ tenant:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.adapters.tenantSpec }}
+  {{- .dot.Values.adapters.tenantSpec | toYaml | indent 2 }}
 {{- end }}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 registration:
@@ -176,7 +176,7 @@ registration:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.adapters.deviceRegistrationSpec }}
+  {{- .dot.Values.adapters.deviceRegistrationSpec | toYaml | indent 2 }}
 {{- end }}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 credentials:
@@ -188,19 +188,27 @@ credentials:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.adapters.credentialsSpec }}
+  {{- .dot.Values.adapters.credentialsSpec | toYaml | indent 2 }}
 {{- end }}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 deviceConnection:
-{{- if .dot.Values.deviceRegistryDeployExample }}
+{{- if .dot.Values.adapters.deviceConnectionSpec }}
+  {{- .dot.Values.adapters.deviceConnectionSpec | toYaml | indent 2 }}
+{{- else }}
   name: Hono {{ $adapter }}
+  {{- if .dot.Values.deviceConnectionService.enabled }}
+  host: {{ .dot.Release.Name }}-service-device-connection
+  {{- else }}
+    {{- if .dot.Values.deviceRegistryDeployExample }}
   host: {{ .dot.Release.Name }}-service-device-registry
+    {{- else }}
+      {{- required ".Values.deviceConnectionService.enabled MUST be set to true if example Device Registry is disabled and no other Device Connection service is configured" nil }}
+    {{- end }}
+  {{- end }}
   port: 5671
   credentialsPath: /etc/hono/adapter.credentials
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
-{{- else }}
-  {{- toYaml .dot.Values.adapters.deviceConnectionSpec }}
 {{- end }}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 {{- end }}

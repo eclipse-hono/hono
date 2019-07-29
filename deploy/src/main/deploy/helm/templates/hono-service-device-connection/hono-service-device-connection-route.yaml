@@ -1,0 +1,13 @@
+{{if and (eq .Values.platform "openshift") .Values.deviceConnectionService.enabled }}
+apiVersion: v1
+kind: Route
+metadata:
+  {{- $args := dict "dot" . "component" "service-device-connection" "name" "service-device-connection" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
+spec:
+  port:
+    targetPort: 5671
+  to:
+    kind: Service
+    name: {{ .Release.Name}}-service-device-connection
+{{end}}

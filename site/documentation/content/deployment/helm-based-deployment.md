@@ -213,6 +213,35 @@ The newly built images can then be deployed using Helm:
 helm install --dep-up --name hono --namespace hono target/deploy/helm/
 ~~~
 
+## Using the Device Connection Service
+
+Hono's example Device Registry component contains a simple in-memory implementation of the [Device Connection API]({{< relref "/api/device-connection" >}}).
+This example implementation is used by default when the example registry is deployed.
+
+Hono also contains a production ready, data grid based implementation of the Device Connection API which can be deployed and used instead of
+the example implementation. The component can be deployed by means of setting the *deviceConnectionService.enabled* property to `true` when
+running Helm:
+
+~~~sh
+# in directory: eclipse-hono-$VERSION/deploy/
+helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true helm/
+~~~
+
+This will deploy the Device Connection service and configure all protocol adapters to use it instead of the example Device Registry implementation.
+However, the service requires a connection to a data grid in order to store the device connection data.
+The Helm chart supports deployment of a simple data grid which can be used for experimenting by means of setting the
+*dataGridDeployExample* property to `true` when running Helm:
+
+~~~sh
+# in directory: eclipse-hono-$VERSION/deploy/
+helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true --set dataGridDeployExample=true helm/
+~~~
+
+This will deploy the data grid and configure the Device Connection service to use it for storing the connection data.
+
+The Device Connection service can also be configured to connect to an already existing data grid. Please refer to the
+[admin guide]({{< relref "/admin-guide/device-connection-config.md" >}}) for details regarding the corresponding configuration properties.
+
 ## Using Jaeger Tracing
 
 Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages flowing through the system.
