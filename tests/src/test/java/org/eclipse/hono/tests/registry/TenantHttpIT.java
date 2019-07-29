@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,60 +13,59 @@
 
 package org.eclipse.hono.tests.registry;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.net.HttpURLConnection;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying the Device Registry component by making HTTP requests to its
  * Tenant HTTP endpoint and validating the corresponding responses.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class TenantHttpIT {
 
+    private static final Logger LOG = LoggerFactory.getLogger(TenantHttpIT.class);
     private static final String TENANT_PREFIX = "testTenant";
     private static final Vertx vertx = Vertx.vertx();
 
     private static DeviceRegistryHttpClient registry;
 
-    /**
-     * Set the timeout for all test methods by using a JUnit Rule (instead of providing the timeout at every @Test annotation).
-     * See {@link Test#timeout} for details about improved thread safety regarding the @After annotation for each test.
-     */
-    @Rule
-    public final TestRule timeoutForAllMethods = Timeout.seconds(5);
-
     private String tenantId;
 
     /**
      * Creates the HTTP client for accessing the registry.
-     * 
-     * @param ctx The vert.x test context.
      */
-    @BeforeClass
-    public static void setUpClient(final TestContext ctx) {
+    @BeforeAll
+    public static void setUpClient() {
 
         registry = new DeviceRegistryHttpClient(
                 vertx,
@@ -76,9 +75,12 @@ public class TenantHttpIT {
 
     /**
      * Sets up the fixture.
+     * 
+     * @param testInfo The test meta data.
      */
-    @Before
-    public void setUp() {
+    @BeforeEach
+    public void setUp(final TestInfo testInfo) {
+        LOG.debug("running test: {}", testInfo.getDisplayName());
         tenantId = TENANT_PREFIX + "." + UUID.randomUUID();
     }
 
@@ -87,11 +89,12 @@ public class TenantHttpIT {
      * 
      * @param ctx The vert.x test context.
      */
-    @After
-    public void removeTenant(final TestContext ctx) {
-        final Async deletion = ctx.async();
-        registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT).setHandler(attempt -> deletion.complete());
-        deletion.await();
+    @AfterEach
+    public void removeTenant(final VertxTestContext ctx) {
+
+        final Checkpoint deletion = ctx.checkpoint();
+        registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT)
+        .setHandler(attempt -> deletion.flag());
     }
 
     /**
@@ -99,9 +102,9 @@ public class TenantHttpIT {
      * 
      * @param context The vert.x test context.
      */
-    @AfterClass
-    public static void tearDown(final TestContext context) {
-        vertx.close(context.asyncAssertSuccess());
+    @AfterAll
+    public static void tearDown(final VertxTestContext context) {
+        vertx.close(context.completing());
     }
 
     /**
@@ -111,10 +114,10 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddTenantSucceeds(final TestContext context)  {
+    public void testAddTenantSucceeds(final VertxTestContext context) {
 
         final JsonObject requestBodyAddTenant = buildTenantPayload();
-        registry.addTenant(tenantId, requestBodyAddTenant).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(tenantId, requestBodyAddTenant).setHandler(context.completing());
     }
 
     /**
@@ -124,14 +127,14 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddTenantRejectsDuplicateRegistration(final TestContext context)  {
+    public void testAddTenantRejectsDuplicateRegistration(final VertxTestContext context)  {
 
         final JsonObject payload = buildTenantPayload();
 
         registry.addTenant(tenantId, payload).compose(ar -> {
             // now try to add the tenant again
             return registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
-        }).setHandler(context.asyncAssertSuccess());
+        }).setHandler(context.completing());
     }
 
     /**
@@ -141,12 +144,12 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddTenantFailsForWrongContentType(final TestContext context)  {
+    public void testAddTenantFailsForWrongContentType(final VertxTestContext context)  {
 
         registry.addTenant(tenantId,
                 buildTenantPayload(),
                 "application/x-www-form-urlencoded",
-                HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+                HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
     }
 
     /**
@@ -155,9 +158,10 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddTenantSucceedsForEmptyBody(final TestContext context) {
+    public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
 
-        registry.addTenant(tenantId, null, HttpURLConnection.HTTP_CREATED).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(tenantId, null, HttpURLConnection.HTTP_CREATED)
+        .setHandler(context.completing());
     }
 
     /**
@@ -166,7 +170,7 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testUpdateTenantSucceeds(final TestContext context) {
+    public void testUpdateTenantSucceeds(final VertxTestContext context) {
 
         final JsonObject orig = buildTenantPayload();
         final JsonObject altered = orig.copy();
@@ -177,9 +181,11 @@ public class TenantHttpIT {
             .compose(ur -> registry.getTenant(tenantId))
             .compose(b -> {
                 // compare the changed field only
-                context.assertFalse(b.toJsonObject().getBoolean(TenantConstants.FIELD_ENABLED, Boolean.TRUE));
+                context.verify(() -> {
+                    assertFalse(b.toJsonObject().getBoolean(TenantConstants.FIELD_ENABLED, Boolean.TRUE));
+                });
                 return Future.succeededFuture();
-            }).setHandler(context.asyncAssertSuccess());
+            }).setHandler(context.completing());
     }
 
     /**
@@ -188,12 +194,12 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testUpdateTenantFailsForNonExistingTenant(final TestContext context) {
+    public void testUpdateTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
         final JsonObject altered = buildTenantPayload();
 
         registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NOT_FOUND)
-            .setHandler(context.asyncAssertSuccess());
+            .setHandler(context.completing());
     }
 
 
@@ -203,12 +209,12 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testRemoveTenantSucceeds(final TestContext context) {
+    public void testRemoveTenantSucceeds(final VertxTestContext context) {
 
         final JsonObject tenantPayload = buildTenantPayload();
         registry.addTenant(tenantId, tenantPayload)
             .compose(ar -> registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
-            .setHandler(context.asyncAssertSuccess());
+            .setHandler(context.completing());
     }
 
 
@@ -218,9 +224,10 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testRemoveTenantFailsForNonExistingTenant(final TestContext context) {
+    public void testRemoveTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
-        registry.removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND).setHandler(context.asyncAssertSuccess());
+        registry.removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
+        .setHandler(context.completing());
     }
 
     /**
@@ -229,16 +236,23 @@ public class TenantHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testGetAddedTenant(final TestContext context)  {
+    public void testGetAddedTenant(final VertxTestContext context)  {
 
-        final JsonObject requestBody = buildTenantPayload();
+        final JsonObject requestBody = buildTenantPayload()
+                .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
+                        .put("max-connections", 1000));
 
+        LOG.debug("registering tenant using Management API: {}", requestBody.encodePrettily());
         registry.addTenant(tenantId, requestBody)
             .compose(ar -> registry.getTenant(tenantId))
-            .compose(b -> {
-                context.assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(b.toJsonObject(), requestBody));
-                return Future.succeededFuture();
-            }).setHandler(context.asyncAssertSuccess());
+            .setHandler(context.succeeding(b -> {
+                final JsonObject json = b.toJsonObject();
+                LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
+                context.verify(() -> {
+                    assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(json, requestBody));
+                });
+                context.completeNow();
+            }));
     }
 
     /**
@@ -248,13 +262,15 @@ public class TenantHttpIT {
      * @param context The Vert.x test context.
      */
     @Test
-    public void testAddTenantFailsForMalformedTrustConfiguration(final TestContext context) {
+    public void testAddTenantFailsForMalformedTrustConfiguration(final VertxTestContext context) {
+
         final JsonObject trustConfig = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
                 .put(TenantConstants.FIELD_PAYLOAD_CERT, "NotBased64Encoded");
         final JsonObject requestBody = buildTenantPayload()
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustConfig);
-        registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.asyncAssertSuccess());
+        registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST)
+        .setHandler(context.completing());
     }
 
     /**
@@ -265,15 +281,17 @@ public class TenantHttpIT {
      * @return The tenant object.
      */
     private static JsonObject buildTenantPayload() {
+
         final JsonArray adapterConfigs = new JsonArray();
         adapterConfigs.add(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, true)
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
         adapterConfigs.add(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, true)
                 .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
         adapterConfigs.add(TenantObject.newAdapterConfig("custom", false)
-                .put("options", new JsonObject().put("maxInstances", 4)));
+                .put(RegistryManagementConstants.FIELD_EXT, new JsonObject()
+                        .put("options", new JsonObject().put("maxInstances", 4))));
         final TenantObject tenantPayload = TenantObject.from(true)
-                .setProperty("ext", new JsonObject().put("plan", "unlimited"))
+                .setProperty(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"))
                 .setAdapterConfigurations(adapterConfigs);
         return JsonObject.mapFrom(tenantPayload);
     }

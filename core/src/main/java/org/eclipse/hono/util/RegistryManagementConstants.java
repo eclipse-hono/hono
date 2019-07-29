@@ -235,7 +235,11 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The name of the property that contains the trusted certificate authority configured for a tenant.
      */
-    public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";    
+    public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
+    /**
+     * The name of the property that contains the configuration options for the resource limits.
+     */
+    public static final String FIELD_RESOURCE_LIMITS = "resource-limits";
 
     private static final Set<String> ACTIONS = new HashSet<>(
             Arrays.asList(ACTION_CREATE, ACTION_GET, ACTION_DELETE, ACTION_UPDATE));

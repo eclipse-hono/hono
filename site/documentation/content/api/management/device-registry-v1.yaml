@@ -460,7 +460,7 @@ components:
                             then the payload size of the telemetry, event and
                             command messages are calculated in accordance with
                             the configured value and then reported to the metrics.
-            "limits":
+            "resource-limits":
                $ref: '#/components/schemas/ResourceLimit'
             "trusted-ca":
                $ref: '#/components/schemas/TrustedCA'
