@@ -122,18 +122,20 @@ class TenantTest {
     }
 
     /**
-     * Decode "limits" section.
+     * Decode "resource-limits" section.
      */
     @Test
-    public void testDecodeLimits() {
-        final JsonObject limit = new JsonObject()
-                        .put("max-connections", 0);
+    public void testDecodeResourceLimits() {
 
-        final var tenant = Json.decodeValue( new JsonObject().put("limits", limit).toString(), Tenant.class);
+        final JsonObject tenantSpec = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
+                        .put("max-connections", 0));
+
+        final Tenant tenant = tenantSpec.mapTo(Tenant.class);
         assertNotNull(tenant);
         assertNull(tenant.getEnabled());
 
-        final var limits = tenant.getLimits();
+        final var limits = tenant.getResourceLimits();
         assertNotNull(limits);
         assertEquals(0, limits.getMaxConnections());
     }

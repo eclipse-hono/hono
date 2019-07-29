@@ -41,6 +41,7 @@ import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -79,11 +80,21 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     private boolean dirty = false;
     private FileBasedTenantsConfigProperties config;
 
+    /**
+     * Sets the configuration properties for this service.
+     * 
+     * @param configuration The properties.
+     */
     @Autowired
     public void setConfig(final FileBasedTenantsConfigProperties configuration) {
         this.config = configuration;
     }
 
+    /**
+     * Gets the configuration properties for this service.
+     * 
+     * @return The properties.
+     */
     protected FileBasedTenantsConfigProperties getConfig() {
         return config;
     }
@@ -484,7 +495,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         tenant.setEnabled(tenantObject.getProperty(TenantConstants.FIELD_ENABLED, Boolean.class));
 
-        Optional.ofNullable(tenantObject.getProperty("ext", JsonObject.class))
+        Optional.ofNullable(tenantObject.getProperty(RegistryManagementConstants.FIELD_EXT, JsonObject.class))
                 .map(JsonObject::getMap)
                 .ifPresent(tenant::setExtensions);
 
@@ -493,10 +504,8 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 .ifPresent(tenant::setAdapters);
 
         Optional.ofNullable(tenantObject.getResourceLimits())
-                .filter(JsonObject.class::isInstance)
-                .map(JsonObject.class::cast)
                 .map(json -> json.mapTo(ResourceLimits.class))
-                .ifPresent(tenant::setLimits);
+                .ifPresent(tenant::setResourceLimits);
 
         Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class))
                 .map(json -> json.mapTo(TrustedCertificateAuthority.class))

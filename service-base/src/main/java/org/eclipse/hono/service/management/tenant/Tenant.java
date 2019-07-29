@@ -30,10 +30,11 @@ public class Tenant {
 
     private Boolean enabled;
 
-    @JsonProperty("ext")
+    @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(Include.NON_EMPTY)
     private Map<String, Object> extensions = new HashMap<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_DEFAULTS)
     @JsonInclude(Include.NON_EMPTY)
     private Map<String, Object> defaults = new HashMap<>();
 
@@ -45,8 +46,9 @@ public class Tenant {
     @JsonInclude(Include.NON_DEFAULT)
     private int minimumMessageSize = RegistryManagementConstants.DEFAULT_MINIMUM_MESSAGE_SIZE;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_RESOURCE_LIMITS)
     @JsonInclude(Include.NON_DEFAULT)
-    private ResourceLimits limits;
+    private ResourceLimits resourceLimits;
 
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     private TrustedCertificateAuthority trustedCertificateAuthority;
@@ -106,12 +108,12 @@ public class Tenant {
         this.minimumMessageSize = minimumMessageSize;
     }
 
-    public ResourceLimits getLimits() {
-        return limits;
+    public ResourceLimits getResourceLimits() {
+        return resourceLimits;
     }
 
-    public void setLimits(final ResourceLimits limits) {
-        this.limits = limits;
+    public void setResourceLimits(final ResourceLimits limits) {
+        this.resourceLimits = limits;
     }
 
     public TrustedCertificateAuthority getTrustedCertificateAuthority() {
