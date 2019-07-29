@@ -24,15 +24,15 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class Adapter {
 
-    private Boolean enabled;
+    private Boolean enabled = Boolean.FALSE;
 
     @JsonProperty(required = true)
     private String type;
 
     @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)
-    private Boolean deviceAuthenticationRequired;
+    private Boolean deviceAuthenticationRequired = Boolean.TRUE;
 
-    @JsonProperty("ext")
+    @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> extensions;
 

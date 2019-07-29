@@ -239,6 +239,7 @@ public class TenantHttpIT {
     public void testGetAddedTenant(final VertxTestContext context)  {
 
         final JsonObject requestBody = buildTenantPayload()
+                .put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
                 .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
                         .put("max-connections", 1000));
 

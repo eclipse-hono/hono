@@ -38,6 +38,7 @@
   <logger name="org.eclipse.hono.client" level="INFO"/>
   <logger name="org.eclipse.hono.client.impl" level="INFO"/>
   <logger name="org.eclipse.hono.tests" level="INFO"/>
+  <logger name="org.eclipse.hono.tests.CrudHttpClient" level="INFO"/>
   <logger name="org.eclipse.hono.tests.amqp" level="INFO"/>
   <logger name="org.eclipse.hono.tests.coap" level="INFO"/>
   <logger name="org.eclipse.hono.tests.http" level="INFO"/>
