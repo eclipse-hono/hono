@@ -177,8 +177,6 @@ If the *trusted-ca* property is provided, then it MUST contain a non-empty array
 | :------------------------| :--------: | :------------ | :------------ | :---------- |
 | *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). Trusted CAs of the same tenant MAY share the same subject DN (e.g. allowing for the definition of overlapping validity periods). However, trusted CAs of different tenants MUST NOT share the same subject DN in order to allow for the look up of a tenant by the subject DN of one of its trusted CAs. |
 | *public-key*             | *yes*       | *string*     |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
-| *not-before*             | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid before the given date. The value MUST be an **ISO 8601 compliant** [*combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations) in extended format. |
-| *not-after*              | *no*       | *string*      |               | The property indicating that the trusted root X.509 certificate is not valid after the given date. The value MUST be an **ISO 8601 compliant** [*combined date and time representation*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations) in extended format.|
 | *algorithm*              | *no*       | *string*      | `RSA`        | The name of the public key algorithm. Supported values are `RSA` and `EC`. This property is ignored if the *cert* property is used to store a certificate. |
 
 **Examples**
@@ -192,13 +190,11 @@ Below is an example for a payload of the response to a *get* request for tenant 
    "trusted-ca": [ {
            "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
            "public-key": "NOTAPUBLICKEY==",
-           "not-before": "2015-01-01T00:00:00+0000",
-           "not-after": "2025-01-01T00:00:00+0000"
+           "algorithm":  "RSA"
          }, {
            "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
-           "public-key": "NOTAPUBLICKEY==",
-           "not-before": "2024-01-01T00:00:00+0000",
-           "not-after": "2034-01-01T00:00:00+0000"
+           "public-key": "AnotherPublickey==",
+           "algorithm":  "EC"
          } ]
  }
 ~~~

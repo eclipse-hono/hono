@@ -13,6 +13,11 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -22,10 +27,6 @@ import java.util.Objects;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantTracingConfig;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Tenant Information.
@@ -189,7 +190,7 @@ public class Tenant {
     /**
      * Sets the trust configurations for this tenant.
      * 
-     * @param trustedCertificateAuthority  The trust configurations to set.
+     * @param   trustedAuthorities  The trust configurations to set.
      * @return  This instance, to allow chained invocations.
      */
     public Tenant setTrustedAuthorities(final List<TrustedCertificateAuthority> trustedAuthorities) {

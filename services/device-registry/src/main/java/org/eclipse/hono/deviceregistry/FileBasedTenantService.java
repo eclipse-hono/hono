@@ -520,7 +520,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 .ifPresent(tenant::setResourceLimits);
 
         Optional.ofNullable(tenantObject.getTrustedCAs())
-                .ifPresent(trustConfigs -> setTrustAuthorities(tenant, trustConfigs));
+                .ifPresent(trustConfigs -> setTrustedAuthorities(tenant, trustConfigs));
 
         Optional.ofNullable(tenantObject.getMinimumMessageSize())
                 .ifPresent(tenant::setMinimumMessageSize);
@@ -532,7 +532,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         return tenant;
     }
 
-    private static void setTrustAuthorities(final Tenant tenant, final List<JsonObject> trustConfigs) {
+    private static void setTrustedAuthorities(final Tenant tenant, final List<JsonObject> trustConfigs) {
         final List<TrustedCertificateAuthority> authorities = 
                 trustConfigs.stream()
                 .map(trustConfig -> trustConfig.mapTo(TrustedCertificateAuthority.class))

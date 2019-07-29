@@ -309,8 +309,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         if (trustConfig == null) {
             return true;
         } else if (JsonArray.class.isInstance(trustConfig)) {
-            final JsonArray trustConfigs = (JsonArray) trustConfig;
-            return trustConfigs.size() > 0 && isValidTrustedCaSpec(trustConfigs);
+            return isValidTrustedCaSpec((JsonArray) trustConfig);
         } else {
             return false;
         }
@@ -368,10 +367,14 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
     }
 
     private boolean isValidTrustedCaSpec(final JsonArray trustConfigs) {
-        final boolean containsInvalidTrustedCa = trustConfigs.stream()
-                .anyMatch(trustedCa -> !JsonObject.class.isInstance(trustedCa)
-                        || !isValidTrustedCaSpec((JsonObject) trustedCa));
-        return !containsInvalidTrustedCa;
+        if (trustConfigs.size() > 0) {
+            final boolean containsInvalidTrustedCa = trustConfigs.stream()
+                    .anyMatch(trustedCa -> !JsonObject.class.isInstance(trustedCa)
+                            || !isValidTrustedCaSpec((JsonObject) trustedCa));
+            return !containsInvalidTrustedCa;
+        } else {
+            return false;
+        }
     }
 
 }

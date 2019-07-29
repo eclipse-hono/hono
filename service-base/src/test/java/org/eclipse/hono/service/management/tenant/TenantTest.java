@@ -106,7 +106,7 @@ class TenantTest {
         final JsonArray adapterJson = new JsonArray().add(
                 new JsonObject()
                         .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
-                        .put("enabled", false)
+                        .put(RegistryManagementConstants.FIELD_ENABLED, false)
                         .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
 
         final var tenant = Json.decodeValue(new JsonObject().put(RegistryManagementConstants.FIELD_ADAPTERS, adapterJson).toString(), Tenant.class);
@@ -199,12 +199,12 @@ class TenantTest {
 
         final JsonArray trustedCaJson = new JsonArray().add(
                 new JsonObject()
-                        .put("subject-dn", "org.eclipse")
-                        .put("public-key", "abc123".getBytes(StandardCharsets.UTF_8))
-                        .put("not-before", "2015-06-05T20:00:05Z")
-                        .put("not-after", "2020-06-05T23:00:05Z")
-                        .put("algorithm", "def456")
-                        .put("cert", "xyz789".getBytes(StandardCharsets.UTF_8)));
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "org.eclipse")
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "abc123".getBytes(StandardCharsets.UTF_8))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, "2015-06-05T20:00:05Z")
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, "2020-06-05T23:00:05Z")
+                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "def456")
+                        .put(TenantConstants.FIELD_PAYLOAD_CERT, "xyz789".getBytes(StandardCharsets.UTF_8)));
 
         final var tenant = Json.decodeValue(
                 new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCaJson).toString(),
