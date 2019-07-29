@@ -36,6 +36,8 @@
     <guava.version>25.0-jre</guava.version>
     <caffeine.version>2.6.2</caffeine.version>
     <hamcrest-core.version>2.1</hamcrest-core.version>
+    <infinispan.version>9.4.16.Final</infinispan.version>
+    <infinispan.image.name>jboss/infinispan-server:9.4.11.Final</infinispan.image.name>
     <jackson.version>2.9.8</jackson.version>
     <jaeger.version>0.34.0</jaeger.version>
     <jaeger-agent.image.name>jaegertracing/jaeger-agent:1.13.1</jaeger-agent.image.name>
@@ -455,6 +457,11 @@
         <artifactId>jaeger-client</artifactId>
         <version>${jaeger.version}</version>
         <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.infinispan</groupId>
+        <artifactId>infinispan-client-hotrod</artifactId>
+        <version>${infinispan.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

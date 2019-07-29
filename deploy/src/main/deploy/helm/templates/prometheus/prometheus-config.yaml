@@ -19,6 +19,9 @@ data:
     {{- if .Values.deviceRegistryDeployExample }}
       {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "service-device-registry") | nindent 4 }}
     {{- end }}
+    {{- if .Values.deviceConnectionService.enabled }}
+      {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "service-device-connection") | nindent 4 }}
+    {{- end }}
     {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-amqp-vertx") | nindent 4 }}
     {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-http-vertx") | nindent 4 }}
     {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-mqtt-vertx") | nindent 4 }}

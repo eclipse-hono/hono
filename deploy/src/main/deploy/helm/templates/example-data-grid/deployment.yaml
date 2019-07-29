@@ -1,0 +1,63 @@
+{{- if .Values.dataGridDeployExample }}
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  {{- $args := dict "dot" . "component" "data-grid" "name" "data-grid" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "hono.matchLabels" $args | nindent 6 }}
+  template:
+    metadata:
+      {{- include "hono.metadata" $args | nindent 6 }}
+    spec:
+      serviceAccountName: {{ printf "%s-%s" .Release.Name $args.name }}
+      containers:
+      - args:
+        - -c
+        - hono/hono-data-grid.xml
+        - -Djboss.default.jgroups.stack=kubernetes
+        env:
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: KUBERNETES_LABELS
+          value: run=infinispan-server
+        - name: _JAVA_OPTIONS
+          value: "-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80"
+        - name: APP_USER
+          value: hono
+        - name: APP_PASS
+          value: hono-secret
+        image: {{ default "jboss/infinispan-server:9.4.11.Final" .Values.dataGridServerImage | quote }}
+        imagePullPolicy: IfNotPresent
+        name: hono-data-grid
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8181
+          protocol: TCP
+        - containerPort: 8888
+          protocol: TCP
+        - containerPort: 9990
+          protocol: TCP
+        - containerPort: 11211
+          protocol: TCP
+        - containerPort: 11222
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /opt/jboss/infinispan-server/standalone/configuration/hono
+          name: conf
+          readOnly: true
+        resources:
+          limits:
+            memory: "512Mi"
+        terminationMessagePath: /dev/termination-log
+      volumes:
+      - name: conf
+        configMap:
+          name: {{ printf "%s-%s-conf" .Release.Name $args.name }}
+{{- end }}

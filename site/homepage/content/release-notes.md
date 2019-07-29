@@ -10,6 +10,11 @@ title = "Release Notes"
   and/or the example Jaeger back end should be deployed and used with the Hono components or not.
   In the latter case, the chart now also supports setting configuration properties for using an already
   existing AMQP Messaging Network, Device Registry and/or Jaeger back end.
+* A data grid based implementation of the Device Connection API has been added to Hono. This implementation
+  can be used in production environments using a highly scalable data grid for storing device connection
+  information. The service can be used instead of the simple implementation provided by the example Device
+  Registry by means of setting a configuration property when [deploying using the Helm chart]
+  ({{% doclink "/deployment/helm-based-deployment/#using-the-device-connection-service" %}}).
 
 ### API Changes
 
