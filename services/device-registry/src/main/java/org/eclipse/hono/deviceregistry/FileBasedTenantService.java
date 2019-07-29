@@ -22,7 +22,6 @@ import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
-import io.vertx.core.AbstractVerticle;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -53,6 +52,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -246,7 +246,12 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
     @Override
     public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, null)));
+        get(tenantId, null, resultHandler);
+    }
+
+    @Override
+    public void get(final String tenantId, final Span span, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, span)));
     }
 
     @Override
@@ -493,7 +498,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         final var tenant = new Tenant();
 
-        tenant.setEnabled(tenantObject.getProperty(TenantConstants.FIELD_ENABLED, Boolean.class));
+        tenant.setEnabled(tenantObject.isEnabled());
 
         Optional.ofNullable(tenantObject.getProperty(RegistryManagementConstants.FIELD_EXT, JsonObject.class))
                 .map(JsonObject::getMap)
@@ -510,6 +515,9 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class))
                 .map(json -> json.mapTo(TrustedCertificateAuthority.class))
                 .ifPresent(tenant::setTrustedCertificateAuthority);
+
+        Optional.ofNullable(tenantObject.getMinimumMessageSize())
+                .ifPresent(tenant::setMinimumMessageSize);
 
         return tenant;
     }

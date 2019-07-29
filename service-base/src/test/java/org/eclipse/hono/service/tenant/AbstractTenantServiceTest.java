@@ -300,8 +300,9 @@ public abstract class AbstractTenantServiceTest {
 
         final JsonObject tenantSpec = buildTenantPayload("tenant")
             .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"))
+            .put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
             .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                .put("max-connections", 1000));
+                    .put("max-connections", 1000));
 
         // GIVEN a tenant that has been added via the Management API
         addTenant("tenant", tenantSpec)
@@ -321,6 +322,9 @@ public abstract class AbstractTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
                 assertEquals("tenant", response.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
                 assertEquals(
+                        tenantSpec.getValue(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE),
+                        response.getPayload().getValue(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE));
+                assertEquals(
                         tenantSpec.getValue(RegistryManagementConstants.FIELD_ENABLED),
                         response.getPayload().getValue(TenantConstants.FIELD_ENABLED));
                 assertEquals(
@@ -330,8 +334,8 @@ public abstract class AbstractTenantServiceTest {
                         tenantSpec.getValue(RegistryManagementConstants.FIELD_RESOURCE_LIMITS),
                         response.getPayload().getValue(TenantConstants.FIELD_RESOURCE_LIMITS));
                 assertEquals(
-                        tenantSpec.getJsonArray(RegistryManagementConstants.FIELD_ADAPTERS),
-                        response.getPayload().getJsonArray(TenantConstants.FIELD_ADAPTERS));
+                        tenantSpec.getValue(RegistryManagementConstants.FIELD_ADAPTERS),
+                        response.getPayload().getValue(TenantConstants.FIELD_ADAPTERS));
             });
             ctx.completeNow();
         }));

@@ -497,6 +497,7 @@ public final class CrudHttpClient {
             @SuppressWarnings("deprecation")
             final HttpClientRequest req = client.delete(requestOptions)
             .handler(response -> {
+                LOGGER.debug("got response [status: {}]", response.statusCode());
                 if (successPredicate.test(response.statusCode())) {
                     result.tryComplete();
                 } else {

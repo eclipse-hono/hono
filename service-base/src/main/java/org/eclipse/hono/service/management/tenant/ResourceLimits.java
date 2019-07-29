@@ -15,6 +15,8 @@ package org.eclipse.hono.service.management.tenant;
 
 import java.util.Map;
 
+import org.eclipse.hono.util.RegistryManagementConstants;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -27,7 +29,7 @@ public class ResourceLimits {
     @JsonProperty("max-connections")
     private int maxConnections = -1;
 
-    @JsonProperty("ext")
+    @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(Include.NON_EMPTY)
     private Map<String, Object> extensions;
 
