@@ -240,6 +240,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the property that contains the configuration options for the resource limits.
      */
     public static final String FIELD_RESOURCE_LIMITS = "resource-limits";
+    /**
+     * The name of the property that contains the maximum number of connected devices a tenant supports.
+     */
+    public static final String FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS = "max-connections";
 
     private static final Set<String> ACTIONS = new HashSet<>(
             Arrays.asList(ACTION_CREATE, ACTION_GET, ACTION_DELETE, ACTION_UPDATE));

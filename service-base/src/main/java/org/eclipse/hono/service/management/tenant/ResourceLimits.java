@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  */
 public class ResourceLimits {
 
-    @JsonProperty("max-connections")
+    @JsonProperty(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS)
     private int maxConnections = -1;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)

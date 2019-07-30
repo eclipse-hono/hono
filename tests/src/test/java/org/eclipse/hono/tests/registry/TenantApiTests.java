@@ -26,6 +26,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         final JsonObject defaults = new JsonObject().put("ttl", 30);
         final JsonObject resourceLimits = new JsonObject()
-                .put("max-connections", 100000)
+                .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 100000)
                 .put("data-volume", new JsonObject()
                         .put("max-bytes", 2147483648L)
                         .put("period-in-days", 30)

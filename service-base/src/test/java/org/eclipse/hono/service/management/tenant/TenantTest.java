@@ -129,7 +129,7 @@ class TenantTest {
 
         final JsonObject tenantSpec = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                        .put("max-connections", 0));
+                        .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 100));
 
         final Tenant tenant = tenantSpec.mapTo(Tenant.class);
         assertNotNull(tenant);
@@ -137,7 +137,7 @@ class TenantTest {
 
         final var limits = tenant.getResourceLimits();
         assertNotNull(limits);
-        assertEquals(0, limits.getMaxConnections());
+        assertEquals(100, limits.getMaxConnections());
     }
 
     /**

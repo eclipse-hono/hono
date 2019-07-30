@@ -302,7 +302,7 @@ public abstract class AbstractTenantServiceTest {
             .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"))
             .put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
             .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                    .put("max-connections", 1000));
+                    .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 1000));
 
         // GIVEN a tenant that has been added via the Management API
         addTenant("tenant", tenantSpec)

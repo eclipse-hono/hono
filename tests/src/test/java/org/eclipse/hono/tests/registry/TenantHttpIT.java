@@ -241,7 +241,7 @@ public class TenantHttpIT {
         final JsonObject requestBody = buildTenantPayload()
                 .put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
                 .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                        .put("max-connections", 1000));
+                        .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 1000));
 
         LOG.debug("registering tenant using Management API: {}", requestBody.encodePrettily());
         registry.addTenant(tenantId, requestBody)
