@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.eclipse.hono.util.RegistryManagementConstants;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,7 +35,7 @@ public class Device {
 
     private Boolean enabled;
 
-    @JsonProperty("ext")
+    @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(value = Include.NON_EMPTY)
     private Map<String, Object> extensions = new HashMap<>();
 

@@ -12,16 +12,17 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_AUTH_ID;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Common Information.
@@ -32,14 +33,14 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class CommonCredential {
 
-    @JsonProperty(FIELD_AUTH_ID)
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTH_ID)
     private String authId;
     @JsonProperty
     private Boolean enabled;
     @JsonProperty
     private String comment;
 
-    @JsonProperty("ext")
+    @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> extensions = new HashMap<>();
 
