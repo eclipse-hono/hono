@@ -23,8 +23,8 @@ spec:
   selector:
     app: hono-adapter-kura
     group: {{ .Values.project.groupId }}
-  {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" )}}
+{{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
   type: LoadBalancer
-  {{- else }}
+{{ else }}
   type: NodePort
-  {{- end}}
+{{- end }}

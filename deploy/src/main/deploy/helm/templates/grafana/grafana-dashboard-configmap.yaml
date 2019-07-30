@@ -7,9 +7,9 @@ metadata:
     version: "{{ .Chart.AppVersion }}"
     group: {{ .Values.project.groupId }}
 data:
-  overview.json:
-{{ toYaml ( .Files.Get "config/grafana/dashboard-definitions/overview.json" ) | indent 4 }}
-  message-details.json:
-{{ toYaml ( .Files.Get "config/grafana/dashboard-definitions/message-details.json" ) | indent 4 }}
-  jvm-details.json:
-{{ toYaml ( .Files.Get "config/grafana/dashboard-definitions/jvm-details.json" ) | indent 4 }}
+  overview.json: |
+{{- .Files.Get "config/grafana/dashboard-definitions/overview.json" | nindent 4 }}
+  message-details.json: |
+{{- .Files.Get "config/grafana/dashboard-definitions/message-details.json" | nindent 4 }}
+  jvm-details.json: |
+{{- .Files.Get "config/grafana/dashboard-definitions/jvm-details.json" | nindent 4 }}

@@ -22,8 +22,8 @@ spec:
   selector:
     app: hono-service-device-registry
     group: {{ .Values.project.groupId }}
-  {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" )}}
+{{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
   type: LoadBalancer
-  {{- else}}
+{{ else }}
   type: NodePort
-  {{- end}}
+{{- end }}

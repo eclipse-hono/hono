@@ -1,4 +1,4 @@
-{{if eq .Values.platform "openshift"}}
+{{- if eq .Values.platform "openshift" }}
 ---
 apiVersion: v1
 kind: Route
@@ -16,4 +16,4 @@ spec:
   to:
     kind: Service
     name: hono-dispatch-router
-{{end}}
+{{- end }}

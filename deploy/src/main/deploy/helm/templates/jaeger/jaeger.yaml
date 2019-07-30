@@ -1,4 +1,4 @@
-{{if eq .Values.jaeger.enabled true}}
+{{- if eq .Values.jaeger.enabled true }}
 apiVersion: jaegertracing.io/v1
 kind: "Jaeger"
 metadata:
@@ -8,7 +8,7 @@ metadata:
     group: {{ .Values.project.groupId }}
   name: "jaeger"
 spec:
-{{- if .Values.jaeger.deploy.spec }}
-{{ toYaml .Values.jaeger.deploy.spec | indent 2 }}
+  {{- if .Values.jaeger.deploy.spec }}
+    {{- toYaml .Values.jaeger.deploy.spec | nindent 2 }}
+  {{- end }}
 {{- end }}
-{{end}}

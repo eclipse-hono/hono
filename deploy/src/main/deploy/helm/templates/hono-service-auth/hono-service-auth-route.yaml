@@ -1,4 +1,4 @@
-{{if eq .Values.platform "openshift"}}
+{{- if eq .Values.platform "openshift" }}
 ---
 apiVersion: v1
 kind: Route
@@ -16,5 +16,4 @@ spec:
   to:
     kind: Service
     name: hono-service-auth
-{{end}}
-    
+{{- end }}

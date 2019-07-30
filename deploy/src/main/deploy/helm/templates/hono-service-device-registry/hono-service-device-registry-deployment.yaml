@@ -21,11 +21,11 @@ spec:
         group: {{ .Values.project.groupId }}
     spec:
       initContainers:
-      {{- if eq .Values.jaeger.enabled true}}
+      {{- if eq .Values.jaeger.enabled true }}
         - name: wait-for-jaeger-agent
           image: busybox:1.28
           command: ['sh', '-c', 'until nslookup {{ .Values.jaeger.agentHost }}; do echo waiting for {{ .Values.jaeger.agentHost }}; sleep 2; done;']
-      {{- end}}
+      {{- end }}
         - name: copy-example-data
           image: busybox
           command:
@@ -66,14 +66,14 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
-        {{- if eq .Values.jaeger.enabled true}}
+      {{- if eq .Values.jaeger.enabled true }}
         - name: JAEGER_SERVICE_NAME
           value: hono-service-device-registry
         {{- range $key, $value := .Values.jaeger.env }}
         - name: {{ $key }}
           value: {{ $value | quote }}
         {{- end }}
-        {{- end}}
+      {{- end }}
         - name: _JAVA_OPTIONS
           value: "{{ .Values.defaultJavaOptions }}"
         - name: KUBERNETES_NAMESPACE
