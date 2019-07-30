@@ -5,31 +5,28 @@
 project:
   groupId: ${project.groupId}
 
-# the name (including tag) of the container image to
-# use for the Dispatch Router container
-dispatchRouter:
-  image:
-    name: ${dispatch-router.image.name}
+# dispatchRouterImageName contains the name (including tag)
+# of the container image to use for the example AQMP Messaging Network
+dispatchRouterImageName: ${dispatch-router.image.name}
 
-# the name (including tag) of the container image to
-# use for the ActiveMQ Artemis container
-artemis:
-  image:
-    name: ${artemis.image.name}
+# artemisImageName contains the name (including tag) of the container
+# image to use for the example AMQP Messaging network
+artemisImageName: ${artemis.image.name}
 
-# the container registry to pull Hono images from
-# this can be set to e.g. a private container registry where
-# snapshot images have been pushed to
-# by default we pull from Docker Hub
+# honoContainerRegistry contains the host name of the container registry
+# to pull Hono images from.
+# This can be set to e.g. a private container registry where
+# snapshot images have been pushed to.
+# By default we pull from Docker Hub.
 honoContainerRegistry: index.docker.io
 
-# the image tag to use when pulling Hono container images
-# the default value is the chart's app version
-# can be overridden in order to pull custom built images
-# from a (private) container registry
+# honoImageTag contains the image tag to use when pulling Hono container images.
+# The default value is the chart's app version. It may be overridden in
+# order to pull custom built images from a (private) container registry.
 honoImageTag: ${helm.app-version}
 
-# options to pass to the JVM when starting up Hono's containers
+# defaultJavaOptions contains options to pass to the JVM when starting
+# up Hono's containers
 defaultJavaOptions: ${default-java-options}
 
 # the port that the Hono components' Prometheus scraping endpoint is exposed on
@@ -37,22 +34,25 @@ monitoring:
   prometheus:
     port: ${prometheus.scraping.port}
 
-# the port that the Hono components' health check resources are exposed on
+# healthCheckPort is the port that the Hono components bind their health check
+# server to.
 healthCheckPort: ${vertx.health.port}
 
-# the container orchestration platform we are deploying to
-# supported values are:
+# platform indicates the type of container orchestration platform we are deploying to.
+# Supported values are:
 # - openshift
 # - kubernetes
 #
-# when setting to "openshift", Route resources will also be deployed
+# When setting to "openshift", Route resources will also be deployed.
 platform: kubernetes
 
-# indicates whether external services should be deployed using the
-# "LoadBalancer" type (true) or the "NodePort" type (false)
-# will always be false when deploying to "platform: openshift".
+# useLoadBalancer indicates whether services should be deployed using the
+# "LoadBalancer" type (true) or the "NodePort" type (false).
+# This property will be ignored when deploying to platform "openshift".
 useLoadBalancer: true
 
+# jaeger contains properties for configuring the Jaeger tracing system that is used
+# by Hono's components to trace the distributed processing of messages.
 jaeger:
   # whether the Jaeger tracing component should be deployed
   enabled: false
