@@ -74,6 +74,28 @@ app.kubernetes.io/instance: {{ .dot.Release.Name }}
 app.kubernetes.io/component: {{ .component }}
 {{- end }}
 
+
+{{/*
+Creates a headless Service for a Hono component.
+The scope passed in is expected to be a dict with keys
+- "dot": the "." scope and
+- "name": the value to use for the "name" metadata property
+- "component": the value of the "app.kubernetes.io/component" label to match
+*/}}
+{{- define "hono.headless.service" }}
+{{- $args := dict "dot" .dot "component" .component "name" (printf "%s-headless" .name) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "hono.metadata" $args | nindent 2 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "hono.matchLabels" $args | nindent 4 }}
+{{- end }}
+
+
 {{/*
 Configuration for the health check server of service components.
 If the scope passed in is not nil, then it is used as the
@@ -177,3 +199,41 @@ deviceConnection:
 {{- end }}
 {{- end }}
 
+{{/*
+Create a fully qualified Prometheus server name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "hono.prometheus.server.fullname" -}}
+{{- if .Values.prometheus.server.fullnameOverride -}}
+{{- .Values.prometheus.server.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default "prometheus" .Values.prometheus.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- printf "%s-%s" .Release.Name .Values.prometheus.server.name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s-%s" .Release.Name $name .Values.prometheus.server.name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
+Create a scrape job for a service name.
+The scope passed in is expected to be a dict with keys
+- "dot": the root scope (".") and
+- "serviceName": the name of the service to scrape
+
+*/}}
+{{- define "hono.prometheus.scrapeJob" }}
+- job_name: {{ printf "%s-%s" .dot.Release.Name .serviceName }}
+  metrics_path: /prometheus
+  scheme: https
+  tls_config:
+    insecure_skip_verify: true
+  dns_sd_configs:
+  - names:
+    - {{ printf "%s-%s-headless" .dot.Release.Name .serviceName }}
+    type: A
+    port: {{ default ${prometheus.scraping.port} .dot.Values.monitoring.prometheus.port }}
+    refresh_interval: 10s
+{{- end }}

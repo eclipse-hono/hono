@@ -1,0 +1,4 @@
+{{- if .Values.prometheus.createInstance }}
+{{- $args := dict "dot" . "component" "adapter-kura" "name" "adapter-kura" }}
+{{- include "hono.headless.service" $args }}
+{{ end }}

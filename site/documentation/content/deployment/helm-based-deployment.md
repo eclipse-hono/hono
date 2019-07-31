@@ -44,17 +44,17 @@ The recommended way of deploying Hono is by means of using Helm's *Tiller* servi
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name eclipse-hono --namespace hono helm/
+helm install --dep-up --name hono --namespace hono helm/
 ~~~
 
-This will create namespace `hono` in the cluster and install all the components to that namespace. The name of the Helm release will be `eclipse-hono`.
+This will create namespace `hono` in the cluster and install all the components to that namespace. The name of the Helm release will be `hono`.
 
 The status of the deployment can be checked using any of the following commands:
 
 ~~~sh
 helm list
-helm status eclipse-hono
-helm get eclipse-hono
+helm status hono
+helm get hono
 ~~~
 
 ### Deploying Hono using kubectl
@@ -66,7 +66,7 @@ The following commands generate the resource descriptors:
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
 helm dep update helm/
-helm template --name eclipse-hono --namespace hono --output-dir . helm/
+helm template --name hono --namespace hono --output-dir . helm/
 ~~~
 
 This will create an `eclipse-hono` folder containing all the resource descriptors which can then be deployed to the cluster using `kubectl`:
@@ -87,22 +87,25 @@ The following command lists all services and their endpoints (replace `hono` wit
 ~~~sh
 kubectl get service -n hono
 
-NAME                                    TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)
-eclipse-hono-grafana                    ClusterIP      10.98.116.21     <none>          3000/TCP
-eclipse-hono-kube-state-metrics         ClusterIP      10.111.143.45    <none>          8080/TCP
-eclipse-hono-prometheus-node-exporter   ClusterIP      10.99.123.105    <none>          9100/TCP
-eclipse-hono-prometheus-op-operator     ClusterIP      10.107.136.47    <none>          8080/TCP
-hono-adapter-amqp-vertx                 LoadBalancer   10.97.243.98     10.97.243.98    5672:32672/TCP,5671:32671/TCP
-hono-adapter-http-vertx                 LoadBalancer   10.104.162.33    10.104.162.33   8080:30080/TCP,8443:30443/TCP
-hono-adapter-kura                       LoadBalancer   10.110.31.68     10.110.31.68    1883:31884/TCP,8883:30884/TCP
-hono-adapter-mqtt-vertx                 LoadBalancer   10.103.97.233    10.103.97.233   1883:31883/TCP,8883:30883/TCP
-hono-artemis                            ClusterIP      10.105.129.3     <none>          5671/TCP
-hono-dispatch-router                    ClusterIP      10.107.34.77     <none>          5673/TCP
-hono-dispatch-router-ext                LoadBalancer   10.109.64.70     10.109.64.70    15671:30671/TCP,15672:30672/TCP
-hono-service-auth                       ClusterIP      10.103.101.106   <none>          5671/TCP
-hono-service-device-registry            ClusterIP      10.107.138.95    <none>          5671/TCP
-hono-service-device-registry-ext        LoadBalancer   10.107.214.87    10.107.214.87   28080:31080/TCP,28443:31443/TCP
-prometheus-operated                     ClusterIP      None             <none>          9090/TCP
+NAME                                    TYPE           CLUSTER-IP       EXTERNAL-IP      PORT(S)
+hono-adapter-amqp-vertx                 LoadBalancer   10.109.123.153   10.109.123.153   5672:32672/TCP,5671:32671/TCP
+hono-adapter-amqp-vertx-headless        ClusterIP      None             <none>           <none>
+hono-adapter-http-vertx                 LoadBalancer   10.99.180.137    10.99.180.137    8080:30080/TCP,8443:30443/TCP
+hono-adapter-http-vertx-headless        ClusterIP      None             <none>           <none>
+hono-adapter-kura                       LoadBalancer   10.111.198.251   10.111.198.251   1883:31884/TCP,8883:30884/TCP
+hono-adapter-kura-headless              ClusterIP      None             <none>           <none>
+hono-adapter-mqtt-vertx                 LoadBalancer   10.102.204.69    10.102.204.69    1883:31883/TCP,8883:30883/TCP
+hono-adapter-mqtt-vertx-headless        ClusterIP      None             <none>           <none>
+hono-artemis                            ClusterIP      10.97.31.154     <none>           5671/TCP
+hono-dispatch-router                    ClusterIP      10.98.111.236    <none>           5673/TCP
+hono-dispatch-router-ext                LoadBalancer   10.109.220.100   10.109.220.100   15671:30671/TCP,15672:30672/TCP
+hono-grafana                            ClusterIP      10.110.61.181    <none>           3000/TCP
+hono-prometheus-server                  ClusterIP      10.96.70.135     <none>           9090/TCP
+hono-service-auth                       ClusterIP      10.109.97.44     <none>           5671/TCP
+hono-service-auth-headless              ClusterIP      None             <none>           <none>
+hono-service-device-registry            ClusterIP      10.105.190.233   <none>           5671/TCP
+hono-service-device-registry-ext        LoadBalancer   10.101.42.99     10.101.42.99     28080:31080/TCP,28443:31443/TCP
+hono-service-device-registry-headless   ClusterIP      None             <none>           <none>
 ~~~
 
 The listing above has been retrieved from a Minikube cluster that emulates a load balancer via the `minikube tunnel` command (refer to the [Minikube Networking docs](https://github.com/kubernetes/minikube/blob/master/docs/networking.md#loadbalancer-emulation-minikube-tunnel) for details).
@@ -133,7 +136,7 @@ Hono comes with an example Grafana dashboard which provides some insight into th
 The following command needs to be run first in order to forward the Grafana service's endpoint to the local host:
 
 ~~~sh
-kubectl port-forward service/eclipse-hono-grafana 3000 -n hono
+kubectl port-forward service/hono-grafana 3000 -n hono
 ~~~
 
 Then the dashboard can be opened by pointing a browser to http://localhost:3000 using credentials `admin:admin`.
@@ -143,11 +146,8 @@ Then the dashboard can be opened by pointing a browser to http://localhost:3000 
 A Hono instance that has been deployed using Helm's Tiller service can be undeployed by running
 
 ~~~sh
-helm delete --purge eclipse-hono
-kubectl delete crd prometheuses.monitoring.coreos.com prometheusrules.monitoring.coreos.com servicemonitors.monitoring.coreos.com alertmanagers.monitoring.coreos.com
+helm delete --purge hono
 ~~~
-
-The additional `kubectl delete` command is necessary to remove [Prometheus operator CRDs](https://github.com/helm/charts/tree/master/stable/prometheus-operator#uninstalling-the-chart).
 
 If the Jaeger tracing component has been deployed, additional resources have to be deleted manually:
 ~~~sh
@@ -194,7 +194,7 @@ Once the images have been pushed, the deployment can be done using Helm:
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name eclipse-hono --namespace hono --set honoContainerRegistry=my.registry.io target/deploy/helm/
+helm install --dep-up --name hono --namespace hono --set honoContainerRegistry=my.registry.io target/deploy/helm/
 ~~~
 
 ### Deploying to Minikube
@@ -218,7 +218,7 @@ The newly built images can then be deployed using Helm:
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name eclipse-hono --namespace hono target/deploy/helm/
+helm install --dep-up --name hono --namespace hono target/deploy/helm/
 ~~~
 
 ## Deploying Jaeger
@@ -229,8 +229,8 @@ The deployment can then be done using the `jaeger.enabled=true` option when runn
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name eclipse-hono --set jaeger.enabled=true --namespace hono target/deploy/helm/
+helm install --dep-up --name hono --set jaeger.enabled=true --namespace hono target/deploy/helm/
 ~~~
 
-For more information on how to access the Jaeger UI, see the [Jaeger Operator documentation](https://github.com/jaegertracing/jaeger-operator#accessing-the-ui).
-
+Under the hood, this will install the Jaeger Operator and create a Jaeger back end instance suitable for testing purposes.
+Please refer to the [Jaeger Operator](https://www.jaegertracing.io/docs/1.13/operator/) documentation for additional information on how to configure and access Jaeger's UI etc.

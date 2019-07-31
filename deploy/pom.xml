@@ -33,10 +33,6 @@
     <docker.skip.build>true</docker.skip.build>
     <default-java-options>-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80</default-java-options>
 
-    <!-- This is only used by the Docker Swarm deployment -->
-    <prometheus.image.name>prom/prometheus:v2.3.1</prometheus.image.name>
-    <helm.app-version>${project.version}</helm.app-version>
-
     <!-- service names -->
     <hono.adapter-amqp.service>hono-adapter-amqp-vertx</hono.adapter-amqp.service>
     <hono.adapter-coap.service>hono-adapter-coap-vertx</hono.adapter-coap.service>
@@ -47,7 +43,6 @@
     <hono.amqp-network.service>hono-dispatch-router</hono.amqp-network.service>
     <hono.auth.service>hono-service-auth</hono.auth.service>
     <hono.artemis.service>hono-artemis</hono.artemis.service>
-    <hono.prometheus.service>prometheus-operated</hono.prometheus.service>
     <hono.registration.service>hono-service-device-registry</hono.registration.service>
 
   </properties>

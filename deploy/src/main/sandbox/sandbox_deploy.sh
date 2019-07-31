@@ -40,13 +40,13 @@ docker secret create -l project=$NS trusted-certs.pem $CERTS/trusted-certs.pem
 
 echo
 echo Deploying Prometheus ...
-docker secret create -l project=$NS prometheus.yml $SCRIPTPATH/prometheus.yml
-docker service create $CREATE_OPTIONS --name ${hono.prometheus.service} \
+docker secret create -l project=$NS prometheus.yml $SCRIPTPATH/prometheus-config.yml
+docker service create $CREATE_OPTIONS --name ${prometheus.service} \
   -p 9090:9090 \
   --limit-memory 256m \
   --secret prometheus.yml \
   --entrypoint "/bin/prometheus" \
-  ${prometheus.image.name} \
+  prom/prometheus:v2.3.1 \
   --config.file=/run/secrets/prometheus.yml \
   --storage.tsdb.path=/prometheus \
   --storage.tsdb.retention=2h
@@ -54,11 +54,11 @@ echo ... done
 
 echo
 echo Deploying Grafana ...
+docker config create -l project=$NS prometheus.yaml $SCRIPTPATH/grafana/provisioning/datasources.yaml
 docker config create -l project=$NS filesystem-provisioner.yaml $SCRIPTPATH/grafana/provisioning/dashboards/filesystem-provisioner.yaml
 docker config create -l project=$NS overview.json $SCRIPTPATH/grafana/dashboard-definitions/overview.json
 docker config create -l project=$NS message-details.json $SCRIPTPATH/grafana/dashboard-definitions/message-details.json
 docker config create -l project=$NS jvm-details.json $SCRIPTPATH/grafana/dashboard-definitions/jvm-details.json
-docker config create -l project=$NS prometheus.yaml $SCRIPTPATH/grafana/provisioning/datasources/prometheus.yaml
 docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --secret source=hono.eclipse.org-key.pem,target=/etc/grafana/hono.eclipse.org-key.pem \
   --secret source=hono.eclipse.org-cert.pem,target=/etc/grafana/hono.eclipse.org-cert.pem \

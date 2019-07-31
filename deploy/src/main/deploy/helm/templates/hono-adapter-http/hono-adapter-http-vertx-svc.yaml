@@ -3,7 +3,6 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "adapter-http-vertx" "name" "adapter-http-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
-    hono-metrics: prometheus
 spec:
   ports:
   - name: http

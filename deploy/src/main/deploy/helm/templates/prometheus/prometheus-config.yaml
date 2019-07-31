@@ -1,0 +1,26 @@
+{{- if .Values.prometheus.createInstance }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  {{- $args := dict "dot" . "component" "metrics" "name" "prometheus-config" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
+data:
+  rules:
+  alerts:
+  prometheus.yml: |
+    global:
+      {{- .Values.prometheus.server.global | toYaml | nindent 6 }}
+    rule_files:
+    - /etc/config/rules
+    - /etc/config/alerts
+
+    scrape_configs:
+    {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "service-auth") | nindent 4 }}
+    {{- if .Values.deviceRegistryDeployExample }}
+      {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "service-device-registry") | nindent 4 }}
+    {{- end }}
+    {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-amqp-vertx") | nindent 4 }}
+    {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-http-vertx") | nindent 4 }}
+    {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-mqtt-vertx") | nindent 4 }}
+    {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-kura") | nindent 4 }}
+{{ end }}

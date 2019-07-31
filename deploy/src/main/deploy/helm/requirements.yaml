@@ -1,7 +1,12 @@
 dependencies:
-  - name: prometheus-operator
-    version: ~6.4.0
+  - name: prometheus
+    version: ~8.15.0
     repository: "@stable"
+    condition: prometheus.createInstance
+  - name: grafana
+    version: ~3.7.3
+    repository: "@stable"
+    condition: grafana.enabled
   - name: jaeger-operator
     version: ~2.4.1
     repository: "@stable"

@@ -1,3 +1,4 @@
+{{- if .Values.grafana.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,3 +12,4 @@ data:
     {{- .Files.Get "config/grafana/dashboard-definitions/message-details.json" | nindent 4 }}
   jvm-details.json: |
     {{- .Files.Get "config/grafana/dashboard-definitions/jvm-details.json" | nindent 4 }}
+{{- end }}

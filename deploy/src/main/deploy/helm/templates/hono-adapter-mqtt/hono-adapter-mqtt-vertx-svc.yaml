@@ -3,7 +3,6 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "adapter-mqtt-vertx" "name" "adapter-mqtt-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
-    hono-metrics: prometheus
 spec:
   ports:
   - name: mqtt
@@ -23,4 +22,3 @@ spec:
 {{ else }}
   type: NodePort
 {{- end }}
-  

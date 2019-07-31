@@ -3,7 +3,6 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "service-auth" "name" "service-auth" }}
   {{- include "hono.metadata" $args | nindent 2 }}
-    hono-metrics: prometheus
 spec:
   ports:
   - name: amqps

@@ -1,0 +1,4 @@
+{{- if .Values.prometheus.createInstance }}
+{{- $args := dict "dot" . "component" "adapter-mqtt-vertx" "name" "adapter-mqtt-vertx" }}
+{{- include "hono.headless.service" $args }}
+{{ end }}

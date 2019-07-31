@@ -80,7 +80,7 @@ docker config rm \
   message-details.json \
   prometheus.yaml
 
-docker service rm ${hono.prometheus.service}
+docker service rm ${prometheus.service}
 docker secret rm prometheus.yml
 
 docker secret rm trusted-certs.pem

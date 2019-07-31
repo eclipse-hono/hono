@@ -35,7 +35,7 @@ honoContainerRegistry: index.docker.io
 # honoImageTag contains the image tag to use when pulling Hono container images.
 # The default value is the chart's app version. It may be overridden in
 # order to pull custom built images from a (private) container registry.
-honoImageTag: ${helm.app-version}
+honoImageTag: ${project.version}
 
 # defaultJavaOptions contains options to pass to the JVM when starting
 # up Hono's containers
@@ -63,6 +63,91 @@ platform: kubernetes
 # This property will be ignored when deploying to platform "openshift".
 useLoadBalancer: true
 
+prometheus:
+  # createInstance indicates whether a Prometheus server should be created
+  # using the Prometheus chart.
+  # Set this property to false if you want to use an already existing server
+  # instead. In that case, set the "name" and "port" properties to the
+  # existing server's host name and port.
+  createInstance: true
+  # host contains the host name of an existing Prometheus server.
+  # This property is used to configure a corresponding datasource in Grafana
+  # if createInstance is set to false.
+  #host:
+  # post contains the port number of an existing Prometheus server.
+  # This property is used to configure a corresponding datasource in Grafana
+  # if createInstance is set to false.
+  #port: 9090
+
+  ## Define serviceAccount names for components. Defaults to component's fully qualified name.
+  ##
+  serviceAccounts:
+    alertmanager:
+      create: false
+      name:
+    kubeStateMetrics:
+      create: false
+      name:
+    nodeExporter:
+      create: false
+      name:
+    pushgateway:
+      create: false
+      name:
+    server:
+      create: true
+      name:
+
+  server:
+    configMapOverrideName: prometheus-config
+    global:
+      scrape_interval: 10s
+    service:
+      servicePort: 9090
+
+  alertmanager:
+    enabled: false
+
+  kubeStateMetrics:
+    enabled: false
+
+  nodeExporter:
+    enabled: false
+
+  pushgateway:
+    enabled: false
+
+grafana:
+  enabled: true
+  adminPassword: admin
+  ## Expose the grafana service to be accessed from outside the cluster (LoadBalancer service).
+  ## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
+  ## ref: http://kubernetes.io/docs/user-guide/services/
+  ##
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+    annotations: {}
+    labels:
+      app.kubernetes.io/name: eclipse-hono
+      app.kubernetes.io/component: dashboard
+
+  ## Sidecars that collect the configmaps with specified label and stores the included files them into the respective folders
+  ## Requires at least Grafana 5 to work and can't be used together with parameters dashboardProviders, datasources and dashboards
+  sidecar:
+    dashboards:
+      enabled: true
+      # label that the configmaps with dashboards are marked with
+      label: grafana_dashboard
+    datasources:
+      enabled: true
+      # label that the configmaps with datasources are marked with
+      label: grafana_datasource
+
+  rbac:
+    namespaced: true
+
 # jaeger contains properties for configuring the Jaeger tracing system that is used
 # by Hono's components to trace the distributed processing of messages.
 jaeger:
@@ -84,145 +169,3 @@ jaeger:
         options:
           memory:
             max-traces: 100000
-
-
-# Default values for prometheus-operator.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-prometheus-operator:
-
-  ## Provide a name in place of prometheus-operator for `app:` labels
-  ##
-  nameOverride: ""
-
-  ## Provide a name to substitute for the full names of resources
-  ##
-  fullnameOverride: ""
-
-  ## Labels to apply to all resources
-  ##
-  commonLabels: {}
-  # scmhash: abc123
-  # myLabel: aakkmd
-
-  ## Create default rules for monitoring the cluster
-  ##
-  defaultRules:
-    create: false
-
-  ##
-  global:
-    rbac:
-      create: true
-      pspEnabled: true
-
-    ## Reference to one or more secrets to be used when pulling images
-    ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-    ##
-    imagePullSecrets: []
-    # - name: "image-pull-secret"
-
-
-  ## Configuration options for Grafana instance that can be created along with Prometheus
-  ## see https://github.com/helm/charts/blob/master/stable/grafana/values.yaml
-  ##
-  grafana:
-    enabled: true
-
-    ## Deploy default dashboards.
-    ##
-    defaultDashboardsEnabled: false
-
-    adminPassword: admin
-
-    ## Expose the grafana service to be accessed from outside the cluster (LoadBalancer service).
-    ## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
-    ## ref: http://kubernetes.io/docs/user-guide/services/
-    ##
-    service:
-      type: ClusterIP
-      port: 3000
-      annotations: {}
-      labels: {}
-
-    sidecar:
-      
-      dashboards:
-        enabled: true
-        label: grafana_dashboard
-      datasources:
-        defaultDatasourceEnabled: false
-        enabled: true
-        label: grafana_datasource
-
-
-  ## Configuration for alertmanager
-  ## ref: https://prometheus.io/docs/alerting/alertmanager/
-  ##
-  alertmanager:
-
-    ## Deploy alertmanager
-    ##
-    enabled: false
-
-  ## Component scraping the kube api server
-  ##
-  kubeApiServer:
-    enabled: false
-
-  ## Component scraping the kubelet and kubelet-hosted cAdvisor
-  ##
-  kubelet:
-    enabled: false
-
-  ## Component scraping the kube controller manager
-  ##
-  kubeControllerManager:
-    enabled: false
-
-  ## Component scraping coreDns. Use either this or kubeDns
-  ##
-  coreDns:
-    enabled: false
-
-  ## Component scraping kubeDns. Use either this or coreDns
-  ##
-  kubeDns:
-    enabled: false
-
-  ## Component scraping etcd
-  ##
-  kubeEtcd:
-    enabled: false
-
-  ## Component scraping kube scheduler
-  ##
-  kubeScheduler:
-    enabled: false
-
-  ## Component scraping kube proxy
-  ##
-  kubeProxy:
-    enabled: false
-
-  ## Component scraping kube state metrics
-  ##
-  kubeStateMetrics:
-    enabled: false
-
-  ## Deploy node exporter as a daemonset to all nodes
-  ##
-  nodeExporter:
-    enabled: false
-
-  ## Manages Prometheus and Alertmanager components
-  ##
-  prometheusOperator:
-    enabled: true
-    serviceMonitor:
-      selfMonitor: false
-
-  ## Deploy a Prometheus instance
-  ##
-  prometheus:
-    enabled: false

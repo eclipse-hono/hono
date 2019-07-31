@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  {{- $args := dict "dot" . "component" "dashboard" "name" "grafana-datasources" }}
-  {{- include "hono.metadata" $args | nindent 2 }}
-    grafana_datasource: "1"
-data:
-  hono-datasource.yaml: |
-    {{- .Files.Get "config/grafana/provisioning/datasources/prometheus.yaml" | nindent 4 }}
