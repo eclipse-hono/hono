@@ -1,5 +1,5 @@
 ---
-title: "Device Registy Management API Specification"
+title: "Device Registry Management API Specification"
 linkTitle: "Device Registry Management API"
 weight: 437
 swaggerUI: true

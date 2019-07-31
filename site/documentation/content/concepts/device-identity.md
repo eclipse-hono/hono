@@ -3,7 +3,7 @@ title = "Device Identity"
 weight = 182
 +++
 
-This page describes how devices are represented and identified throughout Hono and its API's.
+This page describes how devices are represented and identified throughout Hono and its APIs.
 <!--more-->
 
 The main purpose of Hono is to provide a uniform API for applications to interact with devices, regardless of the particular communication protocol the devices natively use. In order to do so, Hono uses a unique *logical* identifier to refer to each device individually.
