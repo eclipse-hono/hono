@@ -440,10 +440,15 @@ components:
       Tenant:
          type: object
          additionalProperties: false
+         required:
+            - tenant-id
+            - enabled
          properties:
             "enabled":
                type: boolean
                default: true
+            "tenant-id":
+               type: string
             "ext":
                $ref: '#/components/schemas/Extensions'
             "adapters":
@@ -534,7 +539,11 @@ components:
       Device:
          type: object
          additionalProperties: false
+         required:
+            - device-id 
          properties:
+            "device-id":
+               type: string
             "enabled":
                type: boolean
                default: true
