@@ -3,9 +3,8 @@ apiVersion: jaegertracing.io/v1
 kind: "Jaeger"
 metadata:
   labels:
-    app: jaeger
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tracing
   name: "jaeger"
 spec:
   {{- if .Values.jaeger.deploy.spec }}

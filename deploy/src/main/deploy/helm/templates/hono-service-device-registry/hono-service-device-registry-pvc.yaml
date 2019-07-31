@@ -3,9 +3,8 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   labels:
-    app: hono-service-device-registry
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hono-service-device-registry
   name: registry
 spec:
   accessModes:

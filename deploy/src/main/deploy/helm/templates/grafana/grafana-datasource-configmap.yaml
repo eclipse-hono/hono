@@ -3,9 +3,9 @@ kind: ConfigMap
 metadata:
   name: hono-grafana-datasource
   labels:
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
     grafana_datasource: "1"
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
 data:
   hono-datasource.yaml: |
-{{- .Files.Get "config/grafana/provisioning/datasources/prometheus.yaml" | nindent 4 }}
+    {{- .Files.Get "config/grafana/provisioning/datasources/prometheus.yaml" | nindent 4 }}

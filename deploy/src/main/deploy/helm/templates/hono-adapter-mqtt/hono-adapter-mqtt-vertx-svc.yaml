@@ -3,9 +3,8 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: hono-adapter-mqtt-vertx
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hono-adapter-mqtt-vertx
     hono-metrics: prometheus
   name: hono-adapter-mqtt-vertx
 spec:
@@ -21,8 +20,8 @@ spec:
     targetPort: secure-mqtt
     nodePort: 30883
   selector:
-    app: hono-adapter-mqtt-vertx
-    group: {{ .Values.project.groupId }}
+    app.kubernetes.io/name: {{ template "hono.name" . }}
+    app.kubernetes.io/component: hono-adapter-mqtt-vertx
 {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
   type: LoadBalancer
 {{ else }}

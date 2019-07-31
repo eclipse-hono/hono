@@ -3,9 +3,8 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: amqp-messaging-network
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: amqp-messaging-network-router
   name: ${hono.amqp-network.service}-ext
 spec:
   ports:
@@ -20,9 +19,8 @@ spec:
     targetPort: amqp
     nodePort: 30672
   selector:
-    app: amqp-messaging-network
-    role: router
-    group: {{ .Values.project.groupId }}
+    app.kubernetes.io/name: {{ template "hono.name" . }}
+    app.kubernetes.io/component: amqp-messaging-network-router
 {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
   type: LoadBalancer
 {{ else }}

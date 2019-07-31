@@ -3,22 +3,20 @@ apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: hono-adapter-kura
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hono-adapter-kura
   name: hono-adapter-kura
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hono-adapter-kura
-      group: {{ .Values.project.groupId }}
+      app.kubernetes.io/name: {{ template "hono.name" . }}
+      app.kubernetes.io/component: hono-adapter-kura
   template:
     metadata:
       labels:
-        app: hono-adapter-kura
-        version: "{{ .Chart.AppVersion }}"
-        group: {{ .Values.project.groupId }}
+        {{- include "hono.std.labels" . | nindent 8 }}
+        app.kubernetes.io/component: hono-adapter-kura
     spec:
       {{- if eq .Values.jaeger.enabled true }}
       initContainers:

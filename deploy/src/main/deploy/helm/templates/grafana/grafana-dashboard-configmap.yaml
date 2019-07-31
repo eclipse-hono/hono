@@ -3,13 +3,13 @@ kind: ConfigMap
 metadata:
   name: hono-grafana-dashboard
   labels:
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
     grafana_dashboard: "1"
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
 data:
   overview.json: |
-{{- .Files.Get "config/grafana/dashboard-definitions/overview.json" | nindent 4 }}
+    {{- .Files.Get "config/grafana/dashboard-definitions/overview.json" | nindent 4 }}
   message-details.json: |
-{{- .Files.Get "config/grafana/dashboard-definitions/message-details.json" | nindent 4 }}
+    {{- .Files.Get "config/grafana/dashboard-definitions/message-details.json" | nindent 4 }}
   jvm-details.json: |
-{{- .Files.Get "config/grafana/dashboard-definitions/jvm-details.json" | nindent 4 }}
+    {{- .Files.Get "config/grafana/dashboard-definitions/jvm-details.json" | nindent 4 }}

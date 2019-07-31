@@ -3,22 +3,20 @@ apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: hono-adapter-http-vertx
-    version: "{{ .Chart.AppVersion }}"
-    group: {{ .Values.project.groupId }}
+    {{- include "hono.std.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hono-adapter-http-vertx
   name: hono-adapter-http-vertx
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hono-adapter-http-vertx
-      group: {{ .Values.project.groupId }}
+      app.kubernetes.io/name: {{ template "hono.name" . }}
+      app.kubernetes.io/component: hono-adapter-http-vertx
   template:
     metadata:
       labels:
-        app: hono-adapter-http-vertx
-        version: "{{ .Chart.AppVersion }}"
-        group: {{ .Values.project.groupId }}
+        {{- include "hono.std.labels" . | nindent 8 }}
+        app.kubernetes.io/component: hono-adapter-http-vertx
     spec:
       {{- if eq .Values.jaeger.enabled true }}
       initContainers:
