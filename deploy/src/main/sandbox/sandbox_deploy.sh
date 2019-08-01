@@ -249,11 +249,11 @@ echo "Deploying NGINX for redirecting to Hono web site"
 docker config create -l project=$NS site.conf $SCRIPTPATH/nginx.conf
 # we bind mount the directory that is used by Certbot to
 # get/update the Let's Encrypt certificate
-docker service create $CREATE_OPTIONS --name hono-nginx -p 443:443 \
+docker service create $CREATE_OPTIONS --name hono-nginx -p 443:443 -p 80:80 \
   --limit-memory 32m \
   --secret source=hono.eclipse.org-key.pem,target=/etc/nginx/hono.eclipse.org-key.pem,mode=0440 \
   --secret source=hono.eclipse.org-cert.pem,target=/etc/nginx/hono.eclipse.org-cert.pem \
-  --config source=site.conf,target=/etc/nginx/conf.d/site.conf,mode=0440 \
+  --config source=site.conf,target=/etc/nginx/conf.d/default.conf,mode=0440 \
   --mount type=bind,source=/var/www/certbot,target=/var/www/letsencrypt \
   nginx:1.17
 echo ... done
