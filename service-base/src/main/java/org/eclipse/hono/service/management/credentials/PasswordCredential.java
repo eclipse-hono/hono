@@ -32,7 +32,14 @@ public class PasswordCredential extends CommonCredential {
         return secrets;
     }
 
-    public void setSecrets(final List<PasswordSecret> secrets) {
+    /**
+     * Set the secrets for this credential.
+     *
+     * @param secrets  The secrets to set.
+     * @return         a reference to this for fluent use.
+     */
+    public PasswordCredential setSecrets(final List<PasswordSecret> secrets) {
         this.secrets = secrets;
+        return this;
     }
 }

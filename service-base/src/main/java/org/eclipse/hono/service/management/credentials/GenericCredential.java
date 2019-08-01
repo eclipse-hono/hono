@@ -33,8 +33,15 @@ public class GenericCredential extends CommonCredential {
 
     private List<GenericSecret> secrets = new LinkedList<>();
 
-    public void setType(final String type) {
+    /**
+     * Set the type of this credential.
+     * 
+     * @param type  The credential type to set.
+     * @return      a reference to this for fluent use.
+     */
+    public GenericCredential setType(final String type) {
         this.type = type;
+        return this;
     }
 
     public String getType() {
@@ -46,12 +53,26 @@ public class GenericCredential extends CommonCredential {
         return this.secrets;
     }
 
-    public void setSecrets(final List<GenericSecret> secrets) {
+    /**
+     * Set the secrets for this credentials type.
+     * 
+     * @param secrets The secret to set.
+     * @return        a reference to this for fluent use.
+     */
+    public GenericCredential setSecrets(final List<GenericSecret> secrets) {
         this.secrets = secrets;
+        return this;
     }
 
-    public void setAdditionalProperties(final Map<String, Object> additionalProperties) {
+    /**
+     * Set the additional properties for this credential.
+     * 
+     * @param additionalProperties  The additional properties for this credential.
+     * @return                      a reference to this for fluent use.
+     */
+    public GenericCredential setAdditionalProperties(final Map<String, Object> additionalProperties) {
         this.additionalProperties = additionalProperties;
+        return this;
     }
 
     @JsonAnyGetter

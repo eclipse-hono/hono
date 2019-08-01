@@ -35,16 +35,30 @@ public class ResourceLimits {
     @JsonInclude(Include.NON_EMPTY)
     private Map<String, Object> extensions;
 
-    public void setMaxConnections(final Integer maxConnections) {
+    /**
+     * Set the max connections property for this resource limits.
+     * 
+     * @param maxConnections  The maximum connections to set.
+     * @return  a reference to this for fluent use.
+     */
+    public ResourceLimits setMaxConnections(final Integer maxConnections) {
         this.maxConnections = maxConnections;
+        return this;
     }
 
     public Integer getMaxConnections() {
         return this.maxConnections;
     }
 
-    public void setExtensions(final Map<String, Object> extensions) {
+    /**
+     * Set the extension properties for this resource limits.
+     * 
+     * @param extensions The extensions to set.
+     * @return          a reference to this for fluent use.
+     */
+    public ResourceLimits setExtensions(final Map<String, Object> extensions) {
         this.extensions = extensions;
+        return this;
     }
 
     public Map<String, Object> getExtensions() {

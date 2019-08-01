@@ -55,37 +55,67 @@ public abstract class CommonCredential {
         return authId;
     }
 
-    public void setAuthId(final String authId) {
+    /**
+     * Set the authId for this credential.
+     * 
+     * @param authId  The authId to set for this credential.
+     * @return        a reference to this for fluent use.
+     */
+    public CommonCredential setAuthId(final String authId) {
         this.authId = authId;
+        return this;
     }
 
     public Boolean getEnabled() {
         return enabled;
     }
 
-    public void setEnabled(final Boolean enabled) {
+    /**
+     * Set the enabled property for this credential.
+     *
+     * @param enabled  The enabled property.
+     * @return         a reference to this for fluent use.
+     */
+    public CommonCredential setEnabled(final Boolean enabled) {
         this.enabled = enabled;
+        return this;
     }
 
     public String getComment() {
         return comment;
     }
 
-    public void setComment(final String comment) {
+    /**
+     * Set the comment property for this credential.
+     *
+     * @param comment   The comment to set for this credential.
+     * @return          a reference to this for fluent use.
+     */
+    public CommonCredential setComment(final String comment) {
         this.comment = comment;
+        return this;
     }
 
     public Map<String, Object> getExtensions() {
         return extensions;
     }
 
-    public void setExtensions(final Map<String, Object> extensions) {
+    /**
+     * Set the extension properties for this credential.
+     *
+     * @param extensions    The extension properties to set.
+     * @return      a reference to this for fluent use.
+     */
+    public CommonCredential setExtensions(final Map<String, Object> extensions) {
         this.extensions = extensions;
+        return this;
     }
 
     /**
      * Add a new extension entry to the device.
-     *
+     * <p>
+     * If an extension property already exist for the specified key, the old value is replaced by the specified value.
+     * 
      * @param key The key of the entry.
      * @param value The value of the entry.
      * @return This instance, to allowed chained invocations.

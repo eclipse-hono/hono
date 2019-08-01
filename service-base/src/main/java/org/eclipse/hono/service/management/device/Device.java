@@ -71,16 +71,30 @@ public class Device {
         }
     }
 
-    public void setEnabled(final Boolean enabled) {
+    /**
+     * Set the enabled property for this device.
+     *
+     * @param enabled The enabled property to set.
+     * @return        a reference to this for fluent use.
+     */
+    public Device setEnabled(final Boolean enabled) {
         this.enabled = enabled;
+        return this;
     }
 
     public Boolean getEnabled() {
         return enabled;
     }
 
-    public void setExtensions(final Map<String, Object> extensions) {
+    /**
+     * Set the extension properties for this device.
+     * 
+     * @param extensions The extension properties to set.
+     * @return           a reference to this for fluent use.
+     */
+    public Device setExtensions(final Map<String, Object> extensions) {
         this.extensions = extensions;
+        return this;
     }
 
     /**
@@ -102,8 +116,14 @@ public class Device {
         return this.extensions;
     }
 
-    public void setDefaults(final Map<String, Object> defaults) {
+    /**
+     * Set the defaults for this device.
+     * @param defaults  The defaults to set for this device.
+     * @return          a reference to this for fluent use.
+     */
+    public Device setDefaults(final Map<String, Object> defaults) {
         this.defaults = defaults;
+        return this;
     }
 
     public Map<String, Object> getDefaults() {
@@ -114,7 +134,14 @@ public class Device {
         return via;
     }
 
-    public void setVia(final List<String> via) {
+    /**
+     * Set the via property for this device.
+     * 
+     * @param via The via property to set.
+     * @return    a reference to this for fluent use.
+     */
+    public Device setVia(final List<String> via) {
         this.via = via;
+        return this;
     }
 }

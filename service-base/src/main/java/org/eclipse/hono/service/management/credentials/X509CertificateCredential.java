@@ -32,7 +32,14 @@ public class X509CertificateCredential extends CommonCredential {
         return secrets;
     }
 
-    public void setSecrets(final List<X509CertificateSecret> secrets) {
+    /**
+     * Set the secrets for this credential.
+     * 
+     * @param secrets   The list of secrets to set.
+     * @return          a reference to this for fluent use.
+     */
+    public X509CertificateCredential setSecrets(final List<X509CertificateSecret> secrets) {
         this.secrets = secrets;
+        return this;
     }
 }

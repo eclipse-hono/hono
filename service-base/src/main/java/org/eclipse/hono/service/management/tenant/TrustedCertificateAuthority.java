@@ -38,32 +38,60 @@ public class TrustedCertificateAuthority {
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM)
     private String keyAlgorithm;
 
-    public void setSubjectDn(final String subjectDn) {
+    /**
+     * Set the subject-dn configuration property.
+     *
+     * @param subjectDn The subject-dn property to set.
+     * @return          a reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setSubjectDn(final String subjectDn) {
         this.subjectDn = subjectDn;
+        return this;
     }
 
     public String getSubjectDn() {
         return subjectDn;
     }
 
-    public void setPublicKey(final byte[] publicKey) {
+    /**
+     * Set the public-key configuration property.
+     *
+     * @param publicKey The public-key property of the trusted root certificate.
+     * @return          a reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setPublicKey(final byte[] publicKey) {
         this.publicKey = publicKey;
+        return this;
     }
 
     public byte[] getPublicKey() {
         return publicKey;
     }
 
-    public void setCertificate(final byte[] certificate) {
+    /**
+     * Set the cert configuration property.
+     *
+     * @param certificate The cert property of the trusted root certificate.
+     * @return            a reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setCertificate(final byte[] certificate) {
         this.certificate = certificate;
+        return this;
     }
 
     public byte[] getCertificate() {
         return certificate;
     }
 
-    public void setKeyAlgorithm(final String keyAlgorithm) {
+    /**
+     * Set the algorithm property of the trusted root certificate.
+     * 
+     * @param keyAlgorithm  The algorithm name of the public key.
+     * @return              a reference to this for fluent use.
+     */
+    public TrustedCertificateAuthority setKeyAlgorithm(final String keyAlgorithm) {
         this.keyAlgorithm = keyAlgorithm;
+        return this;
     }
 
     public String getKeyAlgorithm() {

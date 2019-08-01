@@ -32,7 +32,14 @@ public class PskCredential extends CommonCredential {
         return secrets;
     }
 
-    public void setSecrets(final List<PskSecret> secrets) {
+    /**
+     * Set the secrets for this credential.
+     *
+     * @param secrets The secrets to set.
+     * @return        a reference to this for fluent use.
+     */
+    public PskCredential setSecrets(final List<PskSecret> secrets) {
         this.secrets = secrets;
+        return this;
     }
 }
