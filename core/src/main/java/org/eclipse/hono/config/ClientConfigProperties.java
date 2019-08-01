@@ -121,6 +121,9 @@ public class ClientConfigProperties extends AbstractConfig {
         this.password = otherProperties.password;
         this.port = otherProperties.port;
         this.reconnectAttempts = otherProperties.reconnectAttempts;
+        this.reconnectMinDelayMillis = otherProperties.reconnectMinDelayMillis;
+        this.reconnectMaxDelayMillis = otherProperties.reconnectMaxDelayMillis;
+        this.reconnectDelayIncrementMillis = otherProperties.reconnectDelayIncrementMillis;
         this.requestTimeoutMillis = otherProperties.requestTimeoutMillis;
         this.sendMessageTimeoutMillis = otherProperties.sendMessageTimeoutMillis;
         this.tlsEnabled = otherProperties.tlsEnabled;
