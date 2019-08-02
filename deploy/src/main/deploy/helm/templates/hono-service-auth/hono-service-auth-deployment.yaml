@@ -1,22 +1,16 @@
----
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: hono-service-auth
-  name: hono-service-auth
+  {{- $args := dict "dot" . "component" "service-auth" "name" "service-auth" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "hono.name" . }}
-      app.kubernetes.io/component: hono-service-auth
+      {{- include "hono.matchLabels" $args | nindent 6 }}
   template:
     metadata:
-      labels:
-        {{- include "hono.std.labels" . | nindent 8 }}
-        app.kubernetes.io/component: hono-service-auth
+      {{- include "hono.metadata" $args | nindent 6 }}
     spec:
       containers:
       - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-service-auth:{{ .Values.honoImageTag }}
@@ -69,4 +63,4 @@ spec:
       volumes:
       - name: conf
         secret:
-          secretName: hono-service-auth-conf
+          secretName: {{ .Release.Name }}-service-auth-conf

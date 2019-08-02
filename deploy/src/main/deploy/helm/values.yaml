@@ -2,6 +2,21 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+# amqpMessagingNetworkDeployExample indicates whether the example AMQP Messaging Network
+# consisting of a single Dispatch Router and Artemis broker should be
+# deployed and used.
+amqpMessagingNetworkDeployExample: true
+amqpMessagingNetworkSpec: {}
+commandAndControlSpec: {}
+
+# deviceRegistryDeployExample indicates whether the example Device Registry
+# should be deployed and used.
+deviceRegistryDeployExample: true
+tenantSpec: {}
+deviceRegistrationSpec: {}
+credentialsSpec: {}
+deviceConnectionSpec: {}
+
 # dispatchRouterImageName contains the name (including tag)
 # of the container image to use for the example AQMP Messaging Network
 dispatchRouterImageName: ${dispatch-router.image.name}
@@ -131,10 +146,12 @@ prometheus-operator:
       labels: {}
 
     sidecar:
+      
       dashboards:
         enabled: true
         label: grafana_dashboard
       datasources:
+        defaultDatasourceEnabled: false
         enabled: true
         label: grafana_datasource
 
@@ -181,6 +198,11 @@ prometheus-operator:
   ## Component scraping kube scheduler
   ##
   kubeScheduler:
+    enabled: false
+
+  ## Component scraping kube proxy
+  ##
+  kubeProxy:
     enabled: false
 
   ## Component scraping kube state metrics

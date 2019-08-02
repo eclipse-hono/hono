@@ -1,16 +1,13 @@
 {{- if eq .Values.platform "openshift" }}
----
 apiVersion: v1
 kind: Route
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: hono-service-device-registry
-  name: hono-service-device-registry-http
+  {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry-http" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   port:
     targetPort: 8080
   to:
     kind: Service
-    name: hono-service-device-registry
+    name: {{ .Release.Name }}-service-device-registry
 {{- end }}

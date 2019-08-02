@@ -1,16 +1,14 @@
----
+{{- if .Values.amqpMessagingNetworkDeployExample -}}
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: amqp-messaging-network-router
-  name: ${hono.amqp-network.service}
+  {{- $args := dict "dot" . "component" "amqp-messaging-network-router" "name" "dispatch-router" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   ports:
   - port: 5673
     protocol: TCP
     targetPort: internal
   selector:
-    app.kubernetes.io/name: {{ template "hono.name" . }}
-    app.kubernetes.io/component: amqp-messaging-network-router
+    {{- include "hono.matchLabels" $args | nindent 4 }}
+{{- end }}

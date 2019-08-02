@@ -1,10 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: hono-grafana-dashboard
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: dashboard
+  {{- $args := dict "dot" . "component" "dashboard" "name" "grafana-dashboards" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
     grafana_dashboard: "1"
 data:
   overview.json: |

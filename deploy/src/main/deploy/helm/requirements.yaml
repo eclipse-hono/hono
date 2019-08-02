@@ -1,6 +1,6 @@
 dependencies:
   - name: prometheus-operator
-    version: ~6.3.0
+    version: ~6.4.0
     repository: "@stable"
   - name: jaeger-operator
     version: ~2.4.1

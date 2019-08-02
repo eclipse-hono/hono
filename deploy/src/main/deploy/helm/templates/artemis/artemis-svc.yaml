@@ -1,11 +1,9 @@
----
+{{- if .Values.amqpMessagingNetworkDeployExample -}}
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: amqp-messaging-network-broker
-  name: ${hono.artemis.service}
+  {{- $args := dict "dot" . "component" "amqp-messaging-network-broker" "name" "artemis" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   ports:
   - name: amqps
@@ -13,5 +11,5 @@ spec:
     protocol: TCP
     targetPort: amqps
   selector:
-    app.kubernetes.io/name: {{ template "hono.name" . }}
-    app.kubernetes.io/component: amqp-messaging-network-broker
+    {{- include "hono.matchLabels" $args | nindent 4 }}
+{{- end }}

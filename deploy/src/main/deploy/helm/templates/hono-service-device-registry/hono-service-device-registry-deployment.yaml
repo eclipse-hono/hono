@@ -1,22 +1,16 @@
----
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: hono-service-device-registry
-  name: hono-service-device-registry
+  {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "hono.name" . }}
-      app.kubernetes.io/component: hono-service-device-registry
+      {{- include "hono.matchLabels" $args | nindent 6 }}
   template:
     metadata:
-      labels:
-        {{- include "hono.std.labels" . | nindent 8 }}
-        app.kubernetes.io/component: hono-service-device-registry
+      {{- include "hono.metadata" $args | nindent 6 }}
     spec:
       initContainers:
       {{- if eq .Values.jaeger.enabled true }}
@@ -104,7 +98,7 @@ spec:
       volumes:
       - name: registry
         persistentVolumeClaim:
-          claimName: registry
+          claimName: {{ .Release.Name }}-service-device-registry
       - name: conf
         secret:
-          secretName: hono-service-device-registry-conf
+          secretName: {{ .Release.Name }}-service-device-registry-conf

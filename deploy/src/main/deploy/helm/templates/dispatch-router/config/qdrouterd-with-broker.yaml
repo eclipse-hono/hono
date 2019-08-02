@@ -1,3 +1,4 @@
+{{- define "hono.qdrouterd-with-broker.json" -}}
 [
   ["router", {
     "id": "Hono.Example.Router",
@@ -7,7 +8,7 @@
 
   ["authServicePlugin", {
     "name": "Hono Auth",
-    "host": "${hono.auth.service}${service.suffix}",
+    "host": "{{ .Release.Name }}-service-auth${service.suffix}",
     "port": 5671,
     "sslProfile": "internal"
   }],
@@ -65,7 +66,7 @@
   ["connector", {
     "sslProfile": "external",
     "name": "broker",
-    "host": "${hono.artemis.service}${service.suffix}",
+    "host": "{{ .Release.Name }}-artemis${service.suffix}",
     "port": 5671,
     "role": "route-container",
     "saslUsername": "artemis",
@@ -131,3 +132,4 @@
     "enable": "info+"
   }]
 ]
+{{- end }}

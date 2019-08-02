@@ -1,12 +1,9 @@
 {{- if eq .Values.platform "openshift" }}
----
 apiVersion: v1
 kind: Route
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: hono-adapter-kura
-  name: hono-adapter-kura-sec
+  {{- $args := dict "dot" . "component" "adapter-kura" "name" "adapter-kura-sec" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   port:
     targetPort: 8883
@@ -14,5 +11,5 @@ spec:
     termination: passthrough
   to:
     kind: Service
-    name: hono-adapter-kura
+    name: {{ .Release.Name }}-adapter-kura
 {{- end }}

@@ -1,12 +1,9 @@
----
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: hono-service-auth
+  {{- $args := dict "dot" . "component" "service-auth" "name" "service-auth" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
     hono-metrics: prometheus
-  name: ${hono.auth.service}
 spec:
   ports:
   - name: amqps
@@ -14,5 +11,4 @@ spec:
     protocol: TCP
     targetPort: amqps
   selector:
-    app.kubernetes.io/name: {{ template "hono.name" . }}
-    app.kubernetes.io/component: hono-service-auth
+    {{- include "hono.matchLabels" $args | nindent 4 }}

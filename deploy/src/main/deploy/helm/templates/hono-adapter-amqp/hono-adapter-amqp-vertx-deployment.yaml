@@ -1,22 +1,16 @@
----
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: hono-adapter-amqp-vertx
-  name: hono-adapter-amqp-vertx
+  {{- $args := dict "dot" . "component" "adapter-amqp-vertx" "name" "adapter-amqp-vertx" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ template "hono.name" . }}
-      app.kubernetes.io/component: hono-adapter-amqp-vertx
+      {{- include "hono.matchLabels" $args | nindent 6 }}
   template:
     metadata:
-      labels:
-        {{- include "hono.std.labels" . | nindent 8 }}
-        app.kubernetes.io/component: hono-adapter-amqp-vertx
+      {{- include "hono.metadata" $args | nindent 6 }}
     spec:
       {{- if eq .Values.jaeger.enabled true }}
       initContainers:
@@ -83,4 +77,4 @@ spec:
       volumes:
       - name: conf
         secret:
-          secretName: hono-adapter-amqp-vertx-conf
+          secretName: {{ .Release.Name }}-adapter-amqp-vertx-conf

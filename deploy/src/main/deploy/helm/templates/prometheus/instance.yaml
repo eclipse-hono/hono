@@ -1,19 +1,14 @@
+{{- $args := dict "dot" . "component" "metrics" "name" "prometheus" }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: prometheus
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: metrics
+  {{- include "hono.metadata" $args | nindent 2 }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: prometheus
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: metrics
+  {{- include "hono.metadata" $args | nindent 2 }}
 rules:
 - apiGroups: [""]
   resources:
@@ -29,31 +24,31 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: RoleBinding
 metadata:
-  name: prometheus
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: metrics
+  {{- include "hono.metadata" $args | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: prometheus
+  name: {{ .Release.Name}}-prometheus
 subjects:
 - kind: ServiceAccount
-  name: prometheus
+  name: {{ .Release.Name}}-prometheus
   namespace: {{ .Release.Namespace | quote }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
-  name: prometheus
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: metrics
+  {{- include "hono.metadata" $args | nindent 2 }}
 spec:
-  serviceAccountName: prometheus
+  serviceAccountName: {{ .Release.Name}}-prometheus
   serviceMonitorSelector:
     matchLabels:
       app.kubernetes.io/name: {{ template "hono.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: metrics
+  podMetadata:
+    labels:
+      app.kubernetes.io/name: {{ template "hono.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
       app.kubernetes.io/component: metrics
   resources:
     requests:
@@ -63,14 +58,13 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: hono
-  labels:
-    {{- include "hono.std.labels" . | nindent 4 }}
-    app.kubernetes.io/component: metrics
+  {{- $serviceMonitorArgs := dict "dot" . "component" "metrics" "name" "service-monitor" }}
+  {{- include "hono.metadata" $serviceMonitorArgs | nindent 2 }}
 spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ template "hono.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
       hono-metrics: prometheus
   endpoints:
     - scheme: HTTPS
