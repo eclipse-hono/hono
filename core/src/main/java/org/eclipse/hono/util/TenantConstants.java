@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.util;
 
-import java.util.OptionalInt;
-
 /**
  * Constants &amp; utility methods used throughout the Tenant API.
  */
@@ -90,19 +88,23 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_RESOURCE_LIMITS = "resource-limits";
 
     /**
-     * The name of the field that defines in how far spans created when processing
-     * messages for a tenant shall be recorded (sampled) by the tracing system.
-     * The field contains a {@link TraceSamplingMode} value.
+     * The name of the property that defines tenant-specific tracing options.
      */
-    public static final String FIELD_TRACE_SAMPLING_MODE = "trace-sampling-mode";
+    public static final String FIELD_TRACING = "tracing";
     /**
-     * The name of the field that defines in how far spans created when processing
+     * The name of the property that defines in how far spans created when processing
+     * messages for a tenant shall be recorded (sampled) by the tracing system.
+     * The property contains a {@link TracingSamplingMode} value.
+     */
+    public static final String FIELD_TRACING_SAMPLING_MODE = "sampling-mode";
+    /**
+     * The name of the property that defines in how far spans created when processing
      * messages for a tenant and a particular auth-id shall be recorded (sampled)
      * by the tracing system.
-     * The field contains a JsonObject with fields having a auth-id as name and
-     * a {@link TraceSamplingMode} value.
+     * The property contains a JsonObject with fields having a auth-id as name and
+     * a {@link TracingSamplingMode} value.
      */
-    public static final String FIELD_TRACE_SAMPLING_MODE_PER_AUTH_ID = "trace-sampling-mode-per-auth-id";
+    public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
 
     /**
      * Request actions that belong to the Tenant API.
@@ -143,56 +145,6 @@ public final class TenantConstants extends RequestResponseApiConstants {
                 }
             }
             return custom;
-        }
-    }
-
-    /**
-     * Value that defines in how far <em>OpenTracing</em> spans created when processing
-     * messages for a tenant shall be recorded (sampled) by the tracing system.
-     */
-    public enum TraceSamplingMode {
-        DEFAULT("default"),
-        ALL("all"),
-        ;
-
-        private final String fieldValue;
-
-        TraceSamplingMode(final String fieldValue) {
-            this.fieldValue = fieldValue;
-        }
-
-        /**
-         * Gets the JSON field value for this TraceSamplingMode.
-         *
-         * @return The field value.
-         */
-        public String getFieldValue() {
-            return fieldValue;
-        }
-
-        /**
-         * Construct a TraceSamplingMode from a value.
-         *
-         * @param value The value from which the TraceSamplingMode needs to be constructed.
-         * @return The TraceSamplingMode as enum, or {@link TraceSamplingMode#DEFAULT} otherwise.
-         */
-        public static TraceSamplingMode from(final String value) {
-            for (TraceSamplingMode mode : values()) {
-                if (mode.getFieldValue().equals(value)) {
-                    return mode;
-                }
-            }
-            return DEFAULT;
-        }
-
-        /**
-         * Gets the value for the <em>sampling.priority</em> span tag.
-         *
-         * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
-         *         <em>OptionalInt</em> if no such tag should be set.
-         */
-        public OptionalInt toSamplingPriority() {
-            return this.equals(ALL) ? OptionalInt.of(1) : OptionalInt.empty();
         }
     }
 

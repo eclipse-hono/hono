@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -33,7 +34,10 @@ import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.tenant.AbstractTenantServiceTest;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantTracingConfig;
+import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -370,9 +374,21 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
     public void testConversion() {
         final TenantObject tenantObject = new TenantObject();
         tenantObject.setEnabled(true);
+        final JsonObject tracingConfigJsonObject = new JsonObject();
+        tracingConfigJsonObject.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE, "all");
+        final JsonObject tracingSamplingModeJsonObject = new JsonObject()
+                .put("authId1", "all")
+                .put("authId2", "default");
+        tracingConfigJsonObject.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, tracingSamplingModeJsonObject);
+        tenantObject.setProperty(TenantConstants.FIELD_TRACING, tracingConfigJsonObject);
 
         final Tenant tenant = FileBasedTenantService.convertTenantObject(tenantObject);
         assertEquals(Boolean.TRUE, tenant.getEnabled());
+        final TenantTracingConfig tracingConfig = tenant.getTracing();
+        assertNotNull(tracingConfig);
+        assertEquals(TracingSamplingMode.ALL, tracingConfig.getSamplingMode());
+        assertEquals(TracingSamplingMode.ALL, tracingConfig.getSamplingModePerAuthId().get("authId1"));
+        assertEquals(TracingSamplingMode.DEFAULT, tracingConfig.getSamplingModePerAuthId().get("authId2"));
     }
 
 }

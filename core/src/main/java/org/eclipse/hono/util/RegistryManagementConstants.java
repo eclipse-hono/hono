@@ -244,6 +244,24 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the property that contains the maximum number of connected devices a tenant supports.
      */
     public static final String FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS = "max-connections";
+    /**
+     * The name of the property that defines tenant-specific tracing options.
+     */
+    public static final String FIELD_TRACING = "tracing";
+    /**
+     * The name of the property that defines in how far spans created when processing
+     * messages for a tenant shall be recorded (sampled) by the tracing system.
+     * The property contains a {@link TracingSamplingMode} value.
+     */
+    public static final String FIELD_TRACING_SAMPLING_MODE = "sampling-mode";
+    /**
+     * The name of the property that defines in how far spans created when processing
+     * messages for a tenant and a particular auth-id shall be recorded (sampled)
+     * by the tracing system.
+     * The property contains a JsonObject with fields having a auth-id as name and
+     * a {@link TracingSamplingMode} value.
+     */
+    public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
 
     private static final Set<String> ACTIONS = new HashSet<>(
             Arrays.asList(ACTION_CREATE, ACTION_GET, ACTION_DELETE, ACTION_UPDATE));

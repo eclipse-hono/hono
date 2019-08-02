@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,6 +20,11 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TenantTracingConfig;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Tenant Information.
@@ -51,6 +53,10 @@ public class Tenant {
     @JsonProperty(RegistryManagementConstants.FIELD_RESOURCE_LIMITS)
     @JsonInclude(Include.NON_DEFAULT)
     private ResourceLimits resourceLimits;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_TRACING)
+    @JsonInclude(Include.NON_EMPTY)
+    private TenantTracingConfig tracing;
 
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     private TrustedCertificateAuthority trustedCertificateAuthority;
@@ -116,6 +122,24 @@ public class Tenant {
 
     public void setResourceLimits(final ResourceLimits limits) {
         this.resourceLimits = limits;
+    }
+
+    /**
+     * Gets the tenant-specific tracing configuration.
+     *
+     * @return The tracing configuration or {@code null} if not set.
+     */
+    public TenantTracingConfig getTracing() {
+        return tracing;
+    }
+
+    /**
+     * Sets the tenant-specific tracing configuration.
+     *
+     * @param tracing The tracing configuration.
+     */
+    public void setTracing(final TenantTracingConfig tracing) {
+        this.tracing = tracing;
     }
 
     public TrustedCertificateAuthority getTrustedCertificateAuthority() {

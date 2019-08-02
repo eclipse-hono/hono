@@ -599,22 +599,26 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public OptionalInt getTraceSamplingPriority(final String authId) {
-        String traceSamplingMode = null;
-        if (authId != null) {
-            // check device specific setting first
-            final JsonObject traceSamplingModePerAuthId = getProperty(TenantConstants.FIELD_TRACE_SAMPLING_MODE_PER_AUTH_ID,
-                    JsonObject.class);
-            if (traceSamplingModePerAuthId != null) {
-                traceSamplingMode = traceSamplingModePerAuthId.getString(authId);
-            }
-        }
-        if (traceSamplingMode == null) {
-            // check tenant specific setting
-            traceSamplingMode = getProperty(TenantConstants.FIELD_TRACE_SAMPLING_MODE, String.class);
-        }
-        if (traceSamplingMode == null) {
+        final JsonObject tracingConfig = getProperty(TenantConstants.FIELD_TRACING, JsonObject.class);
+        if (tracingConfig == null) {
             return OptionalInt.empty();
         }
-        return TenantConstants.TraceSamplingMode.from(traceSamplingMode).toSamplingPriority();
+        String samplingMode = null;
+        if (authId != null) {
+            // check device/auth-id specific setting first
+            final JsonObject samplingModePerAuthId = tracingConfig
+                    .getJsonObject(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID);
+            if (samplingModePerAuthId != null) {
+                samplingMode = samplingModePerAuthId.getString(authId);
+            }
+        }
+        if (samplingMode == null) {
+            // check tenant specific setting
+            samplingMode = tracingConfig.getString(TenantConstants.FIELD_TRACING_SAMPLING_MODE);
+        }
+        if (samplingMode == null) {
+            return OptionalInt.empty();
+        }
+        return TracingSamplingMode.from(samplingMode).toSamplingPriority();
     }
 }

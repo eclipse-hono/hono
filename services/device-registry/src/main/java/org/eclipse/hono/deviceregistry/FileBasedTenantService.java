@@ -44,6 +44,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.util.TenantTracingConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -518,6 +519,10 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         Optional.ofNullable(tenantObject.getMinimumMessageSize())
                 .ifPresent(tenant::setMinimumMessageSize);
+
+        Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_TRACING, JsonObject.class))
+                .map(json -> json.mapTo(TenantTracingConfig.class))
+                .ifPresent(tenant::setTracing);
 
         return tenant;
     }
