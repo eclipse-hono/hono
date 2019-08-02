@@ -29,6 +29,8 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 
 import javax.security.auth.x500.X500Principal;
@@ -305,11 +307,19 @@ public class TenantObjectTest {
                 .put("max-connections", 2)
                 .put("data-volume",
                         new JsonObject().put("max-bytes", 20_000_000)
-                                .put("period-in-days", 90)
-                                .put("effective-since", "2019-04-26"));
+                                .put("effective-since", "2019-04-25T14:30:00Z")
+                                .put("period", new JsonObject()
+                                        .put("mode", "days")
+                                        .put("no-of-days", 90)));
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenantObject.setResourceLimits(limitsConfig);
-        assertThat(tenantObject.getResourceLimits(), is(limitsConfig));
+        assertNotNull(tenantObject.getResourceLimits());
+        assertThat(tenantObject.getResourceLimits().getMaxConnections(), is(2));
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes(), is(20_000_000L));
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince(), is(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00Z", OffsetDateTime::from).toInstant()));
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode(), is("days"));
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays(), is(90));
     }
 
     /**

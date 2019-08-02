@@ -20,11 +20,19 @@ package org.eclipse.hono.util;
 public final class TenantConstants extends RequestResponseApiConstants {
 
     /**
+     * The default value for the maximum number of bytes to be allowed for a tenant is set to -1, which implies no
+     * limit.
+     */
+    public static final long DEFAULT_MAX_BYTES = -1;
+    /**
+     * The default value for the maximum number of connections to be allowed is -1, which implies no limit.
+     */
+    public static final int DEFAULT_MAX_CONNECTIONS = -1;    
+    /**
      * The default number of seconds that a protocol adapter should wait for
      * an upstream command.
      */
     public static final int DEFAULT_MAX_TTD = 60; // seconds
-
     /**
      * The default message size is set to 0, which implies no minimum size is defined.
      */
@@ -49,6 +57,22 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
+     * The name of the property that contains the configuration options for the data volume.
+     */
+    public static final String FIELD_DATA_VOLUME = "data-volume";
+    /**
+     * The name of the property that contains the date on which the data volume limit came into effect.
+     */
+    public static final String FIELD_EFFECTIVE_SINCE = "effective-since";
+    /**
+     * The name of the property that contains the maximum number of bytes to be allowed for a tenant.
+     */
+    public static final String FIELD_MAX_BYTES = "max-bytes";
+    /**
+     * The name of the property that contains the maximum number of connections to be allowed for a tenant.
+     */
+    public static final String FIELD_MAX_CONNECTIONS = "max-connections";    
+    /**
      * The name of the property that contains the maximum <em>time til disconnect</em> that protocol
      * adapters should use for a tenant.
      */
@@ -71,7 +95,19 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * The name of the property that contains the trusted certificate authority configured for a tenant.
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
-
+    /**
+     * The name of the property that contains the period details for which the data usage is calculated.
+     */
+    public static final String FIELD_PERIOD = "period";
+    /**
+     * The name of the property that contains the number of days for which the data usage is calculated.
+     */
+    public static final String FIELD_PERIOD_NO_OF_DAYS = "no-of-days";    
+    /**
+     * The name of the property that contains the mode of the period for which the data usage
+     * is calculated.
+     */
+    public static final String FIELD_PERIOD_MODE = "mode";    
     /**
      * The name of the property that contains the minimum message size in bytes.
      */

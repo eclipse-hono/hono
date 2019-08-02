@@ -11,17 +11,15 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.management.tenant;
+package org.eclipse.hono.util;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.util.RegistryManagementConstants;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Resource limits definition.
@@ -29,8 +27,11 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 @JsonInclude(Include.NON_DEFAULT)
 public class ResourceLimits {
 
-    @JsonProperty(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS)
-    private int maxConnections = -1;
+    @JsonProperty(TenantConstants.FIELD_MAX_CONNECTIONS)
+    private int maxConnections = TenantConstants.DEFAULT_MAX_CONNECTIONS;
+
+    @JsonProperty(TenantConstants.FIELD_DATA_VOLUME)
+    private DataVolume dataVolume;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(Include.NON_EMPTY)
@@ -41,8 +42,12 @@ public class ResourceLimits {
      * 
      * @param maxConnections The maximum number of connections to set.
      * @return A reference to this for fluent use.
+     * @throws IllegalArgumentException if the maximum connections is set to less than -1.
      */
-    public ResourceLimits setMaxConnections(final int maxConnections) {
+    public final ResourceLimits setMaxConnections(final int maxConnections) {
+        if (maxConnections < -1) {
+            throw new IllegalArgumentException("Maximum connections property must be set to value >= -1");
+        }
         this.maxConnections = maxConnections;
         return this;
     }
@@ -50,10 +55,31 @@ public class ResourceLimits {
     /**
      * Gets the maximum number of connected devices a tenant supports.
      * 
-     * @return The maximum number of connections.
+     * @return The maximum number of connections or {@link TenantConstants#DEFAULT_MAX_CONNECTIONS}
+     *         if not set.
      */
-    public int getMaxConnections() {
+    public final int getMaxConnections() {
         return this.maxConnections;
+    }
+
+    /**
+     * Gets the data volume properties which are required for the message limit verification.
+     *
+     * @return The data volume properties.
+     */
+    public final DataVolume getDataVolume() {
+        return dataVolume;
+    }
+
+    /**
+     * Sets the data volume properties which are required for the message limit verification.
+     * 
+     * @param dataVolume the data volume properties.
+     * @return a reference to this for fluent use.
+     */
+    public final ResourceLimits setDataVolume(final DataVolume dataVolume) {
+        this.dataVolume = dataVolume;
+        return this;
     }
 
     /**
@@ -62,7 +88,7 @@ public class ResourceLimits {
      * @param extensions The extensions to set.
      * @return          a reference to this for fluent use.
      */
-    public ResourceLimits setExtensions(final Map<String, Object> extensions) {
+    public final ResourceLimits setExtensions(final Map<String, Object> extensions) {
         this.extensions = extensions;
         return this;
     }
@@ -72,7 +98,7 @@ public class ResourceLimits {
      * 
      * @return The extensions.
      */
-    public Map<String, Object> getExtensions() {
+    public final Map<String, Object> getExtensions() {
         return this.extensions;
     }
 
@@ -86,7 +112,7 @@ public class ResourceLimits {
      * @return This instance, to allow chained invocations.
      * @throws NullPointerException if any of the arguments is {@code null}.
      */
-    public ResourceLimits putExtension(final String key, final Object value) {
+    public final ResourceLimits putExtension(final String key, final Object value) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
         if (this.extensions == null) {
