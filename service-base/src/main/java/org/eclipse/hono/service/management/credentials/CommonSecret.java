@@ -17,7 +17,7 @@ import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_NO
 
 import java.time.Instant;
 
-import org.eclipse.hono.service.annotation.HonoTimestamp;
+import org.eclipse.hono.annotation.HonoTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

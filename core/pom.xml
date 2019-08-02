@@ -68,6 +68,11 @@
       <artifactId>jjwt-jackson</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>    
+    <dependency>
       <!-- required as a (missing) transient dependency for JJWT -->
       <groupId>javax.xml.bind</groupId>
       <artifactId>jaxb-api</artifactId>

@@ -241,10 +241,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_RESOURCE_LIMITS = "resource-limits";
     /**
-     * The name of the property that contains the maximum number of connected devices a tenant supports.
-     */
-    public static final String FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS = "max-connections";
-    /**
      * The name of the property that defines tenant-specific tracing options.
      */
     public static final String FIELD_TRACING = "tracing";

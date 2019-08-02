@@ -36,11 +36,13 @@ import java.util.OptionalInt;
 import javax.security.auth.x500.X500Principal;
 
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -53,6 +55,8 @@ public final class TenantObject extends JsonBackedValueObject {
 
     @JsonIgnore
     private List<Map<String, Object>> adapterConfigurations;
+    @JsonIgnore
+    private ResourceLimits resourceLimits;    
     @JsonIgnore
     private TrustAnchor trustAnchor;
 
@@ -522,9 +526,24 @@ public final class TenantObject extends JsonBackedValueObject {
      *
      * @return The resource limits or {@code null} if not set.
      */
+    @JsonGetter(TenantConstants.FIELD_RESOURCE_LIMITS)
+    public ResourceLimits getResourceLimits() {
+        return this.resourceLimits;
+    }
+
+    /**
+     * Sets the resource limits for the tenant.
+     *
+     * @param resourceLimits The resource limits configuration to add.
+     * @return This tenant for command chaining.
+     * @throws NullPointerException if resource limits to be set is {@code null}.
+     * @throws IllegalArgumentException if the resource limits object cannot be 
+     *                                  instantiated from the given jsonObject.
+     */
     @JsonIgnore
-    public JsonObject getResourceLimits() {
-        return getProperty(TenantConstants.FIELD_RESOURCE_LIMITS, JsonObject.class);
+    public TenantObject setResourceLimits(final JsonObject resourceLimits) {
+        Objects.requireNonNull(resourceLimits);
+        return setResourceLimits(resourceLimits.mapTo(ResourceLimits.class));
     }
 
     /**
@@ -534,10 +553,11 @@ public final class TenantObject extends JsonBackedValueObject {
      * @return This tenant for command chaining.
      * @throws NullPointerException if resource limits to be set is {@code null}.
      */
-    @JsonIgnore
-    public TenantObject setResourceLimits(final JsonObject resourceLimits) {
+    @JsonSetter(TenantConstants.FIELD_RESOURCE_LIMITS)
+    public TenantObject setResourceLimits(final ResourceLimits resourceLimits) {
         Objects.requireNonNull(resourceLimits);
-        return setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, resourceLimits);
+        this.resourceLimits = resourceLimits;
+        return this;
     }
 
     /**
