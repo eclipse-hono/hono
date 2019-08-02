@@ -13,24 +13,29 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS_TYPE;
 import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS;
 import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED;
+import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS_TYPE;
 import static org.eclipse.hono.util.TenantConstants.FIELD_ENABLED;
+import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING;
+import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING_SAMPLING_MODE;
+import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-import io.vertx.core.json.JsonArray;
-
 import java.nio.charset.StandardCharsets;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import java.util.Map;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TenantTracingConfig;
+import org.eclipse.hono.util.TracingSamplingMode;
 import org.hamcrest.collection.IsEmptyIterable;
 import org.junit.jupiter.api.Test;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies {@link Tenant}.
@@ -165,6 +170,28 @@ class TenantTest {
     }
 
     /**
+     * Decode tenant with a "tracing" property set.
+     */
+    @Test
+    public void testDecodeTraceSampling() {
+        final JsonObject tenantJson = new JsonObject();
+        final JsonObject tracingConfigJson = new JsonObject();
+        tracingConfigJson.put("sampling-mode", "all");
+        final JsonObject samplingModePerAuthIdMap = new JsonObject()
+                .put("authId1", "all")
+                .put("authId2", "default");
+        tracingConfigJson.put("sampling-mode-per-auth-id", samplingModePerAuthIdMap);
+        tenantJson.put("tracing", tracingConfigJson);
+        final var tenant = Json.decodeValue(tenantJson.toString(), Tenant.class);
+        assertNotNull(tenant);
+        final TenantTracingConfig tracingConfig = tenant.getTracing();
+        assertNotNull(tracingConfig);
+        assertEquals(TracingSamplingMode.ALL, tracingConfig.getSamplingMode());
+        assertEquals(TracingSamplingMode.ALL, tracingConfig.getSamplingModePerAuthId().get("authId1"));
+        assertEquals(TracingSamplingMode.DEFAULT, tracingConfig.getSamplingModePerAuthId().get("authId2"));
+    }
+
+    /**
      * Encode with absent "enabled" flag.
      */
     @Test
@@ -212,6 +239,28 @@ class TenantTest {
         final var json = JsonObject.mapFrom(tenant);
         assertNotNull(json);
         assertEquals(4096, json.getInteger("minimum-message-size"));
+    }
+
+    /**
+     * Encode tenant with a "tracing" value set.
+     */
+    @Test
+    public void testEncodeTraceSamplingModePerAuthId() {
+        final var tenant = new Tenant();
+        final TenantTracingConfig tracingConfig = new TenantTracingConfig();
+        tracingConfig.setSamplingMode(TracingSamplingMode.ALL);
+        tracingConfig.setSamplingModePerAuthId(
+                Map.of("authId1", TracingSamplingMode.ALL, "authId2", TracingSamplingMode.DEFAULT));
+        tenant.setTracing(tracingConfig);
+        final var json = JsonObject.mapFrom(tenant);
+        assertNotNull(json);
+        final JsonObject tracingConfigJson = json.getJsonObject(FIELD_TRACING);
+        assertNotNull(tracingConfigJson);
+        assertEquals(TracingSamplingMode.ALL.getFieldValue(), tracingConfigJson.getString(FIELD_TRACING_SAMPLING_MODE));
+        final JsonObject traceSamplingModePerAuthIdJson = tracingConfigJson.getJsonObject(FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID);
+        assertNotNull(traceSamplingModePerAuthIdJson);
+        assertEquals(TracingSamplingMode.ALL.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId1"));
+        assertEquals(TracingSamplingMode.DEFAULT.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId2"));
     }
 
     /**

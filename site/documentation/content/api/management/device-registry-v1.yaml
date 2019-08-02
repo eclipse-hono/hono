@@ -462,6 +462,8 @@ components:
                             the configured value and then reported to the metrics.
             "resource-limits":
                $ref: '#/components/schemas/ResourceLimit'
+            "tracing":
+               $ref: '#/components/schemas/TracingConfig'
             "trusted-ca":
                $ref: '#/components/schemas/TrustedCA'
 
@@ -528,6 +530,50 @@ components:
                             indicates that no limit is set.
             "ext":
                $ref: '#/components/schemas/Extensions'
+
+      TracingConfig:
+         type: object
+         additionalProperties: false
+         properties:
+            "sampling-mode":
+               type: string
+               description: Defines in how far OpenTracing spans created when
+                  processing messages for this tenant shall be recorded
+                  (sampled) by the tracing system. The value `default`
+                  lets the default sampling mechanism be used.
+                  The value `all` marks the spans related to this tenant
+                  so that they should all be sampled.
+                  The value `none` marks the spans as not to be sampled.
+                  The mode defined here may be overridden for a particular
+                  auth-id by means of the `sampling-mode-per-auth-id`
+                  property.
+               default: default
+               enum:
+                  - default
+                  - all
+                  - none
+            "sampling-mode-per-auth-id":
+               type: object
+               description: Defines in how far OpenTracing spans created when
+                  processing messages for this tenant and a particular
+                  auth-id shall be recorded (sampled) by the tracing
+                  system. The child properties have the auth-id as name.
+                  A child property value of `default` lets the default
+                  sampling mechanism be used. The child property value
+                  `all` marks the spans related to this tenant and the
+                  auth-id so that they should all be sampled.
+                  The child property value `none` marks the spans as not
+                  to be sampled.
+                  The mode defined for a particular auth-id has precedence
+                  over the value defined by the `sampling-mode` property.
+               additionalProperties:
+                  type: string
+                  description: The property name is the auth-id as used for authenticating requests from a device.
+                  default: default
+                  enum:
+                     - default
+                     - all
+                     - none
 
 # Devices schema
 
