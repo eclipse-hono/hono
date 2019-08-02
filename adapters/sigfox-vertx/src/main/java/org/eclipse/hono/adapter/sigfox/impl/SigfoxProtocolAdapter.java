@@ -28,7 +28,12 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
+import org.eclipse.hono.service.http.HttpContext;
+import org.eclipse.hono.service.http.HttpContextTenantAndAuthIdProvider;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
+import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
+import org.eclipse.hono.service.tenant.TenantObjectWithAuthId;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -38,6 +43,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.io.BaseEncoding;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
@@ -74,6 +81,8 @@ public final class SigfoxProtocolAdapter
 
     private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
 
+    private ExecutionContextTenantAndAuthIdProvider<HttpContext> tenantObjectWithAuthIdProvider;
+
     /**
      * Handle message upload.
      */
@@ -95,6 +104,16 @@ public final class SigfoxProtocolAdapter
         this.usernamePasswordAuthProvider = Objects.requireNonNull(provider);
     }
 
+    /**
+     * Sets the provider that determines the tenant and auth-id associated with a request.
+     *
+     * @param provider The provider to use.
+     * @throws NullPointerException if provider is {@code null}.
+     */
+    public void setTenantObjectWithAuthIdProvider(final ExecutionContextTenantAndAuthIdProvider<HttpContext> provider) {
+        this.tenantObjectWithAuthIdProvider = Objects.requireNonNull(provider);
+    }
+
     @Override
     protected String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_MQTT;
@@ -109,6 +128,19 @@ public final class SigfoxProtocolAdapter
                 getConfig().getRealm(), this.tracer));
 
         router.route().handler(authHandler);
+    }
+
+    @Override
+    protected TenantTraceSamplingHandler getTenantTraceSamplingHandler() {
+        return new TenantTraceSamplingHandler(
+                Optional.ofNullable(tenantObjectWithAuthIdProvider)
+                        .orElse(new HttpContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory()) {
+                            @Override
+                            public Future<TenantObjectWithAuthId> get(final HttpContext context, final SpanContext spanContext) {
+                                // only check the auth header, not any client certificate
+                                return getFromAuthHeader(context.getRoutingContext(), spanContext);
+                            }
+                        }));
     }
 
     @Override

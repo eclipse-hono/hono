@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import javax.net.ssl.SSLSession;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.tenant.BaseExecutionContextTenantAndAuthIdProvider;
@@ -44,6 +45,20 @@ public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
 
     /**
      * Creates a new HttpContextTenantAndAuthIdProvider.
+     *
+     * @param config The configuration.
+     * @param tenantClientFactory The factory to use for creating a Tenant service client.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public HttpContextTenantAndAuthIdProvider(final ProtocolAdapterProperties config,
+            final TenantClientFactory tenantClientFactory) {
+        super(config, tenantClientFactory);
+        this.tenantIdContextParamName = null;
+        this.deviceIdContextParamName = null;
+    }
+
+    /**
+     * Creates a new HttpContextTenantAndAuthIdProvider.
      * 
      * @param config The configuration.
      * @param tenantClientFactory The factory to use for creating a Tenant service client.
@@ -66,21 +81,37 @@ public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
     @Override
     public Future<TenantObjectWithAuthId> get(final HttpContext context, final SpanContext spanContext) {
         if (config.isAuthenticationRequired()) {
-            return getTenantViaCert(context.getRoutingContext(), spanContext)
-                    .recover(thr -> getTenantFromAuthHeader(context.getRoutingContext(), spanContext));
+            return getFromClientCertificate(context.getRoutingContext(), spanContext)
+                    .recover(thr -> getFromAuthHeader(context.getRoutingContext(), spanContext));
         }
-        final String tenantId = context.get(tenantIdContextParamName);
-        if (tenantId != null) {
-            // unauthenticated request
+        if (tenantIdContextParamName != null && deviceIdContextParamName != null) {
+            final String tenantId = context.get(tenantIdContextParamName);
             final String deviceId = context.get(deviceIdContextParamName);
-            return tenantClientFactory.getOrCreateTenantClient()
-                    .compose(tenantClient -> tenantClient.get(tenantId, spanContext))
-                    .map(tenantObject -> new TenantObjectWithAuthId(tenantObject, deviceId));
+            if (tenantId != null && deviceId != null) {
+                // unauthenticated request
+                return tenantClientFactory.getOrCreateTenantClient()
+                        .compose(tenantClient -> tenantClient.get(tenantId, spanContext))
+                        .map(tenantObject -> new TenantObjectWithAuthId(tenantObject, deviceId));
+            }
         }
         return Future.failedFuture("tenant could not be determined");
     }
 
-    private Future<TenantObjectWithAuthId> getTenantViaCert(final RoutingContext ctx, final SpanContext spanContext) {
+    /**
+     * Get the tenant and auth-id from the client certificate of the SSL session in the given routing context request.
+     *
+     * @param ctx The execution context.
+     * @param spanContext The OpenTracing context to use for tracking the operation (may be {@code null}).
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will fail if tenant and auth-id information could not be retrieved from the given request
+     *         or if there was an error obtaining the tenant object. In the latter case the future will be failed with a
+     *         {@link ServiceInvocationException}.
+     *         <p>
+     *         Otherwise the future will contain the created <em>TenantObjectWithAuthId</em>.
+     */
+    protected final Future<TenantObjectWithAuthId> getFromClientCertificate(final RoutingContext ctx,
+            final SpanContext spanContext) {
         if (!ctx.request().isSSL()) {
             return Future.failedFuture("no cert found (not SSL/TLS encrypted)");
         }
@@ -88,7 +119,20 @@ public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
         return getFromClientCertificate(sslSession, spanContext);
     }
 
-    private Future<TenantObjectWithAuthId> getTenantFromAuthHeader(final RoutingContext ctx,
+    /**
+     * Get the tenant and auth-id from the <em>authorization</em> header of the given routing context request.
+     *
+     * @param ctx The execution context.
+     * @param spanContext The OpenTracing context to use for tracking the operation (may be {@code null}).
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will fail if tenant and auth-id information could not be retrieved from the header
+     *         or if there was an error obtaining the tenant object. In the latter case the future will be failed with a
+     *         {@link ServiceInvocationException}.
+     *         <p>
+     *         Otherwise the future will contain the created <em>TenantObjectWithAuthId</em>.
+     */
+    protected final Future<TenantObjectWithAuthId> getFromAuthHeader(final RoutingContext ctx,
             final SpanContext spanContext) {
         final String authorizationHeader = ctx.request().headers().get(HttpHeaders.AUTHORIZATION);
         if (authorizationHeader == null) {
