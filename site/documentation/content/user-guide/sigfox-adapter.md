@@ -110,6 +110,18 @@ echo "Basic $(echo -n "sigfox@tenant:password" | base64)"
 
 {{% /note %}}
 
+### Enabling command & control
+
+It is possible to enable command & control as well. For this you need to:
+
+* Switch the **Type** of the `DATA` callback from `UPLINK` to `BIDIR`
+* Add the `ack` query parameter to the **Url pattern**, e.g. `https://iot-sigfox-adapter.my.hono/data/telemetry/<TENANT>?device={device}&data={data}&ack={ack}`
+
+{{% note title="Command requirements" %}}
+Sigfox allows only a very specific payload in command messages. You must send
+exactly 8 bytes of data. It only supports *one way commands*.
+{{% /note %}}
+
 ## Events
 
 You can send events by using the path `/data/event` on the URL.
@@ -120,6 +132,5 @@ Use the standard way of consuming Hono messages.
 
 ## Known bugs and limitations
 
-* Command and control is currently not supported
 * Only the simple `URL` and only *data* (no *service* or *device events* are
   currently supported.
