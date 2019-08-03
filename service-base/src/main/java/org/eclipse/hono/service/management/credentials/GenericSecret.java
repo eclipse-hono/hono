@@ -20,7 +20,7 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
 /**
- * A generic secret.
+ * This class encapsulates secrets information for a generic credential type.
  */
 public class GenericSecret extends CommonSecret {
 

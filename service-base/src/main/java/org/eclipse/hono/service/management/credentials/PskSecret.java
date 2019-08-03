@@ -19,7 +19,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 /**
- * Secret Information.
+ * This class encapsulates secrets information for a PSK credentials type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PskSecret extends CommonSecret {
@@ -31,8 +31,15 @@ public class PskSecret extends CommonSecret {
         return this.key;
     }
 
-    public void setKey(final byte[] key) {
+    /**
+     * Sets the Base64 encoded bytes representing the shared (secret) key.
+     *
+     * @param key  The Base64 encoding of the secret key.
+     * @return     a reference to this for fluent use.
+     */
+    public PskSecret setKey(final byte[] key) {
         this.key = key;
+        return this;
     }
 
     @Override

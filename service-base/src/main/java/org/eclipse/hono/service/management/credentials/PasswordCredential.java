@@ -19,7 +19,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Credential Information.
+ * A credential type for storing a password for a device. Hono supports storing
+ * both plain and hash passwords.
+ * <p>
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#hashed-password">Hashed Password</a> for an example
+ * of the configuration properties for this credential type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PasswordCredential extends CommonCredential {
@@ -33,10 +37,12 @@ public class PasswordCredential extends CommonCredential {
     }
 
     /**
-     * Set the secrets for this credential.
+     * Sets the list of password secrets to use for authenticating a device to protocol adapters.
+     * <p>
+     * The list cannot be empty and each secret is scoped to its validity period.
      *
-     * @param secrets  The secrets to set.
-     * @return         a reference to this for fluent use.
+     * @param secrets The list of password secrets to set.
+     * @return        a reference to this for fluent use.
      */
     public PasswordCredential setSecrets(final List<PasswordSecret> secrets) {
         this.secrets = secrets;

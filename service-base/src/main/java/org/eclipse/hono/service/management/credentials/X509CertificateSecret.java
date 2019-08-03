@@ -13,7 +13,7 @@
 package org.eclipse.hono.service.management.credentials;
 
 /**
- * X509 certificate secret.
+ * This class encapsulates secret information for an X509 certificate credentials type.
  */
 public class X509CertificateSecret extends CommonSecret {
 }

@@ -25,7 +25,7 @@ import org.eclipse.hono.util.Strings;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Secret Information.
+ * This class encapsulates the secrets information for a password credentials type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PasswordSecret extends CommonSecret {
@@ -43,32 +43,66 @@ public class PasswordSecret extends CommonSecret {
         return hashFunction;
     }
 
-    public void setHashFunction(final String hashFunction) {
+    /**
+     * Sets the cryptographic hash function to use for hashing the UTF-8 clear text
+     * password and salt (if set).
+     * <p>
+     * Currently, Hono supports the <b>sha-256</b>, <b>sha-512</b> and <b>bcrypt</b> hash functions.
+     * 
+     * @param hashFunction  The cryptographic hashing function to use.
+     * @return              a reference to this for fluent use.
+     */
+    public PasswordSecret setHashFunction(final String hashFunction) {
         this.hashFunction = hashFunction;
+        return this;
     }
 
     public String getPasswordHash() {
         return passwordHash;
     }
 
-    public void setPasswordHash(final String passwordHash) {
+    /**
+     * Sets the cryptographic password hash value for this secret. 
+     * <p>
+     * The password hash value is the result of applying one of Hono's supported hash functions
+     * to the plain text password and salt (if set).
+     * 
+     * @param passwordHash  The cryptographic hash to set for this password.
+     * @return              a reference to this for fluent use.
+     */
+    public PasswordSecret setPasswordHash(final String passwordHash) {
         this.passwordHash = passwordHash;
+        return this;
     }
 
     public String getPasswordPlain() {
         return passwordPlain;
     }
 
-    public void setPasswordPlain(final String passwordPlain) {
+    /**
+     * Sets the UTF-8 encoding of the plain text password.
+     *
+     * @param passwordPlain  The UTF-8 encoded plain text password to set.
+     * @return               a reference to this for fluent use.
+     */
+    public PasswordSecret setPasswordPlain(final String passwordPlain) {
         this.passwordPlain = passwordPlain;
+        return this;
     }
 
     public String getSalt() {
         return salt;
     }
 
-    public void setSalt(final String salt) {
+    /**
+     * Sets the Base64 encoding of the salt to append to this password before hashing.
+     *
+     * @param salt The Base64 encoding of the salt to use in the password hash.
+     * @return     a reference to this for fluent use.
+     */
+    public PasswordSecret setSalt(final String salt) {
         this.salt = salt;
+        return this;
     }
 
     @Override
@@ -94,11 +128,12 @@ public class PasswordSecret extends CommonSecret {
     }
 
     /**
-     * Encodes a clear text password contained in the <em>pwd-plain</em> field.
+     * Encodes the clear text password contained in the <em>pwd-plain</em> field.
      * 
      * @param encoder The password encoder to use.
+     * @return        a reference to this for fluent use.
      */
-    public void encode(final HonoPasswordEncoder encoder) {
+    public PasswordSecret encode(final HonoPasswordEncoder encoder) {
         if (!Strings.isNullOrEmpty(passwordPlain)) {
             final JsonObject hashedPassword = encoder.encode(passwordPlain);
             hashFunction = hashedPassword.getString(FIELD_SECRETS_HASH_FUNCTION);
@@ -106,6 +141,7 @@ public class PasswordSecret extends CommonSecret {
             salt = hashedPassword.getString(FIELD_SECRETS_SALT);
             passwordPlain = null;
         }
+        return this;
     }
 
 }

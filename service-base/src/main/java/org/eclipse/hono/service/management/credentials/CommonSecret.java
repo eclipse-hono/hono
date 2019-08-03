@@ -31,7 +31,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 /**
- * Secret Information.
+ * This class encapsulates common secrets shared across all credential types used in Hono.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public abstract class CommonSecret {
@@ -48,8 +48,15 @@ public abstract class CommonSecret {
         return enabled;
     }
 
-    public void setEnabled(final Boolean enabled) {
+    /**
+     * Sets the enabled property to indicate to protocol adapters whether to use this secret during authentication.
+     * 
+     * @param enabled  Whether this secret type should be used to authenticate devices.
+     * @return         a reference to this for fluent use.
+     */
+    public CommonSecret setEnabled(final Boolean enabled) {
         this.enabled = enabled;
+        return this;
     }
 
     /**
@@ -83,29 +90,33 @@ public abstract class CommonSecret {
      * Sets the earliest instant in time that this secret may be used for authenticating a device.
      * 
      * @param notBefore The instant as an ISO string.
+     * @return          a reference to this for fluent use.
      * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
      */
     @JsonSetter(FIELD_SECRETS_NOT_BEFORE)
-    public void setNotBefore(final String notBefore) {
+    public CommonSecret setNotBefore(final String notBefore) {
         try {
             this.notBefore = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(notBefore, OffsetDateTime::from);
         } catch (DateTimeParseException e) {
             this.notBefore = null;
         }
+        return this;
     }
 
     /**
      * Sets the earliest instant in time that this secret may be used for authenticating a device.
      * 
-     * @param notBefore The instant.
+     * @param notBefore The start date/time in which this secret is valid.
+     * @return          a reference to this for fluent use.
      */
     @JsonIgnore
-    public void setNotBefore(final Instant notBefore) {
+    public CommonSecret setNotBefore(final Instant notBefore) {
         if (notBefore == null) {
             this.notBefore = null;
         } else {
             this.notBefore = OffsetDateTime.ofInstant(notBefore, ZoneId.systemDefault());;
         }
+        return this;
     }
 
     /**
@@ -126,7 +137,7 @@ public abstract class CommonSecret {
     /**
      * Gets the latest instant in time that this secret may be used for authenticating a device.
      * 
-     * @return The instant.
+     * @return The end date/time in which this secret is valid.
      */
     @JsonIgnore
     public Instant getNotAfter() {
@@ -139,37 +150,48 @@ public abstract class CommonSecret {
      * Sets the latest instant in time that this secret may be used for authenticating a device.
      * 
      * @param notAfter The instant as an ISO string.
+     * @return         a reference to this for fluent use.
      * @see DateTimeFormatter#ISO_OFFSET_DATE_TIME
      */
     @JsonSetter(FIELD_SECRETS_NOT_AFTER)
-    public void setNotAfter(final String notAfter) {
+    public CommonSecret setNotAfter(final String notAfter) {
         try {
             this.notAfter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(notAfter, OffsetDateTime::from);
         } catch (DateTimeParseException e) {
             this.notAfter = null;
         }
+        return this;
     }
 
     /**
      * Sets the latest instant in time that this secret may be used for authenticating a device.
      * 
-     * @param notAfter The instant.
+     * @param notAfter The end date/time in which this secret is valid.
+     * @return         a reference to this for fluent use.
      */
     @JsonIgnore
-    public void setNotAfter(final Instant notAfter) {
+    public CommonSecret setNotAfter(final Instant notAfter) {
         if (notAfter == null) {
             this.notAfter = null;
         } else {
         this.notAfter = OffsetDateTime.ofInstant(notAfter, ZoneId.systemDefault());
         }
+        return this;
     }
 
     public String getComment() {
         return comment;
     }
 
-    public void setComment(final String comment) {
+    /**
+     * Sets the human readable comment describing this secret.
+     *
+     * @param comment The human readable description for this secret.
+     * @return        a reference to this for fluent use.
+     */
+    public CommonSecret setComment(final String comment) {
         this.comment = comment;
+        return this;
     }
 
     /**

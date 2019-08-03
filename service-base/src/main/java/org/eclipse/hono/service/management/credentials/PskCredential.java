@@ -19,7 +19,10 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Credential Information.
+ * A credential type for storing a Pre-shared Key as used in TLS handshakes.
+ * <p>
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#pre-shared-key">Pre-Shared Key</a> for an example
+ * of the configuration properties for this credential type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PskCredential extends CommonCredential {
@@ -33,9 +36,11 @@ public class PskCredential extends CommonCredential {
     }
 
     /**
-     * Set the secrets for this credential.
+     * Sets the list of PSK secrets to use for authenticating a device to protocol adapters.
+     * <p>
+     * The list cannot be empty and each secret is scoped to its validity period.
      *
-     * @param secrets The secrets to set.
+     * @param secrets The secret to set.
      * @return        a reference to this for fluent use.
      */
     public PskCredential setSecrets(final List<PskSecret> secrets) {
