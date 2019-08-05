@@ -77,6 +77,9 @@ adapters:
     # Note that this requires building the corresponding container image manually because
     # there is no official image available from Docker Hub (yet).
     enabled: false
+  kura:
+    # enabled indicates if Hono's (deprecated) Kura adapter should be deployed.
+    enabled: false
 
 prometheus:
   # createInstance indicates whether a Prometheus server should be created

@@ -92,8 +92,6 @@ hono-adapter-amqp-vertx                 LoadBalancer   10.109.123.153   10.109.1
 hono-adapter-amqp-vertx-headless        ClusterIP      None             <none>           <none>
 hono-adapter-http-vertx                 LoadBalancer   10.99.180.137    10.99.180.137    8080:30080/TCP,8443:30443/TCP
 hono-adapter-http-vertx-headless        ClusterIP      None             <none>           <none>
-hono-adapter-kura                       LoadBalancer   10.111.198.251   10.111.198.251   1883:31884/TCP,8883:30884/TCP
-hono-adapter-kura-headless              ClusterIP      None             <none>           <none>
 hono-adapter-mqtt-vertx                 LoadBalancer   10.102.204.69    10.102.204.69    1883:31883/TCP,8883:30883/TCP
 hono-adapter-mqtt-vertx-headless        ClusterIP      None             <none>           <none>
 hono-artemis                            ClusterIP      10.97.31.154     <none>           5671/TCP
@@ -243,4 +241,20 @@ the Jaeger Agent that is deployed with each of Hono's components.
 ~~~sh
 # in Hono working tree directory: hono/deploy
 helm install --dep-up --name hono --namespace hono --set jaegerAgentConf=[{"name": "REPORTER_TYPE", "value": "tchannel"}, {"name": "REPORTER_TCHANNEL_HOST_PORT", "value": "my-jaeger:14267"] target/deploy/helm/
+~~~
+
+## Deploying optional Adapters
+
+The Helm chart supports deployment of additional protocol adapters which are still considered experimental or have been deprecated.
+The following table provides an overview of the corresponding configuration properties that need to be set on deployment.
+
+| Property                     | Default  | Description                              |
+| :--------------------------- | :------- | :--------------------------------------- |
+| *adapters.kura.enabled*      | `false` | Indicates if the deprecated Kura protocol adapter should be deployed. |
+
+The following command will deploy the Kura adapter along with Hono's standard adapters:
+
+~~~sh
+# in directory: eclipse-hono-$VERSION/deploy/
+helm install --dep-up --name hono --namespace hono --set adapters.kura.enabled=true helm/
 ~~~

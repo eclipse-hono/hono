@@ -1,4 +1,4 @@
-{{- if eq .Values.platform "openshift" }}
+{{- if and (eq .Values.platform "openshift") .Values.adapters.kura.enabled }}
 apiVersion: v1
 kind: Route
 metadata:
@@ -10,4 +10,4 @@ spec:
   to:
     kind: Service
     name: {{ .Release.Name }}-adapter-kura
-{{- end }}
+{{ end }}

@@ -10,7 +10,6 @@ title = "Release Notes"
   and/or the example Jaeger back end should be deployed and used with the Hono components or not.
   In the latter case, the chart now also supports setting configuration properties for using an already
   existing AMQP Messaging Network, Device Registry and/or Jaeger back end.
-  
 
 ### API Changes
 
@@ -23,6 +22,12 @@ title = "Release Notes"
   `sendDisconnectedTtdEvent` and `sendTtdEvent` methods in `org.eclipse.hono.service.AbstractProtocolAdapterBase` 
   have been removed. The alternate variant of these methods which accepts an additional OpenTracing span parameter 
   should be used.  
+
+### Depreciations
+
+* The deprecated Kura adapter is no longer deployed by default by the Helm chart.
+  However, it can still be deployed by means of [setting a configuration property]
+  ({{% doclink "/deployment/helm-based-deployment/#deploying-optional-adapters" %}}).
 
 ## 1.0-M6
 

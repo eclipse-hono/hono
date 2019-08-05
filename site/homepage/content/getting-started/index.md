@@ -98,7 +98,6 @@ Hono consists of a set of microservices which are deployed as Docker containers.
 
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
-  * A *Kura Adapter* instance that exposes Hono's Telemetry and Event APIs as an [Eclipse Kura&trade;](https://www.eclipse.org/kura) compatible MQTT topic hierarchy.
   * An *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as a generic MQTT topic hierarchy.
   * An *AMQP Adapter* instance that exposes Hono's Telemetry and Event APIs as a set of AMQP 1.0 addresses.
   * A *Device Registry* instance that manages registration information and issues device registration assertions to protocol adapters.
