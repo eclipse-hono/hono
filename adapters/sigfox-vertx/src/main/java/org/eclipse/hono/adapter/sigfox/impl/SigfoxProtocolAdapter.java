@@ -116,7 +116,7 @@ public final class SigfoxProtocolAdapter
 
     @Override
     protected String getTypeName() {
-        return Constants.PROTOCOL_ADAPTER_TYPE_MQTT;
+        return Constants.PROTOCOL_ADAPTER_TYPE_SIGFOX;
     }
 
     private void setupAuthorization(final Router router) {
