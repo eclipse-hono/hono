@@ -16,7 +16,7 @@ package org.eclipse.hono.adapter.lora.impl;
 import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.adapter.lora.LoraCommandProperties;
+import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -101,9 +101,9 @@ public class Config extends AbstractAdapterConfig {
      * @return The configuration properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.http")
-    public HttpProtocolAdapterProperties adapterProperties() {
-        return new HttpProtocolAdapterProperties();
+    @ConfigurationProperties(prefix = "hono.lora")
+    public LoraProtocolAdapterProperties adapterProperties() {
+        return new LoraProtocolAdapterProperties();
     }
 
     /**
@@ -116,17 +116,6 @@ public class Config extends AbstractAdapterConfig {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_LORA_PROTOCOL_ADAPTER);
         return factory;
-    }
-
-    /**
-     * Exposes the adapter's command configuration properties as a Spring bean.
-     *
-     * @return The configuration properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.lora")
-    public LoraCommandProperties loraCommandProperties() {
-        return new LoraCommandProperties();
     }
 
     /**
