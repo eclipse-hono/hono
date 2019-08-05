@@ -29,10 +29,9 @@ import io.vertx.core.buffer.impl.BufferImpl;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.adapter.lora.LoraCommandProperties;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.adapter.lora.providers.LoraUtils;
@@ -83,7 +82,7 @@ import io.vertx.ext.web.handler.ChainAuthHandler;
 /**
  * A Vert.x based Hono protocol adapter for receiving HTTP push messages from and sending commands to LoRa backends.
  */
-public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
+public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<LoraProtocolAdapterProperties> {
 
     private static final String ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE = "missing or unsupported content-type";
     private static final Logger LOG = LoggerFactory.getLogger(LoraProtocolAdapter.class);
@@ -100,7 +99,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-    private LoraCommandProperties loraCommandProperties;
     private final AtomicBoolean startOfLoraCommandConsumersScheduled = new AtomicBoolean();
 
     /**
@@ -112,18 +110,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     @Autowired
     public void setLoraProviders(final List<LoraProvider> providers) {
         this.loraProviders.addAll(Objects.requireNonNull(providers));
-    }
-
-    /**
-     * Sets the properties defining the command consumer links that should
-     * be created for the LoRa providers.
-     * 
-     * @param properties The properties.
-     * @throws NullPointerException if properties is {@code null}.
-     */
-    @Autowired
-    public void setLoraCommandProperties(final LoraCommandProperties properties) {
-        this.loraCommandProperties = Objects.requireNonNull(properties);
     }
 
     /**
@@ -180,7 +166,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
         final Object normalizedProperties = ctx.get(LoraConstants.NORMALIZED_PROPERTIES);
         if (normalizedProperties != null && normalizedProperties instanceof Map) {
-            for (Map.Entry<String, Object> entry:
+            for (final Map.Entry<String, Object> entry:
                  ((Map<String, Object>) normalizedProperties).entrySet()) {
                 MessageHelper.addProperty(downstreamMessage, entry.getKey(), entry.getValue());
             }
@@ -329,7 +315,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     }
 
     private void scheduleStartLoraCommandConsumers() {
-        final List<String> commandEnabledTenants = loraCommandProperties.getCommandEnabledTenants();
+        final List<String> commandEnabledTenants = getConfig().getCommandEnabledTenants();
         LOG.info("Starting Lora command consumers for tenants [{}] ...", commandEnabledTenants);
         for (final String tenantId : commandEnabledTenants) {
             scheduleStartLoraCommandConsumer(tenantId);

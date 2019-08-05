@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,10 +16,12 @@ package org.eclipse.hono.adapter.lora;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+
 /**
  * Properties for LoRaWAN commands.
  */
-public class LoraCommandProperties {
+public class LoraProtocolAdapterProperties extends HttpProtocolAdapterProperties {
 
     private final List<String> commandEnabledTenants = new LinkedList<>();
 

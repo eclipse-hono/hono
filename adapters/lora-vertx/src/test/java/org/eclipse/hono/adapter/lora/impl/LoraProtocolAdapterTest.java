@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,9 +19,9 @@ import static org.mockito.Mockito.*;
 
 import io.vertx.core.buffer.impl.BufferImpl;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.impl.LoraProtocolAdapter;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
@@ -61,7 +61,7 @@ public class LoraProtocolAdapterTest {
             return null;
         }).when(this.adapter).uploadTelemetryMessage(any(), any(), any(), any(), any());
 
-        when(this.adapter.getConfig()).thenReturn(new HttpProtocolAdapterProperties());
+        when(this.adapter.getConfig()).thenReturn(new LoraProtocolAdapterProperties());
     }
 
     /**
