@@ -128,7 +128,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
                         clientIdentity.getClass(), deviceIdentity.getTenantId(), deviceIdentity.getAuthId(), e);
             }
         } else {
-            LOG.info("unusupported Principal type: {}", clientIdentity.getClass());
+            LOG.info("unsupported Principal type: {}", clientIdentity.getClass());
         }
         return AdditionalInfo.from(result);
     }

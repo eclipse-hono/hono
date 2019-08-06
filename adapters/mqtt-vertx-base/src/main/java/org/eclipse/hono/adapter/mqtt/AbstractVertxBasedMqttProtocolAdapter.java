@@ -176,7 +176,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * This default implementation creates a {@link ChainAuthHandler} consisting of
      * an {@link X509AuthHandler} and a {@link ConnectPacketAuthHandler} instance.
      * <p>
-     * Subclasses may either set the auth handler expicitly using
+     * Subclasses may either set the auth handler explicitly using
      * {@link #setAuthHandler(AuthHandler)} or override this method in order to
      * create a custom auth handler.
      * 
