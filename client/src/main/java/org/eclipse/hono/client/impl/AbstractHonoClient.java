@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -219,6 +220,51 @@ public abstract class AbstractHonoClient {
 
             final ApplicationProperties applicationProperties = new ApplicationProperties(propsToAdd);
             msg.setApplicationProperties(applicationProperties);
+        }
+    }
+
+    /**
+     * TODO.
+     */
+    protected final void startAutoCloseTimer() {
+        final long inactiveLinkTimeout = connection.getConfig().getInactiveLinkTimeout();
+        if (inactiveLinkTimeout > 0) {
+            startAutoCloseTimer(inactiveLinkTimeout);
+        }
+    }
+
+    /**
+     * Stores the current time stamp on the sender link. This is used to detect and close inactive AMQP sender links.
+     */
+    protected final void storeLastSendTime() {
+        sender.attachments().set("last-send-time", Long.class, Instant.now().toEpochMilli());
+    }
+
+    private void startAutoCloseTimer(final long delay) {
+        connection.getVertx().setTimer(delay, id -> {
+            final Long lastSendTime = sender.attachments().get("last-send-time", Long.class);
+            long remaining = 0;
+            if (lastSendTime != null) {
+                remaining = getRemainingTimeout(lastSendTime, Instant.now().toEpochMilli(),
+                        connection.getConfig().getInactiveLinkTimeout());
+            }
+
+            if (lastSendTime == null || remaining == 0) {
+                closeLinks(v -> {
+                });
+            } else {
+                startAutoCloseTimer(remaining);
+            }
+        });
+    }
+
+    // visible for testing
+    long getRemainingTimeout(final long lastSend, final long now, final long timeout) {
+        final long timeDiff = now - lastSend;
+        if (timeDiff >= timeout) {
+            return 0L;
+        } else {
+            return timeout - timeDiff;
         }
     }
 }

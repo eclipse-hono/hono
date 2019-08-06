@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
@@ -63,6 +64,7 @@ public class AbstractSenderTest {
     public void setUp() {
         protonSender = HonoClientUnitTestHelper.mockProtonSender();
         vertx = mock(Vertx.class);
+        when(protonSender.attachments()).thenReturn(mock(Record.class));
     }
 
     /**

@@ -100,6 +100,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                     .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
                     .orElse(Collections.emptyList());
         }
+        startAutoCloseTimer();
     }
 
     @Override
@@ -249,6 +250,8 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
+
+        storeLastSendTime();
 
         final Future<ProtonDelivery> result = Future.future();
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());

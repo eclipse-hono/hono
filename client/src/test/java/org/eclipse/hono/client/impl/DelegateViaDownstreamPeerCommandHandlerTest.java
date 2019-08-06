@@ -13,11 +13,13 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.*;
 
+import io.vertx.core.Vertx;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
@@ -30,6 +32,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.DelegatedCommandSender;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,6 +57,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     private DelegateViaDownstreamPeerCommandHandler delegateViaDownstreamPeerCommandHandler;
     private DelegatedCommandSender delegatedCommandSender;
     private String replyTo;
+    private HonoConnection connection;
 
     /**
      * Sets up common fixture.
@@ -76,6 +80,12 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
 
         delegateViaDownstreamPeerCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
                 tenantIdParam -> Future.succeededFuture(delegatedCommandSender));
+
+        connection= mock(HonoConnection.class);
+        when(connection.getConfig()).thenReturn(new ClientConfigProperties());
+        final Vertx vertx = mock(Vertx.class);
+        when(connection.getVertx()).thenReturn(vertx);
+        when(vertx.setTimer(anyLong(), anyHandler())).thenReturn(1L);
     }
 
     /**
@@ -89,7 +99,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         final ProtonDelivery protonDelivery = mock(ProtonDelivery.class);
         when(protonDelivery.getRemoteState()).thenReturn(Accepted.getInstance());
         // not using a DelegatedCommandSender mock here since mocking the #sendAndWaitForOutcome(Message, SpanContext) method (which has a default implementation) doesn't seem to work
-        delegatedCommandSender = new DelegatedCommandSenderImpl(mock(HonoConnection.class), mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -123,7 +133,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         final ErrorCondition error = new ErrorCondition(Symbol.valueOf("someError"), "error message");
         rejected.setError(error);
         when(protonDelivery.getRemoteState()).thenReturn(rejected);
-        delegatedCommandSender = new DelegatedCommandSenderImpl(mock(HonoConnection.class), mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -158,7 +168,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         modified.setDeliveryFailed(true);
         modified.setUndeliverableHere(true);
         when(protonDelivery.getRemoteState()).thenReturn(modified);
-        delegatedCommandSender = new DelegatedCommandSenderImpl(mock(HonoConnection.class), mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -189,7 +199,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // GIVEN a message sender that returns an 'Released' delivery result
         final ProtonDelivery protonDelivery = mock(ProtonDelivery.class);
         when(protonDelivery.getRemoteState()).thenReturn(Released.getInstance());
-        delegatedCommandSender = new DelegatedCommandSenderImpl(mock(HonoConnection.class), mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -217,7 +227,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     public void testHandleWithFailureToSend() {
 
         // GIVEN a message sender that fails to send the message
-        delegatedCommandSender = new DelegatedCommandSenderImpl(mock(HonoConnection.class), mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 return Future.failedFuture("expected send failure");
