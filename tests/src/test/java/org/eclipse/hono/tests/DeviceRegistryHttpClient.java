@@ -89,7 +89,7 @@ public final class DeviceRegistryHttpClient {
     /**
      * Adds configuration information for a tenant.
      * <p>
-     * This method simply invokes {@link #addTenant(String, JsonObject, int)} with
+     * This method simply invokes {@link #addTenant(String, Tenant, int)} with
      * {@link HttpURLConnection#HTTP_CREATED} as the expected status code.
      *
      * @param tenantId The id of the tenant to add.
@@ -104,7 +104,7 @@ public final class DeviceRegistryHttpClient {
     /**
      * Adds configuration information for a tenant.
      * <p>
-     * This method simply invokes {@link #addTenant(String, JsonObject, String, int)} with <em>application/json</em> as
+     * This method simply invokes {@link #addTenant(String, Tenant, String, int)} with <em>application/json</em> as
      * content type and {@link HttpURLConnection#HTTP_CREATED} as the expected status code.
      *
      * @param tenantId The id of the tenant to add.
