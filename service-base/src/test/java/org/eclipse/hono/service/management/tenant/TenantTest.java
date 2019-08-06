@@ -26,17 +26,22 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
+import org.eclipse.hono.util.TenantConstants;
 import org.hamcrest.collection.IsEmptyIterable;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies {@link Tenant}.
@@ -136,7 +141,13 @@ class TenantTest {
 
         final JsonObject tenantSpec = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                        .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 100));
+                        .put(TenantConstants.FIELD_MAX_CONNECTIONS, 100)
+                        .put(TenantConstants.FIELD_DATA_VOLUME, new JsonObject()
+                                .put(TenantConstants.FIELD_MAX_BYTES, 20_000_000)
+                                .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00Z")
+                                .put(TenantConstants.FIELD_PERIOD, new JsonObject()
+                                        .put(TenantConstants.FIELD_PERIOD_MODE, "days")
+                                        .put(TenantConstants.FIELD_PERIOD_NO_OF_DAYS, 90))));
 
         final Tenant tenant = tenantSpec.mapTo(Tenant.class);
         assertNotNull(tenant);
@@ -145,6 +156,14 @@ class TenantTest {
         final var limits = tenant.getResourceLimits();
         assertNotNull(limits);
         assertEquals(100, limits.getMaxConnections());
+        assertNotNull(limits.getDataVolume());
+        assertEquals(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00Z", OffsetDateTime::from).toInstant(),
+                limits.getDataVolume().getEffectiveSince());
+        assertEquals(20_000_000, limits.getDataVolume().getMaxBytes());
+        assertNotNull(limits.getDataVolume().getPeriod());
+        assertEquals("days", limits.getDataVolume().getPeriod().getMode());
+        assertEquals(90, limits.getDataVolume().getPeriod().getNoOfDays());
     }
 
     /**
@@ -155,7 +174,7 @@ class TenantTest {
 
         final ResourceLimits limits = new ResourceLimits();
         final JsonObject json = JsonObject.mapFrom(limits);
-        assertFalse(json.containsKey(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS));
+        assertFalse(json.containsKey(TenantConstants.FIELD_MAX_CONNECTIONS));
         final ResourceLimits deserializedLimits = json.mapTo(ResourceLimits.class);
         assertThat(deserializedLimits.getMaxConnections(), is(-1));
     }

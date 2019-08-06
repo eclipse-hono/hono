@@ -528,6 +528,8 @@ components:
                description: The maximum number of concurrent connections allowed
                             from devices of this tenant. The default value -1
                             indicates that no limit is set.
+            "data-volume":
+               $ref: '#/components/schemas/DataVolume'
             "ext":
                $ref: '#/components/schemas/Extensions'
 
@@ -575,6 +577,40 @@ components:
                      - all
                      - none
 
+      DataVolume:
+         type: object
+         additionalProperties: false
+         required:
+            - effective-since
+         properties:
+            "effective-since":
+               type: string
+               format: date-time
+               description: The date-time on which the data volume limit came into effect.
+            "max-bytes":
+               type: integer
+               default: -1
+               description: The maximum number of bytes to be allowed for a tenant for the
+                            defined period. The default value -1 indicates that no limit is set.
+            "period":
+               $ref: '#/components/schemas/Period'
+
+      Period:
+         type: object
+         additionalProperties: false
+         required:
+            - mode
+         properties:
+            "mode":
+               type: string
+               description: The mode of the data usage caluclation. The supported modes by
+                            the default resource limit checks implementation are `days`
+                            and `monthly`.
+            "no-of-days":
+               type: integer
+               description: The number of days for which the data usage is to be calculated
+                            provided the mode is set to `days`.
+               
 # Devices schema
 
       Device:
