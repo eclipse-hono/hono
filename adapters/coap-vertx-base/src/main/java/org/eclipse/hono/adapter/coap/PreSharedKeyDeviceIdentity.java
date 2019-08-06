@@ -43,8 +43,8 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
     /**
      * Create a new instance.
      * 
-     * @param tenantId tenant id the device belongs to
-     * @param authId Iidentity that the device wants to authenticate as
+     * @param tenantId The tenant id that the device belongs to.
+     * @param authId The identity that the device wants to authenticate as.
      */
     public PreSharedKeyDeviceIdentity(final String tenantId, final String authId) {
         this.tenantId = Objects.requireNonNull(tenantId);

@@ -259,7 +259,7 @@ public final class HonoProtonHelper {
                 // if sender gets remote peer detach close -> complete senderCloseHandler
                 link.closeHandler(remoteDetach -> {
                     context.owner().cancelTimer(timerId);
-                    // we do not care if the peer's detahc
+                    // we do not care if the peer's detach
                     // frame contains an error because there
                     // is nothing we can do about it anyway
                     result.tryComplete();
