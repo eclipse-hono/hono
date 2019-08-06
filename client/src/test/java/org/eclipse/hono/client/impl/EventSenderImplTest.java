@@ -16,10 +16,12 @@ import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
@@ -55,6 +58,7 @@ public class EventSenderImplTest {
     private ProtonSender sender;
     private ClientConfigProperties config;
     private HonoConnection connection;
+    private Record attachments;
 
     /**
      * Sets up the fixture.
@@ -66,6 +70,9 @@ public class EventSenderImplTest {
         sender = HonoClientUnitTestHelper.mockProtonSender();
         config = new ClientConfigProperties();
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
+        attachments = mock(Record.class);
+        when(sender.attachments()).thenReturn(attachments);
+        when(attachments.get("last-send-time", Long.class)).thenReturn(0L);
     }
 
     /**
@@ -200,6 +207,25 @@ public class EventSenderImplTest {
         verify(sender).send(any(Message.class), anyHandler());
         // and the message has been marked as durable
         assertTrue(msg.isDurable());
+    }
+
+    /**
+     * Verifies that sending a message sets the "last-send-time", which is used for the automatic close of the link.
+     */
+    @Test
+    public void testMessageSendSetsLastSendTime() {
+
+        // GIVEN a sender
+        final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "telemetry/tenant");
+
+        // WHEN sending messages
+        final Message msg = ProtonHelper.message("telemetry/tenant/deviceId", "some payload");
+        messageSender.sendAndWaitForOutcome(msg);
+        messageSender.send(msg, null);
+        messageSender.send("dev1", null, "some payload", "application/text");
+
+        // THEN the last sent times is reset each time
+        verify(attachments, times(3)).set(eq("last-send-time"), any(), anyLong());
     }
 
 }

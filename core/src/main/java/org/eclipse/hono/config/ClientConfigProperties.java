@@ -41,6 +41,11 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public static final int DEFAULT_IDLE_TIMEOUT = 16000; //ms
     /**
+     * The default amount of time (milliseconds) after which a a sender link will be closed when no messages have been
+     * sent.
+     */
+    public static final long DEFAULT_INACTIVE_LINK_TIMEOUT = 0; // ms
+    /**
      * The default number of credits issued by the receiver side of a link.
      */
     public static final int  DEFAULT_INITIAL_CREDITS = 200;
@@ -81,6 +86,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
     private int idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT;
+    private long inactiveLinkTimeout = DEFAULT_INACTIVE_LINK_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
     private String name;
@@ -755,5 +761,23 @@ public class ClientConfigProperties extends AbstractConfig {
         } else {
             this.idleTimeoutMillis = idleTimeoutMillis;
         }
+    }
+
+    /**
+     * TODO.
+     * 
+     * @return The inactiveLinkTimeout in milliseconds.
+     */
+    public long getInactiveLinkTimeout() {
+        return inactiveLinkTimeout;
+    }
+
+    /**
+     * TODO.
+     * 
+     * @param inactiveLinkTimeout The inactiveLinkTimeout in milliseconds.
+     */
+    public void setInactiveLinkTimeout(final long inactiveLinkTimeout) {
+        this.inactiveLinkTimeout = inactiveLinkTimeout;
     }
 }
