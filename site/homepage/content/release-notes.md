@@ -16,6 +16,10 @@ title = "Release Notes"
   allocated resources of the tenant. Currently this means that it closes AMQP links. The timeout is 
   configured with the property `tenantIdleTimeout` for a protocol   adapter. Please refer to the protocol 
   adapter [configuration guides]({{% doclink "/admin-guide/" %}}) for details.
+* The accounting period for the *message limit* checks can now be configured as `monthly`.
+  In this case the data usage for a tenant is calculated from the beginning till the end of the 
+  (Gregorian) calendar month. Refer [resource limits] ({{% doclink "/concepts/resource-limits/" %}})
+  for more information.
 
 ### API Changes
 
