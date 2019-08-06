@@ -299,10 +299,10 @@ public abstract class AbstractTenantServiceTest {
     public void testGetTenantSucceedsForExistingTenant(final VertxTestContext ctx) {
 
         final JsonObject tenantSpec = buildTenantPayload("tenant")
-            .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"))
-            .put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
-            .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                    .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS, 1000));
+                .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"))
+                .put(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
+                .put(TenantConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
+                        .put(TenantConstants.FIELD_MAX_CONNECTIONS, 1000));
 
         // GIVEN a tenant that has been added via the Management API
         addTenant("tenant", tenantSpec)

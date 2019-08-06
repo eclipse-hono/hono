@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantTracingConfig;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
