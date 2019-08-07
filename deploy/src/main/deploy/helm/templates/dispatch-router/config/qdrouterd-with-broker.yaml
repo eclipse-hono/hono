@@ -70,7 +70,8 @@
     "port": 5671,
     "role": "route-container",
     "saslUsername": "artemis",
-    "saslPassword": "artemis"
+    "saslPassword": "artemis",
+    "verifyHostname": false
   }],
 
   ["linkRoute", {
