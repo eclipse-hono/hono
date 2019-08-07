@@ -225,7 +225,14 @@ public abstract class AbstractHonoClient {
     }
 
     /**
-     * TODO.
+     * Starts a timer with the delay configured in {@link ClientConfigProperties#getInactiveLinkTimeout()}. The timer
+     * checks if a message has been sent on the sender link in this period (subclass needs to call
+     * {@link #storeLastSendTime()} when sending a message). If no message has been sent in the timout period, it closes
+     * the links, otherwise a new timer is scheduled to recheck.
+     * <p>
+     * This method needs to be called by subclasses where {@link #sender} is set.
+     * <p>
+     * If {@link ClientConfigProperties#getInactiveLinkTimeout()} is <code>0</code>, this method does nothing.
      */
     protected final void startAutoCloseTimer() {
         final long inactiveLinkTimeout = connection.getConfig().getInactiveLinkTimeout();
@@ -235,7 +242,8 @@ public abstract class AbstractHonoClient {
     }
 
     /**
-     * Stores the current time stamp on the sender link. This is used to detect and close inactive AMQP sender links.
+     * Stores the current time stamp on the sender link. This is used to detect and close inactive sender links as
+     * documented in {@link #startAutoCloseTimer()}.
      */
     protected final void storeLastSendTime() {
         sender.attachments().set(ATTACHMENT_LAST_SEND_TIME, Long.class, Instant.now().toEpochMilli());

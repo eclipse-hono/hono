@@ -764,8 +764,11 @@ public class ClientConfigProperties extends AbstractConfig {
     }
 
     /**
-     * TODO.
-     * 
+     * Gets the amount of time in milliseconds after which a sender link will be closed when no message has been sent on
+     * it.
+     * <p>
+     * The default value of this property is <code>0</code>, which disables automatic link timeout.
+     *
      * @return The inactiveLinkTimeout in milliseconds.
      */
     public long getInactiveLinkTimeout() {
@@ -773,11 +776,18 @@ public class ClientConfigProperties extends AbstractConfig {
     }
 
     /**
-     * TODO.
+     * Gets the amount of time in milliseconds after which a sender link will be closed when no message has been sent on
+     * it.
+     * <p>
+     * The default value of this property is <code>0</code>, which disables automatic link timeout.
      * 
      * @param inactiveLinkTimeout The inactiveLinkTimeout in milliseconds.
      */
     public void setInactiveLinkTimeout(final long inactiveLinkTimeout) {
-        this.inactiveLinkTimeout = inactiveLinkTimeout;
+        if (inactiveLinkTimeout < 0) {
+            throw new IllegalArgumentException("inactiveLinkTimeout must not be negative");
+        } else {
+            this.inactiveLinkTimeout = inactiveLinkTimeout;
+        }
     }
 }
