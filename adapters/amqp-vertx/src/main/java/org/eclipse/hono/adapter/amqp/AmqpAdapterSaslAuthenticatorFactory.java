@@ -51,7 +51,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -93,7 +92,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
      * @param adapterConnectionLimit The adapter level connection limit to enforce.
      * @param tenantConnectionLimit The tenant level connection limit to enforce. The function must return
      *                              a succeeded future if the connection limit has not been reached yet.
-     * @param usernamePasswordAuthprovider The authentication provider to use for validating device credentials.
+     * @param usernamePasswordAuthProvider The authentication provider to use for validating device credentials.
      *                                     The given provider should support validation of credentials with a
      *                                     username containing the device's tenant ({@code auth-id@TENANT}) if the
      *                                     protocol adapter configuration's <em>isSingleTenant</em> method returns
@@ -107,7 +106,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final Supplier<Span> spanFactory,
             final ConnectionLimitManager adapterConnectionLimit,
             final Function<TenantObject, Future<Void>> tenantConnectionLimit,
-            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthprovider,
+            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider,
             final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider) {
 
         this.tenantClientFactory = Objects.requireNonNull(tenantClientFactory, "Tenant client factory cannot be null");
@@ -116,7 +115,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         this.adapterConnectionLimit = Objects.requireNonNull(adapterConnectionLimit);
         this.tenantConnectionLimit = Objects.requireNonNull(tenantConnectionLimit);
         this.certValidator = new DeviceCertificateValidator();
-        this.usernamePasswordAuthProvider = usernamePasswordAuthprovider;
+        this.usernamePasswordAuthProvider = usernamePasswordAuthProvider;
         this.clientCertAuthProvider = clientCertAuthProvider;
     }
 
@@ -166,7 +165,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 LOG.trace("client connected through a secured port");
                 try {
                     peerCertificateChain = socket.sslSession().getPeerCertificates();
-                } catch (SSLPeerUnverifiedException e) {
+                } catch (final SSLPeerUnverifiedException e) {
                     LOG.debug("device's certificate chain cannot be read: {}", e.getMessage());
                 }
             }
@@ -194,7 +193,19 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     remoteMechanism, sasl.getHostname(), sasl.getState());
 
             final Context currentContext = Vertx.currentContext();
-            final Future<DeviceUser> deviceAuthTracker = Future.future();
+
+            final byte[] saslResponse = new byte[sasl.pending()];
+            sasl.recv(saslResponse, 0, saslResponse.length);
+
+            final Future<DeviceUser> deviceAuthTracker;
+            if (AuthenticationConstants.MECHANISM_PLAIN.equals(remoteMechanism)) {
+                deviceAuthTracker = parseSaslResponse(saslResponse)
+                        .compose(this::verifyPlain);
+            } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(remoteMechanism)) {
+                deviceAuthTracker = verifyExternal();
+            } else {
+                deviceAuthTracker = Future.failedFuture("Unsupported SASL mechanism: " + remoteMechanism);
+            }
             deviceAuthTracker.setHandler(outcome -> {
                 if (outcome.succeeded()) {
                     currentSpan.log("credentials verified successfully");
@@ -212,7 +223,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     currentSpan.finish();
                     LOG.debug("SASL handshake failed: {}", outcome.cause().getMessage());
                     sasl.done(SaslOutcome.PN_SASL_AUTH);
-
                 }
 
                 if (currentContext == null) {
@@ -222,16 +232,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                     currentContext.runOnContext(action -> completionHandler.handle(Boolean.TRUE));
                 }
             });
-
-            final byte[] saslResponse = new byte[sasl.pending()];
-            sasl.recv(saslResponse, 0, saslResponse.length);
-
-            if (AuthenticationConstants.MECHANISM_PLAIN.equals(remoteMechanism)) {
-                verifyPlain(saslResponse, deviceAuthTracker);
-            } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(remoteMechanism)) {
-                verifyExternal(deviceAuthTracker);
-            }
-
         }
 
         @Override
@@ -239,80 +239,79 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             return succeeded;
         }
 
-        private void verifyPlain(final byte[] saslResponse, final Handler<AsyncResult<DeviceUser>> completer) {
-
-            currentSpan.log("authenticating device using SASL PLAIN");
+        private Future<String[]> parseSaslResponse(final byte[] saslResponse) {
             try {
-                final String[] fields = AuthenticationConstants.parseSaslResponse(saslResponse);
-                final UsernamePasswordCredentials credentials = UsernamePasswordCredentials
-                        .create(fields[1], fields[2], config.isSingleTenant());
-                if (credentials == null) {
-                    // adapter is configured for multi-tenancy but credentials
-                    // does not comply with the pattern [<authId>@<tenantId>]
-                    completer.handle(Future.failedFuture(new CredentialException(
-                            "username does not comply with expected pattern [<authId>@<tenantId>]")));
-                } else {
-
-                    final Map<String, Object> items = new HashMap<>(2);
-                    items.put(MessageHelper.APP_PROPERTY_TENANT_ID, credentials.getTenantId());
-                    items.put("auth_id", credentials.getAuthId());
-                    currentSpan.log(items);
-
-                    final Future<DeviceUser> authenticationTracker = Future.future();
-                    usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(),
-                            authenticationTracker);
-                    authenticationTracker
-                            .compose(user -> getTenantObject(credentials.getTenantId())
-                                    .compose(tenant -> CompositeFuture.all(
-                                            checkTenantIsEnabled(tenant),
-                                            tenantConnectionLimit.apply(tenant)).map(ok -> user)))
-                            .setHandler(completer);
-                }
-            } catch (CredentialException e) {
+                return Future.succeededFuture(AuthenticationConstants.parseSaslResponse(saslResponse));
+            } catch (final CredentialException e) {
                 // SASL response could not be parsed
                 TracingHelper.logError(currentSpan, e);
-                completer.handle(Future.failedFuture(e));
+                return Future.failedFuture(e);
             }
         }
 
-        private void verifyExternal(final Handler<AsyncResult<DeviceUser>> completer) {
+        private Future<DeviceUser> verifyPlain(final String[] saslResponseFields) {
+
+            currentSpan.log("authenticating device using SASL PLAIN");
+
+            final UsernamePasswordCredentials credentials = UsernamePasswordCredentials.create(saslResponseFields[1],
+                    saslResponseFields[2], config.isSingleTenant());
+            if (credentials == null) {
+                // adapter is configured for multi-tenancy but credentials
+                // does not comply with the pattern [<authId>@<tenantId>]
+                return Future.failedFuture(new CredentialException(
+                        "username does not comply with expected pattern [<authId>@<tenantId>]"));
+            }
+
+            final Map<String, Object> items = new HashMap<>(2);
+            items.put(MessageHelper.APP_PROPERTY_TENANT_ID, credentials.getTenantId());
+            items.put("auth_id", credentials.getAuthId());
+            currentSpan.log(items);
+
+            final Future<DeviceUser> authenticationTracker = Future.future();
+            usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(), authenticationTracker);
+            return authenticationTracker
+                    .compose(user -> getTenantObject(credentials.getTenantId())
+                            .compose(tenant -> CompositeFuture.all(
+                                    checkTenantIsEnabled(tenant),
+                                    tenantConnectionLimit.apply(tenant)).map(ok -> user)));
+        }
+
+        private Future<DeviceUser> verifyExternal() {
 
             currentSpan.log("authenticating device using SASL EXTERNAL");
 
             if (peerCertificateChain == null) {
-                completer.handle(Future.failedFuture(new CredentialException("Missing client certificate")));
+                return Future.failedFuture(new CredentialException("Missing client certificate"));
             } else if (!X509Certificate.class.isInstance(peerCertificateChain[0])) {
-                completer.handle(Future.failedFuture(new CredentialException("Only X.509 certificates are supported")));
-            } else {
-
-                final X509Certificate deviceCert = (X509Certificate) peerCertificateChain[0];
-                final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
-                LOG.debug("authenticating client certificate [Subject DN: {}]", subjectDn);
-                currentSpan.log(Collections.singletonMap(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn));
-
-                final Future<TenantObject> tenantTracker = getTenantObject(deviceCert.getIssuerX500Principal());
-                tenantTracker
-                        .compose(tenant -> {
-                            try {
-                                final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchor();
-                                return certValidator.validate(Collections.singletonList(deviceCert), trustAnchor);
-                            } catch(final GeneralSecurityException e) {
-                                LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);
-                                return Future.failedFuture(new CredentialException("validation of client certificate failed"));
-                            }
-                        })
-                        .compose(ok -> {
-                            final Future<DeviceUser> user = Future.future();
-                            final String tenantId = tenantTracker.result().getTenantId();
-                            final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenantId, deviceCert.getSubjectX500Principal());
-                            clientCertAuthProvider.authenticate(credentials, currentSpan.context(), user);
-                            return user;
-                        })
-                        .compose(user -> CompositeFuture.all(
-                                checkTenantIsEnabled(tenantTracker.result()),
-                                tenantConnectionLimit.apply(tenantTracker.result())).map(ok -> user))
-                        .setHandler(completer);
+                return Future.failedFuture(new CredentialException("Only X.509 certificates are supported"));
             }
+            final X509Certificate deviceCert = (X509Certificate) peerCertificateChain[0];
+            final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+            LOG.debug("authenticating client certificate [Subject DN: {}]", subjectDn);
+            currentSpan.log(Collections.singletonMap(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn));
+
+            final Future<TenantObject> tenantTracker = getTenantObject(deviceCert.getIssuerX500Principal());
+            return tenantTracker
+                    .compose(tenant -> {
+                        try {
+                            final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchor();
+                            return certValidator.validate(Collections.singletonList(deviceCert), trustAnchor);
+                        } catch (final GeneralSecurityException e) {
+                            LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);
+                            return Future.failedFuture(new CredentialException("validation of client certificate failed"));
+                        }
+                    })
+                    .compose(ok -> {
+                        final Future<DeviceUser> user = Future.future();
+                        final String tenantId = tenantTracker.result().getTenantId();
+                        final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenantId,
+                                deviceCert.getSubjectX500Principal());
+                        clientCertAuthProvider.authenticate(credentials, currentSpan.context(), user);
+                        return user;
+                    })
+                    .compose(user -> CompositeFuture.all(
+                            checkTenantIsEnabled(tenantTracker.result()),
+                            tenantConnectionLimit.apply(tenantTracker.result())).map(ok -> user));
         }
 
         private Future<TenantObject> getTenantObject(final X500Principal issuerDn) {
