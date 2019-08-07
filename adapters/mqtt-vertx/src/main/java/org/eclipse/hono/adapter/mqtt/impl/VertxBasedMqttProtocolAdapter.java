@@ -51,7 +51,8 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
         .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
         .compose(targetAddress -> uploadMessage(ctx, targetAddress, ctx.message()))
         .recover(t -> {
-            LOG.debug("discarding message [topic: {}] from device: {}", ctx.message().topicName(), t.getMessage());
+            LOG.debug("discarding message [topic: {}] from device: {}",
+                    ctx.message().topicName(), ctx.authenticatedDevice(), t);
             return Future.failedFuture(t);
         });
     }
