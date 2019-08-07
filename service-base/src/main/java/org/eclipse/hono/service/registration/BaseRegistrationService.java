@@ -40,13 +40,15 @@ import io.vertx.core.json.JsonObject;
  * @deprecated - Use {@link RegistrationService} and {@link org.eclipse.hono.service.management.device.DeviceManagementService} instead.
  */
 @Deprecated
-public abstract class BaseRegistrationService<T> extends EventBusRegistrationAdapter<T> implements RegistrationService {
+public abstract class BaseRegistrationService<T> extends EventBusRegistrationAdapter implements RegistrationService {
 
     /**
      * The default number of seconds that information returned by this service's
      * operations may be cached for.
      */
     public static final int DEFAULT_MAX_AGE_SECONDS = 300;
+
+    private T config;
 
     private final AbstractRegistrationService service = new AbstractRegistrationService() {
 
@@ -123,5 +125,36 @@ public abstract class BaseRegistrationService<T> extends EventBusRegistrationAda
             final JsonObject registrationInfo) {
 
         return service.getAssertionPayload(tenantId, deviceId, registrationInfo);
+    }
+
+    /**
+     * Sets the specific object instance to use for configuring this <em>Verticle</em>.
+     * 
+     * @param props The properties.
+     */
+    protected final void setSpecificConfig(final T props) {
+        this.config = props;
+    }
+
+    /**
+     * Sets the properties to use for configuring this <em>Verticle</em>.
+     * <p>
+     * Subclasses <em>must</em> invoke {@link #setSpecificConfig(Object)} with the configuration object.
+     * <p>
+     * This method mainly exists so that subclasses can annotate its concrete implementation with Spring annotations
+     * like {@code Autowired} and/or {@code Qualifier} to get injected a particular bean instance.
+     * 
+     * @param configuration The configuration properties.
+     * @throws NullPointerException if configuration is {@code null}.
+     */
+    public abstract void setConfig(T configuration);
+
+    /**
+     * Gets the properties that this <em>Verticle</em> has been configured with.
+     * 
+     * @return The properties or {@code null} if not set.
+     */
+    public final T getConfig() {
+        return this.config;
     }
 }

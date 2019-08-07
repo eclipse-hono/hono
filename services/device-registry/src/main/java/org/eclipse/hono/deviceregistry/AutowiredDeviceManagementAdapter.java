@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @ConditionalOnBean(DeviceManagementService.class)
-public final class AutowiredDeviceManagementAdapter extends EventBusDeviceManagementAdapter<Void> {
+public final class AutowiredDeviceManagementAdapter extends EventBusDeviceManagementAdapter {
 
     private DeviceManagementService service;
 
@@ -41,10 +41,6 @@ public final class AutowiredDeviceManagementAdapter extends EventBusDeviceManage
     @Override
     protected DeviceManagementService getService() {
         return this.service;
-    }
-
-    @Override
-    public void setConfig(final Void configuration) {
     }
 
 }

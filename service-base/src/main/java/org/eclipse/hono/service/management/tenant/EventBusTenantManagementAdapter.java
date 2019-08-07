@@ -50,7 +50,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @param <T> The type of configuration properties this service requires.
  */
-public abstract class EventBusTenantManagementAdapter<T> extends EventBusService<T> {
+public abstract class EventBusTenantManagementAdapter<T> extends EventBusService {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";

@@ -43,8 +43,4 @@ public final class AutowiredTenantManagementAdapter extends EventBusTenantManage
         return this.service;
     }
 
-    @Override
-    public void setConfig(final Void configuration) {
-    }
-
 }

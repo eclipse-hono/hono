@@ -18,7 +18,6 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
@@ -30,6 +29,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -40,10 +40,8 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * In particular, this base class provides support for receiving request messages via vert.x' event bus
  * and route them to specific methods corresponding to the operation indicated in the message.
- *
- * @param <C> The type of configuration this service supports.
  */
-public abstract class EventBusService<C> extends ConfigurationSupportingVerticle<C> {
+public abstract class EventBusService extends AbstractVerticle {
 
     /**
      * A logger to be shared by subclasses.

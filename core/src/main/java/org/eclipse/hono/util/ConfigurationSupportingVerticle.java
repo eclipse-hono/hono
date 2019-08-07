@@ -44,7 +44,7 @@ public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticl
      * object.
      * <p>
      * This method mainly exists so that subclasses can annotate its concrete implementation
-     * with Spring annotations like @c{@code Autowired} and/or {@code Qualifier} to get injected
+     * with Spring annotations like {@code Autowired} and/or {@code Qualifier} to get injected
      * a particular bean instance.
      * 
      * @param configuration The configuration properties.

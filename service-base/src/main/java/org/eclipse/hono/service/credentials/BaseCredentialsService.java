@@ -35,8 +35,10 @@ import io.vertx.core.json.JsonObject;
  * @deprecated - Use {@link CredentialsService} and {@link org.eclipse.hono.service.management.credentials.CredentialsManagementService} instead.
  */
 @Deprecated
-public abstract class BaseCredentialsService<T> extends EventBusCredentialsAdapter<T>
+public abstract class BaseCredentialsService<T> extends EventBusCredentialsAdapter
         implements CredentialsService {
+
+    private T config;
 
     @Override
     protected CredentialsService getService() {
@@ -94,5 +96,36 @@ public abstract class BaseCredentialsService<T> extends EventBusCredentialsAdapt
      */
     protected void handleUnimplementedOperation(final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
         resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
+    }
+
+    /**
+     * Sets the specific object instance to use for configuring this <em>Verticle</em>.
+     * 
+     * @param props The properties.
+     */
+    protected final void setSpecificConfig(final T props) {
+        this.config = props;
+    }
+
+    /**
+     * Sets the properties to use for configuring this <em>Verticle</em>.
+     * <p>
+     * Subclasses <em>must</em> invoke {@link #setSpecificConfig(Object)} with the configuration object.
+     * <p>
+     * This method mainly exists so that subclasses can annotate its concrete implementation with Spring annotations
+     * like {@code Autowired} and/or {@code Qualifier} to get injected a particular bean instance.
+     * 
+     * @param configuration The configuration properties.
+     * @throws NullPointerException if configuration is {@code null}.
+     */
+    public abstract void setConfig(T configuration);
+
+    /**
+     * Gets the properties that this <em>Verticle</em> has been configured with.
+     * 
+     * @return The properties or {@code null} if not set.
+     */
+    public final T getConfig() {
+        return this.config;
     }
 }

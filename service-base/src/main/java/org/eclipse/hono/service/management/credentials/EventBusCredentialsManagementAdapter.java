@@ -36,10 +36,8 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * Adapter to bind {@link CredentialsManagementService} to the vertx event bus.
- *
- * @param <T> The type of configuration properties this service requires.
  */
-public abstract class EventBusCredentialsManagementAdapter<T> extends EventBusService<T>
+public abstract class EventBusCredentialsManagementAdapter extends EventBusService
         implements Verticle {
 
     private static final String SPAN_NAME_GET_CREDENTIAL = "get Credential from management API";
