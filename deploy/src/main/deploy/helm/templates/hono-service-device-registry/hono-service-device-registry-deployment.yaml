@@ -13,25 +13,21 @@ spec:
       {{- include "hono.metadata" $args | nindent 6 }}
     spec:
       initContainers:
-      {{- if eq .Values.jaeger.enabled true }}
-        - name: wait-for-jaeger-agent
-          image: busybox:1.28
-          command: ['sh', '-c', 'until nslookup {{ .Values.jaeger.agentHost }}; do echo waiting for {{ .Values.jaeger.agentHost }}; sleep 2; done;']
-      {{- end }}
-        - name: copy-example-data
-          image: busybox
-          command:
-            - sh
-            - -c
-            - cp -u /tmp/hono/example-device-identities.json /var/lib/hono/device-registry/device-identities.json;
-              cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json;
-              cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json
-          volumeMounts:
-            - mountPath: /tmp/hono
-              name: conf
-            - mountPath: /var/lib/hono/device-registry
-              name: registry
+      - name: copy-example-data
+        image: busybox
+        command:
+        - sh
+        - -c
+        - cp -u /tmp/hono/example-device-identities.json /var/lib/hono/device-registry/device-identities.json;
+          cp -u /tmp/hono/example-credentials.json /var/lib/hono/device-registry/credentials.json;
+          cp -u /tmp/hono/example-tenants.json /var/lib/hono/device-registry/tenants.json
+        volumeMounts:
+        - mountPath: /tmp/hono
+          name: conf
+        - mountPath: /var/lib/hono/device-registry
+          name: registry
       containers:
+      {{- include "hono.jaeger.agent" . | indent 6 }}
       - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-service-device-registry:{{ .Values.honoImageTag }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-service-device-registry
@@ -58,20 +54,13 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
-      {{- if eq .Values.jaeger.enabled true }}
-        - name: JAEGER_SERVICE_NAME
-          value: hono-service-device-registry
-        {{- range $key, $value := .Values.jaeger.env }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
-      {{- end }}
         - name: _JAVA_OPTIONS
           value: "{{ .Values.defaultJavaOptions }}"
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        {{- include "hono.jaeger.clientConf" $args | indent 8 }}
         securityContext:
           privileged: false
         volumeMounts:

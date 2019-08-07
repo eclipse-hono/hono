@@ -7,7 +7,3 @@ dependencies:
     version: ~3.7.3
     repository: "@stable"
     condition: grafana.enabled
-  - name: jaeger-operator
-    version: ~2.4.1
-    repository: "@stable"
-    condition: jaeger.enabled

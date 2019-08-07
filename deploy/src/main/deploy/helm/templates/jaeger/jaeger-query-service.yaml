@@ -1,0 +1,20 @@
+{{- if .Values.jaegerBackendDeployExample }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- $args := dict "dot" . "component" "tracing" "name" "jaeger-query" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
+spec:
+  ports:
+    - name: query-http
+      port: 80
+      protocol: TCP
+      targetPort: 16686
+  selector:
+    {{- include "hono.matchLabels" $args | nindent 4 }}
+{{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
+  type: LoadBalancer
+{{ else }}
+  type: NodePort
+{{- end }}
+{{- end }}

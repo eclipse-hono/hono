@@ -4,7 +4,16 @@ title = "Release Notes"
 
 ## 1.0-M7 (not yet released)
 
+### New Features
+
+* The Hono Helm chart now supports to choose if the example Device Registry, example AMQP Messaging Network
+  and/or the example Jaeger back end should be deployed and used with the Hono components or not.
+  In the latter case, the chart now also supports setting configuration properties for using an already
+  existing AMQP Messaging Network, Device Registry and/or Jaeger back end.
+  
+
 ### API Changes
+
 * The obsolete method variants of `reportTelemetry` in `org.eclipse.hono.service.metric.Metrics` 
   have been removed. The new variants of this method accept an additional parameter of type `TenantObject`.
 * The already deprecated `org.eclipse.hono.service.AbstractProtocolAdapterBase.getRegistrationAssertion`

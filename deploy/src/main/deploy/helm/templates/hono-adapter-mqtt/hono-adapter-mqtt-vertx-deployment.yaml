@@ -12,13 +12,8 @@ spec:
     metadata:
       {{- include "hono.metadata" $args | nindent 6 }}
     spec:
-      {{- if eq .Values.jaeger.enabled true }}
-      initContainers:
-        - name: wait-for-jaeger-agent
-          image: busybox:1.28
-          command: ['sh', '-c', 'until nslookup {{ .Values.jaeger.agentHost }}; do echo waiting for {{ .Values.jaeger.agentHost }}; sleep 2; done;']
-      {{- end }}
       containers:
+      {{- include "hono.jaeger.agent" . | indent 6 }}
       - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-adapter-mqtt-vertx:{{ .Values.honoImageTag }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-mqtt-vertx
@@ -41,20 +36,13 @@ spec:
           value: dev
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
-      {{- if eq .Values.jaeger.enabled true }}
-        - name: JAEGER_SERVICE_NAME
-          value: hono-adapter-mqtt
-        {{- range $key, $value := .Values.jaeger.env }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
-      {{- end }}
         - name: _JAVA_OPTIONS
           value: "{{ .Values.defaultJavaOptions }}"
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        {{- include "hono.jaeger.clientConf" $args | indent 8 }}
         volumeMounts:
         - mountPath: /etc/hono
           name: conf

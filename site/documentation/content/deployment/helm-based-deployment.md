@@ -149,12 +149,6 @@ A Hono instance that has been deployed using Helm's Tiller service can be undepl
 helm delete --purge hono
 ~~~
 
-If the Jaeger tracing component has been deployed, additional resources have to be deleted manually:
-~~~sh
-kubectl delete crd jaegers.jaegertracing.io
-kubectl delete svc -n hono eclipse-hono-jaeger-operator
-~~~
-
 A Hono instance that has been deployed manually using the resource files can be undeployed by running
 
 ~~~sh
@@ -164,7 +158,7 @@ kubectl delete -f ./eclipse-hono -R
 
 ## Deploying custom Container Images
 
-The sections above describe how Hono's pre-built container images can be deployed using Helm. In some cases it might be desirable to build Hono from source, e.g. in order to use a different metrics back end or to [enable Jaeger tracing](#deploying-jaeger). In these cases, the Helm templates contained in the source tree can be used instead of the Helm chart from the download page.
+The sections above describe how Hono's pre-built container images can be deployed using Helm. In some cases it might be desirable to build Hono from source, e.g. in order to use a different metrics back end or to [use Jaeger tracing](#using-jaeger-tracing). In these cases, the Helm templates contained in the source tree can be used instead of the Helm chart from the download page.
 
 The container images created as part of the build process need to be made available to the Kubernetes cluster that Hono should be deployed to. This usually requires the images to be pushed to a (private) container registry that the cluster has pull access to. Please refer to the documentation of the employed Kubernetes service provider for details regarding the setup and configuration of a private container registry.
 
@@ -221,16 +215,32 @@ The newly built images can then be deployed using Helm:
 helm install --dep-up --name hono --namespace hono target/deploy/helm/
 ~~~
 
-## Deploying Jaeger
+## Using Jaeger Tracing
 
-In order to deploy the Jaeger tracing component along with Hono, first make sure that the Hono container images have been built with the Jaeger client included.
-This is done by activating the `jaeger` Maven profile, see [Monitoring & Tracing]({{< ref "/admin-guide/monitoring-tracing-config.md#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}}).
-The deployment can then be done using the `jaeger.enabled=true` option when running Helm:
+Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages flowing through the system.
+The Hono chart can be configured to report tracing information to the [Jaeger tracing system](https://jaegertracing.io). The *Spans* reported
+by the components can then be viewed in a web browser.
+
+In order for Hono's components to use the Jaeger client for reporting tracing information, the container images need to be built
+with the `jaeger` Maven profile. Please refer to [Monitoring & Tracing]
+({{< relref "/admin-guide/monitoring-tracing-config.md#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}}) for details.
+
+The chart can be configured to deploy and use an example Jaeger back end by means of setting the *jaegerBackendDeployExample* property
+to `true` when running Helm:
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name hono --set jaeger.enabled=true --namespace hono target/deploy/helm/
+helm install --dep-up --name hono --namespace hono --set jaegerBackendDeployExample=true target/deploy/helm/
 ~~~
 
-Under the hood, this will install the Jaeger Operator and create a Jaeger back end instance suitable for testing purposes.
-Please refer to the [Jaeger Operator](https://www.jaegertracing.io/docs/1.13/operator/) documentation for additional information on how to configure and access Jaeger's UI etc.
+This will create a Jaeger back end instance suitable for testing purposes and will configure all deployed Hono components to use the
+Jaeger back end.
+
+If no example Jaeger back end should be deployed but instead an existing Jaeger installation should be used,
+the chart's *jaegerAgentConf* property can be set to environment variables which are passed in to
+the Jaeger Agent that is deployed with each of Hono's components.
+
+~~~sh
+# in Hono working tree directory: hono/deploy
+helm install --dep-up --name hono --namespace hono --set jaegerAgentConf=[{"name": "REPORTER_TYPE", "value": "tchannel"}, {"name": "REPORTER_TCHANNEL_HOST_PORT", "value": "my-jaeger:14267"] target/deploy/helm/
+~~~

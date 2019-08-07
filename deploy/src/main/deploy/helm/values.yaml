@@ -17,6 +17,10 @@ deviceRegistrationSpec: {}
 credentialsSpec: {}
 deviceConnectionSpec: {}
 
+# jaegerBackendDeployExample indicates whether the example Jaeger all-in-one
+# back end should be deployed and used.
+jaegerBackendDeployExample: false
+
 # dispatchRouterImageName contains the name (including tag)
 # of the container image to use for the example AQMP Messaging Network
 dispatchRouterImageName: ${dispatch-router.image.name}
@@ -148,24 +152,12 @@ grafana:
   rbac:
     namespaced: true
 
-# jaeger contains properties for configuring the Jaeger tracing system that is used
-# by Hono's components to trace the distributed processing of messages.
-jaeger:
-  # whether the Jaeger tracing component should be deployed
-  enabled: false
-  agentHost: jaeger-agent
-  # environment variables for containers that provide tracing data
-  env:
-    JAEGER_AGENT_HOST: jaeger-agent
-    JAEGER_AGENT_PORT: "6831"
-    JAEGER_SAMPLER_TYPE: const
-    JAEGER_SAMPLER_PARAM: 1
-  deploy:
-    # configuration of Jaeger deployment
-    # see examples of spec definitions here: https://github.com/jaegertracing/jaeger-operator/tree/master/deploy/examples
-    spec:
-      strategy: allInOne
-      storage:
-        options:
-          memory:
-            max-traces: 100000
+# agentConf contains environment variables for configuring the Jaeger Agent sidecar container
+# that is deployed with each of Hono's components.
+# The Jaeger Agent sidecar container is deployed with standard properties if
+# "jaegerBackendDeployExample" is set to true.
+# Otherwise the sidecar container is deployed using the environment variables contained
+# in this property (if not nil).
+jaegerAgentConf:
+#- name: REPORTER_TYPE
+#  value: tchannel

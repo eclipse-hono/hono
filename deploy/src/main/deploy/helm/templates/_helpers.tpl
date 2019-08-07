@@ -237,3 +237,64 @@ The scope passed in is expected to be a dict with keys
     port: {{ default ${prometheus.scraping.port} .dot.Values.monitoring.prometheus.port }}
     refresh_interval: 10s
 {{- end }}
+
+{{/*
+Adds a Jaeger Agent container to a template spec.
+*/}}
+{{- define "hono.jaeger.agent" }}
+{{- $jaegerEnabled := or .Values.jaegerBackendDeployExample .Values.jaegerAgentConf }}
+{{- if $jaegerEnabled }}
+- name: jaeger-agent-sidecar
+  image: jaegertracing/jaeger-agent:1.13.1
+  ports:
+  - name: agent-compact
+    containerPort: 6831
+    protocol: UDP
+  - name: agent-binary
+    containerPort: 6832
+    protocol: UDP
+  - name: agent-configs
+    containerPort: 5778
+    protocol: TCP
+  readinessProbe:
+    httpGet:
+      path: "/"
+      port: 14271
+    initialDelaySeconds: 5
+  env:
+  {{- if .Values.jaegerBackendDeployExample }}
+  - name: REPORTER_TYPE
+    value: "tchannel"
+  - name: REPORTER_TCHANNEL_HOST_PORT
+    value: {{ printf "%s-jaeger-collector:14267" .Release.Name | quote }}
+  - name: REPORTER_TCHANNEL_DISCOVERY_MIN_PEERS
+    value: "1"
+  {{- else }}
+  {{- range $key, $value := .Values.jaegerAgentConf }}
+  - name: {{ $key }}
+    value: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Adds Jaeger client configuration to a container's "env" properties.
+The scope passed in is expected to be a dict with keys
+- "dot": the root scope (".") and
+- "name": the value to use for the JAEGER_SERVICE_NAME (prefixed with the release name).
+*/}}
+{{- define "hono.jaeger.clientConf" }}
+{{- $jaegerEnabled := or .dot.Values.jaegerBackendDeployExample .dot.Values.jaegerAgentConf }}
+{{- if $jaegerEnabled }}
+{{- $agentHost := printf "%s-jaeger-agent" .dot.Release.Name }}
+- name: JAEGER_SERVICE_NAME
+  value: {{ printf "%s-%s" .dot.Release.Name .name | quote }}
+{{- if .dot.Values.jaegerBackendDeployExample }}
+- name: JAEGER_SAMPLER_TYPE
+  value: "const"
+- name: JAEGER_SAMPLER_PARAM
+  value: "1"
+{{- end }}
+{{- end }}
+{{- end }}
