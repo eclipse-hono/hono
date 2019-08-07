@@ -19,7 +19,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -84,7 +84,7 @@ public class AbstractHonoClientTest {
     }
 
     /**
-     * TODO.
+     * Verifies that the automatic close of inactive sender links is disabled by default.
      */
     @Test
     public void testNoAutoCloseOnDefault() {
@@ -94,7 +94,7 @@ public class AbstractHonoClientTest {
     }
 
     /**
-     * TODO.
+     * Verifies that a timer is started to automatically close inactive sender links if a timeout is configured.
      */
     @Test
     public void testTimeoutExceededAndNeverSent() {
@@ -108,7 +108,9 @@ public class AbstractHonoClientTest {
     }
 
     /**
-     * TODO.
+     * Verifies that the timer to automatically close inactive sender links is restarted if the configured timeout is
+     * not exceeded.
+     * 
      * @throws InterruptedException if sleep is interrupted.
      */
     @Test
@@ -120,7 +122,7 @@ public class AbstractHonoClientTest {
         Thread.sleep(1);
 
         client.startAutoCloseTimer();
-        verify(client.connection.getVertx(), atLeastOnce()).setTimer(anyLong(), anyHandler());
+        verify(client.connection.getVertx(), atLeast(2)).setTimer(anyLong(), anyHandler());
         verify(client.connection).closeAndFree(eq(client.sender), anyHandler());
     }
 
@@ -147,14 +149,15 @@ public class AbstractHonoClientTest {
     }
 
     /**
-     * TODO.
+     * Verifies that the remaining timeout is the difference between now and lastSend but min. 0 and max. the configured
+     * timeout.
      */
     @Test
     public void testRemainingTimeout() {
         final AbstractHonoClient client = new AbstractHonoClient(mock(HonoConnectionImpl.class)) {
         };
+        assertEquals(0L, client.getRemainingTimeout(0, 20, 5));
         assertEquals(0L, client.getRemainingTimeout(10, 20, 5));
-        assertEquals(0L, client.getRemainingTimeout(0, 20, 5)); // never seen
         assertEquals(1L, client.getRemainingTimeout(10, 20, 11));
         assertEquals(5L, client.getRemainingTimeout(20, 20, 5));
     }
