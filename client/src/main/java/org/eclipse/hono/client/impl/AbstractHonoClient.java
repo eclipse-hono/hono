@@ -46,6 +46,7 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class AbstractHonoClient {
 
+    public static final String ATTACHMENT_LAST_SEND_TIME = "last-send-time";
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
@@ -237,12 +238,12 @@ public abstract class AbstractHonoClient {
      * Stores the current time stamp on the sender link. This is used to detect and close inactive AMQP sender links.
      */
     protected final void storeLastSendTime() {
-        sender.attachments().set("last-send-time", Long.class, Instant.now().toEpochMilli());
+        sender.attachments().set(ATTACHMENT_LAST_SEND_TIME, Long.class, Instant.now().toEpochMilli());
     }
 
     private void startAutoCloseTimer(final long delay) {
         connection.getVertx().setTimer(delay, id -> {
-            final Long lastSendTime = sender.attachments().get("last-send-time", Long.class);
+            final Long lastSendTime = sender.attachments().get(ATTACHMENT_LAST_SEND_TIME, Long.class);
             long remaining = 0;
             if (lastSendTime != null) {
                 remaining = getRemainingTimeout(lastSendTime, Instant.now().toEpochMilli(),

@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Target;
-import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
@@ -59,7 +58,6 @@ public class TelemetrySenderImplTest {
     private ProtonSender sender;
     private ClientConfigProperties config;
     private HonoConnection connection;
-    private Record attachments;
 
     /**
      * Sets up the fixture.
@@ -71,9 +69,6 @@ public class TelemetrySenderImplTest {
         sender = HonoClientUnitTestHelper.mockProtonSender();
         config = new ClientConfigProperties();
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
-        attachments = mock(Record.class);
-        when(attachments.get("last-send-time", Long.class)).thenReturn(0L);
-        when(sender.attachments()).thenReturn(attachments);
     }
 
     /**
@@ -156,7 +151,7 @@ public class TelemetrySenderImplTest {
     }
 
     /**
-     * Verifies that sending a message sets the "last-send-time", which is used for the automatic close of the link.
+     * Verifies that sending a message sets the "last-send-time", which is used for the automatic link timeout.
      */
     @Test
     public void testMessageSendSetsLastSendTime() {
@@ -171,7 +166,7 @@ public class TelemetrySenderImplTest {
         messageSender.send(msg, null);
         messageSender.send("dev1", null, "some payload", "application/text");
 
-        // THEN the last sent times is reset each time
-        verify(attachments, times(3)).set(eq("last-send-time"), any(), anyLong());
+        // THEN the last sent time is reset each time
+        verify(sender.attachments(), times(3)).set(eq(AbstractHonoClient.ATTACHMENT_LAST_SEND_TIME), any(), anyLong());
     }
 }

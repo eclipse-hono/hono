@@ -31,7 +31,6 @@ import java.util.Map;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Target;
-import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -101,7 +100,7 @@ public class AbstractHonoClientTest {
     public void testTimeoutExceededAndNeverSent() {
         final AbstractHonoClient client = createClient();
         client.connection.getConfig().setInactiveLinkTimeout(1L);
-        when(client.sender.attachments().get("last-send-time", Long.class)).thenReturn(0L);
+        when(client.sender.attachments().get(AbstractHonoClient.ATTACHMENT_LAST_SEND_TIME, Long.class)).thenReturn(0L);
 
         client.startAutoCloseTimer();
         verify(client.connection.getVertx()).setTimer(eq(1L), anyHandler());
@@ -117,7 +116,7 @@ public class AbstractHonoClientTest {
         final AbstractHonoClient client = createClient();
         client.connection.getConfig().setInactiveLinkTimeout(100L);
         final long now = Instant.now().toEpochMilli();
-        when(client.sender.attachments().get("last-send-time", Long.class)).thenReturn(now);
+        when(client.sender.attachments().get(AbstractHonoClient.ATTACHMENT_LAST_SEND_TIME, Long.class)).thenReturn(now);
         Thread.sleep(1);
 
         client.startAutoCloseTimer();
@@ -128,9 +127,6 @@ public class AbstractHonoClientTest {
     private AbstractHonoClient createClient() {
         final ProtonSender protonSender = HonoClientUnitTestHelper.mockProtonSender();
         when(protonSender.getTarget()).thenReturn(new Target());
-
-        final Record attachments = mock(Record.class);
-        when(protonSender.attachments()).thenReturn(attachments);
 
         final Vertx vertx = mock(Vertx.class);
         when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
