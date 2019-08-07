@@ -39,6 +39,8 @@ public abstract class CompleteBaseCredentialsService<T> extends EventBusComplete
 
     private final HonoPasswordEncoder pwdEncoder;
 
+    private T config;
+
     /**
      * Creates a new service instance for a password encoder.
      * 
@@ -118,5 +120,36 @@ public abstract class CompleteBaseCredentialsService<T> extends EventBusComplete
     protected void handleUnimplementedOperation(
             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
         resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
+    }
+
+    /**
+     * Sets the specific object instance to use for configuring this <em>Verticle</em>.
+     * 
+     * @param props The properties.
+     */
+    protected final void setSpecificConfig(final T props) {
+        this.config = props;
+    }
+
+    /**
+     * Sets the properties to use for configuring this <em>Verticle</em>.
+     * <p>
+     * Subclasses <em>must</em> invoke {@link #setSpecificConfig(Object)} with the configuration object.
+     * <p>
+     * This method mainly exists so that subclasses can annotate its concrete implementation with Spring annotations
+     * like {@code Autowired} and/or {@code Qualifier} to get injected a particular bean instance.
+     * 
+     * @param configuration The configuration properties.
+     * @throws NullPointerException if configuration is {@code null}.
+     */
+    public abstract void setConfig(T configuration);
+
+    /**
+     * Gets the properties that this <em>Verticle</em> has been configured with.
+     * 
+     * @return The properties or {@code null} if not set.
+     */
+    public final T getConfig() {
+        return this.config;
     }
 }

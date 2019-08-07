@@ -37,6 +37,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests verifying behavior of {@link BaseDeviceConnectionService}.
  *
  */
+@Deprecated
 @RunWith(VertxUnitRunner.class)
 public class BaseDeviceConnectionServiceTest {
 
@@ -164,6 +165,7 @@ public class BaseDeviceConnectionServiceTest {
 
             @Override
             public void setConfig(final Object configuration) {
+                setSpecificConfig(configuration);
             }
         };
     }

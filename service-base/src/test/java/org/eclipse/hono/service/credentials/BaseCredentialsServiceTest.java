@@ -38,7 +38,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class BaseCredentialsServiceTest {
 
-    private static EventBusCredentialsAdapter<?> service;
+    private static EventBusCredentialsAdapter service;
 
     private static final String TEST_TENANT = "dummy";
 
@@ -107,7 +107,7 @@ public class BaseCredentialsServiceTest {
                 .setJsonPayload(payload);
     }
 
-    private static EventBusCredentialsAdapter<?> createCredentialsService() {
+    private static EventBusCredentialsAdapter createCredentialsService() {
 
         final var service = new CredentialsService() {
 
@@ -122,17 +122,11 @@ public class BaseCredentialsServiceTest {
             }
         };
 
-        return new EventBusCredentialsAdapter<>() {
+        return new EventBusCredentialsAdapter() {
 
             @Override
             protected CredentialsService getService() {
                 return service;
-            }
-
-            @Override
-            public void setConfig(final Object configuration) {
-                // TODO Auto-generated method stub
-
             }
         };
     }

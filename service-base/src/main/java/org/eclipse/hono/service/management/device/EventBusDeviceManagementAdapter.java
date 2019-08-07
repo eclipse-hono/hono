@@ -38,10 +38,8 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * In particular, this base class provides support for receiving service invocation request messages via vert.x' event
  * bus and route them to specific methods corresponding to the operation indicated in the message.
- *
- * @param <T> The type of configuration properties this service requires.
  */
-public abstract class EventBusDeviceManagementAdapter<T> extends EventBusService<T>
+public abstract class EventBusDeviceManagementAdapter extends EventBusService
         implements Verticle {
 
     private static final String SPAN_NAME_CREATE_DEVICE = "create Device from management API";

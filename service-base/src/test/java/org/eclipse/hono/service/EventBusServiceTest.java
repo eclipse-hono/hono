@@ -32,18 +32,14 @@ import io.vertx.core.json.JsonObject;
  */
 public class EventBusServiceTest {
 
-    private static EventBusService<Object> service;
+    private static EventBusService service;
 
     /**
      * Sets up the fixture.
      */
     @BeforeAll
     public static void setUp() {
-        service = new EventBusService<>() {
-
-            @Override
-            public void setConfig(final Object configuration) {
-            }
+        service = new EventBusService() {
 
             @Override
             protected String getEventBusAddress() {

@@ -36,8 +36,10 @@ import io.vertx.core.Handler;
  * @deprecated - Use {@link DeviceConnectionService} instead.
  */
 @Deprecated
-public abstract class BaseDeviceConnectionService<T> extends EventBusDeviceConnectionAdapter<T>
+public abstract class BaseDeviceConnectionService<T> extends EventBusDeviceConnectionAdapter
         implements DeviceConnectionService {
+
+    private T config;
 
     @Override
     protected DeviceConnectionService getService() {
@@ -83,5 +85,36 @@ public abstract class BaseDeviceConnectionService<T> extends EventBusDeviceConne
      */
     protected void handleUnimplementedOperation(final Handler<AsyncResult<DeviceConnectionResult>> resultHandler) {
         resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
+    }
+
+    /**
+     * Sets the specific object instance to use for configuring this <em>Verticle</em>.
+     * 
+     * @param props The properties.
+     */
+    protected final void setSpecificConfig(final T props) {
+        this.config = props;
+    }
+
+    /**
+     * Sets the properties to use for configuring this <em>Verticle</em>.
+     * <p>
+     * Subclasses <em>must</em> invoke {@link #setSpecificConfig(Object)} with the configuration object.
+     * <p>
+     * This method mainly exists so that subclasses can annotate its concrete implementation with Spring annotations
+     * like {@code Autowired} and/or {@code Qualifier} to get injected a particular bean instance.
+     * 
+     * @param configuration The configuration properties.
+     * @throws NullPointerException if configuration is {@code null}.
+     */
+    public abstract void setConfig(T configuration);
+
+    /**
+     * Gets the properties that this <em>Verticle</em> has been configured with.
+     * 
+     * @return The properties or {@code null} if not set.
+     */
+    public final T getConfig() {
+        return this.config;
     }
 }

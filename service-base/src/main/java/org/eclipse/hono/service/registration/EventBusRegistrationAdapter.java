@@ -40,10 +40,8 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * This base class provides support for receiving <em>assert Registration</em> request messages via vert.x' event bus
  * and routing them to specific methods accepting the query parameters contained in the request message.
- * 
- * @param <T> The type of configuration properties this service requires.
  */
-public abstract class EventBusRegistrationAdapter<T> extends EventBusService<T> implements Verticle {
+public abstract class EventBusRegistrationAdapter extends EventBusService implements Verticle {
 
     /**
      * The default number of seconds that information returned by this service's

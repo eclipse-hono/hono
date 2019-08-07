@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
  * in a Spring Boot environment.
  */
 @Component
-public final class AutowiredCredentialsAdapter extends EventBusCredentialsAdapter<Void> {
+public final class AutowiredCredentialsAdapter extends EventBusCredentialsAdapter {
 
     private CredentialsService service;
 
@@ -39,10 +39,6 @@ public final class AutowiredCredentialsAdapter extends EventBusCredentialsAdapte
     @Override
     protected CredentialsService getService() {
         return this.service;
-    }
-
-    @Override
-    public void setConfig(final Void configuration) {
     }
 
 }

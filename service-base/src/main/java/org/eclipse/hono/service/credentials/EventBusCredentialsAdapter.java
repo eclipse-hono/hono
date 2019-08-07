@@ -38,10 +38,8 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * This base class provides support for receiving <em>Get</em> request messages via vert.x' event bus and routing them
  * to specific methods accepting the query parameters contained in the request message.
- *
- * @param <T> The type of configuration class this service supports.
  */
-public abstract class EventBusCredentialsAdapter<T> extends EventBusService<T> implements Verticle {
+public abstract class EventBusCredentialsAdapter extends EventBusService implements Verticle {
 
     private static final String SPAN_NAME_GET_CREDENTIALS = "get Credentials";
 

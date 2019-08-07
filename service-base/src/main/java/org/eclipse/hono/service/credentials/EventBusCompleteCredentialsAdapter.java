@@ -41,7 +41,7 @@ import io.vertx.core.json.JsonObject;
  * @deprecated - Use {@link org.eclipse.hono.service.management.credentials.EventBusCredentialsManagementAdapter} instead.
  */
 @Deprecated
-public abstract class EventBusCompleteCredentialsAdapter<T> extends EventBusCredentialsAdapter<T> {
+public abstract class EventBusCompleteCredentialsAdapter<T> extends EventBusCredentialsAdapter {
 
     private static final int DEFAULT_MAX_BCRYPT_ITERATIONS = 10;
 

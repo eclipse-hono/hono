@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
  * in a Spring Boot environment.
  */
 @Component
-public final class AutowiredRegistrationAdapter extends EventBusRegistrationAdapter<Void> {
+public final class AutowiredRegistrationAdapter extends EventBusRegistrationAdapter {
 
     private RegistrationService service;
 
@@ -40,10 +40,6 @@ public final class AutowiredRegistrationAdapter extends EventBusRegistrationAdap
     @Override
     protected RegistrationService getService() {
         return this.service;
-    }
-
-    @Override
-    public void setConfig(final Void configuration) {
     }
 
 }
