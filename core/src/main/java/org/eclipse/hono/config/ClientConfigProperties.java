@@ -42,7 +42,7 @@ public class ClientConfigProperties extends AbstractConfig {
     public static final int DEFAULT_IDLE_TIMEOUT = 16000; //ms
     /**
      * The default amount of time (milliseconds) after which a a sender link will be closed when no messages have been
-     * sent.
+     * sent. The value <code>0</code> disables automatic link timeout.
      */
     public static final long DEFAULT_INACTIVE_LINK_TIMEOUT = 0; // ms
     /**

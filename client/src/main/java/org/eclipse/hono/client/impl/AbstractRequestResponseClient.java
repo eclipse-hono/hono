@@ -856,6 +856,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 TracingHelper.injectSpanContext(connection.getTracer(), currentSpan.context(), request);
                 replyMap.put(correlationId, handler);
 
+                storeLastSendTime();
                 sender.send(request, deliveryUpdated -> {
                     final Future<R> failedResult = Future.future();
                     final DeliveryState remoteState = deliveryUpdated.getRemoteState();
