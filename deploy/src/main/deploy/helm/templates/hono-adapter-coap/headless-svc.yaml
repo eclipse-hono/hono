@@ -1,0 +1,4 @@
+{{- if and .Values.prometheus.createInstance .Values.adapters.coap.enabled }}
+{{- $args := dict "dot" . "component" "adapter-coap-vertx" "name" "adapter-coap-vertx" }}
+{{- include "hono.headless.service" $args }}
+{{ end }}

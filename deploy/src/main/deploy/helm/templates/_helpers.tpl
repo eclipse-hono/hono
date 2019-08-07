@@ -138,7 +138,7 @@ messaging:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.amqpMessagingNetworkSpec }}
+  {{- required "A .Values.adapters.amqpMessagingNetworkSpec needs to be set when not using the example AMQP Messaging Network" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml }}
 {{- end }}
 command:
 {{- if .dot.Values.amqpMessagingNetworkDeployExample }}
@@ -151,7 +151,7 @@ command:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.commandAndControlSpec }}
+  {{- toYaml .dot.Values.adapters.commandAndControlSpec }}
 {{- end }}
 tenant:
 {{- if .dot.Values.deviceRegistryDeployExample }}
@@ -162,7 +162,7 @@ tenant:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.tenantSpec }}
+  {{- toYaml .dot.Values.adapters.tenantSpec }}
 {{- end }}
 registration:
 {{- if .dot.Values.deviceRegistryDeployExample }}
@@ -173,7 +173,7 @@ registration:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.deviceRegistrationSpec }}
+  {{- toYaml .dot.Values.adapters.deviceRegistrationSpec }}
 {{- end }}
 credentials:
 {{- if .dot.Values.deviceRegistryDeployExample }}
@@ -184,7 +184,7 @@ credentials:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.credentialsSpec }}
+  {{- toYaml .dot.Values.adapters.credentialsSpec }}
 {{- end }}
 deviceConnection:
 {{- if .dot.Values.deviceRegistryDeployExample }}
@@ -195,7 +195,7 @@ deviceConnection:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- toYaml .dot.Values.deviceConnectionSpec }}
+  {{- toYaml .dot.Values.adapters.deviceConnectionSpec }}
 {{- end }}
 {{- end }}
 

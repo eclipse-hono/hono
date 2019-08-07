@@ -1,0 +1,26 @@
+{{- if .Values.adapters.coap.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- $args := dict "dot" . "component" "adapter-coap-vertx" "name" "adapter-coap-vertx" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
+spec:
+  ports:
+  - name: coap
+    port: 5683
+    protocol: UDP
+    targetPort: coap
+    nodePort: 30683
+  - name: coaps
+    port: 5684
+    protocol: UDP
+    targetPort: coaps
+    nodePort: 30684
+  selector:
+    {{- include "hono.matchLabels" $args | nindent 4 }}
+{{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
+  type: LoadBalancer
+{{ else }}
+  type: NodePort
+{{- end }}
+{{ end }}

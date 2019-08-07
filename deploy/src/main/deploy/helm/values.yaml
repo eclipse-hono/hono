@@ -6,16 +6,11 @@
 # consisting of a single Dispatch Router and Artemis broker should be
 # deployed and used.
 amqpMessagingNetworkDeployExample: true
-amqpMessagingNetworkSpec: {}
-commandAndControlSpec: {}
+
 
 # deviceRegistryDeployExample indicates whether the example Device Registry
 # should be deployed and used.
 deviceRegistryDeployExample: true
-tenantSpec: {}
-deviceRegistrationSpec: {}
-credentialsSpec: {}
-deviceConnectionSpec: {}
 
 # jaegerBackendDeployExample indicates whether the example Jaeger all-in-one
 # back end should be deployed and used.
@@ -66,6 +61,22 @@ platform: kubernetes
 # "LoadBalancer" type (true) or the "NodePort" type (false).
 # This property will be ignored when deploying to platform "openshift".
 useLoadBalancer: true
+
+# Configuration options for adapters.
+adapters:
+
+  #amqpMessagingNetworkSpec:
+  #commandAndControlSpec:
+  #credentialsSpec:
+  #deviceConnectionSpec:
+  #deviceRegistrationSpec:
+  #tenantSpec:
+
+  coap:
+    # enabled indicates if Hono's (experimental) CoAP adapter should be deployed.
+    # Note that this requires building the corresponding container image manually because
+    # there is no official image available from Docker Hub (yet).
+    enabled: false
 
 prometheus:
   # createInstance indicates whether a Prometheus server should be created
