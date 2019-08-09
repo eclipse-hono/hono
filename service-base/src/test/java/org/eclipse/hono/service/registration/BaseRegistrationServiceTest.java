@@ -28,6 +28,8 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.Span;
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -157,7 +159,7 @@ public class BaseRegistrationServiceTest {
 
     /**
      * Verifies that the getDevice method returns "not implemented" if the base
-     * {@link AbstractRegistrationService#getDevice(String, String, Handler)} implementation is used.
+     * {@link AbstractRegistrationService#getDevice(String, String, Span, Handler)} implementation is used.
      *
      * @param ctx The vert.x unit test context.
      */
@@ -168,7 +170,8 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationServiceWithoutImpls();
 
         // WHEN trying to get a device's data
-        registrationService.getDevice(Constants.DEFAULT_TENANT, "4711", ctx.succeeding(result -> ctx.verify(() -> {
+        registrationService.getDevice(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE,
+                ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the assertion fails with a status code 501
             assertEquals(HttpURLConnection.HTTP_NOT_IMPLEMENTED, result.getStatus());
             // and the response payload is empty
@@ -252,7 +255,8 @@ public class BaseRegistrationServiceTest {
         return new AbstractRegistrationService() {
 
             @Override
-            public void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+            public void getDevice(final String tenantId, final String deviceId, final Span span,
+                    final Handler<AsyncResult<RegistrationResult>> resultHandler) {
                 devices.apply(deviceId).setHandler(resultHandler);
             }
 
@@ -269,7 +273,7 @@ public class BaseRegistrationServiceTest {
         return new AbstractRegistrationService() {
 
             @Override
-            protected void getDevice(final String tenantId, final String deviceId,
+            protected void getDevice(final String tenantId, final String deviceId, final Span span,
                     final Handler<AsyncResult<RegistrationResult>> resultHandler) {
                 resultHandler.handle(
                         Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));

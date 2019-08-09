@@ -52,7 +52,8 @@ public class DummyRegistrationService extends AbstractRegistrationService {
     }
 
     @Override
-    protected void getDevice(final String tenantId, final String deviceId, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    protected void getDevice(final String tenantId, final String deviceId, final Span span,
+            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         resultHandler.handle(Future.failedFuture("Not implemented"));
     }
 

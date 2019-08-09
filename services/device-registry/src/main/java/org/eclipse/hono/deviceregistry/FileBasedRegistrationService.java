@@ -98,7 +98,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
     private final AbstractRegistrationService registrationService = new AbstractRegistrationService() {
 
         @Override
-        public void getDevice(final String tenantId, final String deviceId,
+        public void getDevice(final String tenantId, final String deviceId, final Span span,
                 final Handler<AsyncResult<RegistrationResult>> resultHandler) {
             FileBasedRegistrationService.this.getDevice(tenantId, deviceId, resultHandler);
         }
