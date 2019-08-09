@@ -496,7 +496,7 @@ public class AbstractRequestResponseClientTest  {
         });
 
         // THEN the last sent time is reset
-        verify(client.sender.attachments()).set(eq(AbstractHonoClient.ATTACHMENT_LAST_SEND_TIME), any(), anyLong());
+        verify(client.sender.attachments()).set(eq(AbstractHonoClient.KEY_LAST_SEND_TIME), any(), anyLong());
     }
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {

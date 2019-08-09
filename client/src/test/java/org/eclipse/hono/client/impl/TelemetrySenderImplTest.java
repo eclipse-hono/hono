@@ -167,6 +167,6 @@ public class TelemetrySenderImplTest {
         messageSender.send("dev1", null, "some payload", "application/text");
 
         // THEN the last sent time is reset each time
-        verify(sender.attachments(), times(3)).set(eq(AbstractHonoClient.ATTACHMENT_LAST_SEND_TIME), any(), anyLong());
+        verify(sender.attachments(), times(3)).set(eq(AbstractHonoClient.KEY_LAST_SEND_TIME), any(), anyLong());
     }
 }

@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Target;
@@ -90,7 +91,7 @@ public class AbstractHonoClientTest {
     public void testNoAutoCloseOnDefault() {
         final AbstractHonoClient client = createClient();
         client.startAutoCloseTimer();
-        verify(client.connection.getVertx(), never()).setTimer(eq(1L), anyHandler());
+        verify(client.connection.getVertx(), never()).setTimer(anyLong(), anyHandler());
     }
 
     /**
@@ -100,10 +101,11 @@ public class AbstractHonoClientTest {
     public void testTimeoutExceededAndNeverSent() {
         final AbstractHonoClient client = createClient();
         client.connection.getConfig().setInactiveLinkTimeout(1L);
-        when(client.sender.attachments().get(AbstractHonoClient.ATTACHMENT_LAST_SEND_TIME, Long.class)).thenReturn(0L);
+        client.connection.getConfig().setInactiveLinkTimeoutUnit(TimeUnit.MILLISECONDS);
+        when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class)).thenReturn(0L);
 
         client.startAutoCloseTimer();
-        verify(client.connection.getVertx()).setTimer(eq(1L), anyHandler());
+        verify(client.connection.getVertx()).setTimer(anyLong(), anyHandler());
         verify(client.connection).closeAndFree(eq(client.sender), anyHandler());
     }
 
@@ -117,8 +119,9 @@ public class AbstractHonoClientTest {
     public void testTimerIsRestartedWhenTimeoutNotExceeded() throws InterruptedException {
         final AbstractHonoClient client = createClient();
         client.connection.getConfig().setInactiveLinkTimeout(100L);
+        client.connection.getConfig().setInactiveLinkTimeoutUnit(TimeUnit.MILLISECONDS);
         final long now = Instant.now().toEpochMilli();
-        when(client.sender.attachments().get(AbstractHonoClient.ATTACHMENT_LAST_SEND_TIME, Long.class)).thenReturn(now);
+        when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class)).thenReturn(now);
         Thread.sleep(1);
 
         client.startAutoCloseTimer();
