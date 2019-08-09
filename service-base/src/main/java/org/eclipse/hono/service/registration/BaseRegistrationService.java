@@ -51,7 +51,7 @@ public abstract class BaseRegistrationService<T> extends EventBusRegistrationAda
     private final AbstractRegistrationService service = new AbstractRegistrationService() {
 
         @Override
-        protected void getDevice(final String tenantId, final String deviceId,
+        protected void getDevice(final String tenantId, final String deviceId, final Span span,
                 final Handler<AsyncResult<RegistrationResult>> resultHandler) {
             BaseRegistrationService.this.getDevice(tenantId, deviceId, resultHandler);
         }

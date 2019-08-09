@@ -37,7 +37,7 @@ import io.vertx.core.json.JsonObject;
  * An abstract base class implementation for {@link RegistrationService}.
  * <p>
  * The default implementation of <em>assertRegistration</em> relies on
- * {@link AbstractRegistrationService#getDevice(String, String, Handler)} to retrieve a device's registration
+ * {@link AbstractRegistrationService#getDevice(String, String, Span, Handler)} to retrieve a device's registration
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
  * 
@@ -56,6 +56,9 @@ public abstract class AbstractRegistrationService implements RegistrationService
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get registration data for.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @param resultHandler The handler to invoke with the result of the operation. The <em>status</em> will be
      *            <ul>
      *            <li><em>200 OK</em> if a device with the given ID is registered for the tenant. The <em>payload</em>
@@ -66,7 +69,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#get-registration-information"> Device
      *      Registration API - Get Registration Information</a>
      */
-    protected abstract void getDevice(String tenantId, String deviceId,
+    protected abstract void getDevice(
+            String tenantId,
+            String deviceId,
+            Span span,
             Handler<AsyncResult<RegistrationResult>> resultHandler);
 
     @Override
@@ -83,7 +89,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
      * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #getDevice(String, String, Handler) getDevice} method to work.
+     * {@link #getDevice(String, String, Span, Handler) getDevice} method to work.
      */
     @Override
     public void assertRegistration(
@@ -98,7 +104,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
         Objects.requireNonNull(resultHandler);
 
         final Future<RegistrationResult> getResultTracker = Future.future();
-        getDevice(tenantId, deviceId, getResultTracker);
+        getDevice(tenantId, deviceId, span, getResultTracker);
 
         getResultTracker.compose(result -> {
             if (isDeviceEnabled(result)) {
@@ -125,7 +131,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
      * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #getDevice(String, String, Handler) getDevice} method to work.
+     * {@link #getDevice(String, String, Span, Handler) getDevice} method to work.
      */
     @Override
     public void assertRegistration(
@@ -144,8 +150,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
         final Future<RegistrationResult> deviceInfoTracker = Future.future();
         final Future<RegistrationResult> gatewayInfoTracker = Future.future();
 
-        getDevice(tenantId, deviceId, deviceInfoTracker);
-        getDevice(tenantId, gatewayId, gatewayInfoTracker);
+        getDevice(tenantId, deviceId, span, deviceInfoTracker);
+        getDevice(tenantId, gatewayId, span, gatewayInfoTracker);
 
         CompositeFuture.all(deviceInfoTracker, gatewayInfoTracker).compose(ok -> {
 
