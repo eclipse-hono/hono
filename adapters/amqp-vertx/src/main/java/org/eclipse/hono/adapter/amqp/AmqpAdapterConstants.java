@@ -18,15 +18,21 @@ package org.eclipse.hono.adapter.amqp;
 public final class AmqpAdapterConstants {
 
     /**
-     * They key that an authenticated client of a protocol adapter (representing a device)
+     * The key that an authenticated client of a protocol adapter (representing a device)
      * is stored under in a {@code ProtonConnection}'s attachments.
      */
     public static final String KEY_CLIENT_DEVICE = "CLIENT_DEVICE";
     /**
-     * They key that an OpenTracing span created by the AMQP Adapter's SASL authenticator
+     * The key that an OpenTracing span created by the AMQP Adapter's SASL authenticator
      * is stored under in a {@code ProtonConnection}'s attachments.
      */
     public static final String KEY_CURRENT_SPAN = "CURRENT_SPAN";
+
+    /**
+     * The key that the trace sampling priority determined for a request tenant/auth-id
+     * is stored under in a {@code ProtonConnection}'s attachments.
+     */
+    public static final String KEY_TRACE_SAMPLING_PRIORITY = "TRACE_SAMPLING_PRIORITY";
 
     private AmqpAdapterConstants() {
         // avoid instantiation

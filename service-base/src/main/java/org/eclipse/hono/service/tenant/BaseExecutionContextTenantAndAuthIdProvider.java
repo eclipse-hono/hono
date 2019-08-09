@@ -61,15 +61,29 @@ public class BaseExecutionContextTenantAndAuthIdProvider {
      * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if sslSession is {@code null}.
      */
-    protected Future<TenantObjectWithAuthId> getFromClientCertificate(final SSLSession sslSession,
+    protected final Future<TenantObjectWithAuthId> getFromClientCertificate(final SSLSession sslSession,
             final SpanContext spanContext) {
         Objects.requireNonNull(sslSession);
         final X509Certificate deviceCert = getX509Cert(sslSession);
         if (deviceCert == null) {
             return Future.failedFuture("no cert found");
         }
-        final X500Principal x500Principal = deviceCert.getIssuerX500Principal();
-        final String subjectDnAuthId = deviceCert.getSubjectX500Principal().getName();
+        return getFromClientCertificate(deviceCert, spanContext);
+    }
+
+    /**
+     * Gets a {@link TenantObjectWithAuthId} from the given X509 certificate.
+     *
+     * @param certificate The SSL certificate.
+     * @param spanContext The OpenTracing context to use for tracking the operation (may be {@code null}).
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if certificate is {@code null}.
+     */
+    protected final Future<TenantObjectWithAuthId> getFromClientCertificate(final X509Certificate certificate,
+            final SpanContext spanContext) {
+        Objects.requireNonNull(certificate);
+        final X500Principal x500Principal = certificate.getIssuerX500Principal();
+        final String subjectDnAuthId = certificate.getSubjectX500Principal().getName();
         return get(x500Principal, subjectDnAuthId, spanContext);
     }
 
@@ -95,11 +109,11 @@ public class BaseExecutionContextTenantAndAuthIdProvider {
      * the <code>&#64;</code> sign. <em>authId</em> is then set to the first part and the tenant id is derived from the
      * second part.
      *
-     * @param userName The user name.
+     * @param userName The user name in the format <em>authId@tenantId</em>.
      * @param spanContext The OpenTracing context to use for tracking the operation.
      * @return A future indicating the outcome of the operation.
      */
-    protected Future<TenantObjectWithAuthId> getFromUserName(final String userName, final SpanContext spanContext) {
+    protected final Future<TenantObjectWithAuthId> getFromUserName(final String userName, final SpanContext spanContext) {
         if (userName == null) {
             return Future.failedFuture("user name not set");
         }
@@ -132,8 +146,22 @@ public class BaseExecutionContextTenantAndAuthIdProvider {
                 .map(tenantObject -> new TenantObjectWithAuthId(tenantObject, subjectDnAuthId));
     }
 
-    private Future<TenantObjectWithAuthId> get(final String tenantId, final String authId,
+    /**
+     * Gets a {@link TenantObjectWithAuthId} from the given tenant id and auth id.
+     *
+     * @param tenantId The tenant id.
+     * @param authId The auth id.
+     * @param spanContext The OpenTracing context to use for tracking the operation.
+     * @return A future indicating the outcome of the operation.
+     */
+    protected final Future<TenantObjectWithAuthId> get(final String tenantId, final String authId,
             final SpanContext spanContext) {
+        if (tenantId == null) {
+            return Future.failedFuture("tenant id not set");
+        }
+        if (authId == null) {
+            return Future.failedFuture("auth id not set");
+        }
         return tenantClientFactory.getOrCreateTenantClient()
                 .compose(tenantClient -> tenantClient.get(tenantId, spanContext))
                 .map(tenantObject -> new TenantObjectWithAuthId(tenantObject, authId));
