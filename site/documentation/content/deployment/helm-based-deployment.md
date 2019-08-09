@@ -240,7 +240,7 @@ the Jaeger Agent that is deployed with each of Hono's components.
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name hono --namespace hono --set jaegerAgentConf=[{"name": "REPORTER_TYPE", "value": "tchannel"}, {"name": "REPORTER_TCHANNEL_HOST_PORT", "value": "my-jaeger:14267"] target/deploy/helm/
+helm install --dep-up --name hono --namespace hono --set jaegerAgentConf.REPORTER_TYPE=tchannel --set jaegerAgentConf.REPORTER_TCHANNEL_HOST_PORT=my-jaeger-collector:14267 target/deploy/helm/
 ~~~
 
 ## Deploying optional Adapters

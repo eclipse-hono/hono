@@ -20,7 +20,7 @@ spec:
       - env:
         - name: MEMORY_MAX_TRACES
           value: "100000"
-        image: jaegertracing/all-in-one:1.13.1
+        image: {{ default "jaegertracing/all-in-one:1.13.1" .Values.jaegerBackendAllInOneImage }}
         name: jaeger
         ports:
         - containerPort: 5775

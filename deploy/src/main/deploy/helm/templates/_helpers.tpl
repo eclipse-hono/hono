@@ -245,7 +245,7 @@ Adds a Jaeger Agent container to a template spec.
 {{- $jaegerEnabled := or .Values.jaegerBackendDeployExample .Values.jaegerAgentConf }}
 {{- if $jaegerEnabled }}
 - name: jaeger-agent-sidecar
-  image: jaegertracing/jaeger-agent:1.13.1
+  image: {{ default "jaegertracing/jaeger-agent:1.13.1" .Values.jaegerAgentImage }}
   ports:
   - name: agent-compact
     containerPort: 6831
@@ -285,8 +285,6 @@ The scope passed in is expected to be a dict with keys
 - "name": the value to use for the JAEGER_SERVICE_NAME (prefixed with the release name).
 */}}
 {{- define "hono.jaeger.clientConf" }}
-{{- $jaegerEnabled := or .dot.Values.jaegerBackendDeployExample .dot.Values.jaegerAgentConf }}
-{{- if $jaegerEnabled }}
 {{- $agentHost := printf "%s-jaeger-agent" .dot.Release.Name }}
 - name: JAEGER_SERVICE_NAME
   value: {{ printf "%s-%s" .dot.Release.Name .name | quote }}
@@ -295,6 +293,5 @@ The scope passed in is expected to be a dict with keys
   value: "const"
 - name: JAEGER_SAMPLER_PARAM
   value: "1"
-{{- end }}
 {{- end }}
 {{- end }}

@@ -6,23 +6,43 @@
 # consisting of a single Dispatch Router and Artemis broker should be
 # deployed and used.
 amqpMessagingNetworkDeployExample: true
+# dispatchRouterImageName contains the name (including tag)
+# of the container image to use for the example AQMP Messaging Network
+dispatchRouterImageName: ${dispatch-router.image.name}
+# artemisImageName contains the name (including tag) of the container
+# image to use for the example AMQP Messaging network
+artemisImageName: ${artemis.image.name}
 
 
 # deviceRegistryDeployExample indicates whether the example Device Registry
 # should be deployed and used.
 deviceRegistryDeployExample: true
 
+
 # jaegerBackendDeployExample indicates whether the example Jaeger all-in-one
 # back end should be deployed and used.
 jaegerBackendDeployExample: false
+# jaegerBackendAllInOneImage contains the name (including tag)
+# of the container image to use for the example Jaeger back end.
+jaegerBackendAllInOneImage: ${jaeger-all-in-one.image.name}
 
-# dispatchRouterImageName contains the name (including tag)
-# of the container image to use for the example AQMP Messaging Network
-dispatchRouterImageName: ${dispatch-router.image.name}
+# jaegerAgentImage contains the name (including tag)
+# of the container image to use for the Jaeger Agent sidecar deployed
+# with Hono's components.
+jaegerAgentImage: ${jaeger-agent.image.name}
+# jaegerAgentConf contains environment variables for configuring the Jaeger Agent sidecar container
+# that is deployed with each of Hono's components.
+# The Jaeger Agent sidecar container is deployed with standard properties if
+# "jaegerBackendDeployExample" is set to true.
+# Otherwise the sidecar container is deployed using the environment variables contained
+# in this property (if not nil).
+# Please refer to https://www.jaegertracing.io/docs/1.13/cli/ for syntax and semantics
+# of environment variables.
+jaegerAgentConf:
+#  REPORTER_TYPE: tchannel
+#  REPORTER_TCHANNEL_HOST_PORT: my-jaeger-collector:14267
+#  REPORTER_TCHANNEL_DISCOVERY_MIN_PEERS: 1
 
-# artemisImageName contains the name (including tag) of the container
-# image to use for the example AMQP Messaging network
-artemisImageName: ${artemis.image.name}
 
 # honoContainerRegistry contains the host name of the container registry
 # to pull Hono images from.
@@ -166,12 +186,3 @@ grafana:
   rbac:
     namespaced: true
 
-# agentConf contains environment variables for configuring the Jaeger Agent sidecar container
-# that is deployed with each of Hono's components.
-# The Jaeger Agent sidecar container is deployed with standard properties if
-# "jaegerBackendDeployExample" is set to true.
-# Otherwise the sidecar container is deployed using the environment variables contained
-# in this property (if not nil).
-jaegerAgentConf:
-#- name: REPORTER_TYPE
-#  value: tchannel
