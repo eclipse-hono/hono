@@ -13,6 +13,7 @@
 package org.eclipse.hono.adapter.amqp.impl;
 
 import java.util.Objects;
+import java.util.OptionalInt;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -38,6 +39,7 @@ public class AmqpContext extends MapBasedExecutionContext {
     private Buffer payload;
     private EndpointType endpoint;
     private Sample timer;
+    private OptionalInt traceSamplingPriority = OptionalInt.empty();
 
     /**
      * Creates an AmqpContext instance using the specified delivery, message and authenticated device.
@@ -76,7 +78,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      *
      * @return The body of the AMQP 1.0 message as a buffer object.
      */
-    Buffer getMessagePayload() {
+    final Buffer getMessagePayload() {
         return payload;
     }
 
@@ -85,7 +87,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      * 
      * @return The size in bytes.
      */
-    int getPayloadSize() {
+    final int getPayloadSize() {
         return payload == null ? 0 : payload.length();
     }
 
@@ -94,7 +96,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      *
      * @return The content type of the AMQP 1.0 message.
      */
-    String getMessageContentType() {
+    final String getMessageContentType() {
         return message.getContentType();
     }
 
@@ -103,7 +105,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      *
      * @return The delivery state of this context.
      */
-    ProtonDelivery delivery() {
+    final ProtonDelivery delivery() {
         return delivery;
     }
 
@@ -112,7 +114,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      * 
      * @return The AMQP 1.0 message.
      */
-    Message getMessage() {
+    final Message getMessage() {
         return message;
     }
 
@@ -121,7 +123,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      *
      * @return The endpoint name.
      */
-    EndpointType getEndpoint() {
+    final EndpointType getEndpoint() {
         return endpoint;
     }
 
@@ -130,7 +132,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      *
      * @return The resource.
      */
-    ResourceIdentifier getAddress() {
+    final ResourceIdentifier getAddress() {
         return address;
     }
 
@@ -139,7 +141,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      *
      * @return The authenticated device or {@code null} for an unauthenticated device.
      */
-    Device getAuthenticatedDevice() {
+    final Device getAuthenticatedDevice() {
         return authenticatedDevice;
     }
 
@@ -148,7 +150,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      * 
      * @return True if the device is authenticated or false otherwise.
      */
-    boolean isDeviceAuthenticated() {
+    final boolean isDeviceAuthenticated() {
         return authenticatedDevice != null;
     }
 
@@ -157,7 +159,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      *
      * @return True if the device sends the message settled, false otherwise.
      */
-    boolean isRemotelySettled() {
+    final boolean isRemotelySettled() {
         return delivery.remotelySettled();
     }
 
@@ -167,7 +169,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      * 
      * @param timer The timer.
      */
-    void setTimer(final Sample timer) {
+    final void setTimer(final Sample timer) {
         this.timer = timer;
     }
 
@@ -177,8 +179,30 @@ public class AmqpContext extends MapBasedExecutionContext {
      * 
      * @return The timer or {@code null} if not set.
      */
-    Sample getTimer() {
+    final Sample getTimer() {
         return timer;
     }
 
+    /**
+     * Gets the value for the <em>sampling.priority</em> span tag to be used for OpenTracing spans created in connection
+     * with this AmqpContext.
+     *
+     * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
+     *         <em>OptionalInt</em> if no priority should be set.
+     */
+    final OptionalInt getTraceSamplingPriority() {
+        return traceSamplingPriority;
+    }
+
+    /**
+     * Sets the value for the <em>sampling.priority</em> span tag to be used for OpenTracing spans created in connection
+     * with this AmqpContext.
+     *
+     * @param traceSamplingPriority The <em>OptionalInt</em> containing the <em>sampling.priority</em> span tag value or
+     *            an empty <em>OptionalInt</em> if no priority should be set.
+     * @throws NullPointerException if traceSamplingPriority is {@code null}.
+     */
+    final void setTraceSamplingPriority(final OptionalInt traceSamplingPriority) {
+        this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
+    }
 }

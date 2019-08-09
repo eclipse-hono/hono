@@ -147,6 +147,7 @@ public class AmqpAdapterSaslAuthenticatorFactoryTest {
                 adapterConnectionLimit,
                 tenantConnectionLimit,
                 authProvider,
+                null,
                 null);
 
         final ProtonSaslAuthenticator authenticator = factory.create();
@@ -185,6 +186,7 @@ public class AmqpAdapterSaslAuthenticatorFactoryTest {
                 adapterConnectionLimit,
                 tenantConnectionLimit,
                 authProvider,
+                null,
                 null);
 
         final ProtonSaslAuthenticator authenticator = factory.create();
