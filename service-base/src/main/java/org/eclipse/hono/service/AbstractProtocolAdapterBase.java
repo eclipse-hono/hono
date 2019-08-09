@@ -936,8 +936,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return gatewayId
                 .compose(gwId -> getRegistrationClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId.result(), context))
-                .compose(registrationAssertion -> updateLastGateway(registrationAssertion,
-                        tenantId, deviceId, authenticatedDevice, context));
+                .compose(registrationAssertion -> {
+                    // the updateLastGateway invocation shouldn't delay or possibly fail the surrounding operation
+                    // so don't wait for the outcome here
+                    updateLastGateway(registrationAssertion, tenantId, deviceId, authenticatedDevice, context)
+                            .otherwise(t -> {
+                                LOG.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
+                                return null;
+                            });
+                    return Future.succeededFuture(registrationAssertion);
+                });
     }
 
     /**
