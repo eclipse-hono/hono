@@ -82,6 +82,12 @@ platform: kubernetes
 # This property will be ignored when deploying to platform "openshift".
 useLoadBalancer: true
 
+authServer:
+  signing:
+    # tokenExpiration contains the number of seconds after which tokens issued
+    # by the Auth server will expire.
+    tokenExpiration: 3600
+
 # Configuration options for adapters.
 adapters:
 
