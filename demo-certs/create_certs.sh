@@ -19,6 +19,8 @@ HONO_TRUST_STORE=trustStore.jks
 HONO_TRUST_STORE_PWD=honotrust
 AUTH_SERVER_KEY_STORE=authServerKeyStore.p12
 AUTH_SERVER_KEY_STORE_PWD=authkeys
+DEVCON_SERVER_KEY_STORE=deviceConnectionKeyStore.p12
+DEVCON_SERVER_KEY_STORE_PWD=deviceconnectionkeys
 DEVREG_SERVER_KEY_STORE=deviceRegistryKeyStore.p12
 DEVREG_SERVER_KEY_STORE_PWD=deviceregistrykeys
 MQTT_ADAPTER_KEY_STORE=mqttKeyStore.p12
@@ -117,6 +119,7 @@ echo "trusted-ca.algorithm=$KEY_ALG" >> $DIR/trust-anchor.properties
 create_cert qdrouter
 create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
 create_cert device-registry $DEVREG_SERVER_KEY_STORE $DEVREG_SERVER_KEY_STORE_PWD
+create_cert device-connection $DEVCON_SERVER_KEY_STORE $DEVCON_SERVER_KEY_STORE_PWD
 create_cert http-adapter $HTTP_ADAPTER_KEY_STORE $HTTP_ADAPTER_KEY_STORE_PWD
 create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD
 create_cert kura-adapter $KURA_ADAPTER_KEY_STORE $KURA_ADAPTER_KEY_STORE_PWD
