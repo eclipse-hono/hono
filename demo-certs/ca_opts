@@ -77,6 +77,13 @@ keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
 subjectAltName       = DNS.1:hono-service-device-registry,DNS.2:hono-service-device-registry.hono,DNS.3:localhost
 
+[ req_ext_device-connection ]
+
+subjectKeyIdentifier = hash
+keyUsage             = keyAgreement,keyEncipherment,digitalSignature
+extendedKeyUsage     = serverAuth, clientAuth
+subjectAltName       = DNS.1:hono-service-device-connection,DNS.2:hono-service-device-connection.hono,DNS.3:localhost
+
 [ req_ext_http-adapter ]
 
 subjectKeyIdentifier = hash
