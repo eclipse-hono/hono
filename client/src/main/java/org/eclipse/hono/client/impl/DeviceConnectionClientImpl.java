@@ -170,7 +170,8 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
         final Map<String, Object> properties = createDeviceIdProperties(deviceId);
         properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
 
-        final Span currentSpan = newChildSpan(context, "set last known gateway for device");
+        // using FollowsFrom instead of ChildOf reference here as invoking methods usually don't depend and wait on the result of this method
+        final Span currentSpan = newFollowingSpan(context, "set last known gateway for device");
         final Future<DeviceConnectionResult> resultTracker = Future.future();
         createAndSendRequest(
                 DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject(),
