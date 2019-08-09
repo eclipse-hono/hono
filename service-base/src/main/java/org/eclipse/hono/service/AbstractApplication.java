@@ -95,7 +95,10 @@ public class AbstractApplication extends AbstractBaseApplication {
             preDeploy(serviceInstance);
             log.debug("deploying service instance [type: {}]", serviceInstance.getClass().getName());
             getVertx().deployVerticle(serviceInstance, deploymentOptions, deployTracker);
-            deploymentTracker.add(deployTracker);
+            deploymentTracker.add(deployTracker.map(id -> {
+                postDeploy(serviceInstance);
+                return id;
+            }));
         }
 
         return CompositeFuture.all(deploymentTracker);
@@ -103,10 +106,23 @@ public class AbstractApplication extends AbstractBaseApplication {
 
     /**
      * Invoked before a service instance object gets deployed to vert.x.
+     * <p>
+     * This default implementation does nothing.
      * 
      * @param serviceInstance The instance.
      */
     protected void preDeploy(final AbstractServiceBase<?> serviceInstance) {
+        // do nothing
+    }
+
+    /**
+     * Invoked after a service instance object has been deployed successfully to vert.x.
+     * <p>
+     * This default implementation does nothing.
+     * 
+     * @param serviceInstance The instance.
+     */
+    protected void postDeploy(final AbstractServiceBase<?> serviceInstance) {
         // do nothing
     }
 
