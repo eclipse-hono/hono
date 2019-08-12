@@ -15,10 +15,10 @@ package org.eclipse.hono.config;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.util.Constants;
 
@@ -42,18 +42,10 @@ public class ClientConfigProperties extends AbstractConfig {
      */
     public static final int DEFAULT_IDLE_TIMEOUT = 16000; //ms
     /**
-     * The default amount of time (time unit configured with {@link #setInactiveLinkTimeoutUnit(TimeUnit)}) after which
-     * a a sender link will be closed when no messages have been sent. The default value disables automatic link
-     * timeout.
+     * The default duration after which a sender link will be closed when no message has been sent on it. The default
+     * value disables automatic link timeout.
      */
-    public static final long DEFAULT_INACTIVE_LINK_TIMEOUT = -1;
-    /**
-     * The default time unit for the inactive link timeout.
-     * 
-     * @see #getInactiveLinkTimeout()
-     * 
-     */
-    public static final TimeUnit DEFAULT_INACTIVE_LINK_TIMEOUT_UNIT = TimeUnit.MINUTES;
+    public static final Duration DEFAULT_INACTIVE_LINK_TIMEOUT = Duration.ZERO;
     /**
      * The default number of credits issued by the receiver side of a link.
      */
@@ -95,8 +87,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
     private int idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT;
-    private long inactiveLinkTimeout = DEFAULT_INACTIVE_LINK_TIMEOUT;
-    private TimeUnit inactiveLinkTimeoutUnit = DEFAULT_INACTIVE_LINK_TIMEOUT_UNIT;
+    private Duration inactiveLinkTimeout = DEFAULT_INACTIVE_LINK_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
     private String name;
@@ -132,7 +123,6 @@ public class ClientConfigProperties extends AbstractConfig {
         this.hostnameVerificationRequired = otherProperties.hostnameVerificationRequired;
         this.idleTimeoutMillis = otherProperties.idleTimeoutMillis;
         this.inactiveLinkTimeout = otherProperties.inactiveLinkTimeout;
-        this.inactiveLinkTimeoutUnit = otherProperties.inactiveLinkTimeoutUnit;
         this.initialCredits = otherProperties.initialCredits;
         this.linkEstablishmentTimeout = otherProperties.linkEstablishmentTimeout;
         this.name = otherProperties.name;
@@ -776,59 +766,28 @@ public class ClientConfigProperties extends AbstractConfig {
     }
 
     /**
-     * Gets the amount of time after which a sender link will be closed when no message has been sent on it. The time
-     * unit is set by {@link #setInactiveLinkTimeoutUnit(TimeUnit)}.
+     * Gets the duration after which a sender link will be closed when no message has been sent on it.
      * <p>
      * The default value of this property is {@link #DEFAULT_INACTIVE_LINK_TIMEOUT}, which disables automatic link
      * timeout.
      *
-     * @return The amount of time to wait for inactive links.
-     * @see #getInactiveLinkTimeoutUnit()
+     * @return The duration to wait for inactive links.
      */
-    public final long getInactiveLinkTimeout() {
+    public final Duration getInactiveLinkTimeout() {
         return inactiveLinkTimeout;
     }
 
     /**
-     * Gets the amount of time after which a sender link will be closed when no message has been sent on it. The time
-     * unit is set by {@link #setInactiveLinkTimeoutUnit(TimeUnit)}.
+     * Sets the duration after which a sender link will be closed when no message has been sent on it.
      * <p>
      * The default value of this property is {@link #DEFAULT_INACTIVE_LINK_TIMEOUT}, which disables automatic link
      * timeout.
      * 
-     * @param inactiveLinkTimeout The amount of time to wait for inactive links.
-     * @throws IllegalArgumentException if inactiveLinkTimeout is 0 or &lt; -1.
-     * @see #setInactiveLinkTimeoutUnit(TimeUnit)
+     * @param inactiveLinkTimeout The duration to wait for inactive links.
+     * @throws NullPointerException if inactiveLinkTimeout is {@code null}.
      */
-    public final void setInactiveLinkTimeout(final long inactiveLinkTimeout) {
-        if (inactiveLinkTimeout == 0 || inactiveLinkTimeout < -1) {
-            throw new IllegalArgumentException("inactiveLinkTimeout must not be 0 or < -1");
-        } else {
-            this.inactiveLinkTimeout = inactiveLinkTimeout;
-        }
+    public final void setInactiveLinkTimeout(final Duration inactiveLinkTimeout) {
+        this.inactiveLinkTimeout = Objects.requireNonNull(inactiveLinkTimeout);
     }
 
-    /**
-     * Gets the time unit for the inactive link timeout.
-     * <p>
-     * The default value of this property is {@link #DEFAULT_INACTIVE_LINK_TIMEOUT_UNIT}.
-     *
-     * @return inactiveLinkTimeoutUnit The TimeUnit to use for the inactiveLinkTimeout.
-     * @see #getInactiveLinkTimeout()
-     */
-    public final TimeUnit getInactiveLinkTimeoutUnit() {
-        return inactiveLinkTimeoutUnit;
-    }
-
-    /**
-     * Sets the time unit for the inactive link timeout.
-     * <p>
-     * The default value of this property is {@link #DEFAULT_INACTIVE_LINK_TIMEOUT_UNIT}.
-     * 
-     * @param inactiveLinkTimeoutUnit The TimeUnit to use for the inactiveLinkTimeout.
-     * @see #setInactiveLinkTimeout(long)
-     */
-    public final void setInactiveLinkTimeoutUnit(final TimeUnit inactiveLinkTimeoutUnit) {
-        this.inactiveLinkTimeoutUnit = Objects.requireNonNull(inactiveLinkTimeoutUnit);
-    }
 }

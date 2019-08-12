@@ -13,12 +13,12 @@
 
 package org.eclipse.hono.client.impl;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -47,7 +47,7 @@ import io.vertx.proton.ProtonSender;
 public abstract class AbstractHonoClient {
 
     /**
-     * They key that the timestamp of the last message send is stored under in a {@code ProtonLink}'s attachments.
+     * The key that the timestamp of the last message send is stored under in a {@code ProtonLink}'s attachments.
      */
     public static final String KEY_LAST_SEND_TIME = "last-send-time";
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
@@ -228,25 +228,20 @@ public abstract class AbstractHonoClient {
     }
 
     /**
-     * Starts a timer with the delay configured by {@link ClientConfigProperties#getInactiveLinkTimeout()} and
-     * {@link ClientConfigProperties#getInactiveLinkTimeoutUnit()}. The timer checks if a message has been sent on the
-     * sender link in this period (subclass needs to call {@link #storeLastSendTime()} when sending a message). If no
-     * message has been sent in the timout period, it closes the links, otherwise a new timer is scheduled to recheck.
+     * Starts a timer with the delay configured by {@link ClientConfigProperties#getInactiveLinkTimeout()}. The timer
+     * checks if a message has been sent on the sender link in this period (subclass needs to call
+     * {@link #storeLastSendTime()} when sending a message). If no message has been sent in the timout period, it closes
+     * the links, otherwise a new timer is scheduled to recheck.
      * <p>
      * This method needs to be called by subclasses where {@link #sender} is set.
      * <p>
-     * If {@link ClientConfigProperties#getInactiveLinkTimeout()} is &lt; 1, this method does nothing.
+     * If {@link ClientConfigProperties#getInactiveLinkTimeout()} is zero, this method does nothing.
      */
     protected final void startAutoCloseTimer() {
-        final long inactiveLinkTimeoutMillis = getInactiveLinkTimeoutMillis();
-        if (inactiveLinkTimeoutMillis > 0) {
-            startAutoCloseTimer(inactiveLinkTimeoutMillis);
+        final Duration inactiveLinkTimeout = connection.getConfig().getInactiveLinkTimeout();
+        if (!inactiveLinkTimeout.isZero()) {
+            startAutoCloseTimer(inactiveLinkTimeout.toMillis());
         }
-    }
-
-    private long getInactiveLinkTimeoutMillis() {
-        final TimeUnit unit = connection.getConfig().getInactiveLinkTimeoutUnit();
-        return unit.toMillis(connection.getConfig().getInactiveLinkTimeout());
     }
 
     /**
@@ -263,7 +258,7 @@ public abstract class AbstractHonoClient {
             long remaining = 0;
             if (lastSendTime != null) {
                 remaining = getRemainingTimeout(lastSendTime, System.currentTimeMillis(),
-                        connection.getConfig().getInactiveLinkTimeout());
+                        connection.getConfig().getInactiveLinkTimeout().toMillis());
             }
 
             if (lastSendTime == null || remaining == 0) {

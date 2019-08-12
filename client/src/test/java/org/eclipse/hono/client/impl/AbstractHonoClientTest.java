@@ -19,16 +19,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.Instant;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Target;
@@ -59,7 +58,7 @@ public class AbstractHonoClientTest {
      * Time out each test after five seconds.
      */
     @Rule
-    public final Timeout timeout = Timeout.seconds(5);
+    public final Timeout timeout = Timeout.seconds(30);
 
     /**
      * Verifies that the given application properties are propagated to
@@ -100,8 +99,7 @@ public class AbstractHonoClientTest {
     @Test
     public void testTimeoutExceededAndNeverSent() {
         final AbstractHonoClient client = createClient();
-        client.connection.getConfig().setInactiveLinkTimeout(1L);
-        client.connection.getConfig().setInactiveLinkTimeoutUnit(TimeUnit.MILLISECONDS);
+        client.connection.getConfig().setInactiveLinkTimeout(Duration.ofMillis(1));
         when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class)).thenReturn(0L);
 
         client.startAutoCloseTimer();
@@ -112,20 +110,17 @@ public class AbstractHonoClientTest {
     /**
      * Verifies that the timer to automatically close inactive sender links is restarted if the configured timeout is
      * not exceeded.
-     * 
-     * @throws InterruptedException if sleep is interrupted.
      */
     @Test
-    public void testTimerIsRestartedWhenTimeoutNotExceeded() throws InterruptedException {
+    public void testTimerIsRestartedWhenTimeoutNotExceeded() {
+        final long timeoutMillis = 10L;
         final AbstractHonoClient client = createClient();
-        client.connection.getConfig().setInactiveLinkTimeout(100L);
-        client.connection.getConfig().setInactiveLinkTimeoutUnit(TimeUnit.MILLISECONDS);
-        final long now = Instant.now().toEpochMilli();
-        when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class)).thenReturn(now);
-        Thread.sleep(1);
+        client.connection.getConfig().setInactiveLinkTimeout(Duration.ofMillis(timeoutMillis));
+        when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class))
+                .thenReturn(System.currentTimeMillis());
 
         client.startAutoCloseTimer();
-        verify(client.connection.getVertx(), atLeast(2)).setTimer(anyLong(), anyHandler());
+        verify(client.connection.getVertx(), timeout(timeoutMillis).atLeast(2)).setTimer(anyLong(), anyHandler());
         verify(client.connection).closeAndFree(eq(client.sender), anyHandler());
     }
 
