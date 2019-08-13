@@ -17,28 +17,34 @@ hono:
     amqpHostname: hono-internal
     host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
+    inactiveLinkTimeout: 1h
   registration:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
+    inactiveLinkTimeout: 1h
   credentials:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
+    inactiveLinkTimeout: 1h
   tenant:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
+    inactiveLinkTimeout: 1h
   deviceConnection:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/amqp-adapter.credentials
+    inactiveLinkTimeout: 1h
   command:
     name: 'Hono AMQP Adapter'
     amqpHostname: hono-internal
     host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
+    inactiveLinkTimeout: 1h
