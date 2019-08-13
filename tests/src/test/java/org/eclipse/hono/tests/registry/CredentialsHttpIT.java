@@ -501,6 +501,7 @@ public class CredentialsHttpIT {
             final GenericSecret secret = new GenericSecret();
             secret.getAdditionalProperties().put("field" + i, "setec astronomy");
 
+            credential.setSecrets(List.of(secret));
             credentialsToAdd.add(credential);
         }
 

@@ -20,6 +20,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
  * A generic credentials implementation.
@@ -31,6 +32,7 @@ public class GenericCredential extends CommonCredential {
     @JsonAnySetter
     private Map<String, Object> additionalProperties = new HashMap<>();
 
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<GenericSecret> secrets = new LinkedList<>();
 
     /**
@@ -63,8 +65,12 @@ public class GenericCredential extends CommonCredential {
      *
      * @param secrets The secret to set.
      * @return        a reference to this for fluent use.
+     * @throws IllegalArgumentException if the list of secrets is empty.
      */
     public GenericCredential setSecrets(final List<GenericSecret> secrets) {
+        if (secrets != null && secrets.isEmpty()) {
+            throw new IllegalArgumentException("Secrets cannot be empty");
+        }
         this.secrets = secrets;
         return this;
     }

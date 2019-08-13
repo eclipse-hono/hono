@@ -15,12 +15,14 @@ package org.eclipse.hono.service.management.credentials;
 import static org.eclipse.hono.util.RegistryManagementConstants.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -64,7 +66,7 @@ public class CredentialsTest {
         final JsonObject jsonSecret = jsonCredential.getJsonArray(FIELD_SECRETS).getJsonObject(0);
 
         assertEquals("foo", jsonCredential.getString(FIELD_AUTH_ID));
-        assertEquals("setec astronomy", jsonCredential.getString("comment"));
+        assertEquals("setec astronomy", jsonCredential.getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT));
 
         assertEquals("abc", jsonSecret.getString(FIELD_SECRETS_SALT));
         assertEquals("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f",
@@ -80,8 +82,9 @@ public class CredentialsTest {
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertNotNull(json);
+        assertNull(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS));
 
-        assertEquals("psk", json.getString(FIELD_TYPE));
+        assertEquals("psk", json.getString(RegistryManagementConstants.FIELD_TYPE));
 
         final CommonCredential decodedCredential = Json.decodeValue(Json.encodeToBuffer(credential), CommonCredential.class);
         assertTrue(decodedCredential instanceof PskCredential);
@@ -96,8 +99,9 @@ public class CredentialsTest {
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertNotNull(json);
+        assertNull(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS));
 
-        assertEquals("x509-cert", json.getString(FIELD_TYPE));
+        assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
     }
 
     /**
@@ -117,7 +121,7 @@ public class CredentialsTest {
         final List<CommonCredential> credentials = new ArrayList<>();
 
         final PskCredential credential = new PskCredential();
-        credential.setAuthId("auth");
+        credential.setAuthId(RegistryManagementConstants.FIELD_AUTH_ID);
         final PskSecret secret = new PskSecret();
         secret.setKey("foo".getBytes(StandardCharsets.UTF_8));
         credential.setSecrets(Collections.singletonList(secret));
@@ -128,7 +132,9 @@ public class CredentialsTest {
         final JsonArray array = new JsonArray(json);
         for (final Object o : array) {
             assertTrue(o instanceof JsonObject);
-            assertNotNull(((JsonObject) o).getString("type"));
+            assertNotNull(((JsonObject) o).getString(RegistryManagementConstants.FIELD_TYPE));
+            assertNotNull(((JsonObject) o).getString(RegistryManagementConstants.FIELD_AUTH_ID));
+            assertNotNull(((JsonObject) o).getJsonArray(RegistryManagementConstants.FIELD_SECRETS));
         }
     }
 
@@ -139,18 +145,18 @@ public class CredentialsTest {
     public void testDecodePasswordCredential() {
 
         final JsonObject jsonCredential = new JsonObject()
-                .put(FIELD_TYPE, SECRETS_TYPE_HASHED_PASSWORD)
-                .put(FIELD_AUTH_ID, "foo")
-                .put(FIELD_ENABLED, true)
-                .put(FIELD_SECRETS, new JsonArray()
+                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo")
+                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
                         .add(new JsonObject()
-                            .put(FIELD_ENABLED, true)
-                            .put(FIELD_SECRETS_NOT_BEFORE, Instant.EPOCH)
-                            .put(FIELD_SECRETS_NOT_AFTER, Instant.EPOCH.plusMillis(1))
-                            .put(FIELD_SECRETS_HASH_FUNCTION, HASH_FUNCTION_SHA256)
-                            .put(FIELD_SECRETS_PWD_HASH, "2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f")
-                            .put(FIELD_SECRETS_SALT, "abc")
-                            .put(FIELD_SECRETS_COMMENT, "setec astronomy")
+                            .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, Instant.EPOCH)
+                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, Instant.EPOCH.plusMillis(1))
+                            .put(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION, HASH_FUNCTION_SHA256)
+                            .put(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH, "2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f")
+                            .put(RegistryManagementConstants.FIELD_SECRETS_SALT, "abc")
+                            .put(RegistryManagementConstants.FIELD_SECRETS_COMMENT, "setec astronomy")
                         )
                 );
 

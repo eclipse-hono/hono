@@ -56,7 +56,7 @@ public class Tenant {
     private TrustedCertificateAuthority trustedCertificateAuthority;
 
     /**
-     * Set the enabled property.
+     * Sets the enabled property.
      * 
      * @param enabled The enabled property.
      * @return This instance, to allow chained invocations.
@@ -71,7 +71,7 @@ public class Tenant {
     }
 
     /**
-     * Set the extension properties for this tenant.
+     * Sets the extension properties for this tenant.
      * 
      * @param extensions The extension properties.
      * @return   This instance, to allow chained invocations.
@@ -86,7 +86,7 @@ public class Tenant {
     }
 
     /**
-     * Set the defaults properties for this tenant.
+     * Sets the defaults properties for this tenant.
      * 
      * @param defaults  The defaults properties.
      * @return          This instance, to allow chained invocations.
@@ -105,7 +105,7 @@ public class Tenant {
     }
 
     /**
-     * Set the list of adapters for this tenant.
+     * Sets the list of adapters for this tenant.
      *
      * @param adapters The adapters to set for the tenant.
      * @return   This instance, to allow chained invocations.
@@ -146,7 +146,7 @@ public class Tenant {
     }
 
     /**
-     * Set the resource limits for this tenant.
+     * Sets the resource limits for this tenant.
      * 
      * @param resourceLimits The resource limits to set.
      * @return  This instance, to allow chained invocations.
@@ -161,7 +161,7 @@ public class Tenant {
     }
 
     /**
-     * Set the trust configurations for this tenant.
+     * Sets the trust configurations for this tenant.
      * 
      * @param trustedCertificateAuthority  The trust configurations to set.
      * @return  This instance, to allow chained invocations.

@@ -28,6 +28,7 @@ import java.util.List;
 public class PskCredential extends CommonCredential {
 
     @JsonProperty
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<PskSecret> secrets = new LinkedList<>();
 
     @Override
@@ -42,8 +43,12 @@ public class PskCredential extends CommonCredential {
      *
      * @param secrets The secret to set.
      * @return        a reference to this for fluent use.
+     * @throws IllegalArgumentException if the list of secrets is empty.
      */
     public PskCredential setSecrets(final List<PskSecret> secrets) {
+        if (secrets != null && secrets.isEmpty()) {
+            throw new IllegalArgumentException("secrets cannot be empty");
+        }
         this.secrets = secrets;
         return this;
     }

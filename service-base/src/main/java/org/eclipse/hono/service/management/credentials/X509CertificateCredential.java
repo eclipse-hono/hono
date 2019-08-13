@@ -29,6 +29,7 @@ import java.util.List;
 public class X509CertificateCredential extends CommonCredential {
 
     @JsonProperty
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<X509CertificateSecret> secrets = new LinkedList<>();
 
     @Override
@@ -43,8 +44,12 @@ public class X509CertificateCredential extends CommonCredential {
      *
      * @param secrets The secret to set.
      * @return        a reference to this for fluent use.
+     * @throws IllegalArgumentException if the list of secrets is empty.
      */
     public X509CertificateCredential setSecrets(final List<X509CertificateSecret> secrets) {
+        if (secrets != null && secrets.isEmpty()) {
+            throw new IllegalArgumentException("secrets cannot be empty");
+        }
         this.secrets = secrets;
         return this;
     }

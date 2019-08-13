@@ -36,7 +36,7 @@ public class ResourceLimits {
     private Map<String, Object> extensions;
 
     /**
-     * Set the max connections property for this resource limits.
+     * Sets the max connections property for this resource limits.
      * 
      * @param maxConnections  The maximum connections to set.
      * @return  a reference to this for fluent use.
@@ -51,7 +51,7 @@ public class ResourceLimits {
     }
 
     /**
-     * Set the extension properties for this resource limits.
+     * Sets the extension properties for this resource limits.
      * 
      * @param extensions The extensions to set.
      * @return          a reference to this for fluent use.

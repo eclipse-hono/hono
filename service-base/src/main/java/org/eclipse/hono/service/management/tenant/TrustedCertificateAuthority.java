@@ -39,7 +39,7 @@ public class TrustedCertificateAuthority {
     private String keyAlgorithm;
 
     /**
-     * Set the subject-dn configuration property.
+     * Sets the subject-dn configuration property.
      *
      * @param subjectDn The subject-dn property to set.
      * @return          a reference to this for fluent use.
@@ -54,7 +54,7 @@ public class TrustedCertificateAuthority {
     }
 
     /**
-     * Set the public-key configuration property.
+     * Sets the public-key configuration property.
      *
      * @param publicKey The public-key property of the trusted root certificate.
      * @return          a reference to this for fluent use.
@@ -69,7 +69,7 @@ public class TrustedCertificateAuthority {
     }
 
     /**
-     * Set the cert configuration property.
+     * Sets the cert configuration property.
      *
      * @param certificate The cert property of the trusted root certificate.
      * @return            a reference to this for fluent use.
@@ -84,7 +84,7 @@ public class TrustedCertificateAuthority {
     }
 
     /**
-     * Set the algorithm property of the trusted root certificate.
+     * Sets the algorithm property of the trusted root certificate.
      * 
      * @param keyAlgorithm  The algorithm name of the public key.
      * @return              a reference to this for fluent use.
