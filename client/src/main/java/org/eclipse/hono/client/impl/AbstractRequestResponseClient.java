@@ -219,7 +219,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         this(connection, tenantId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
-        startAutoCloseTimer();
+        startAutoCloseLinksTimer();
     }
 
     /**
@@ -396,7 +396,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 }).compose(sender -> {
                     LOG.debug("request-response client for peer [{}] created", connection.getConfig().getHost());
                     this.sender = sender;
-                    startAutoCloseTimer();
+                    startAutoCloseLinksTimer();
                     return Future.succeededFuture();
                 });
     }

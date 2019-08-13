@@ -100,7 +100,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                     .map(caps -> Collections.unmodifiableList(Arrays.asList(caps)))
                     .orElse(Collections.emptyList());
         }
-        startAutoCloseTimer();
+        startAutoCloseLinksTimer();
     }
 
     @Override

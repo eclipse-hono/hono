@@ -89,7 +89,7 @@ public class AbstractHonoClientTest {
     @Test
     public void testNoAutoCloseOnDefault() {
         final AbstractHonoClient client = createClient();
-        client.startAutoCloseTimer();
+        client.startAutoCloseLinksTimer();
         verify(client.connection.getVertx(), never()).setTimer(anyLong(), anyHandler());
     }
 
@@ -102,7 +102,7 @@ public class AbstractHonoClientTest {
         client.connection.getConfig().setInactiveLinkTimeout(Duration.ofMillis(1));
         when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class)).thenReturn(0L);
 
-        client.startAutoCloseTimer();
+        client.startAutoCloseLinksTimer();
         verify(client.connection.getVertx()).setTimer(anyLong(), anyHandler());
         verify(client.connection).closeAndFree(eq(client.sender), anyHandler());
     }
@@ -119,7 +119,7 @@ public class AbstractHonoClientTest {
         when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class))
                 .thenReturn(System.currentTimeMillis());
 
-        client.startAutoCloseTimer();
+        client.startAutoCloseLinksTimer();
         verify(client.connection.getVertx(), timeout(timeoutMillis).atLeast(2)).setTimer(anyLong(), anyHandler());
         verify(client.connection).closeAndFree(eq(client.sender), anyHandler());
     }
