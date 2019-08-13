@@ -20,7 +20,7 @@ Please make sure to search the existing issues for similar symptoms before you o
 
 ## Chat
 
-The most direct way of interacting with the Hono developers is by means of [joining the #eclipse-hono IRC channel](http://webchat.freenode.net/?randomnick=1&prompt=1&channels=#eclipse-hono).
+The most direct way of interacting with the Hono developers is by means of [joining the #eclipse-hono IRC channel](http://webchat.freenode.net/#eclipse-hono?nick=guest?).
 
 Please don't be disappointed if you do not immediately get an answer to your inquiry, most of us are working on multiple projects and thus do not always find the time to answer promptly. However, we usually do our best to follow the chat with at least one eye ...
 
