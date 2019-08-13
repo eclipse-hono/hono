@@ -58,7 +58,7 @@ public class AbstractHonoClientTest {
      * Time out each test after five seconds.
      */
     @Rule
-    public final Timeout timeout = Timeout.seconds(30);
+    public final Timeout timeout = Timeout.seconds(5);
 
     /**
      * Verifies that the given application properties are propagated to
