@@ -47,7 +47,7 @@ import io.vertx.proton.ProtonSender;
 public abstract class AbstractHonoClient {
 
     /**
-     * The key that the timestamp of the last message send is stored under in a {@code ProtonLink}'s attachments.
+     * The key that the timestamp from last sending a message is stored under in a {@code ProtonLink}'s attachments.
      */
     public static final String KEY_LAST_SEND_TIME = "last-send-time";
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
@@ -69,6 +69,8 @@ public abstract class AbstractHonoClient {
      * The capabilities offered by the peer.
      */
     protected List<Symbol> offeredCapabilities = Collections.emptyList();
+
+    private long autoCloseLinksTimerId = -1;
 
     /**
      * Creates a client for a connection.
@@ -180,6 +182,7 @@ public abstract class AbstractHonoClient {
     protected final void closeLinks(final Handler<Void> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
+        connection.getVertx().cancelTimer(autoCloseLinksTimerId);
 
         final Handler<Void> closeReceiver = s -> {
             if (receiver != null) {
@@ -237,23 +240,23 @@ public abstract class AbstractHonoClient {
      * <p>
      * If {@link ClientConfigProperties#getInactiveLinkTimeout()} is zero, this method does nothing.
      */
-    protected final void startAutoCloseTimer() {
+    protected final void startAutoCloseLinksTimer() {
         final Duration inactiveLinkTimeout = connection.getConfig().getInactiveLinkTimeout();
         if (!inactiveLinkTimeout.isZero()) {
-            startAutoCloseTimer(inactiveLinkTimeout.toMillis());
+            startAutoCloseLinksTimer(inactiveLinkTimeout.toMillis());
         }
     }
 
     /**
      * Stores the current time stamp on the sender link. This is used to detect and close inactive sender links as
-     * documented in {@link #startAutoCloseTimer()}.
+     * documented in {@link #startAutoCloseLinksTimer()}.
      */
     protected final void storeLastSendTime() {
         sender.attachments().set(KEY_LAST_SEND_TIME, Long.class, System.currentTimeMillis());
     }
 
-    private void startAutoCloseTimer(final long delay) {
-        connection.getVertx().setTimer(delay, id -> {
+    private void startAutoCloseLinksTimer(final long delay) {
+        autoCloseLinksTimerId = connection.getVertx().setTimer(delay, id -> {
             final Long lastSendTime = sender.attachments().get(KEY_LAST_SEND_TIME, Long.class);
             long remaining = 0;
             if (lastSendTime != null) {
@@ -265,7 +268,7 @@ public abstract class AbstractHonoClient {
                 closeLinks(v -> {
                 });
             } else {
-                startAutoCloseTimer(remaining);
+                startAutoCloseLinksTimer(remaining);
             }
         });
     }
