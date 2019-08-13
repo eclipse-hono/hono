@@ -140,6 +140,7 @@ messaging:
 {{- else }}
   {{- required "A .Values.adapters.amqpMessagingNetworkSpec needs to be set when not using the example AMQP Messaging Network" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml }}
 {{- end }}
+  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 command:
 {{- if .dot.Values.amqpMessagingNetworkDeployExample }}
   name: Hono {{ $adapter }}
@@ -153,6 +154,7 @@ command:
 {{- else }}
   {{- toYaml .dot.Values.adapters.commandAndControlSpec }}
 {{- end }}
+  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 tenant:
 {{- if .dot.Values.deviceRegistryDeployExample }}
   name: Hono {{ $adapter }}
@@ -164,6 +166,7 @@ tenant:
 {{- else }}
   {{- toYaml .dot.Values.adapters.tenantSpec }}
 {{- end }}
+  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 registration:
 {{- if .dot.Values.deviceRegistryDeployExample }}
   name: Hono {{ $adapter }}
@@ -175,6 +178,7 @@ registration:
 {{- else }}
   {{- toYaml .dot.Values.adapters.deviceRegistrationSpec }}
 {{- end }}
+  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 credentials:
 {{- if .dot.Values.deviceRegistryDeployExample }}
   name: Hono {{ $adapter }}
@@ -186,6 +190,7 @@ credentials:
 {{- else }}
   {{- toYaml .dot.Values.adapters.credentialsSpec }}
 {{- end }}
+  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 deviceConnection:
 {{- if .dot.Values.deviceRegistryDeployExample }}
   name: Hono {{ $adapter }}
@@ -197,6 +202,7 @@ deviceConnection:
 {{- else }}
   {{- toYaml .dot.Values.adapters.deviceConnectionSpec }}
 {{- end }}
+  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 {{- end }}
 
 {{/*

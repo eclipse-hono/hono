@@ -106,6 +106,10 @@ adapters:
   kura:
     # enabled indicates if Hono's (deprecated) Kura adapter should be deployed.
     enabled: false
+  # Configures a timeout for inactive sender links.
+  # Please refer to the Spring Boot documentation for the supported syntax:
+  # https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-conversion-duration
+  inactiveLinkTimeout: 1h
 
 prometheus:
   # createInstance indicates whether a Prometheus server should be created
