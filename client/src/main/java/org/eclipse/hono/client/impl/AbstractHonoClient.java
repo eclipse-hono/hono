@@ -70,7 +70,7 @@ public abstract class AbstractHonoClient {
      */
     protected List<Symbol> offeredCapabilities = Collections.emptyList();
 
-    private long autoCloseLinksTimerId = -1;
+    private Long autoCloseLinksTimerId = null;
 
     /**
      * Creates a client for a connection.
@@ -182,7 +182,9 @@ public abstract class AbstractHonoClient {
     protected final void closeLinks(final Handler<Void> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
-        connection.getVertx().cancelTimer(autoCloseLinksTimerId);
+        if (autoCloseLinksTimerId != null) {
+            connection.getVertx().cancelTimer(autoCloseLinksTimerId);
+        }
 
         final Handler<Void> closeReceiver = s -> {
             if (receiver != null) {
@@ -257,6 +259,7 @@ public abstract class AbstractHonoClient {
 
     private void startAutoCloseLinksTimer(final long delay) {
         autoCloseLinksTimerId = connection.getVertx().setTimer(delay, id -> {
+            autoCloseLinksTimerId = null;
             final Long lastSendTime = sender.attachments().get(KEY_LAST_SEND_TIME, Long.class);
             long remaining = 0;
             if (lastSendTime != null) {
