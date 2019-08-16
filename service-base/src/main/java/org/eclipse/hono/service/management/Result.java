@@ -22,6 +22,9 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.EventBusMessage;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -111,5 +114,28 @@ public class Result<T> {
 
         return result;
 
+    }
+
+    /**
+     * Create {@link ToStringHelper} for this instance. <br>
+     * Derived classes should call the super method, and add their own fields. Following this pattern derived classes do
+     * not need to implement {@link #toString()}.
+     * 
+     * @return A new instance of a {@link ToStringHelper}, filled with fields from this instance.
+     */
+    protected ToStringHelper toStringHelper() {
+        return MoreObjects
+                .toStringHelper(this)
+                .add("status", this.status)
+                .add("cacheDirective", this.cacheDirective)
+                .add("payload", this.payload);
+    }
+
+    /**
+     * {@link #toString()} method implemented based on {@link #toStringHelper()}.
+     */
+    @Override
+    public String toString() {
+        return toStringHelper().toString();
     }
 }
