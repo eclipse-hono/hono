@@ -20,6 +20,8 @@ import java.util.function.Function;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.EventBusMessage;
 
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -94,5 +96,11 @@ public final class OperationResult<T> extends Result<T> {
      */
     public static <T> OperationResult<T> empty(final int status) {
         return new OperationResult<>(status, null, Optional.empty(), Optional.empty());
+    }
+
+    @Override
+    protected ToStringHelper toStringHelper() {
+        return super.toStringHelper()
+                .add("resourceVersion", this.resourceVersion);
     }
 }
