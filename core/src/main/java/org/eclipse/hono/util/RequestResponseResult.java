@@ -104,6 +104,15 @@ public class RequestResponseResult<T> {
     }
 
     /**
+     * Gets read-only access to the response message's <em>application-properties</em>.
+     * 
+     * @return The unmodifiable map of the application properties. Never returns {@code null}.
+     */
+    public final Map<String, Object> getApplicationProperties() {
+        return applicationProperties;
+    }
+
+    /**
      * Checks if this result's status is <em>OK</em>.
      * 
      * @return {@code true} if status == 200.
