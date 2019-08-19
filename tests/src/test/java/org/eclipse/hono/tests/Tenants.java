@@ -29,7 +29,6 @@ public final class Tenants {
     private Tenants() {
     }
 
-
     /**
      * Create a new tenant, based on a trust anchor.
      *
@@ -61,12 +60,10 @@ public final class Tenants {
      * @return The new tenant. Never returns {@code null}.
      */
     public static Tenant createTenantForTrustAnchor(final String subjectDn, final byte[] publicKey, final String algorithmn) {
-        final var tenant = new Tenant();
-        final var trustedCa = new TrustedCertificateAuthority();
-        trustedCa.setSubjectDn(subjectDn);
-        trustedCa.setPublicKey(publicKey);
-        trustedCa.setKeyAlgorithm(algorithmn);
-        tenant.setTrustedCertificateAuthority(trustedCa);
-        return tenant;
+        final var trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn(subjectDn)
+                .setPublicKey(publicKey)
+                .setKeyAlgorithm(algorithmn);
+        return new Tenant().setTrustedCertificateAuthority(trustedCa);
     }
 }

@@ -47,13 +47,13 @@ public class Device {
     private List<String> via = new LinkedList<>();
 
     /**
-     * Create new instance.
+     * Creates a new Device instance.
      */
     public Device() {
     }
 
     /**
-     * Create new instance cloned from existing instance.
+     * Creates a new instance cloned from an existing instance.
      * 
      * @param other The device to copy from.
      */
@@ -71,20 +71,34 @@ public class Device {
         }
     }
 
-    public void setEnabled(final Boolean enabled) {
+    /**
+     * Sets the enabled property for this device.
+     *
+     * @param enabled The enabled property to set.
+     * @return        a reference to this for fluent use.
+     */
+    public Device setEnabled(final Boolean enabled) {
         this.enabled = enabled;
+        return this;
     }
 
     public Boolean getEnabled() {
         return enabled;
     }
 
-    public void setExtensions(final Map<String, Object> extensions) {
+    /**
+     * Sets the extension properties for this device.
+     * 
+     * @param extensions The extension properties to set.
+     * @return           a reference to this for fluent use.
+     */
+    public Device setExtensions(final Map<String, Object> extensions) {
         this.extensions = extensions;
+        return this;
     }
 
     /**
-     * Add a new extension entry to the device.
+     * Adds a new extension entry to the device.
      * 
      * @param key The key of the entry.
      * @param value The value of the entry.
@@ -102,8 +116,15 @@ public class Device {
         return this.extensions;
     }
 
-    public void setDefaults(final Map<String, Object> defaults) {
+    /**
+     * Sets the defaults for this device.
+     *
+     * @param defaults  The defaults to set for this device.
+     * @return          a reference to this for fluent use.
+     */
+    public Device setDefaults(final Map<String, Object> defaults) {
         this.defaults = defaults;
+        return this;
     }
 
     public Map<String, Object> getDefaults() {
@@ -114,7 +135,14 @@ public class Device {
         return via;
     }
 
-    public void setVia(final List<String> via) {
+    /**
+     * Sets the via property for this device.
+     * 
+     * @param via The via property to set.
+     * @return    a reference to this for fluent use.
+     */
+    public Device setVia(final List<String> via) {
         this.via = via;
+        return this;
     }
 }

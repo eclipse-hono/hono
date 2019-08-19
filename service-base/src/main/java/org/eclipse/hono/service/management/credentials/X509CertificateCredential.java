@@ -19,12 +19,17 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Credential Information.
+ * A credential type for storing the <a href="https://www.ietf.org/rfc/rfc2253.txt">RFC 2253</a> formatted subject DN of
+ * a client certificate.
+ * <p>
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#x-509-certificate">X.509 Certificate</a> for an
+ * example of the configuration properties for this credential type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class X509CertificateCredential extends CommonCredential {
 
     @JsonProperty
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<X509CertificateSecret> secrets = new LinkedList<>();
 
     @Override
@@ -32,7 +37,20 @@ public class X509CertificateCredential extends CommonCredential {
         return secrets;
     }
 
-    public void setSecrets(final List<X509CertificateSecret> secrets) {
+    /**
+     * Sets the list of X509 certificate secrets to use for authenticating a device to protocol adapters.
+     * <p>
+     * The list cannot be empty and each secret is scoped to the validity period of the certificate.
+     *
+     * @param secrets The secret to set.
+     * @return        a reference to this for fluent use.
+     * @throws IllegalArgumentException if the list of secrets is empty.
+     */
+    public X509CertificateCredential setSecrets(final List<X509CertificateSecret> secrets) {
+        if (secrets != null && secrets.isEmpty()) {
+            throw new IllegalArgumentException("secrets cannot be empty");
+        }
         this.secrets = secrets;
+        return this;
     }
 }

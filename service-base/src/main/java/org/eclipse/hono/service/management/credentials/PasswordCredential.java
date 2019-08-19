@@ -19,12 +19,16 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Credential Information.
+ * A credential type for storing a password for a device.
+ * <p>
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#hashed-password">Hashed Password</a> for an example
+ * of the configuration properties for this credential type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PasswordCredential extends CommonCredential {
 
     @JsonProperty
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<PasswordSecret> secrets = new LinkedList<>();
 
     @Override
@@ -32,7 +36,20 @@ public class PasswordCredential extends CommonCredential {
         return secrets;
     }
 
-    public void setSecrets(final List<PasswordSecret> secrets) {
+    /**
+     * Sets the list of password secrets to use for authenticating a device to protocol adapters.
+     * <p>
+     * The list cannot be empty and each secret is scoped to its validity period.
+     *
+     * @param secrets The list of password secrets to set.
+     * @return        a reference to this for fluent use.
+     * @throws IllegalArgumentException if the list of secrets is empty.
+     */
+    public PasswordCredential setSecrets(final List<PasswordSecret> secrets) {
+        if (secrets != null && secrets.isEmpty()) {
+            throw new IllegalArgumentException("secrets cannot be empty");
+        }
         this.secrets = secrets;
+        return this;
     }
 }

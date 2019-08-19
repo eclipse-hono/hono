@@ -487,11 +487,10 @@ public abstract class HttpTestBase {
         helper.getCertificate(deviceCert.certificatePath())
                 .compose(cert -> {
 
-                    final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority();
-                    trustedCertificateAuthority
-                            .setSubjectDn(cert.getIssuerX500Principal().getName(X500Principal.RFC2253));
-                    trustedCertificateAuthority.setPublicKey(keyPair.getPublic().getEncoded());
-                    trustedCertificateAuthority.setKeyAlgorithm(keyPair.getPublic().getAlgorithm());
+                    final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority()
+                            .setSubjectDn(cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                            .setPublicKey(keyPair.getPublic().getEncoded())
+                            .setKeyAlgorithm(keyPair.getPublic().getAlgorithm());
                     tenant.setTrustedCertificateAuthority(trustedCertificateAuthority);
 
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
@@ -562,8 +561,8 @@ public abstract class HttpTestBase {
 
         // GIVEN a disabled device
         final Tenant tenant = new Tenant();
-        final Device device = new Device();
-        device.setEnabled(Boolean.FALSE);
+        final Device device = new Device()
+                .setEnabled(Boolean.FALSE);
 
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, device, PWD)

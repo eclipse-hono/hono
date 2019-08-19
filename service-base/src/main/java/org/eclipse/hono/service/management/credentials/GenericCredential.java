@@ -20,9 +20,10 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * A generic credential.
+ * A generic credentials implementation.
  */
 public class GenericCredential extends CommonCredential {
 
@@ -31,10 +32,21 @@ public class GenericCredential extends CommonCredential {
     @JsonAnySetter
     private Map<String, Object> additionalProperties = new HashMap<>();
 
+    @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<GenericSecret> secrets = new LinkedList<>();
 
-    public void setType(final String type) {
+    /**
+     * Sets the credentials type name reflecting the type of authentication mechanism a device will use
+     * when authenticating to protocol adapters.
+     * 
+     * @param type  The credential name type to set.
+     * @return      a reference to this for fluent use.
+     * 
+     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#standard-credential-types">Standard Credential Types</a>
+     */
+    public GenericCredential setType(final String type) {
         this.type = type;
+        return this;
     }
 
     public String getType() {
@@ -46,12 +58,32 @@ public class GenericCredential extends CommonCredential {
         return this.secrets;
     }
 
-    public void setSecrets(final List<GenericSecret> secrets) {
+    /**
+     * Sets the list of secrets to use for authenticating a device to protocol adapters.
+     * <p>
+     * The list cannot be empty and each secret is scoped to its validity period.
+     *
+     * @param secrets The secret to set.
+     * @return        a reference to this for fluent use.
+     * @throws IllegalArgumentException if the list of secrets is empty.
+     */
+    public GenericCredential setSecrets(final List<GenericSecret> secrets) {
+        if (secrets != null && secrets.isEmpty()) {
+            throw new IllegalArgumentException("Secrets cannot be empty");
+        }
         this.secrets = secrets;
+        return this;
     }
 
-    public void setAdditionalProperties(final Map<String, Object> additionalProperties) {
+    /**
+     * Sets the additional properties for this credential.
+     * 
+     * @param additionalProperties  The additional properties for this credential.
+     * @return                      a reference to this for fluent use.
+     */
+    public GenericCredential setAdditionalProperties(final Map<String, Object> additionalProperties) {
         this.additionalProperties = additionalProperties;
+        return this;
     }
 
     @JsonAnyGetter

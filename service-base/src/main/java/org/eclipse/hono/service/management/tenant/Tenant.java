@@ -61,24 +61,45 @@ public class Tenant {
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     private TrustedCertificateAuthority trustedCertificateAuthority;
 
-    public void setEnabled(final Boolean enabled) {
+    /**
+     * Sets the enabled property.
+     * 
+     * @param enabled The enabled property.
+     * @return This instance, to allow chained invocations.
+     */
+    public Tenant setEnabled(final Boolean enabled) {
         this.enabled = enabled;
+        return this;
     }
 
     public Boolean getEnabled() {
         return enabled;
     }
 
-    public void setExtensions(final Map<String, Object> extensions) {
+    /**
+     * Sets the extension properties for this tenant.
+     * 
+     * @param extensions The extension properties.
+     * @return   This instance, to allow chained invocations.
+     */
+    public Tenant setExtensions(final Map<String, Object> extensions) {
         this.extensions = extensions;
+        return this;
     }
 
     public Map<String, Object> getExtensions() {
         return this.extensions;
     }
 
-    public void setDefaults(final Map<String, Object> defaults) {
+    /**
+     * Sets the defaults properties for this tenant.
+     * 
+     * @param defaults  The defaults properties.
+     * @return          This instance, to allow chained invocations.
+     */
+    public Tenant setDefaults(final Map<String, Object> defaults) {
         this.defaults = defaults;
+        return this;
     }
 
     public Map<String, Object> getDefaults() {
@@ -89,8 +110,15 @@ public class Tenant {
         return adapters;
     }
 
-    public void setAdapters(final List<Adapter> adapters) {
+    /**
+     * Sets the list of adapters for this tenant.
+     *
+     * @param adapters The adapters to set for the tenant.
+     * @return   This instance, to allow chained invocations.
+     */
+    public Tenant setAdapters(final List<Adapter> adapters) {
         this.adapters = adapters;
+        return this;
     }
 
     /**
@@ -107,21 +135,31 @@ public class Tenant {
      * Sets the minimum message size in bytes.
      *
      * @param minimumMessageSize The minimum message size.
+     *
+     * @return This instance, to allow chained invocations.
      * @throws IllegalArgumentException if the minimum message size is negative.
      */
-    public void setMinimumMessageSize(final Integer minimumMessageSize) {
+    public Tenant setMinimumMessageSize(final Integer minimumMessageSize) {
         if (minimumMessageSize == null || minimumMessageSize < 0) {
             throw new IllegalArgumentException("minimum message size must be >= 0");
         }
         this.minimumMessageSize = minimumMessageSize;
+        return this;
     }
 
     public ResourceLimits getResourceLimits() {
         return resourceLimits;
     }
 
-    public void setResourceLimits(final ResourceLimits limits) {
-        this.resourceLimits = limits;
+    /**
+     * Sets the resource limits for this tenant.
+     * 
+     * @param resourceLimits The resource limits to set.
+     * @return  This instance, to allow chained invocations.
+     */
+    public Tenant setResourceLimits(final ResourceLimits resourceLimits) {
+        this.resourceLimits = resourceLimits;
+        return this;
     }
 
     /**
@@ -146,8 +184,15 @@ public class Tenant {
         return trustedCertificateAuthority;
     }
 
-    public void setTrustedCertificateAuthority(final TrustedCertificateAuthority trustedCertificateAuthority) {
+    /**
+     * Sets the trust configurations for this tenant.
+     * 
+     * @param trustedCertificateAuthority  The trust configurations to set.
+     * @return  This instance, to allow chained invocations.
+     */
+    public Tenant setTrustedCertificateAuthority(final TrustedCertificateAuthority trustedCertificateAuthority) {
         this.trustedCertificateAuthority = trustedCertificateAuthority;
+        return this;
     }
 
     /**

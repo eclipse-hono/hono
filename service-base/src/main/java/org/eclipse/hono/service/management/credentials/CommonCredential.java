@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
 /**
- * Common Information.
+ * This class encapsulates information that is common across all credential types supported in Hono.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", visible = true)
@@ -55,37 +55,67 @@ public abstract class CommonCredential {
         return authId;
     }
 
-    public void setAuthId(final String authId) {
+    /**
+     * Sets the authentication identifier that the device uses for authenticating to protocol adapters.
+     * 
+     * @param authId  The authentication identifier use for authentication.
+     * @return        a reference to this for fluent use.
+     */
+    public CommonCredential setAuthId(final String authId) {
         this.authId = authId;
+        return this;
     }
 
     public Boolean getEnabled() {
         return enabled;
     }
 
-    public void setEnabled(final Boolean enabled) {
+    /**
+     * Sets the enabled property to indicate to protocol adapters whether this credential type should be use to authenticate devices.
+     * 
+     * @param enabled  Whether this credential type should be used to authenticate devices.
+     * @return         a reference to this for fluent use.
+     */
+    public CommonCredential setEnabled(final Boolean enabled) {
         this.enabled = enabled;
+        return this;
     }
 
     public String getComment() {
         return comment;
     }
 
-    public void setComment(final String comment) {
+    /**
+     * Sets a human readable comment describing this credential type.
+     *
+     * @param comment   The comment to set for this credential.
+     * @return          a reference to this for fluent use.
+     */
+    public CommonCredential setComment(final String comment) {
         this.comment = comment;
+        return this;
     }
 
     public Map<String, Object> getExtensions() {
         return extensions;
     }
 
-    public void setExtensions(final Map<String, Object> extensions) {
+    /**
+     * Sets the additional extension properties to use with this credential type.
+     *
+     * @param extensions    The additional properties to set for this credential.
+     * @return              a reference to this for fluent use.
+     */
+    public CommonCredential setExtensions(final Map<String, Object> extensions) {
         this.extensions = extensions;
+        return this;
     }
 
     /**
-     * Add a new extension entry to the device.
-     *
+     * Adds a new extension entry to the device.
+     * <p>
+     * If an extension entry already exist for the specified key, the old value is replaced by the specified value.
+     * 
      * @param key The key of the entry.
      * @param value The value of the entry.
      * @return This instance, to allowed chained invocations.
@@ -99,9 +129,11 @@ public abstract class CommonCredential {
     }
 
     /**
-     * Check if credential is valid.
+     * Check if this credential is valid.
+     * <p>
+     * The credential is valid if it contains a non-null, non-empty authentication identifier.
      * 
-     * @throws IllegalStateException if the credential is not valid.
+     * @throws IllegalStateException if this credential does not contain a valid authentication identifier.
      */
     public void checkValidity() {
         if (this.authId == null || this.authId.isEmpty()) {
