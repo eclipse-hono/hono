@@ -234,6 +234,11 @@ helm install --dep-up --name hono --namespace hono --set jaegerBackendDeployExam
 This will create a Jaeger back end instance suitable for testing purposes and will configure all deployed Hono components to use the
 Jaeger back end.
 
+The following command can then be used to return the IP address with which the Jaeger UI can be accessed in a browser (ensure `minikube tunnel` is running when using minikube):
+~~~sh
+kubectl get service hono-jaeger-query --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n hono
+~~~
+
 If no example Jaeger back end should be deployed but instead an existing Jaeger installation should be used,
 the chart's *jaegerAgentConf* property can be set to environment variables which are passed in to
 the Jaeger Agent that is deployed with each of Hono's components.
