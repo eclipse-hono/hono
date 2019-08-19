@@ -24,7 +24,7 @@ The recommended settings for a Minikube VM used for running Hono's example setup
 
 The command to start the VM will look something like this:
 ```sh
-minikube start --cpus 2 --memory 8192 -p hono
+minikube start --cpus 2 --memory 8192
 ```
 
 After the Minikube VM has started successfully, the `minikube tunnel` command should be run in order to support Hono's services being deployed using the *LoadBalancer* type. Please refer to the [Minikube Networking docs](https://github.com/kubernetes/minikube/blob/master/docs/networking.md#access-to-loadbalancer-services-using-minikube-tunnel) for details.
