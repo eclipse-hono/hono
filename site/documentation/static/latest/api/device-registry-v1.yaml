@@ -440,7 +440,12 @@ components:
       Tenant:
          type: object
          additionalProperties: false
+         required:
+            - tenant-id
+            - enabled
          properties:
+            "tenant-id":
+               type: string
             "enabled":
                type: boolean
                default: true
@@ -534,7 +539,11 @@ components:
       Device:
          type: object
          additionalProperties: false
+         required:
+            - device-id 
          properties:
+            "device-id":
+               type: string
             "enabled":
                type: boolean
                default: true
