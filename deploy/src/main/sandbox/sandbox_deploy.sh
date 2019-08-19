@@ -255,7 +255,7 @@ docker service create $CREATE_OPTIONS --name hono-nginx -p 443:443 -p 80:80 \
   --secret source=hono.eclipse.org-cert.pem,target=/etc/nginx/hono.eclipse.org-cert.pem \
   --config source=site.conf,target=/etc/nginx/conf.d/default.conf,mode=0440 \
   --mount type=bind,source=/var/www/certbot,target=/var/www/letsencrypt \
-  nginx:1.17
+  nginx:1.17.3
 echo ... done
 
 echo ECLIPSE HONO SANDBOX DEPLOYED TO DOCKER SWARM
