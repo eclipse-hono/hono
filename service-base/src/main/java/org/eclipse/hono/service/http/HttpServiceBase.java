@@ -38,6 +38,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 
 /**
@@ -56,6 +57,11 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     private HttpServer server;
     private HttpServer insecureServer;
+
+    /**
+     * Auth handler to be used on the routes.
+     */
+    private AuthHandler authHandler;
 
     /**
      * Adds multiple endpoints to this server.
@@ -77,6 +83,15 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         endpoints.add(Objects.requireNonNull(ep));
     }
 
+    /**
+     * Sets auth handler.
+     *
+     * @param authHandler The handler.
+     */
+    @Autowired(required=false)
+    public void setAuthHandler(final AuthHandler authHandler) {
+        this.authHandler = authHandler;
+    }
 
     @Autowired
     @Qualifier(Constants.QUALIFIER_REST)
@@ -185,7 +200,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         matchAllRoute.handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY)
                 .setBodyLimit(getConfig().getMaxPayloadSize()));
-
+        //4. AuthHandler
+        addAuthHandler(router);
         return router;
     }
 
@@ -195,6 +211,18 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         addCustomTags(customTags);
         final List<WebSpanDecorator> decorators = Collections.singletonList(new ComponentMetaDataDecorator(customTags));
         return new TracingHandler(tracer, decorators);
+    }
+
+    /**
+     * Add authentication handler to the router if needed.
+     *
+     * @param router The router.
+     */
+    protected void addAuthHandler(final Router router) {
+        if (authHandler != null) {
+            final Route matchAllRoute = router.route();
+            matchAllRoute.handler(authHandler);
+        }
     }
 
     /**
