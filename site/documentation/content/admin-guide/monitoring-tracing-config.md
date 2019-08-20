@@ -164,3 +164,7 @@ For example, building the HTTP adapter image with the Jaeger client included:
     mvn clean install -Pbuild-docker-image,jaeger
 
 Note that when running the created docker image, the environment variables for configuring the Jaeger client still need to be set. Please refer to the [Jaeger documentation](https://github.com/jaegertracing/jaeger-client-java/blob/master/jaeger-core/README.md) for details.
+
+## Enforcing the recording of traces for a tenant
+
+Typically, in production systems, the tracing components will be configured to not store *all* trace spans in the tracing backend, in order to reduce the performance impact. For debugging purposes it can however be beneficial to enforce the recording of certain traces. Hono allows this by providing a configuration option in the Tenant information with which all traces concerning the processing of telemetry, event and command messages for that specific tenant will be recorded. Furthermore, this enforced trace sampling can be restricted to only apply to messages sent in the context of a specific authentication identifier. Please refer to the [description of the `tracing` object]({{< ref "/api/tenant#tracing-format" >}}) in the Tenant Information for details.

@@ -113,6 +113,7 @@ The table below provides an overview of the standard members defined for the JSO
 | *minimum-message-size*   | *no*      | *number*      | The minimum message size in bytes. If it is set then the payload size of the telemetry, event and command messages are calculated in accordance with the configured value and then reported to the metrics. See [Metrics]({{< relref "/api/Metrics.md#minimum-message-size" >}}) for more details.| 
 | *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections and the maximum data volume for a given period. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
+| *tracing*                | *no*      | *object*      | A set of options regarding the tracing of messages for the tenant. See [Tracing Format]({{< relref "#tracing-format" >}}) for a definition of the content model of the object. |
 | *trusted-ca*             | *no*      | *object*      | The trusted certificate authority to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the object. |
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names which can be of a scalar or a complex type.
@@ -154,6 +155,15 @@ The JSON structure below contains example information for tenant `TEST_TENANT`. 
   ]
 }
 ~~~
+
+### Tracing Format
+
+The table below provides an overview of the members defined for the *tracing* JSON object:
+
+| Name                        | Mandatory  | Type          | Default Value | Description |
+| :---------------------------| :--------: | :------------ | :------------ | :---------- |
+| *sampling-mode*             | *no*       | *string*      | `default`     | Defines in how far OpenTracing spans created when processing messages for this tenant shall be recorded (sampled) by the tracing system. The value `default` lets the default sampling mechanism be used. The value `all` marks the spans related to this tenant so that they should all be sampled. The value `none` marks the spans as not to be sampled. The mode defined here may be overridden for a particular auth-id by means of the `sampling-mode-per-auth-id` property. |
+| *sampling-mode-per-auth-id* | *no*       | *object*      |               | Defines in how far OpenTracing spans created when processing messages for this tenant and a particular auth-id shall be recorded (sampled) by the tracing system. The child properties have the auth-id as name. A child property value of `default` lets the default sampling mechanism be used. The child property value `all` marks the spans related to this tenant and the auth-id so that they should all be sampled. The child property value `none` marks the spans as not to be sampled. The mode defined for a particular auth-id has precedence over the value defined by the `sampling-mode` property. |
 
 ### Trusted CA Format
 

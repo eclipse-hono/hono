@@ -15,6 +15,11 @@ title = "Release Notes"
   information. The service can be used instead of the simple implementation provided by the example Device
   Registry by means of setting a configuration property when [deploying using the Helm chart]
   ({{% doclink "/deployment/helm-based-deployment/#using-the-device-connection-service" %}}).
+* A tenant can now be configured so that *all* OpenTracing spans created when processing messages for that
+  specific tenant will be recorded in the tracing backend (overriding the default sampling strategy that
+  might only record a certain percentage of traces). See 
+  [Monitoring & Tracing]({{% doclink "/admin-guide/monitoring-tracing-config/#enforcing-the-recording-of-traces-for-a-tenant" %}})
+  for more details.
 
 ### API Changes
 
