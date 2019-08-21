@@ -48,6 +48,7 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
+import org.eclipse.hono.service.metric.Metrics;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.plan.NoopResourceLimitChecks;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
@@ -88,8 +89,10 @@ import io.vertx.proton.ProtonHelper;
  * Provides connections to device registration and telemetry and event service endpoints.
  *
  * @param <T> The type of configuration properties used by this service.
+ * @param <U> the type of metrics used by this service.
  */
-public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterProperties> extends AbstractServiceBase<T> {
+public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterProperties, U extends Metrics>
+        extends AbstractServiceBase<T> {
 
     /**
      * The <em>application/octet-stream</em> content type.
@@ -101,6 +104,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected static final String KEY_MICROMETER_SAMPLE = "micrometer.sample";
 
+    private U metrics;
     private DownstreamSenderFactory downstreamSenderFactory;
     private RegistrationClientFactory registrationClientFactory;
     private TenantClientFactory tenantClientFactory;
@@ -119,6 +123,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
 
     };
+
+    /**
+     * Creates an instance initialized with the given metrics.
+     * 
+     * @param metrics The metrics to use.
+     * @throws NullPointerException if metrics is {@code null}.
+     */
+    public AbstractProtocolAdapterBase(final U metrics) {
+        this.metrics = Objects.requireNonNull(metrics);
+    }
 
     /**
      * Adds a Micrometer sample to a command context.
@@ -379,6 +393,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected final ResourceLimitChecks getResourceLimitChecks() {
         return this.resourceLimitChecks;
+    }
+
+    /**
+     * Gets the metrics for this service.
+     *
+     * @return The metrics
+     */
+    protected final U getMetrics() {
+        return metrics;
+    }
+
+    /**
+     * Sets the metrics for this service.
+     *
+     * @param metrics The metrics
+     * @throws NullPointerException if metrics is {@code null}.
+     */
+    @Autowired
+    public final void setMetrics(final U metrics) {
+        Objects.requireNonNull(metrics);
+        this.metrics = metrics;
     }
 
     /**

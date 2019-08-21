@@ -45,6 +45,8 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.NoopBasedMetrics;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -83,7 +85,7 @@ public class AbstractProtocolAdapterBaseTest {
     private Vertx vertx;
     private Context context;
     private ProtocolAdapterProperties properties;
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> adapter;
     private RegistrationClient registrationClient;
     private TenantClientFactory tenantService;
     private RegistrationClientFactory registrationClientFactory;
@@ -589,30 +591,33 @@ public class AbstractProtocolAdapterBaseTest {
         }));
     }
 
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> newProtocolAdapter(
+            final ProtocolAdapterProperties props) {
 
         return newProtocolAdapter(props, ADAPTER_NAME);
     }
 
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props, final String typeName) {
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> newProtocolAdapter(
+            final ProtocolAdapterProperties props, final String typeName) {
         return newProtocolAdapter(props, typeName, start -> {});
     }
 
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> newProtocolAdapter(
             final ProtocolAdapterProperties props,
             final String typeName,
             final Handler<Void> startupHandler) {
         return newProtocolAdapter(props, typeName, startupHandler, null, null);
     }
 
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> newProtocolAdapter(
             final ProtocolAdapterProperties props,
             final String typeName,
             final Handler<Void> startupHandler,
             final Handler<Void> commandConnectionEstablishedHandler,
             final Handler<Void> commandConnectionLostHandler) {
 
-        final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<>() {
+        final AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> result = new AbstractProtocolAdapterBase<>(
+                mock(NoopBasedMetrics.class)) {
 
             @Override
             public String getTypeName() {

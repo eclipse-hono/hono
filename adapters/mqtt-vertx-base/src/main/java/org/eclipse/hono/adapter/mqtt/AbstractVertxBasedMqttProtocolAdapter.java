@@ -58,7 +58,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -87,7 +86,7 @@ import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
  * @param <T> The type of configuration properties this adapter supports/requires.
  */
 public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtocolAdapterProperties>
-        extends AbstractProtocolAdapterBase<T> {
+        extends AbstractProtocolAdapterBase<T, MqttAdapterMetrics> {
 
     /**
      * The minimum amount of memory that the adapter requires to run.
@@ -101,8 +100,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
 
-    private MqttAdapterMetrics metrics = MqttAdapterMetrics.NOOP;
-
     private MqttServer server;
     private MqttServer insecureServer;
     private AuthHandler<MqttContext> authHandler;
@@ -110,6 +107,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             subscription, commandContext) -> afterCommandPublished(tenantObject, subscription, commandContext);
     private ExecutionContextTenantAndAuthIdProvider<MqttContext> tenantObjectWithAuthIdProvider;
 
+    /**
+     * Creates an instance initialized with {@link MqttAdapterMetrics.Noop} metrics.
+     *
+     */
+    public AbstractVertxBasedMqttProtocolAdapter() {
+        super(MqttAdapterMetrics.NOOP);
+    }
     /**
      * Sets the authentication handler to use for authenticating devices.
      * 
@@ -149,25 +153,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     @Override
     protected final int getActualInsecurePort() {
         return insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED;
-    }
-
-    /**
-     * Sets the metrics for this service.
-     *
-     * @param metrics The metrics
-     */
-    @Autowired
-    public final void setMetrics(final MqttAdapterMetrics metrics) {
-        this.metrics = metrics;
-    }
-
-    /**
-     * Gets the metrics for this service.
-     *
-     * @return The metrics
-     */
-    protected final MqttAdapterMetrics getMetrics() {
-        return metrics;
     }
 
     /**
@@ -330,7 +315,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private ConnectionLimitManager createConnectionLimitManager() {
         return new DefaultConnectionLimitManager(
                 new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION),
-                () -> metrics.getNumberOfConnections(), getConfig());
+                () -> getMetrics().getNumberOfConnections(), getConfig());
     }
 
     @Override
@@ -734,7 +719,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 commandContext -> {
 
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
-                    final Sample timer = metrics.startTimer();
+                    final Sample timer = getMetrics().startTimer();
                     final Command command = commandContext.getCommand();
                     final Future<TenantObject> tenantTracker = getTenantConfiguration(sub.getTenant(),
                             commandContext.getTracingContext());
@@ -757,7 +742,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         } else {
                             commandContext.release(1);
                         }
-                        metrics.reportCommand(
+                        getMetrics().reportCommand(
                                 command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 sub.getTenant(),
                                 tenantTracker.result(),
@@ -907,7 +892,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getTelemetrySender(tenant),
                         ctx.endpoint()))
                 .compose(success -> {
-                    metrics.reportTelemetry(
+                    getMetrics().reportTelemetry(
                             ctx.endpoint(),
                             ctx.tenant(),
                             tenantTracker.result(),
@@ -917,7 +902,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ctx.getTimer());
                     return Future.<Void> succeededFuture();
                 }).recover(t -> {
-                    metrics.reportTelemetry(
+                    getMetrics().reportTelemetry(
                             ctx.endpoint(),
                             ctx.tenant(),
                             tenantTracker.result(),
@@ -967,7 +952,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, getEventSender(tenant),
                         ctx.endpoint()))
                 .compose(success -> {
-                    metrics.reportTelemetry(
+                    getMetrics().reportTelemetry(
                             ctx.endpoint(),
                             ctx.tenant(),
                             tenantTracker.result(),
@@ -977,7 +962,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ctx.getTimer());
                     return Future.<Void> succeededFuture();
                 }).recover(t -> {
-                    metrics.reportTelemetry(
+                    getMetrics().reportTelemetry(
                             ctx.endpoint(),
                             ctx.tenant(),
                             tenantTracker.result(),
@@ -1064,7 +1049,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .compose(delivery -> {
                     LOG.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
                             targetAddress.getTenantId(), targetAddress.getResourceId());
-                    metrics.reportCommand(
+                    getMetrics().reportCommand(
                             Direction.RESPONSE,
                             targetAddress.getTenantId(),
                             tenantTracker.result(),
@@ -1081,7 +1066,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .recover(t -> {
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();
-                    metrics.reportCommand(
+                    getMetrics().reportCommand(
                             Direction.RESPONSE,
                             targetAddress.getTenantId(),
                             tenantTracker.result(),
@@ -1196,11 +1181,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
         if (authenticatedDevice == null) {
             LOG.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
-            metrics.decrementUnauthenticatedConnections();
+            getMetrics().decrementUnauthenticatedConnections();
         } else {
             LOG.debug("connection to device [tenant-id: {}, device-id: {}] closed",
                     authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-            metrics.decrementConnections(authenticatedDevice.getTenantId());
+            getMetrics().decrementConnections(authenticatedDevice.getTenantId());
         }
         if (endpoint.isConnected()) {
             LOG.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
@@ -1386,7 +1371,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         subscription.getQos(),
                         sentHandler.cause());
                 TracingHelper.logError(commandContext.getCurrentSpan(), sentHandler.cause());
-                metrics.reportCommand(
+                getMetrics().reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                         subscription.getTenant(),
                         tenantObject,
@@ -1403,7 +1388,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final CommandSubscription subscription,
             final CommandContext commandContext) {
 
-        metrics.reportCommand(
+        getMetrics().reportCommand(
                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                 subscription.getTenant(),
                 tenantObject,
@@ -1460,9 +1445,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         endpoint.unsubscribeHandler(unsubscribeMsg -> onUnsubscribe(endpoint, authenticatedDevice, unsubscribeMsg,
                 cmdHandler, traceSamplingPriority));
         if (authenticatedDevice == null) {
-            metrics.incrementUnauthenticatedConnections();
+            getMetrics().incrementUnauthenticatedConnections();
         } else {
-            metrics.incrementConnections(authenticatedDevice.getTenantId());
+            getMetrics().incrementConnections(authenticatedDevice.getTenantId());
         }
         return Future.succeededFuture(authenticatedDevice);
     }

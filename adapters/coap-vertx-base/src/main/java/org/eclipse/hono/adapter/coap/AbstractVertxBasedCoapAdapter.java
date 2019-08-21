@@ -66,7 +66,7 @@ import io.vertx.core.json.JsonObject;
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
-        extends AbstractProtocolAdapterBase<T> {
+        extends AbstractProtocolAdapterBase<T, CoapAdapterMetrics> {
 
     /**
      * A logger shared with subclasses.
@@ -79,12 +79,19 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * COAP server. Created from blocking execution, therefore use volatile.
      */
     private CoapServer server;
-    private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
     private ApplicationLevelInfoSupplier honoDeviceResolver;
     private PskStore pskStore;
 
     private volatile Endpoint secureEndpoint;
     private volatile Endpoint insecureEndpoint;
+
+    /**
+     * Creates an instance initialized with {@link CoapAdapterMetrics.Noop} metrics.
+     *
+     */
+    public AbstractVertxBasedCoapAdapter() {
+        super(CoapAdapterMetrics.NOOP);
+    }
 
     /**
      * Sets the service to use for resolving an authenticated CoAP client to a Hono device.
@@ -103,25 +110,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      */
     public final void setPskStore(final PskStore pskStore) {
         this.pskStore = Objects.requireNonNull(pskStore);
-    }
-
-    /**
-     * Sets the metrics for this service.
-     *
-     * @param metrics The metrics
-     */
-    @Autowired
-    public final void setMetrics(final CoapAdapterMetrics metrics) {
-        this.metrics = metrics;
-    }
-
-    /**
-     * Gets the object for reporting this adapter's metrics.
-     * 
-     * @return The metrics.
-     */
-    protected CoapAdapterMetrics getMetrics() {
-        return metrics;
     }
 
     /**
@@ -593,7 +581,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             }).map(delivery -> {
                 LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName());
-                metrics.reportTelemetry(
+                getMetrics().reportTelemetry(
                         endpoint,
                         device.getTenantId(),
                         tenantTracker.result(),
@@ -606,7 +594,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             }).recover(t -> {
                 LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName(), t);
-                metrics.reportTelemetry(
+                getMetrics().reportTelemetry(
                         endpoint,
                         device.getTenantId(),
                         tenantTracker.result(),

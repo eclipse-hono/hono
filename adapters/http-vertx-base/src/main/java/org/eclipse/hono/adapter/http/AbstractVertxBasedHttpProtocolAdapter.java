@@ -73,7 +73,7 @@ import io.vertx.ext.web.handler.BodyHandler;
  *
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T> {
+public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtocolAdapterProperties> extends AbstractProtocolAdapterBase<T, HttpAdapterMetrics> {
 
     /**
      * Default file uploads directory used by Vert.x Web.
@@ -84,25 +84,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private HttpServer server;
     private HttpServer insecureServer;
-    private HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
 
     /**
-     * Sets the metrics for this service.
+     * Creates an instance initialized with {@link HttpAdapterMetrics.Noop} metrics.
      *
-     * @param metrics The metrics
      */
-    @Autowired
-    public final void setMetrics(final HttpAdapterMetrics metrics) {
-        this.metrics = metrics;
-    }
-
-    /**
-     * Gets the metrics for this service.
-     *
-     * @return The metrics
-     */
-    protected final HttpAdapterMetrics getMetrics() {
-        return metrics;
+    public AbstractVertxBasedHttpProtocolAdapter() {
+        super(HttpAdapterMetrics.NOOP);
     }
 
     /**
@@ -716,7 +704,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     if (commandContext != null) {
                         commandContext.getCurrentSpan().log("forwarded command to device in HTTP response body");
                         commandContext.accept();
-                        metrics.reportCommand(
+                        getMetrics().reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 tenant,
                                 tenantTracker.result(),
@@ -724,7 +712,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 commandContext.getCommand().getPayloadSize(),
                                 getMicrometerSample(commandContext));
                     }
-                    metrics.reportTelemetry(
+                    getMetrics().reportTelemetry(
                             endpoint,
                             tenant,
                             tenantTracker.result(),
@@ -746,7 +734,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         commandContext.getCurrentSpan().log("failed to forward command to device in HTTP response body");
                         TracingHelper.logError(commandContext.getCurrentSpan(), t);
                         commandContext.release();
-                        metrics.reportCommand(
+                        getMetrics().reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 tenant,
                                 tenantTracker.result(),
@@ -788,7 +776,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 outcome = ProcessingOutcome.UNDELIVERABLE;
                 HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
             }
-            metrics.reportTelemetry(
+            getMetrics().reportTelemetry(
                     endpoint,
                     tenant,
                     tenantTracker.result(),
@@ -972,7 +960,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                             } else {
                                                 // issue credit so that application(s) can send the next command
                                                 commandContext.reject(getErrorCondition(result.cause()), 1);
-                                                metrics.reportCommand(
+                                                getMetrics().reportCommand(
                                                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                                         tenantObject.getTenantId(),
                                                         tenantObject,
@@ -1159,7 +1147,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 LOG.trace("delivered command response [command-request-id: {}] to application",
                                         commandRequestId);
                                 currentSpan.log("delivered command response to application");
-                                metrics.reportCommand(
+                                getMetrics().reportCommand(
                                         Direction.RESPONSE,
                                         tenant,
                                         tenantTracker.result(),
@@ -1175,7 +1163,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             commandRequestId, t);
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();
-                    metrics.reportCommand(
+                    getMetrics().reportCommand(
                             Direction.RESPONSE,
                             tenant,
                             tenantTracker.result(),

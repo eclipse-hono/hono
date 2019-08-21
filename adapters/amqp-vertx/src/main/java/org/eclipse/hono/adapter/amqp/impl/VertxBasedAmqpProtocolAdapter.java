@@ -61,7 +61,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
@@ -87,7 +86,8 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using AMQP.
  */
-public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapterBase<AmqpAdapterProperties> {
+public final class VertxBasedAmqpProtocolAdapter
+        extends AbstractProtocolAdapterBase<AmqpAdapterProperties, AmqpAdapterMetrics> {
 
     // These values should be made configurable.
     private static final long DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS = 10000; // 10 seconds
@@ -116,9 +116,15 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * This adapter's custom SASL authenticator factory for handling the authentication process for devices.
      */
     private ProtonSaslAuthenticatorFactory authenticatorFactory;
-    private AmqpAdapterMetrics metrics = AmqpAdapterMetrics.NOOP;
     private AmqpContextTenantAndAuthIdProvider tenantObjectWithAuthIdProvider;
 
+    /**
+     * Creates an instance initialized with {@link AmqpAdapterMetrics.Noop} metrics.
+     * 
+     */
+    public VertxBasedAmqpProtocolAdapter() {
+        super(AmqpAdapterMetrics.NOOP);
+    }
     // -----------------------------------------< AbstractProtocolAdapterBase >---
     /**
      * {@inheritDoc}
@@ -126,25 +132,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     @Override
     protected String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_AMQP;
-    }
-
-    /**
-     * Sets the metrics for this service.
-     *
-     * @param metrics The metrics
-     */
-    @Autowired
-    public void setMetrics(final AmqpAdapterMetrics metrics) {
-        this.metrics = metrics;
-    }
-
-    /**
-     * Gets the metrics for this service.
-     *
-     * @return The metrics
-     */
-    protected AmqpAdapterMetrics getMetrics() {
-        return metrics;
     }
 
     /**
@@ -188,7 +175,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return new DefaultConnectionLimitManager(
                 new MemoryBasedConnectionLimitStrategy(
                         MINIMAL_MEMORY, MEMORY_PER_CONNECTION + getConfig().getMaxSessionWindowSize()),
-                () -> metrics.getNumberOfConnections(), getConfig());
+                () -> getMetrics().getNumberOfConnections(), getConfig());
     }
 
     @Override
@@ -377,9 +364,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             LOG.debug("connection with device [container: {}] established", con.getRemoteContainer());
             span.log("connection established");
             if (authenticatedDevice == null) {
-                metrics.incrementUnauthenticatedConnections();
+                getMetrics().incrementUnauthenticatedConnections();
             } else {
-                metrics.incrementConnections(authenticatedDevice.getTenantId());
+                getMetrics().incrementConnections(authenticatedDevice.getTenantId());
             }
             return null;
         }).otherwise(t -> {
@@ -464,9 +451,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final Device device = getAuthenticatedDevice(con);
         if (device == null) {
-            metrics.decrementUnauthenticatedConnections();
+            getMetrics().decrementUnauthenticatedConnections();
         } else {
-            metrics.decrementConnections(device.getTenantId());
+            getMetrics().decrementConnections(device.getTenantId());
         }
     }
 
@@ -518,7 +505,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             receiver.handler((delivery, message) -> {
                 final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, authenticatedDevice);
-                ctx.setTimer(metrics.startTimer());
+                ctx.setTimer(getMetrics().startTimer());
+                onMessageReceived(ctx);
+                ctx.setTimer(getMetrics().startTimer());
                 if (authenticatedDevice == null) {
                     applyTenantTraceSamplingPriority(ctx, span)
                             .setHandler(ar -> onMessageReceived(ctx));
@@ -773,7 +762,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 sourceAddress.getResourceId(),
                 commandContext -> {
 
-                    final Sample timer = metrics.startTimer();
+                    final Sample timer = getMetrics().startTimer();
                     addMicrometerSample(commandContext, timer);
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     final Command command = commandContext.getCommand();
@@ -800,7 +789,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         } else {
                             commandContext.release(1);
                         }
-                        metrics.reportCommand(
+                        getMetrics().reportCommand(
                                 command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 sourceAddress.getTenantId(),
                                 tenantTracker.result(),
@@ -865,7 +854,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 commandContext.release(1);
                 outcome = ProcessingOutcome.UNDELIVERABLE;
             }
-            metrics.reportCommand(
+            getMetrics().reportCommand(
                     command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                     command.getTenant(),
                     tenantObject,
@@ -989,7 +978,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             context.getEndpoint().getCanonicalName(),
                             resource.getTenantId(),
                             resource.getResourceId(), t);
-                    metrics.reportTelemetry(
+                    getMetrics().reportTelemetry(
                             context.getEndpoint(),
                             resource.getTenantId(),
                             tenantTracker.result(),
@@ -1001,7 +990,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                 }).map(delivery -> {
 
-                    metrics.reportTelemetry(
+                    getMetrics().reportTelemetry(
                             context.getEndpoint(),
                             resource.getTenantId(),
                             tenantTracker.result(),
@@ -1058,7 +1047,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                     LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
                             resource.getTenantId(), resource.getResourceId());
-                    metrics.reportCommand(
+                    getMetrics().reportCommand(
                             Direction.RESPONSE,
                             resource.getTenantId(),
                             tenantTracker.result(),
@@ -1071,7 +1060,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                     LOG.debug("cannot process command response from device [tenant: {}, device-id: {}]",
                             resource.getTenantId(), resource.getResourceId(), t);
-                    metrics.reportCommand(
+                    getMetrics().reportCommand(
                             Direction.RESPONSE,
                             resource.getTenantId(),
                             tenantTracker.result(),
