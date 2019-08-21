@@ -521,14 +521,17 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Checks if this adapter may accept another connection from a device.
+     * Checks if the maximum number of concurrent connections across all protocol
+     * adapters from devices of a particular tenant has been reached.
      * <p>
      * This default implementation uses the
      * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject)} method
-     * to verify if the tenant's connection limit has been reached.
+     * to verify if the tenant's overall connection limit across all adapters
+     * has been reached and also invokes {@link #checkMessageLimit(TenantObject, long)}
+     * to check if the tenant's message limit has been exceeded.
      * 
      * @param tenantConfig The tenant to check the connection limit for.
-     * @return A succeeded future if the connection limit has not been reached yet
+     * @return A succeeded future if the connection and message limits have not been reached yet
      *         or if the limits could not be checked.
      *         Otherwise the future will be failed with a {@link ClientErrorException}
      *         containing the 403 Forbidden status code.
@@ -537,7 +540,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected Future<Void> checkConnectionLimit(final TenantObject tenantConfig) {
 
         Objects.requireNonNull(tenantConfig);
-        return resourceLimitChecks.isConnectionLimitReached(tenantConfig)
+        final Future<Void> connectionLimitCheckResult = resourceLimitChecks.isConnectionLimitReached(tenantConfig)
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
@@ -546,6 +549,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         return Future.succeededFuture();
                     }
                 });
+        final Future<Void> messageLimitCheckResult = checkMessageLimit(tenantConfig, 1)
+                .recover(t -> {
+                    if (t instanceof ClientErrorException) {
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
+                    }
+                    return Future.failedFuture(t);
+                });
+        return CompositeFuture.all(connectionLimitCheckResult, messageLimitCheckResult)
+                .map(ok -> (Void) null);
     }
 
     /**

@@ -45,6 +45,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -439,95 +440,6 @@ public class AbstractProtocolAdapterBaseTest {
                 })));
     }
 
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {
-
-        return newProtocolAdapter(props, ADAPTER_NAME);
-    }
-
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props, final String typeName) {
-        return newProtocolAdapter(props, typeName, start -> {});
-    }
-
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
-            final ProtocolAdapterProperties props,
-            final String typeName,
-            final Handler<Void> startupHandler) {
-        return newProtocolAdapter(props, typeName, startupHandler, null, null);
-    }
-
-    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
-            final ProtocolAdapterProperties props,
-            final String typeName,
-            final Handler<Void> startupHandler,
-            final Handler<Void> commandConnectionEstablishedHandler,
-            final Handler<Void> commandConnectionLostHandler) {
-
-        final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<>() {
-
-            @Override
-            public String getTypeName() {
-                return typeName;
-            }
-
-            @Override
-            public int getPortDefaultValue() {
-                return 0;
-            }
-
-            @Override
-            public int getInsecurePortDefaultValue() {
-                return 0;
-            }
-
-            @Override
-            protected int getActualPort() {
-                return 0;
-            }
-
-            @Override
-            protected int getActualInsecurePort() {
-                return 0;
-            }
-
-            @Override
-            protected void doStart(final Future<Void> startFuture) {
-                startupHandler.handle(null);
-                startFuture.complete();
-            }
-
-            @Override
-            protected void onCommandConnectionEstablished(final HonoConnection connectedClient) {
-                if (commandConnectionEstablishedHandler != null) {
-                    commandConnectionEstablishedHandler.handle(null);
-                }
-            }
-
-            @Override
-            protected void onCommandConnectionLost(final HonoConnection commandConnection) {
-                if (commandConnectionLostHandler != null) {
-                    commandConnectionLostHandler.handle(null);
-                }
-            }
-        };
-        result.setConfig(props);
-        result.init(vertx, context);
-        return result;
-    }
-
-    private static JsonObject newRegistrationAssertionResult() {
-        return newRegistrationAssertionResult(null);
-    }
-
-    private static JsonObject newRegistrationAssertionResult(final String defaultContentType) {
-
-        final JsonObject result = new JsonObject();
-        if (defaultContentType != null) {
-            result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
-                    .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, defaultContentType));
-        }
-        return result;
-    }
-
     /**
      * Verifies that the helper approves empty notification without payload.
      *
@@ -628,5 +540,141 @@ public class AbstractProtocolAdapterBaseTest {
             assertEquals("4711", r.getResourceId());
             ctx.completeNow();
         })));
+    }
+
+    /**
+     * Verifies that the connection limit check fails if the maximum number of connections
+     * for a tenant have been reached.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCheckConnectionLimitFailsIfConnectionLimitIsReached(final VertxTestContext ctx) {
+
+        // GIVEN an tenant for which the maximum number of connections has been reached
+        final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
+        final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
+        when(checks.isConnectionLimitReached(any(TenantObject.class))).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(checks.isMessageLimitReached(any(TenantObject.class), anyLong())).thenReturn(Future.succeededFuture(Boolean.FALSE));
+        adapter.setResourceLimitChecks(checks);
+
+        // WHEN a device tries to connect
+        adapter.checkConnectionLimit(tenant).setHandler(ctx.failing(t -> {
+            // THEN the connection limit check fails
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            ctx.completeNow();
+        }));
+    }
+
+    /**
+     * Verifies that the connection limit check fails if the tenant's message limit has been reached.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCheckConnectionLimitFailsIfMessageLimitIsReached(final VertxTestContext ctx) {
+
+        // GIVEN an tenant for which the message limit has been reached
+        final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
+        final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
+        when(checks.isConnectionLimitReached(any(TenantObject.class))).thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(checks.isMessageLimitReached(any(TenantObject.class), anyLong())).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        adapter.setResourceLimitChecks(checks);
+
+        // WHEN a device tries to connect
+        adapter.checkConnectionLimit(tenant).setHandler(ctx.failing(t -> {
+            // THEN the connection limit check fails
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            ctx.completeNow();
+        }));
+    }
+
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {
+
+        return newProtocolAdapter(props, ADAPTER_NAME);
+    }
+
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props, final String typeName) {
+        return newProtocolAdapter(props, typeName, start -> {});
+    }
+
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
+            final ProtocolAdapterProperties props,
+            final String typeName,
+            final Handler<Void> startupHandler) {
+        return newProtocolAdapter(props, typeName, startupHandler, null, null);
+    }
+
+    private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(
+            final ProtocolAdapterProperties props,
+            final String typeName,
+            final Handler<Void> startupHandler,
+            final Handler<Void> commandConnectionEstablishedHandler,
+            final Handler<Void> commandConnectionLostHandler) {
+
+        final AbstractProtocolAdapterBase<ProtocolAdapterProperties> result = new AbstractProtocolAdapterBase<>() {
+
+            @Override
+            public String getTypeName() {
+                return typeName;
+            }
+
+            @Override
+            public int getPortDefaultValue() {
+                return 0;
+            }
+
+            @Override
+            public int getInsecurePortDefaultValue() {
+                return 0;
+            }
+
+            @Override
+            protected int getActualPort() {
+                return 0;
+            }
+
+            @Override
+            protected int getActualInsecurePort() {
+                return 0;
+            }
+
+            @Override
+            protected void doStart(final Future<Void> startFuture) {
+                startupHandler.handle(null);
+                startFuture.complete();
+            }
+
+            @Override
+            protected void onCommandConnectionEstablished(final HonoConnection connectedClient) {
+                if (commandConnectionEstablishedHandler != null) {
+                    commandConnectionEstablishedHandler.handle(null);
+                }
+            }
+
+            @Override
+            protected void onCommandConnectionLost(final HonoConnection commandConnection) {
+                if (commandConnectionLostHandler != null) {
+                    commandConnectionLostHandler.handle(null);
+                }
+            }
+        };
+        result.setConfig(props);
+        result.init(vertx, context);
+        return result;
+    }
+
+    private static JsonObject newRegistrationAssertionResult() {
+        return newRegistrationAssertionResult(null);
+    }
+
+    private static JsonObject newRegistrationAssertionResult(final String defaultContentType) {
+
+        final JsonObject result = new JsonObject();
+        if (defaultContentType != null) {
+            result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
+                    .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, defaultContentType));
+        }
+        return result;
     }
 }

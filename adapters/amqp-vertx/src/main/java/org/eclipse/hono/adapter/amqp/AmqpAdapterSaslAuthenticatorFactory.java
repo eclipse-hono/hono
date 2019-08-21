@@ -14,7 +14,6 @@ package org.eclipse.hono.adapter.amqp;
 
 import java.security.GeneralSecurityException;
 import java.security.cert.Certificate;
-import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -302,13 +301,15 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             items.put("auth_id", credentials.getAuthId());
             currentSpan.log(items);
 
-            final Future<DeviceUser> authenticationTracker = Future.future();
-            usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(), authenticationTracker);
-            return authenticationTracker
-                    .compose(user -> getTenantObject(credentials.getTenantId())
-                            .compose(tenant -> CompositeFuture.all(
-                                    checkTenantIsEnabled(tenant),
-                                    tenantConnectionLimit.apply(tenant)).map(ok -> user)));
+            return getTenantObject(credentials.getTenantId())
+                    .compose(tenant -> CompositeFuture.all(
+                                checkTenantIsEnabled(tenant),
+                                tenantConnectionLimit.apply(tenant)))
+                    .compose(ok -> {
+                        final Future<DeviceUser> authResult = Future.future();
+                        usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
+                        return authResult;
+                    });
         }
 
         private Future<DeviceUser> verifyExternal(final Certificate[] peerCertificateChain) {
@@ -325,28 +326,27 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             LOG.debug("authenticating client certificate [Subject DN: {}]", subjectDn);
             currentSpan.log(Collections.singletonMap(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn));
 
-            final Future<TenantObject> tenantTracker = getTenantObject(deviceCert.getIssuerX500Principal());
-            return tenantTracker
+            return getTenantObject(deviceCert.getIssuerX500Principal())
+                    .compose(tenant -> CompositeFuture.all(
+                            checkTenantIsEnabled(tenant),
+                            tenantConnectionLimit.apply(tenant)).map(ok -> tenant))
                     .compose(tenant -> {
                         try {
-                            final TrustAnchor trustAnchor = tenantTracker.result().getTrustAnchor();
-                            return certValidator.validate(Collections.singletonList(deviceCert), trustAnchor);
+                            return certValidator.validate(
+                                    Collections.singletonList(deviceCert),
+                                    tenant.getTrustAnchor()).map(ok -> tenant);
                         } catch (final GeneralSecurityException e) {
                             LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);
                             return Future.failedFuture(new CredentialException("validation of client certificate failed"));
                         }
                     })
-                    .compose(ok -> {
-                        final Future<DeviceUser> user = Future.future();
-                        final String tenantId = tenantTracker.result().getTenantId();
-                        final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenantId,
+                    .compose(tenant -> {
+                        final Future<DeviceUser> authResult = Future.future();
+                        final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenant.getTenantId(),
                                 deviceCert.getSubjectX500Principal());
-                        clientCertAuthProvider.authenticate(credentials, currentSpan.context(), user);
-                        return user;
-                    })
-                    .compose(user -> CompositeFuture.all(
-                            checkTenantIsEnabled(tenantTracker.result()),
-                            tenantConnectionLimit.apply(tenantTracker.result())).map(ok -> user));
+                        clientCertAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
+                        return authResult;
+                    });
         }
 
         private Future<TenantObject> getTenantObject(final X500Principal issuerDn) {

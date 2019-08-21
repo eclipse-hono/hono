@@ -41,8 +41,8 @@ import org.eclipse.hono.service.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -72,7 +72,7 @@ public class AmqpAdapterSaslAuthenticatorFactoryTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
 
         props = new ProtocolAdapterProperties();
