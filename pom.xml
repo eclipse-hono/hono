@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
     Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
-   
+
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
-   
+
     This program and the accompanying materials are made available under the
     terms of the Eclipse Public License 2.0 which is available at
     http://www.eclipse.org/legal/epl-2.0
-   
+
     SPDX-License-Identifier: EPL-2.0
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -174,21 +174,32 @@
      -->
     <snapshotDependencyAllowed>true</snapshotDependencyAllowed>
 
-    <!-- 
+    <!--
       Build images defined in modules with packaging type "pom".
      -->
     <docker.skip.build.pom>false</docker.skip.build.pom>
 
-    <!-- 
+    <!--
       The organization name to use for our Docker image names.
      -->
-     <docker.image.org-name>eclipse</docker.image.org-name>
+    <docker.image.org-name>eclipse</docker.image.org-name>
+
+    <!--
+      The Docker registry to use for our Docker image names.
+    -->
+    <docker.registry>index.docker.io</docker.registry>
+
+    <!--
+      The Docker repository to use for our Docker image names.
+    -->
+    <docker.repository>${docker.registry}/${docker.image.org-name}</docker.repository>
 
     <!--
       Additional tag which can be defined for custom builds
      -->
     <docker.image.additional.tag></docker.image.additional.tag>
-     <jacoco.version>0.8.2</jacoco.version>
+
+    <jacoco.version>0.8.2</jacoco.version>
   </properties>
 
   <modules>
@@ -228,7 +239,7 @@
           <configuration>
             <images>
               <image>
-                <name>${docker.image.org-name}/%a:%v</name>
+                <name>${docker.repository}/%a:%v</name>
                 <build>
                   <maintainer>The Eclipse Hono project</maintainer>
                   <labels>
@@ -299,7 +310,7 @@
           <version>2.22.1</version>
         </plugin>
         <plugin>
-          <!-- 
+          <!--
             Copy legal documents from "legal" module to "target/classes" folder
             so that we make sure to include legal docs in all modules.
            -->
@@ -367,7 +378,7 @@
             <configLocation>checkstyle/default.xml</configLocation>
             <suppressionsLocation>checkstyle/suppressions.xml</suppressionsLocation>
             <includeTestSourceDirectory>true</includeTestSourceDirectory>
-            
+
             <!--
               The next two lines are required due to an issue in M2E support
               for Checkstyle.
@@ -425,7 +436,7 @@
         <version>3.0.0-M2</version>
         <executions>
           <execution>
-            <!-- Make sure that only non-snapshot versions are used for the dependencies. 
+            <!-- Make sure that only non-snapshot versions are used for the dependencies.
               Only active when property 'snapshotDependencyAllowed' is false. -->
             <id>enforce-no-snapshots</id>
             <goals>
@@ -520,7 +531,7 @@
       <build>
         <plugins>
           <plugin>
-            <!-- 
+            <!--
               Use the Nexus Staging plugin as a full replacement for the standard
               Maven Deploy plugin.
               See https://github.com/sonatype/nexus-maven-plugins/tree/master/staging/maven-plugin
@@ -547,7 +558,7 @@
       </build>
     </profile>
     <profile>
-      <!-- 
+      <!--
         This profile is activated by Eclipse IDE automatically.
        -->
       <id>eclipse-only</id>

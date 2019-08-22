@@ -71,13 +71,13 @@
 
     <plugins>
       <plugin>
-        <!-- Copy legal documents from "legal" module to "target/classes" folder so that we make sure to include 
+        <!-- Copy legal documents from "legal" module to "target/classes" folder so that we make sure to include
           legal docs in all modules. -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <!-- Execution and configuration for copying certificates from related module to "target/classes" folder 
+            <!-- Execution and configuration for copying certificates from related module to "target/classes" folder
               so that we can include them in the image. -->
             <id>copy_demo_certs</id>
             <phase>generate-resources</phase>
@@ -139,7 +139,7 @@
               <goal>copy-resources</goal>
             </goals>
             <configuration>
-              <outputDirectory>${project.build.directory}/deploy/helm</outputDirectory>
+              <outputDirectory>${project.build.directory}/deploy/helm/eclipse-hono</outputDirectory>
               <resources>
                 <resource>
                   <directory>${project.build.directory}/config/hono-demo-certs-jar</directory>

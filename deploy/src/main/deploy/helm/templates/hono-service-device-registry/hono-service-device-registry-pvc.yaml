@@ -6,6 +6,7 @@ metadata:
 spec:
   accessModes:
   - ReadWriteOnce
+  storageClassName: {{ .Values.deviceRegistry.storageClass }}
   resources:
     requests:
       storage: 1Mi

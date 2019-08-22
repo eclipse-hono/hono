@@ -124,6 +124,7 @@ Now it's time to create the AKS cluster.
 ```sh
 az ad sp create-for-rbac --skip-assignment
 ```
+
 If successful, *appId* and *password* will be displayed.
 
 #### Create Cluster
@@ -171,6 +172,32 @@ ACR_ID=$(az acr show --name $ACR_NAME --resource-group $AKS_RESOURCE_GROUP --que
 # Create role assignment
 az role assignment create --assignee $CLIENT_ID --role acrpull --scope $ACR_ID
 ```
+
+#### (Optional) Create retain StorageClass for the Device Registry
+
+With the [reclaim policy retain](https://docs.microsoft.com/en-us/azure/aks/concepts-storage) AKS ensures that your storage persists even through Hono redeployments.
+
+Create a file `managed-premium-retain.yaml` with the following content.
+
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: managed-premium-retain
+provisioner: kubernetes.io/azure-disk
+reclaimPolicy: Retain
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: Managed
+```
+
+Now apply to your AKS cluster:
+
+```shell
+kubectl apply -f managed-premium-retain.yaml
+```
+
+Note: in your helm deployment later you have to set the value `deviceRegistry.storageClass=managed-premium-retain`.
 
 ### Monitoring
 

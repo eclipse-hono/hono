@@ -31,7 +31,7 @@ The [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/
 #### Hono Helm Chart
 
 The Helm chart is contained in the Hono archive that is available from [Hono's download page]({{% homelink "/downloads/" %}}).
-After the archive has been extracted, the chart can be found in the `eclipse-hono-$VERSION/deploy/helm` folder.
+After the archive has been extracted, the chart can be found in the `eclipse-hono-$VERSION/deploy/helm/eclipse-hono` folder.
 
 #### Hono Command Line Client
 
@@ -43,8 +43,8 @@ The command line client requires a Java 11 runtime environment to run.
 The recommended way of deploying Hono is by means of using Helm's *Tiller* service running on the Kubernetes cluster:
 
 ~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name hono --namespace hono helm/
+# in directory: eclipse-hono-$VERSION/deploy/helm
+helm install --dep-up --name hono --namespace hono eclipse-hono/
 ~~~
 
 This will create namespace `hono` in the cluster and install all the components to that namespace. The name of the Helm release will be `hono`.
@@ -186,7 +186,7 @@ Once the images have been pushed, the deployment can be done using Helm:
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name hono --namespace hono --set honoContainerRegistry=my.registry.io target/deploy/helm/
+helm install --dep-up --name hono --namespace hono --set deviceRegistry.imageName=my.registry.io/eclipse/hono-service-device-registry:1.0-CUSTOM,authServer.imageName=my.registry.io/eclipse/hono-service-auth:1.0-CUSTOM,deviceConnectionService.imageName=my.registry.io/eclipse/hono-service-device-connection:1.0-CUSTOM,adapters.amqp.imageName=my.registry.io/eclipse/hono-adapter-amqp-vertx:1.0-CUSTOM,adapters.mqtt.imageName=my.registry.io/eclipse/hono-adapter-mqtt-vertx:1.0-CUSTOM,adapters.http.imageName=my.registry.io/eclipse/hono-adapter-http-vertx:1.0-CUSTOM target/deploy/helm/eclipse-hono/
 ~~~
 
 ### Deploying to Minikube
@@ -210,7 +210,7 @@ The newly built images can then be deployed using Helm:
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name hono --namespace hono target/deploy/helm/
+helm install --dep-up --name hono --namespace hono target/deploy/helm/eclipse-hono/
 ~~~
 
 ## Using the Device Connection Service
@@ -224,7 +224,7 @@ running Helm:
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true helm/
+helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true helm/eclipse-hono/
 ~~~
 
 This will deploy the Device Connection service and configure all protocol adapters to use it instead of the example Device Registry implementation.
@@ -234,7 +234,7 @@ The Helm chart supports deployment of a simple data grid which can be used for e
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true --set dataGridDeployExample=true helm/
+helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true --set dataGridDeployExample=true helm/eclipse-hono/
 ~~~
 
 This will deploy the data grid and configure the Device Connection service to use it for storing the connection data.
@@ -257,7 +257,7 @@ to `true` when running Helm:
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name hono --namespace hono --set jaegerBackendDeployExample=true target/deploy/helm/
+helm install --dep-up --name hono --namespace hono --set jaegerBackendDeployExample=true target/deploy/helm/eclipse-hono/
 ~~~
 
 This will create a Jaeger back end instance suitable for testing purposes and will configure all deployed Hono components to use the
@@ -274,7 +274,7 @@ the Jaeger Agent that is deployed with each of Hono's components.
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name hono --namespace hono --set jaegerAgentConf.REPORTER_TYPE=tchannel --set jaegerAgentConf.REPORTER_TCHANNEL_HOST_PORT=my-jaeger-collector:14267 target/deploy/helm/
+helm install --dep-up --name hono --namespace hono --set jaegerAgentConf.REPORTER_TYPE=tchannel --set jaegerAgentConf.REPORTER_TCHANNEL_HOST_PORT=my-jaeger-collector:14267 target/deploy/helm/eclipse-hono/
 ~~~
 
 ## Deploying optional Adapters
@@ -290,5 +290,5 @@ The following command will deploy the Kura adapter along with Hono's standard ad
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name hono --namespace hono --set adapters.kura.enabled=true helm/
+helm install --dep-up --name hono --namespace hono --set adapters.kura.enabled=true helm/eclipse-hono/
 ~~~

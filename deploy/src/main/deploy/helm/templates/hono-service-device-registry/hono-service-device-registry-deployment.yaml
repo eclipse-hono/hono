@@ -1,5 +1,5 @@
 apiVersion: apps/v1beta1
-kind: Deployment
+kind: StatefulSet
 metadata:
   {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry" }}
   {{- include "hono.metadata" $args | nindent 2 }}
@@ -12,6 +12,7 @@ spec:
     metadata:
       {{- include "hono.metadata" $args | nindent 6 }}
     spec:
+{{- if .Values.deviceRegistry.resetFiles }}
       initContainers:
       - name: copy-example-data
         image: busybox
@@ -26,9 +27,10 @@ spec:
           name: conf
         - mountPath: /var/lib/hono/device-registry
           name: registry
+{{- end }}
       containers:
       {{- include "hono.jaeger.agent" . | indent 6 }}
-      - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-service-device-registry:{{ .Values.honoImageTag }}
+      - image: {{ .Values.deviceRegistry.imageName }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-service-device-registry
         ports:

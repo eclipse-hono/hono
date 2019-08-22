@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       {{- include "hono.jaeger.agent" . | indent 6 }}
-      - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-service-device-connection:{{ .Values.honoImageTag }}
+      - image: {{ .Values.deviceConnectionService.imageName }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-service-device-connection
         ports:
