@@ -1,4 +1,4 @@
-{{- if .Values.dataGridDeployExample }}
+{{- if .Values.dataGridExample.enabled }}
 {{- $args := dict "dot" . "component" "data-grid" "name" "data-grid" -}}
 apiVersion: v1
 kind: List

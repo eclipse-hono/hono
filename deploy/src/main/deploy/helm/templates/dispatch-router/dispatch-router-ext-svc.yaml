@@ -4,7 +4,7 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "amqp-messaging-network-router" "name" "dispatch-router-ext" }}
   {{- include "hono.metadata" $args | nindent 2 }}
-  {{- with .Values.dispatchRouter.svc.annotations }}
+  {{- with .Values.amqpMessagingNetworkExample.dispatchRouter.svc.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -24,10 +24,10 @@ spec:
     {{- include "hono.matchLabels" $args | nindent 4 }}
 {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
   type: LoadBalancer
-{{ else }}
+{{- else }}
   type: NodePort
 {{- end }}
-{{ if .Values.dispatchRouter.svc.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.dispatchRouter.svc.loadBalancerIP }}
+{{- with .Values.amqpMessagingNetworkExample.dispatchRouter.svc.loadBalancerIP }}
+  loadBalancerIP: {{ . | quote }}
 {{- end }}
 {{- end }}

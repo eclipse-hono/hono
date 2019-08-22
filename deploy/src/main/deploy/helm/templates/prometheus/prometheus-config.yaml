@@ -16,7 +16,7 @@ data:
 
     scrape_configs:
     {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "service-auth") | nindent 4 }}
-    {{- if .Values.deviceRegistryDeployExample }}
+    {{- if .Values.deviceRegistryExample.enabled }}
       {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "service-device-registry") | nindent 4 }}
     {{- end }}
     {{- if .Values.deviceConnectionService.enabled }}

@@ -1,8 +1,8 @@
 {{- if .Values.adapters.coap.enabled }}
+{{- $args := dict "dot" . "component" "adapter-coap-vertx" "name" "adapter-coap-vertx" }}
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  {{- $args := dict "dot" . "component" "adapter-coap-vertx" "name" "adapter-coap-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   replicas: 1
@@ -45,9 +45,7 @@ spec:
               fieldPath: metadata.namespace
         {{- include "hono.jaeger.clientConf" $args | indent 8 }}
         volumeMounts:
-        - mountPath: /etc/hono
-          name: conf
-          readOnly: true
+        {{- include "hono.container.secretVolumeMounts" ( dict "name" $args.name "conf" .Values.adapters.coap ) | indent 8 }}
         resources:
           limits:
             memory: "256Mi"
@@ -64,7 +62,5 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 10
       volumes:
-      - name: conf
-        secret:
-          secretName: {{ .Release.Name }}-adapter-coap-vertx-conf
-{{ end }}
+      {{- include "hono.pod.secretVolumes" ( dict "releaseName" .Release.Name "name" $args.name "conf" .Values.adapters.coap ) | indent 6 }}
+{{- end }}

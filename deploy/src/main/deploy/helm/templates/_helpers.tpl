@@ -98,10 +98,10 @@ spec:
 
 {{/*
 Configuration for the health check server of service components.
-If the scope passed in is not nil, then it is used as the
-configuration for the health check server. Otherwise, a secure health check
-server will be configured to bind to all interfaces on the default port
-using the component's key and cert.
+If the scope passed in is not 'nil', then its value is
+used as the configuration for the health check server.
+Otherwise, a secure health check server will be configured to bind to all
+interfaces on the default port using the component's key and cert.
 */}}
 {{- define "hono.healthServerConfig" -}}
 healthCheck:
@@ -109,9 +109,9 @@ healthCheck:
   {{- toYaml . | nindent 2 }}
 {{- else }}
   port: ${vertx.health.port}
-  bindAddress: 0.0.0.0
-  keyPath: /etc/hono/key.pem
-  certPath: /etc/hono/cert.pem
+  bindAddress: "0.0.0.0"
+  keyPath: "/etc/hono/key.pem"
+  certPath: "/etc/hono/cert.pem"
 {{- end }}
 {{- end }}
 
@@ -121,9 +121,6 @@ Configuration for the service clients of protocol adapters.
 The scope passed in is expected to be a dict with keys
 - "dot": the root scope (".") and
 - "component": the name of the adapter
-
-The component name is used to construct the names of the key and cert
-PEM files by appending "-key.pem" and "-cert.pem" respectively.
 */}}
 {{- define "hono.serviceClientConfig" -}}
 {{- $adapter := default "adapter" .component -}}
@@ -154,7 +151,7 @@ command:
   {{- required ".Values.adapters.commandAndControlSpec MUST be set if example AQMP Messaging Network is disabled" .dot.Values.adapters.commandAndControlSpec | toYaml | nindent 2 }}
 {{- end }}
 tenant:
-{{- if .dot.Values.deviceRegistryDeployExample }}
+{{- if .dot.Values.deviceRegistryExample.enabled }}
   name: Hono {{ $adapter }}
   host: {{ .dot.Release.Name }}-service-device-registry
   port: 5671
@@ -165,7 +162,7 @@ tenant:
   {{- required ".Values.adapters.tenantSpec MUST be set if example Device Registry is disabled" .dot.Values.adapters.tenantSpec | toYaml | nindent 2 }}
 {{- end }}
 registration:
-{{- if .dot.Values.deviceRegistryDeployExample }}
+{{- if .dot.Values.deviceRegistryExample.enabled }}
   name: Hono {{ $adapter }}
   host: {{ .dot.Release.Name }}-service-device-registry
   port: 5671
@@ -176,7 +173,7 @@ registration:
   {{- required ".Values.adapters.deviceRegistrationSpec MUST be set if example Device Registry is disabled" .dot.Values.adapters.deviceRegistrationSpec | toYaml | nindent 2 }}
 {{- end }}
 credentials:
-{{- if .dot.Values.deviceRegistryDeployExample }}
+{{- if .dot.Values.deviceRegistryExample.enabled }}
   name: Hono {{ $adapter }}
   host: {{ .dot.Release.Name }}-service-device-registry
   port: 5671
@@ -188,13 +185,15 @@ credentials:
 {{- end }}
 deviceConnection:
 {{- if .dot.Values.adapters.deviceConnectionSpec }}
-  {{- .dot.Values.adapters.deviceConnectionSpec | toYaml | indent 2 }}
+  {{- range $key, $value := .dot.Values.adapters.deviceConnectionSpec }}
+  {{ $key }}: {{ $value }}
+  {{- end }}
 {{- else }}
   name: Hono {{ $adapter }}
   {{- if .dot.Values.deviceConnectionService.enabled }}
   host: {{ .dot.Release.Name }}-service-device-connection
   {{- else }}
-    {{- if .dot.Values.deviceRegistryDeployExample }}
+    {{- if .dot.Values.deviceRegistryExample.enabled }}
   host: {{ .dot.Release.Name }}-service-device-registry
     {{- else }}
       {{- required ".Values.deviceConnectionService.enabled MUST be set to true if example Device Registry is disabled and no other Device Connection service is configured" nil }}
@@ -250,7 +249,7 @@ The scope passed in is expected to be a dict with keys
 Adds a Jaeger Agent container to a template spec.
 */}}
 {{- define "hono.jaeger.agent" }}
-{{- $jaegerEnabled := or .Values.jaegerBackendDeployExample .Values.jaegerAgentConf }}
+{{- $jaegerEnabled := or .Values.jaegerBackendExample.enabled .Values.jaegerAgentConf }}
 {{- if $jaegerEnabled }}
 - name: jaeger-agent-sidecar
   image: {{ default "jaegertracing/jaeger-agent:1.13.1" .Values.jaegerAgentImage }}
@@ -270,7 +269,7 @@ Adds a Jaeger Agent container to a template spec.
       port: 14271
     initialDelaySeconds: 5
   env:
-  {{- if .Values.jaegerBackendDeployExample }}
+  {{- if .Values.jaegerBackendExample.enabled }}
   - name: REPORTER_TYPE
     value: "tchannel"
   - name: REPORTER_TCHANNEL_HOST_PORT
@@ -296,10 +295,50 @@ The scope passed in is expected to be a dict with keys
 {{- $agentHost := printf "%s-jaeger-agent" .dot.Release.Name }}
 - name: JAEGER_SERVICE_NAME
   value: {{ printf "%s-%s" .dot.Release.Name .name | quote }}
-{{- if .dot.Values.jaegerBackendDeployExample }}
+{{- if .dot.Values.jaegerBackendExample.enabled }}
 - name: JAEGER_SAMPLER_TYPE
   value: "const"
 - name: JAEGER_SAMPLER_PARAM
   value: "1"
+{{- end }}
+{{- end }}
+
+{{/*
+Adds volume mounts to a component's container.
+The scope passed in is expected to be a dict with keys
+- "conf": the component's configuration properties as defined in .Values
+- "name": the name of the component.
+*/}}
+{{- define "hono.container.secretVolumeMounts" }}
+- name: {{ printf "%s-conf" .name | quote }}
+  mountPath: "/etc/hono"
+  readOnly: true
+{{- with .conf.extraSecretMounts }}
+{{- range $name,$spec := . }}
+- name: {{ $name | quote }}
+  mountPath: {{ $spec.mountPath | quote }}
+  readOnly: true
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Adds volume declarations to a component's pod spec.
+The scope passed in is expected to be a dict with keys
+- "conf": the component's configuration properties as defined in .Values
+- "name": the name of the component
+- "releaseName": the .Release.Name
+*/}}
+{{- define "hono.pod.secretVolumes" }}
+{{- $volumeName := printf "%s-conf" .name }}
+- name: {{ $volumeName | quote }}
+  secret:
+    secretName: {{ printf "%s-%s" .releaseName $volumeName | quote }}
+{{- with .conf.extraSecretMounts }}
+{{- range $name,$spec := . }}
+- name: {{ $name | quote }}
+  secret:
+    secretName: {{ $spec.secretName | quote }}
+{{- end }}
 {{- end }}
 {{- end }}

@@ -1,4 +1,4 @@
-{{- if and .Values.deviceRegistryDeployExample ( eq .Values.platform "openshift" ) }}
+{{- if and .Values.deviceRegistryExample.enabled ( eq .Values.platform "openshift" ) }}
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:

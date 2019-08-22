@@ -1,10 +1,10 @@
-{{- if .Values.deviceRegistryDeployExample }}
+{{- if .Values.deviceRegistryExample.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry-ext" }}
   {{- include "hono.metadata" $args | nindent 2 }}
-  {{- with .Values.deviceRegistry.svc.annotations }}
+  {{- with .Values.deviceRegistryExample.svc.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
@@ -24,10 +24,10 @@ spec:
     {{- include "hono.matchLabels" $args | nindent 4 }}
 {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
   type: LoadBalancer
-{{ else }}
+{{- else }}
   type: NodePort
 {{- end }}
-{{ if .Values.deviceRegistry.svc.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.deviceRegistry.svc.loadBalancerIP }}
+{{- with .Values.deviceRegistryExample.svc.loadBalancerIP }}
+  loadBalancerIP: {{ . | quote }}
 {{- end }}
 {{- end }}

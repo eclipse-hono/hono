@@ -1,7 +1,7 @@
+{{- $args := dict "dot" . "component" "service-auth" "name" "service-auth" }}
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  {{- $args := dict "dot" . "component" "service-auth" "name" "service-auth" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   replicas: 1
@@ -42,9 +42,7 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         volumeMounts:
-        - mountPath: /etc/hono
-          name: conf
-          readOnly: true
+        {{- include "hono.container.secretVolumeMounts" ( dict "name" $args.name "conf" .Values.authServer ) | indent 8 }}
         resources:
           limits:
             memory: "196Mi"
@@ -61,6 +59,4 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 10
       volumes:
-      - name: conf
-        secret:
-          secretName: {{ .Release.Name }}-service-auth-conf
+      {{- include "hono.pod.secretVolumes" ( dict "releaseName" .Release.Name "name" $args.name "conf" .Values.authServer ) | indent 6 }}

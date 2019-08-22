@@ -1,4 +1,4 @@
-{{- if .Values.dataGridDeployExample }}
+{{- if .Values.dataGridExample.enabled }}
 {{- $args := dict "dot" . "component" "data-grid" "name" "data-grid-conf" -}}
 apiVersion: v1
 kind: ConfigMap
@@ -6,9 +6,6 @@ metadata:
   {{- include "hono.metadata" $args | nindent 2 }}
 data:
   hono-data-grid.xml: |
-  {{- if .Values.dataGridConfigFile }}
-    {{- .Files.Get .Values.dataGridConfigFile | indent 4 }}
-  {{- else }}
     <?xml version='1.0' encoding='UTF-8'?>
     
     <server xmlns="urn:jboss:domain:8.0">
@@ -552,5 +549,4 @@ data:
         </outbound-socket-binding>
       </socket-binding-group>
     </server>
-  {{- end }}
 {{- end }}

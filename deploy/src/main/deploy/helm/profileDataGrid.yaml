@@ -1,0 +1,5 @@
+dataGridExample:
+  enabled: true
+
+deviceConnectionService:
+  enabled: true

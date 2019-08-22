@@ -21,7 +21,7 @@ spec:
 {{- else }}
   type: NodePort
 {{- end }}
-{{ if .Values.deviceConnectionService.svc.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.deviceConnectionService.svc.loadBalancerIP }}
+{{- with .Values.deviceConnectionService.svc.loadBalancerIP }}
+  loadBalancerIP: {{ . | quote }}
 {{- end }}
 {{- end }}

@@ -1,4 +1,4 @@
-{{- if .Values.jaegerBackendDeployExample }}
+{{- if .Values.jaegerBackendExample.enabled }}
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -20,7 +20,7 @@ spec:
       - env:
         - name: MEMORY_MAX_TRACES
           value: "100000"
-        image: {{ default "jaegertracing/all-in-one:1.13.1" .Values.jaegerBackendAllInOneImage }}
+        image: {{ default "jaegertracing/all-in-one:1.13.1" .Values.jaegerBackendExample.allInOneImage }}
         name: jaeger
         ports:
         - containerPort: 5775

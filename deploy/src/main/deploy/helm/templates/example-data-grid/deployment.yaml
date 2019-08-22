@@ -1,4 +1,4 @@
-{{- if .Values.dataGridDeployExample }}
+{{- if .Values.dataGridExample.enabled }}
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -32,7 +32,7 @@ spec:
           value: hono
         - name: APP_PASS
           value: hono-secret
-        image: {{ default "jboss/infinispan-server:9.4.11.Final" .Values.dataGridServerImage | quote }}
+        image: {{ default "jboss/infinispan-server:9.4.11.Final" .Values.dataGridExample.imageName | quote }}
         imagePullPolicy: IfNotPresent
         name: hono-data-grid
         ports:

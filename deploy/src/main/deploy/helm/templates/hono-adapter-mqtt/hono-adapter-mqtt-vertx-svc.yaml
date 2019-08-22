@@ -23,9 +23,9 @@ spec:
     {{- include "hono.matchLabels" $args | nindent 4 }}
 {{- if and ( eq .Values.useLoadBalancer true ) ( ne .Values.platform "openshift" ) }}
   type: LoadBalancer
-{{ else }}
+{{- else }}
   type: NodePort
 {{- end }}
-{{ if .Values.adapters.mqtt.svc.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.adapters.mqtt.svc.loadBalancerIP }}
+{{- with .Values.adapters.mqtt.svc.loadBalancerIP }}
+  loadBalancerIP: {{ . | quote }}
 {{- end }}

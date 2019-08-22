@@ -45,9 +45,7 @@ spec:
               fieldPath: metadata.namespace
         {{- include "hono.jaeger.clientConf" $args | indent 8 }}
         volumeMounts:
-        - mountPath: /etc/hono
-          name: conf
-          readOnly: true
+        {{- include "hono.container.secretVolumeMounts" ( dict "name" $args.name "conf" .Values.adapters.lora ) | indent 8 }}
         resources:
           limits:
             memory: "256Mi"
@@ -64,7 +62,5 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 10
       volumes:
-      - name: conf
-        secret:
-          secretName: {{ .Release.Name }}-adapter-lora-vertx-conf
+      {{- include "hono.pod.secretVolumes" ( dict "releaseName" .Release.Name "name" $args.name "conf" .Values.adapters.lora ) | indent 6 }}
 {{- end }}

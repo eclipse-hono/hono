@@ -1,14 +1,14 @@
-{{- if .Values.deviceRegistryDeployExample }}
+{{- if .Values.deviceRegistryExample.enabled }}
+{{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry" }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   accessModes:
   - ReadWriteOnce
-  {{- if .Values.deviceRegistry.storageClass }}
-  storageClassName: {{ .Values.deviceRegistry.storageClass | quote }}
+  {{- with .Values.deviceRegistryExample.storageClass }}
+  storageClassName: {{ . | quote }}
   {{- end }}
   resources:
     requests:
