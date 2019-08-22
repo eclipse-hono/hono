@@ -98,10 +98,10 @@ spec:
 
 {{/*
 Configuration for the health check server of service components.
-If the scope passed in is not nil, then it is used as the
-configuration for the health check server. Otherwise, a secure health check
-server will be configured to bind to all interfaces on the default port
-using the component's key and cert.
+If the scope passed in is not 'nil', then its value is
+used as the configuration for the health check server.
+Otherwise, a secure health check server will be configured to bind to all
+interfaces on the default port using the component's key and cert.
 */}}
 {{- define "hono.healthServerConfig" -}}
 healthCheck:
@@ -109,9 +109,9 @@ healthCheck:
   {{- toYaml . | nindent 2 }}
 {{- else }}
   port: ${vertx.health.port}
-  bindAddress: 0.0.0.0
-  keyPath: /etc/hono/key.pem
-  certPath: /etc/hono/cert.pem
+  bindAddress: "0.0.0.0"
+  keyPath: "/etc/hono/key.pem"
+  certPath: "/etc/hono/cert.pem"
 {{- end }}
 {{- end }}
 
@@ -121,9 +121,6 @@ Configuration for the service clients of protocol adapters.
 The scope passed in is expected to be a dict with keys
 - "dot": the root scope (".") and
 - "component": the name of the adapter
-
-The component name is used to construct the names of the key and cert
-PEM files by appending "-key.pem" and "-cert.pem" respectively.
 */}}
 {{- define "hono.serviceClientConfig" -}}
 {{- $adapter := default "adapter" .component -}}
@@ -188,7 +185,9 @@ credentials:
 {{- end }}
 deviceConnection:
 {{- if .dot.Values.adapters.deviceConnectionSpec }}
-  {{- .dot.Values.adapters.deviceConnectionSpec | toYaml | indent 2 }}
+  {{- range $key, $value := .dot.Values.adapters.deviceConnectionSpec }}
+  {{ $key }}: {{ $value }}
+  {{- end }}
 {{- else }}
   name: Hono {{ $adapter }}
   {{- if .dot.Values.deviceConnectionService.enabled }}

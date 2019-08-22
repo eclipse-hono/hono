@@ -5,17 +5,31 @@
 # amqpMessagingNetworkDeployExample indicates whether the example AMQP Messaging Network
 # consisting of a single Dispatch Router and Artemis broker should be
 # deployed and used.
+# If this property is set to false, then the protocol adapters need to be
+# explicitly configured for connecting to an existing AMQP Messaging Network
+# using properties
+# - "adapters.amqpMessagingNetworkSpec"
+# - "adapters.commandAndControlSpec"
 amqpMessagingNetworkDeployExample: true
 # dispatchRouterImageName contains the name (including tag)
 # of the container image to use for the example AQMP Messaging Network
+# This property is only used if "amqpMessagingNetworkDeployExample" is set to true
 dispatchRouterImageName: ${dispatch-router.image.name}
 # artemisImageName contains the name (including tag) of the container
 # image to use for the example AMQP Messaging network
+# This property is only used if "amqpMessagingNetworkDeployExample" is set to true
 artemisImageName: ${artemis.image.name}
 
 
 # deviceRegistryDeployExample indicates whether the example Device Registry
 # should be deployed and used.
+# If this property is set to false, then the protocol adapters need to be
+# explicitly configured for connecting to the Tenant, Device Registration,
+# Credentials and Device Connection services using properties
+# - "adapters.tenantSpec"
+# - "adapters.deviceRegistrationSpec"
+# - "adapters.credentialsSpec"
+# - "adapters.deviceConnectionSpec"
 deviceRegistryDeployExample: true
 deviceRegistry:
   # Persistent volume claim storage class
@@ -27,6 +41,10 @@ deviceRegistry:
 
 # dataGridDeployExample indicates whether the example data grid
 # should be deployed and used.
+# The default value of this property is false which is consistent with
+# the default value (false) of the "deviceConnectionService.enabled" property,
+# resulting in the in-memory implementation of the Device Connection
+# service provided by the example device registry being used by default.
 dataGridDeployExample: false
 # dataGridServerImage contains the name (including tag)
 # of the container image to use for the example data grid.
@@ -90,43 +108,148 @@ platform: kubernetes
 # This property will be ignored when deploying to platform "openshift".
 useLoadBalancer: true
 
+# authServer contains configuration properties for the Auth Server component.
 authServer:
   signing:
     # tokenExpiration contains the number of seconds after which tokens issued
     # by the Auth server will expire.
     tokenExpiration: 3600
-  # Docker image repository
+  # imageName contains the name (including registry and tag)
+  # of the container image to use for the Auth Server
   imageName: ${docker.repository}/hono-service-auth:${project.version}
 
-# Configuration options for adapters.
+# Configuration properties for protocol adapters.
 adapters:
-  amqp:
-    # Docker image repository
-    imageName: ${docker.repository}/hono-adapter-amqp-vertx:${project.version}
+
+  # amqpMessagingNetworkSpec contains Hono client properties used by all protocol
+  # adapters for connecting to the AMQP Messaging Network to forward downstream messages to.
+  # This property MUST be set if "amqpMessagingNetworkDeployExample" is set to false.
+  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # for a description of supported properties.
   #amqpMessagingNetworkSpec:
+  #  host: my-amqp-host
+  #  port: 5671
+  #  trustStorePath: /etc/conf/amqp-trust-store.pem
+  #  credentialsPath: /etc/conf/amqp-credentials.properties
+
+  # commandAndControlSpec contains Hono client properties used by all protocol
+  # adapters for connecting to the AMQP Messaging Network which is used by applications
+  # to send commands to devices.
+  # This property MUST be set if "amqpMessagingNetworkDeployExample" is set to false.
+  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # for a description of supported properties.
   #commandAndControlSpec:
-  #credentialsSpec:
-  #deviceConnectionSpec:
-  #deviceRegistrationSpec:
+
+  # tenantSpec contains Hono client properties used by all protocol adapters for
+  # connecting to the Tenant service.
+  # This property MUST be set if "deviceRegistryDeployExample" is set to false.
+  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # for a description of supported properties.
   #tenantSpec:
+
+  # deviceRegistrationSpec contains Hono client properties used by all protocol adapters for
+  # connecting to the Device Registration service.
+  # This property MUST be set if "deviceRegistryDeployExample" is set to false.
+  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # for a description of supported properties.
+  #deviceRegistrationSpec:
+
+  # credentialsSpec contains Hono client properties used by all protocol adapters for
+  # connecting to the Credentials service.
+  # This property MUST be set if "deviceRegistryDeployExample" is set to false.
+  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # for a description of supported properties.
+  #credentialsSpec:
+
+  # deviceConnectionSpec contains Hono client properties used by all protocol adapters for
+  # connecting to the Device Connection service.
+  # This property MUST be set if "deviceRegistryDeployExample" and
+  # "deviceConnectionService.enabled" are both set to false.
+  # Please refer to https://www.eclipse.org/hono/docs/admin-guide/hono-client-configuration/
+  # for a description of supported properties.
+  #deviceConnectionSpec:
+
+  # tenantIdleTimeout contains the amount of time of inactivity after
+  # which protocol adapters close tenant specific links to services they
+  # interact with.
+  # Please refer to the Spring Boot documentation for the supported syntax:
+  # https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-conversion-duration
+  defaultTenantIdleTimeout: "1h"
+
+  amqp:
+    # imageName contains the name (including registry and tag)
+    # of the container image to use for the AMQP adapter
+    imageName: ${docker.repository}/hono-adapter-amqp-vertx:${project.version}
+
+    # extraSecretMounts describes additional secrets that should be mounted into the
+    # adapter's container filesystem. The files from the secret(s) can
+    # then be used in e.g. the service client specs.
+    # The secrets are expected to exist in the same Kubernetes namespace
+    # as the one that the adapter has been deployed to.
+    # If this property is set then the example key, cert, trust store and credentials
+    # will not be included in the adapters "config" secret, i.e. the extra
+    # secret(s) defiend here need to include these artifcats if the adapter should
+    # use TLS and/or credentials for authentication.
+    #extraSecretMounts:
+    #  passwords:
+    #    secretName: "my-passwords"
+    #    mountPath: "/etc/pwd"
+    #  other:
+    #    secretName: "other-stuff"
+    #    mountPath: "/etc/other"
+
+    # hono contains the adapter's configuration properties as defined in
+    # https://www.eclipse.org/hono/docs/admin-guide/amqp-adapter-config/
+    hono:
+      app:
+        # maxInstances defines the number of adapter Verticle instances to deploy
+        # to the vert.x runtime during start-up.
+        maxInstances: 1
+
+      # amqp contains configuration properties for the adapter's
+      # exposed AMQP endpoints.
+      # If not set, the adapter by default exposes the secure and insecure ports
+      # using an example key and certificate.
+      amqp:
+      #  insecurePortEnabled: true
+      #  insecurePortBindAddress: "0.0.0.0"
+
+      # healthCheck contains configuration properties for the adapter's
+      # health check server as defined by
+      # https://www.eclipse.org/hono/docs/admin-guide/monitoring-tracing-config/#health-check-server-configuration
+      # If not set, a TLS secured health check server is configured listening on
+      # all network interfaces on port ${vertx.health.port} using the adapter's
+      # example key and cert.'
+      healthCheck:
+      #  bindAddress: 0.0.0.0
+      #  port: 12000
+      #  keyPath: "/etc/config/key.pem"
+      #  certPath: "/etc/config/cert.pem"
 
   coap:
     # enabled indicates if Hono's (experimental) CoAP adapter should be deployed.
     # Note that this requires building the corresponding container image manually because
     # there is no official image available from Docker Hub (yet).
     enabled: false
-    # Docker image repository
+    # imageName contains the name (including registry and tag)
+    # of the container image to use for the CoAP adapter
     imageName: ${docker.repository}/hono-adapter-coap-vertx:${project.version}
+
   http:
-    # Docker image repository
+    # imageName contains the name (including registry and tag)
+    # of the container image to use for the HTTP adapter
     imageName: ${docker.repository}/hono-adapter-http-vertx:${project.version}
+
   mqtt:
-    # Docker image repository
+    # imageName contains the name (including registry and tag)
+    # of the container image to use for the MQTT adapter
     imageName: ${docker.repository}/hono-adapter-mqtt-vertx:${project.version}
+
   kura:
     # enabled indicates if Hono's (deprecated) Kura adapter should be deployed.
     enabled: false
-    # Docker image repository
+    # imageName contains the name (including registry and tag)
+    # of the container image to use for the Kura adapter
     imageName: ${docker.repository}/hono-adapter-kura:${project.version}
 
 deviceConnectionService:
@@ -134,9 +257,12 @@ deviceConnectionService:
   imageName: ${docker.repository}/hono-service-device-connection:${project.version}
 
   # enabled indicates if the data grid based Device Connection service implementation
-  # should be deployed and used. If set to false (the default), the example implementation
-  # that is part of the example Device Registry is used instead, if "deviceRegistryDeployExample"
-  # is set to true.
+  # should be deployed and used.
+  # If set to false (the default) and "deviceRegistryDeployExample" is set to true,
+  # the example implementation that is part of the example Device Registry is used.
+  # If set to false (the default) and "deviceRegistryDeployExample" is also set to false,
+  # then the "adapters.deviceConnectionSpec" is expected to contain the required
+  # Hono client config properties to connect to an already existing Device Connection service.
   enabled: false
 
   # remoteSpec contains properties for configuring the Infinispan Hotrod connection

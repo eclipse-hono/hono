@@ -137,7 +137,7 @@ The following command needs to be run first in order to forward the Grafana serv
 kubectl port-forward service/hono-grafana 3000 -n hono
 ~~~
 
-Then the dashboard can be opened by pointing a browser to http://localhost:3000 using credentials `admin:admin`.
+Then the dashboard can be opened by pointing your browser to `http://localhost:3000` using credentials `admin:admin`.
 
 ## Undeploying Hono
 
@@ -212,6 +212,129 @@ The newly built images can then be deployed using Helm:
 # in Hono working tree directory: hono/deploy
 helm install --dep-up --name hono --namespace hono target/deploy/helm/eclipse-hono/
 ~~~
+
+## Using a production grade Device Registry and AMQP Messaging Network
+
+The Helm chart by default deploys the example Device Registry that comes with Hono. The example registry provides implementations
+of the Tenant, Device Registration, Credentials and Device Connection APIs which can be used for example/demo purposes.
+
+The chart also deploys an example AMQP Messaging Network consisting of a single Apache Qpid Dispatch Router and a single
+Apache ActiveMQ Artemis broker.
+
+The protocol adapters are configured to connect to the example messaging network and registry by default.
+
+In a production environment, though, usage of the example registry and messaging network is strongly discouraged and more
+sophisticated (custom) implementations of the service APIs should be used.
+
+The Helm chart supports configuration of the protocol adapters to connect to other service implementations than the example registry
+and messaging network as described in the following sections.
+
+### Integrating with an existing AMQP Messaging Network
+
+The Helm chart can be configured to use an existing AMQP Messaging Network implementation instead of the example implementation.
+In order to do so, the protocol adapters need to be configured with information about the AMQP Messaging Network's endpoint address
+and connection parameters.
+
+The easiest way to set these properties is by means of putting them into a YAML file with content like this:
+
+```
+# do not deploy example AMQP Messaging Network
+amqpMessagingNetworkDeployExample: false
+
+adapters:
+
+  # mount (existing) Kubernetes secret which contains
+  # credentials for connecting to AMQP network
+  extraSecretMounts:
+  - amqpNetwork:
+      secretName: "my-secret"
+      mountPath: "/etc/custom"
+
+  # provide connection params
+  # assuming that "my-secret" contains an "amqp-credenials.properties" file
+  amqpMessagingNetworkSpec:
+    host: my-custom.amqp-network.org
+    port: 5672
+    credentialsPath: "/etc/custom/amqp-credentials.properties"
+  commandAndControlSpec:
+    host: my-custom.amqp-network.org
+    port: 5672
+    credentialsPath: "/etc/custom/amqp-credentials.properties"
+```
+
+Both the *amqpMessagingNetworkSpec* and the *commandAndControlSpec* need to contain Hono client configuration properties
+as described in the [client admin guide]({{< relref "/admin-guide/hono-client-configuration" >}}).
+Make sure to adapt/add properties as required by the AMQP Messaging Network.
+
+Note that *my-secret* is expected to already exist in the namespace that Hono gets deployed to, i.e. the Helm chart will **not**
+create this secret.
+
+Assuming that the file is named `customAmqpNetwork.yaml`, the values can then be passed in to the `helm install` command
+as follows:
+
+```sh
+# in directory: eclipse-hono-$VERSION/deploy/
+helm install --dep-up --name hono --namespace hono -f customAmqpNetwork.yaml helm/
+```
+
+### Integrating with a custom Device Registry
+
+The Helm chart can be configured to use existing implementations of the Tenant, Device Registration, Credentials and Device Connection APIs
+instead of the example device registry.
+In order to do so, the protocol adapters need to be configured with information about the service endpoints and connection parameters.
+
+The easiest way to set these properties is by means of putting them into a YAML file with the following content:
+
+```
+# do not deploy example Device Registry
+deviceRegistryDeployExample: false
+
+adapters:
+
+  # mount (existing) Kubernetes secret which contains
+  # credentials for connecting to services
+  extraSecretMounts:
+  - customRegistry:
+      secretName: "my-secret"
+      mountPath: "/etc/custom"
+
+  # provide connection params
+  # assuming that "my-secret" contains credentials files
+  tenantSpec:
+    host: my-custom.registry.org
+    port: 5672
+    credentialsPath: "/etc/custom/tenant-service-credentials.properties"
+  deviceRegistrationSpec:
+    host: my-custom.registry.org
+    port: 5672
+    credentialsPath: "/etc/custom/registration-service-credentials.properties"
+  credentialsSpec:
+    host: my-custom.registry.org
+    port: 5672
+    credentialsPath: "/etc/custom/credentials-service-credentials.properties"
+  deviceConnectionSpec:
+    host: my-custom.registry.org
+    port: 5672
+    credentialsPath: "/etc/custom/device-connection-service-credentials.properties"
+```
+
+All of the *specs* need to contain Hono client configuration properties
+as described in the [client admin guide]({{< relref "/admin-guide/hono-client-configuration" >}}).
+Make sure to adapt/add properties as required by the custom service implementations.
+The information cotnained in the *specs* will then be used by all protocol adapters that get deployed.
+As a consequence, it is not possible to use credentials for the services which are specific to the
+individual protocol adapters.
+
+Note that *my-secret* is expected to already exist in the namespace that Hono gets deployed to, i.e. the Helm chart will **not**
+create this secret.
+
+Assuming that the file is named `customRegistry.yaml`, the values can then be passed in to the `helm install` command
+as follows:
+
+```sh
+# in directory: eclipse-hono-$VERSION/deploy/
+helm install --dep-up --name hono --namespace hono -f customRegistry.yaml helm/
+```
 
 ## Using the Device Connection Service
 

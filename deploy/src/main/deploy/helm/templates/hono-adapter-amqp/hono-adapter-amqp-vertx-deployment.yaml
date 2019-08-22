@@ -44,9 +44,16 @@ spec:
               fieldPath: metadata.namespace
         {{- include "hono.jaeger.clientConf" $args | indent 8 }}
         volumeMounts:
-        - mountPath: /etc/hono
-          name: conf
+        - name: "adapter-amqp-vertx-conf"
+          mountPath: "/etc/hono"
           readOnly: true
+        {{- with .Values.adapters.amqp.extraSecretMounts }}
+        {{- range $name,$spec := . }}
+        - name: {{ $name | quote }}
+          mountPath: {{ $spec.mountPath | quote }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
         resources:
           limits:
             memory: "256Mi"
@@ -63,6 +70,13 @@ spec:
             scheme: HTTPS
           initialDelaySeconds: 10
       volumes:
-      - name: conf
+      - name: "adapter-amqp-vertx-conf"
         secret:
           secretName: {{ .Release.Name }}-adapter-amqp-vertx-conf
+      {{- with .Values.adapters.amqp.extraSecretMounts }}
+      {{- range $name,$spec := . }}
+      - name: {{ $name | quote }}
+        secret:
+          secretName: {{ $spec.secretName | quote }}
+      {{- end }}
+      {{- end }}
