@@ -13,7 +13,7 @@ spec:
       {{- include "hono.metadata" $args | nindent 6 }}
     spec:
       containers:
-      - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-service-auth:{{ .Values.honoImageTag }}
+      - image: {{ .Values.authServer.imageName }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-service-auth
         ports:

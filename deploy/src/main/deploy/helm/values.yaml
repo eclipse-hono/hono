@@ -17,6 +17,12 @@ artemisImageName: ${artemis.image.name}
 # deviceRegistryDeployExample indicates whether the example Device Registry
 # should be deployed and used.
 deviceRegistryDeployExample: true
+deviceRegistry:
+  # Persistent volume claim storage class
+  storageClass: default
+  # Set to false to not override registry files with example content
+  resetFiles: true
+  imageName: ${docker.repository}/hono-service-device-registry:${project.version}
 
 
 # dataGridDeployExample indicates whether the example data grid
@@ -58,19 +64,6 @@ jaegerAgentConf:
 #  REPORTER_TCHANNEL_HOST_PORT: my-jaeger-collector:14267
 #  REPORTER_TCHANNEL_DISCOVERY_MIN_PEERS: 1
 
-
-# honoContainerRegistry contains the host name of the container registry
-# to pull Hono images from.
-# This can be set to e.g. a private container registry where
-# snapshot images have been pushed to.
-# By default we pull from Docker Hub.
-honoContainerRegistry: index.docker.io
-
-# honoImageTag contains the image tag to use when pulling Hono container images.
-# The default value is the chart's app version. It may be overridden in
-# order to pull custom built images from a (private) container registry.
-honoImageTag: ${project.version}
-
 # defaultJavaOptions contains options to pass to the JVM when starting
 # up Hono's containers
 defaultJavaOptions: ${default-java-options}
@@ -102,10 +95,14 @@ authServer:
     # tokenExpiration contains the number of seconds after which tokens issued
     # by the Auth server will expire.
     tokenExpiration: 3600
+  # Docker image repository
+  imageName: ${docker.repository}/hono-service-auth:${project.version}
 
 # Configuration options for adapters.
 adapters:
-
+  amqp:
+    # Docker image repository
+    imageName: ${docker.repository}/hono-adapter-amqp-vertx:${project.version}
   #amqpMessagingNetworkSpec:
   #commandAndControlSpec:
   #credentialsSpec:
@@ -118,15 +115,27 @@ adapters:
     # Note that this requires building the corresponding container image manually because
     # there is no official image available from Docker Hub (yet).
     enabled: false
+    # Docker image repository
+    imageName: ${docker.repository}/hono-adapter-coap-vertx:${project.version}
+  http:
+    # Docker image repository
+    imageName: ${docker.repository}/hono-adapter-http-vertx:${project.version}
+  mqtt:
+    # Docker image repository
+    imageName: ${docker.repository}/hono-adapter-mqtt-vertx:${project.version}
   kura:
     # enabled indicates if Hono's (deprecated) Kura adapter should be deployed.
     enabled: false
+    # Docker image repository
+    imageName: ${docker.repository}/hono-adapter-kura:${project.version}
   # Configures a timeout for inactive sender links.
   # Please refer to the Spring Boot documentation for the supported syntax:
   # https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-conversion-duration
   inactiveLinkTimeout: 1h
 
 deviceConnectionService:
+  # Docker image repository
+  imageName: ${docker.repository}/hono-service-device-connection:${project.version}
 
   # enabled indicates if the data grid based Device Connection service implementation
   # should be deployed and used. If set to false (the default), the example implementation

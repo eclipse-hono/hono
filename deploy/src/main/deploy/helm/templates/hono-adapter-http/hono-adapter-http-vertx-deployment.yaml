@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       {{- include "hono.jaeger.agent" . | indent 6 }}
-      - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-adapter-http-vertx:{{ .Values.honoImageTag }}
+      - image: {{ .Values.adapters.http.imageName }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-http-vertx
         ports:

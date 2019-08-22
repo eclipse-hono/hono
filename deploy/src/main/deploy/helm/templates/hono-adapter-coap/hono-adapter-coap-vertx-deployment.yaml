@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       {{- include "hono.jaeger.agent" . | indent 6 }}
-      - image: {{ .Values.honoContainerRegistry }}/eclipse/hono-adapter-coap-vertx:{{ .Values.honoImageTag }}
+      - image: {{ .Values.adapters.coap.imageName }}
         imagePullPolicy: IfNotPresent
         name: eclipse-hono-adapter-coap-vertx
         ports:
