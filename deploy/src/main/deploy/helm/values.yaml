@@ -19,7 +19,7 @@ artemisImageName: ${artemis.image.name}
 deviceRegistryDeployExample: true
 deviceRegistry:
   # Persistent volume claim storage class
-  storageClass: default
+  #storageClass:
   # Set to false to not override registry files with example content
   resetFiles: true
   imageName: ${docker.repository}/hono-service-device-registry:${project.version}
