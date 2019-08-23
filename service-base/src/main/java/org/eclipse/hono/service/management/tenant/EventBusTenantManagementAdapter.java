@@ -47,10 +47,8 @@ import io.vertx.core.json.JsonObject;
  * In particular, this base class provides support for receiving service invocation request messages
  * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
  * in the message.
- *
- * @param <T> The type of configuration properties this service requires.
  */
-public abstract class EventBusTenantManagementAdapter<T> extends EventBusService {
+public abstract class EventBusTenantManagementAdapter extends EventBusService {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";
