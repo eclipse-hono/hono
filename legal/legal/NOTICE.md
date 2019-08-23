@@ -59,6 +59,19 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=com/github/ben-manes/caffeine/caffeine/${caffeine.version}/caffeine-${caffeine.version}-sources.jar).
 
+### Infinispan Hotrod Client ${infinispan.version}
+
+This product includes software developed by the [Infinispan project](https://infinispan.org).
+
+Your use of *Infinispan Hotrod Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from Maven Central:
+
+* [infinispan-client-hotrod](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-client-hotrod/${infinispan.version}/infinispan-client-hotrod-${infinispan.version}-sources.jar).
+* [infinispan-commons](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-commons/${infinispan.version}/infinispan-commons-${infinispan.version}-sources.jar).
+
 ### Jackson ${jackson.version}
 
 This product includes software developed by [FasterXML, LLC](http://fasterxml.com/).
@@ -68,6 +81,36 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.fasterxml.jackson.core%22%20AND%20v%3A%22${jackson.version}%22).
+
+### Java Transaction API 1.2
+
+This product includes software developed by Oracle and its affiliates.
+
+The Hono project elects to include the *Java Transaction API* in this distribution under the CDDL 1.0 license.
+Your use of the *Java Transaction API* is thus subject to the terms and conditions of the COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0.
+A copy of the license is contained in the file [CDDL-1.0.txt](CDDL-1.0.txt).
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/jboss/spec/javax/transaction/jboss-transaction-api_1.2_spec/1.1.1.Final/jboss-transaction-api_1.2_spec-1.1.1.Final-sources.jar).
+
+### JBoss Logging 3.3.2.Final
+
+This product includes software developed by the [JBoss Logging project](https://github.com/jboss-logging).
+
+Your use of *JBoss Logging* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/jboss/logging/jboss-logging/3.3.2.Final/jboss-logging-3.3.2.Final-sources.jar).
+
+### JBoss Marshalling 2.0.6.Final
+
+This product includes software developed by the [JBoss Remoting project](https://github.com/jboss-remoting).
+
+Your use of *JBoss Marshalling* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/jboss/marshalling/jboss-marshalling-osgi/2.0.6.Final/jboss-marshalling-osgi-2.0.6.Final-sources.jar).
 
 ### JCL-over-SLF4J ${slf4j.version}
 

@@ -4,7 +4,7 @@
 
 Please visit the Netty web site for more information:
 
-  * http://netty.io/
+  * https://netty.io/
 
 Copyright 2014 The Netty Project
 
@@ -42,7 +42,7 @@ Base64 Encoder and Decoder, which can be obtained at:
   * HOMEPAGE:
     * http://iharder.sourceforge.net/current/java/base64/
 
-This product contains a modified portion of 'Webbit', an event based  
+This product contains a modified portion of 'Webbit', an event based
 WebSocket and HTTP server, which can be obtained at:
 
   * LICENSE:
@@ -61,6 +61,8 @@ facade for Java, which can be obtained at:
 This product contains a modified portion of 'Apache Harmony', an open source
 Java SE, which can be obtained at:
 
+  * NOTICE:
+    * license/NOTICE.harmony.txt
   * LICENSE:
     * license/LICENSE.harmony.txt (Apache License 2.0)
   * HOMEPAGE:
@@ -160,9 +162,9 @@ This product optionally depends on 'JBoss Marshalling', an alternative Java
 serialization API, which can be obtained at:
 
   * LICENSE:
-    * license/LICENSE.jboss-marshalling.txt (GNU LGPL 2.1)
+    * license/LICENSE.jboss-marshalling.txt (Apache License 2.0)
   * HOMEPAGE:
-    * http://www.jboss.org/jbossmarshalling
+    * https://github.com/jboss-remoting/jboss-marshalling
 
 This product optionally depends on 'Caliper', Google's micro-
 benchmarking framework, which can be obtained at:
@@ -203,6 +205,22 @@ the HTTP/2 HPACK algorithm written by Twitter. It can be obtained at:
     * license/LICENSE.hpack.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://github.com/twitter/hpack
+    
+This product contains a modified version of 'HPACK', a Java implementation of
+the HTTP/2 HPACK algorithm written by Cory Benfield. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.hyper-hpack.txt (MIT License)
+  * HOMEPAGE:
+    * https://github.com/python-hyper/hpack/
+
+This product contains a modified version of 'HPACK', a Java implementation of
+the HTTP/2 HPACK algorithm written by Tatsuhiro Tsujikawa. It can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.nghttp2-hpack.txt (MIT License)
+  * HOMEPAGE:
+    * https://github.com/nghttp2/nghttp2/
 
 This product contains a modified portion of 'Apache Commons Lang', a Java library
 provides utilities for the java.lang API, which can be obtained at:
@@ -211,3 +229,11 @@ provides utilities for the java.lang API, which can be obtained at:
     * license/LICENSE.commons-lang.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://commons.apache.org/proper/commons-lang/
+
+
+This product contains the Maven wrapper scripts from 'Maven Wrapper', that provides an easy way to ensure a user has everything necessary to run the Maven build.
+
+  * LICENSE:
+    * license/LICENSE.mvn-wrapper.txt (Apache License 2.0)
+  * HOMEPAGE:
+    * https://github.com/takari/maven-wrapper
