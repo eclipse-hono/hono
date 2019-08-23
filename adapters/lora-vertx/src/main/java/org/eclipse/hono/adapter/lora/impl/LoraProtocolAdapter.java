@@ -92,8 +92,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     private static final String TAG_LORA_PROVIDER = "lora_provider";
     private static final String JSON_MISSING_REQUIRED_FIELDS = "JSON Body does not contain required fields";
     private static final String INVALID_PAYLOAD = "Invalid payload";
-    private static final String FIELD_BINARY_PAYLOAD = "payload";
-    private static final String FIELD_ORIG_UPLINK_MESSAGE = "orig-message";
 
     private final List<LoraProvider> loraProviders = new ArrayList<>();
 
@@ -159,6 +157,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
         MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
