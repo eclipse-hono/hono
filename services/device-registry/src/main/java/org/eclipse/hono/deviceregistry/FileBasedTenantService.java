@@ -33,7 +33,6 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.service.management.tenant.ResourceLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
@@ -510,7 +509,6 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 .ifPresent(tenant::setAdapters);
 
         Optional.ofNullable(tenantObject.getResourceLimits())
-                .map(json -> json.mapTo(ResourceLimits.class))
                 .ifPresent(tenant::setResourceLimits);
 
         Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class))
