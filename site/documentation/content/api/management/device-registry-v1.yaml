@@ -526,8 +526,19 @@ components:
                type: integer
                default: -1
                description: The maximum number of concurrent connections allowed
-                            from devices of this tenant. The default value -1
-                            indicates that no limit is set.
+                            from devices of this tenant.
+                            A value of -1 (the default) indicates that no limit is set.
+            "max-ttl":
+               type: integer
+               default: -1
+               description: The maximum time-to-live (in seconds) to use for events published by
+                            devices of this tenant. Any default TTL value specified
+                            at either the tenant or device level will be limited to
+                            the max value specified here.
+                            If this property is set to a value other than -1 and no
+                            default TTL is specified for a device, the max value will
+                            be used for events published by the device.
+                            A value of -1 (the default) indicates that no limit is set.
             "data-volume":
                $ref: '#/components/schemas/DataVolume'
             "ext":
@@ -591,7 +602,8 @@ components:
                type: integer
                default: -1
                description: The maximum number of bytes to be allowed for a tenant for the
-                            defined period. The default value -1 indicates that no limit is set.
+                            defined period.
+                            A value of -1 (the default) indicates that no limit is set.
             "period":
                $ref: '#/components/schemas/Period'
 
@@ -604,12 +616,12 @@ components:
             "mode":
                type: string
                description: The mode of the data usage caluclation. The supported modes by
-                            the default resource limit checks implementation are `days`
-                            and `monthly`.
+                            the default resource limit checks implementation are "days"
+                            and "monthly".
             "no-of-days":
                type: integer
                description: The number of days for which the data usage is to be calculated
-                            provided the mode is set to `days`.
+                            if mode is set to "days". Otherwise, this property is ignored.
                
 # Devices schema
 
@@ -739,7 +751,7 @@ components:
               properties:
                  "hash-function":
                     type: string
-                    example: sha-512
+                    example: bcrypt
                     description: The name of the hash function used to create the password hash (defined in `pwd-hash` property).
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.

@@ -52,6 +52,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -342,7 +343,9 @@ public class AbstractProtocolAdapterBaseTest {
         final JsonObject assertion = newRegistrationAssertionResult();
         assertion.put(
                 RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
-                new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30).put("custom-device", true));
+                new JsonObject()
+                .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30)
+                .put("custom-device", true));
 
         adapter.addProperties(message, target, null, tenant, assertion, null);
 
@@ -353,6 +356,45 @@ public class AbstractProtocolAdapterBaseTest {
                 MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-device", Boolean.class),
                 is(Boolean.TRUE));
         assertThat(message.getTtl(), is(30L));
+    }
+
+    /**
+     * Verifies that the TTL for a downstream event is limited by the <em>max-ttl</em> specified for
+     * a tenant.
+     */
+    @Test
+    public void testAddPropertiesLimitsTtlToMaxValue() {
+
+        final Message message = ProtonHelper.message();
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 15));
+        final JsonObject assertion = newRegistrationAssertionResult();
+        assertion.put(
+                RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
+                new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30));
+
+        adapter.addProperties(message, target, null, tenant, assertion, null);
+
+        assertThat(message.getTtl(), is(15L));
+    }
+
+    /**
+     * Verifies that the TTL for a downstream event is set to the <em>max-ttl</em> specified for
+     * a tenant, if no default is set explicitly.
+     */
+    @Test
+    public void testAddPropertiesUsesMaxTtlByDefault() {
+
+        final Message message = ProtonHelper.message();
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 15));
+        final JsonObject assertion = newRegistrationAssertionResult();
+
+        adapter.addProperties(message, target, null, tenant, assertion, null);
+
+        assertThat(message.getTtl(), is(15L));
     }
 
     /**

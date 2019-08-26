@@ -20,15 +20,6 @@ package org.eclipse.hono.util;
 public final class TenantConstants extends RequestResponseApiConstants {
 
     /**
-     * The default value for the maximum number of bytes to be allowed for a tenant is set to -1, which implies no
-     * limit.
-     */
-    public static final long DEFAULT_MAX_BYTES = -1;
-    /**
-     * The default value for the maximum number of connections to be allowed is -1, which implies no limit.
-     */
-    public static final int DEFAULT_MAX_CONNECTIONS = -1;    
-    /**
      * The default number of seconds that a protocol adapter should wait for
      * an upstream command.
      */
@@ -37,6 +28,19 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * The default message size is set to 0, which implies no minimum size is defined.
      */
     public static final int DEFAULT_MINIMUM_MESSAGE_SIZE = 0;
+
+    /**
+     * The value indicating an <em>unlimited</em> number of bytes to be allowed for a tenant.
+     */
+    public static final long UNLIMITED_BYTES = -1;
+    /**
+     * The value indicating an <em>unlimited</em> number of connections to be allowed for a tenant.
+     */
+    public static final int UNLIMITED_CONNECTIONS = -1;
+    /**
+     * The value indicating <em>unlimited</em> time-to-live for downstream events.
+     */
+    public static final long UNLIMITED_TTL = -1;
 
     /**
      * The name of the property that contains configuration options for specific
@@ -69,10 +73,15 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_MAX_CONNECTIONS = "max-connections";    
     /**
-     * The name of the property that contains the maximum <em>time til disconnect</em> that protocol
+     * The name of the property that contains the maximum <em>time til disconnect</em> (seconds) that protocol
      * adapters should use for a tenant.
      */
     public static final String FIELD_MAX_TTD = "max-ttd";
+    /**
+     * The name of the property that contains the maximum <em>time to live</em> (seconds) for
+     * downstream events that protocol adapters should use for a tenant.
+     */
+    public static final String FIELD_MAX_TTL = "max-ttl";
     /**
      * The name of the property that contains the algorithm used for a public key.
      */

@@ -295,7 +295,7 @@ public class TenantClientImplTest {
         verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertNull(MessageHelper.getTenantId(sentMessage));
-        assertThat(sentMessage.getMessageId().toString(), is(notNullValue()));
+        assertThat(sentMessage.getMessageId(), is(notNullValue()));
         assertThat(sentMessage.getSubject(), is(TenantConstants.TenantAction.get.toString()));
         assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
     }

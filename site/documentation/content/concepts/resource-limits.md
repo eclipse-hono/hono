@@ -19,3 +19,4 @@ The MQTT and AMQP protocol adapters keep the connections longer opened than thei
 Hono supports limiting the number of messages that devices and north bound applications of a tenant can publish to Hono during a given time interval. Before accepting any telemetry or event or command messages from devices or north bound applications, it is checked by the protocol adapters that if the message limit is exceeded or not. The incoming message is discarded if the limit is exceeded. 
 
 The default prometheus based implementation uses data volume as the factor to limit the messages. The data volume already consumed by a tenant over the given time interval is compared with the configured message limit before accepting any messages.
+

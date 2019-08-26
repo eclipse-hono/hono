@@ -79,6 +79,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         final ResourceLimits resourceLimits = new ResourceLimits()
                 .setMaxConnections(100000)
+                .setMaxTtl(30L)
                 .setDataVolume(new DataVolume()
                         .setMaxBytes(2147483648L)
                         .setEffectiveSince(Instant.parse("2019-07-27T14:30:00Z"))
@@ -107,6 +108,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                 .setDefaults(defaults)
                 .setResourceLimits(new JsonObject()
                         .put("max-connections", 100000)
+                        .put("max-ttl", 300L)
                         .put("data-volume", new JsonObject()
                                 .put("max-bytes", 2147483648L)
                                 .put("effective-since", "2019-07-27T14:30:00Z")
