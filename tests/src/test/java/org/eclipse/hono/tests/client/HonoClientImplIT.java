@@ -12,26 +12,29 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tests.IntegrationTestApplicationClientFactory;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Test cases verifying the behavior of {@code HonoClient}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class HonoClientImplIT {
 
     private static Vertx vertx;
@@ -41,7 +44,7 @@ public class HonoClientImplIT {
     /**
      * Sets up vert.x.
      */
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         vertx = Vertx.vertx();
     }
@@ -53,27 +56,51 @@ public class HonoClientImplIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectFailsWithClientErrorForNoSASLMechanismException(final TestContext ctx) {
+    public void testConnectFailsWithClientErrorForNoSASLMechanismException(final VertxTestContext ctx) {
 
         // GIVEN a client that is configured with no username and password
         final ClientConfigProperties downstreamProps = new ClientConfigProperties();
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
-        downstreamProps.setFlowLatency(200);
         downstreamProps.setReconnectAttempts(-1);
 
-        final Async async = ctx.async();
         clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
-        clientFactory.connect().setHandler(res -> {
+        clientFactory.connect().setHandler(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
-            ctx.assertTrue(res.failed());
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ServiceInvocationException.extractStatusCode(res.cause()));
-            ctx.assertEquals("no suitable SASL mechanism found for authentication with server", res.cause().getMessage());
-            async.complete();
-        });
-        async.await();
+            ctx.verify(() -> {
+                assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+            });
+            ctx.completeNow();
+        }));
     }
 
+    /**
+     * Verifies that a connection attempt where the TLS handshake cannot be finished successfully fails
+     * immediately with a ClientErrorException with status code 400.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testConnectFailsWithClientErrorIfTlsHandshakeFails(final VertxTestContext ctx) {
+
+        // GIVEN a client that is configured to try to connect using TLS to a port that does not support TLS
+        final ClientConfigProperties downstreamProps = new ClientConfigProperties();
+        downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
+        downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
+        downstreamProps.setTlsEnabled(true);
+        downstreamProps.setReconnectAttempts(-1);
+
+        clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
+        // WHEN the client tries to connect
+        clientFactory.connect().setHandler(ctx.failing(t -> {
+            // THEN the connection attempt fails due to lack of authorization
+            ctx.verify(() -> {
+                assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+            });
+            ctx.completeNow();
+        }));
+    }
 }
 

@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.net.ssl.SSLException;
 import javax.security.sasl.AuthenticationException;
 
 import org.apache.qpid.proton.amqp.Symbol;
@@ -521,7 +522,8 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private boolean isTerminalConnectionError(final Throwable connectionFailureCause) {
 
-        return connectionFailureCause instanceof AuthenticationException ||
+        return connectionFailureCause instanceof SSLException ||
+                connectionFailureCause instanceof AuthenticationException ||
                 connectionFailureCause instanceof MechanismMismatchException ||
                 (connectionFailureCause instanceof SaslSystemException && ((SaslSystemException) connectionFailureCause).isPermanent());
     }
@@ -541,6 +543,11 @@ public class HonoConnectionImpl implements HonoConnection {
         } else if (connectionFailureCause instanceof MechanismMismatchException) {
             connectionHandler.handle(Future.failedFuture(
                     new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "no suitable SASL mechanism found for authentication with server")));
+        } else if (connectionFailureCause instanceof SSLException) {
+            connectionHandler.handle(Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "TLS handshake with server failed: " + connectionFailureCause.getMessage(),
+                            connectionFailureCause)));
         } else {
             connectionHandler.handle(Future.failedFuture(
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",
