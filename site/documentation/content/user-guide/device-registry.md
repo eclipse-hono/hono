@@ -8,7 +8,7 @@ The Device Registry component provides exemplary implementations of Hono's [Tena
 <!--more-->
 As such it exposes AMQP 1.0 based endpoints for retrieving the relevant information and persists data in the local filesystem. 
 
-In addition, the Device Registry also exposes HTTP resources for managing the contents of the registry according to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1.yaml).
+In addition, the Device Registry also exposes HTTP resources for managing the contents of the registry according to the [Device Registry HTTP API]({{< relref "/api/management" >}}).
 
 {{% warning %}}
 The Device Registry is not intended to be used in production environments. In particular, access to the HTTP resources described below is not restricted to authorized clients only.
@@ -19,7 +19,7 @@ The resources have been designed to provide convenient access to the registry's 
 ## Managing Tenants
 
 The following sections describe the resources representing the operations of the Tenant API and how they can be used to manage tenants.
-Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1.yaml) for the specific elements that are explained in detail there.
+Please refer to the [Device Registry HTTP API]({{< relref "/api/management" >}}) for the specific elements that are explained in detail there.
 
 ### Add a Tenant
 
@@ -28,7 +28,7 @@ Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1
 * Request Headers:
   * (required) `Content-Type`: `application/json` (no other type supported)
 * Request Body:
-  * (required) A JSON object as specified by [Tenant schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification.
+  * (required) A JSON object as specified by [Tenant schema]({{< relref "/api/management" >}}) of the HTTP API specification.
 * Status Codes:
   * 201 (Created): Tenant has been added successfully under the resource indicated by `Location` header.
   * 400 (Bad Request): The tenant has not been created because the request was malformed, e .g. because the payload was malformed. The response body may contain hints regarding the cause of the problem.
@@ -73,7 +73,7 @@ Add a tenant that can only use the MQTT adapter:
 * URI: `/v1/tenants/${tenantId}`
 * Method: `GET`
 * Status Codes:
-  * 200 (OK): A tenant with the given identifier has been found. The response body contains the tenant data as specified by [Tenant schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification.
+  * 200 (OK): A tenant with the given identifier has been found. The response body contains the tenant data as specified by [Tenant schema]({{< relref "/api/management" >}}) of the HTTP API specification.
   * 404 (Not Found): No tenant with the given identifier is registered.
 
 **Example**
@@ -101,7 +101,7 @@ The following command retrieves the details for the tenant `tenantMqttAdapter`:
 * Request Headers:
   * (required) `Content-Type`: `application/json` (no other type supported)
 * Request Body:
-  * (required) A JSON object as specified by [Tenant schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification.
+  * (required) A JSON object as specified by [Tenant schema]({{< relref "/api/management" >}}) of the HTTP API specification.
 * Status Codes:
   * 204 (No Content): The tenant has been updated successfully.
   * 400 (Bad Request): The tenant has not been updated because the request was malformed, e .g. because the payload was malformed. The response body may contain hints regarding the cause of the problem.
@@ -143,7 +143,7 @@ The following command disables the MQTT adapter for devices that belong to the t
 ## Managing Device Registration Information
 
 The following sections describe the resources representing the operations of the [Device Registration API]({{< relref "/api/device-registration" >}}) and how they can be used to manage device registration information.
-Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1.yaml) for the specific elements that are explained in detail there.
+Please refer to the [Device Registry HTTP API]({{< relref "/api/management" >}}) for the specific elements that are explained in detail there.
 
 ### Register Device
 
@@ -152,7 +152,7 @@ Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1
 * Headers:
   * (required) `Content-Type`: `application/json`
 * Request Body:
-  * (required) A JSON object as specified by [Device schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification.
+  * (required) A JSON object as specified by [Device schema]({{< relref "/api/management" >}}) of the HTTP API specification.
 * Status Codes:
   * 201 (Created): Device has been registered successfully under resource indicated by `Location` header.
   * 400 (Bad Request): Device has not been registered because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
@@ -183,7 +183,7 @@ like this:
 * URI: `/v1/devices/${tenantId}/${deviceId}`
 * Method: `GET`
 * Status Codes:
-  * 200 (OK): A device with the given identifier has been found. The response body contains the registration information as specified by [Device schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification.
+  * 200 (OK): A device with the given identifier has been found. The response body contains the registration information as specified by [Device schema]({{< relref "/api/management" >}}) of the HTTP API specification.
   * 404 (Not Found): No device with the given identifier is registered for the given tenant.
 
 **Example**
@@ -210,7 +210,7 @@ The following command retrieves registration data for device `4711`:
   * (required) `Content-Type`: `application/json`
 * Parameters (encoded as a JSON object in the request body):
 * Request Body:
-  * (required) A JSON object as specified by [Device schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification. All existing registration information will be replaced by the data provided in the object.
+  * (required) A JSON object as specified by [Device schema]({{< relref "/api/management" >}}) of the HTTP API specification. All existing registration information will be replaced by the data provided in the object.
 * Status Codes:
   * 204 (No Content): Device registration data has been updated.
   * 400 (Bad Request): Device registration has not been updated because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
@@ -246,7 +246,7 @@ The following command retrieves registration data for device `4711`:
 ## Managing Credentials
 
 The following sections describe the resources representing the operations of the Credentials API and how they can be used to manage credentials for devices.
-Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1.yaml) for the specific elements that are explained in detail there.
+Please refer to the [Device Registry HTTP API]({{< relref "/api/management" >}}) for the specific elements that are explained in detail there.
 
 ### Update Credentials for a Device
 
@@ -255,7 +255,7 @@ Please refer to the [Device Registry HTTP API](/hono/docs/api/device-registry-v1
 * Request Headers:
   * (required) `Content-Type`: `application/json` (no other type supported)
 * Request Body:
-  * (required) A JSON object as specified by [Credentials schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification.
+  * (required) A JSON object as specified by [Credentials schema]({{< relref "/api/management" >}}) of the HTTP API specification.
 * Status Codes:
   * 204 (No Content): Credentials have been updated successfully.
   * 400 (Bad Request): The credentials have not been added because the request was malformed, e .g. because the payload did not contain required values. The response body may contain hints regarding the cause of the problem.
@@ -368,7 +368,7 @@ The following command deletes all credentials for device `4710`:
 * URI: `/v1/credentials/${tenantId}/${deviceId}`
 * Method: `GET`
 * Status Codes:
-  * 200 (OK): Credentials for the device have been found, body contains the credentials. The response body contains the registration information as specified by [Credentials schema](/hono/docs/api/device-registry-v1.yaml) of the HTTP API specification.
+  * 200 (OK): Credentials for the device have been found, body contains the credentials. The response body contains the registration information as specified by [Credentials schema]({{< relref "/api/management" >}}) of the HTTP API specification.
   * 404 (Not Found): No credentials for the device are registered.
 
 **Example**
