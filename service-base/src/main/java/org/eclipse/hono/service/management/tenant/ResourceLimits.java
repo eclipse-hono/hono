@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 /**
  * Resource limits definition.
  */
+@JsonInclude(Include.NON_DEFAULT)
 public class ResourceLimits {
 
     @JsonProperty(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS)
@@ -36,17 +37,22 @@ public class ResourceLimits {
     private Map<String, Object> extensions;
 
     /**
-     * Sets the max connections property for this resource limits.
+     * Sets the maximum number of connected devices a tenant supports.
      * 
-     * @param maxConnections  The maximum connections to set.
-     * @return  a reference to this for fluent use.
+     * @param maxConnections The maximum number of connections to set.
+     * @return A reference to this for fluent use.
      */
-    public ResourceLimits setMaxConnections(final Integer maxConnections) {
+    public ResourceLimits setMaxConnections(final int maxConnections) {
         this.maxConnections = maxConnections;
         return this;
     }
 
-    public Integer getMaxConnections() {
+    /**
+     * Gets the maximum number of connected devices a tenant supports.
+     * 
+     * @return The maximum number of connections.
+     */
+    public int getMaxConnections() {
         return this.maxConnections;
     }
 
@@ -61,6 +67,11 @@ public class ResourceLimits {
         return this;
     }
 
+    /**
+     * Gets the extension properties for this resource limits.
+     * 
+     * @return The extensions.
+     */
     public Map<String, Object> getExtensions() {
         return this.extensions;
     }

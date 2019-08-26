@@ -20,6 +20,7 @@ import static org.eclipse.hono.util.TenantConstants.FIELD_ENABLED;
 import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING;
 import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING_SAMPLING_MODE;
 import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -144,6 +145,19 @@ class TenantTest {
         final var limits = tenant.getResourceLimits();
         assertNotNull(limits);
         assertEquals(100, limits.getMaxConnections());
+    }
+
+    /**
+     * Encode "resource-limits" section.
+     */
+    @Test
+    public void testEncodeResourceLimitsDoesNotIncludeDefaultValues() {
+
+        final ResourceLimits limits = new ResourceLimits();
+        final JsonObject json = JsonObject.mapFrom(limits);
+        assertFalse(json.containsKey(RegistryManagementConstants.FIELD_RESOURCE_LIMITS_MAX_CONNECTIONS));
+        final ResourceLimits deserializedLimits = json.mapTo(ResourceLimits.class);
+        assertThat(deserializedLimits.getMaxConnections(), is(-1));
     }
 
     /**
