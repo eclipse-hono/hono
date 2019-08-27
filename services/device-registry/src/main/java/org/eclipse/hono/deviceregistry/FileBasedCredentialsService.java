@@ -55,19 +55,14 @@ import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
-
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 
 /**
@@ -134,17 +129,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void init(final Vertx vertx, final Context context) {
-        super.init(vertx, context);
-        Json.mapper.registerModule(new JavaTimeModule());
-    }
-
-    @Override
     public void start(final Future<Void> startFuture) {
         if (running) {
             startFuture.complete();
         } else {
-            Json.mapper.registerModule(new JavaTimeModule());
             if (!getConfig().isModificationEnabled()) {
                 log.info("modification of credentials has been disabled");
             }
@@ -589,16 +577,6 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         Objects.requireNonNull(pwdHash);
         if (BCryptHelper.getIterations(pwdHash) > getMaxBcryptIterations()) {
             throw new IllegalStateException("password hash uses too many iterations, max is " + getMaxBcryptIterations());
-        }
-    }
-
-    private void checkHashedPassword(final PasswordSecret secret) {
-        if (secret.getHashFunction() == null) {
-            throw new IllegalStateException("missing/invalid hash function");
-        }
-
-        if (secret.getPasswordHash() == null) {
-            throw new IllegalStateException("missing/invalid password hash");
         }
     }
 

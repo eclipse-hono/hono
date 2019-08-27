@@ -13,23 +13,22 @@
 package org.eclipse.hono.service.management.credentials;
 
 import static org.eclipse.hono.util.RegistryManagementConstants.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.collection.IsIterableWithSize.iterableWithSize;
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.junit.Test;
-
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
@@ -44,8 +43,6 @@ public class CredentialsTest {
      */
     @Test
     public void testEncodePasswordCredential() {
-
-        Json.mapper.registerModule(new JavaTimeModule());
 
         final PasswordSecret secret = new PasswordSecret();
 
@@ -90,7 +87,8 @@ public class CredentialsTest {
 
         assertEquals("psk", json.getString(RegistryManagementConstants.FIELD_TYPE));
 
-        final CommonCredential decodedCredential = Json.decodeValue(Json.encodeToBuffer(credential), CommonCredential.class);
+        final CommonCredential decodedCredential = Json.decodeValue(Json.encodeToBuffer(credential),
+                CommonCredential.class);
         assertTrue(decodedCredential instanceof PskCredential);
     }
 
@@ -117,7 +115,7 @@ public class CredentialsTest {
     }
 
     /**
-     * Test encoding an aray of secrets.
+     * Test encoding an array of secrets.
      *
      * @param provider credentials provider.
      */
@@ -148,23 +146,22 @@ public class CredentialsTest {
     @Test
     public void testDecodePasswordCredential() {
 
-        Json.mapper.registerModule(new JavaTimeModule());
-
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD)
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo")
                 .put(RegistryManagementConstants.FIELD_ENABLED, true)
                 .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
                         .add(new JsonObject()
-                            .put(RegistryManagementConstants.FIELD_ENABLED, true)
-                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, Instant.EPOCH.truncatedTo(ChronoUnit.SECONDS))
-                            .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, Instant.EPOCH.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS))
-                            .put(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION, HASH_FUNCTION_SHA256)
-                            .put(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH, "2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f")
-                            .put(RegistryManagementConstants.FIELD_SECRETS_SALT, "abc")
-                            .put(RegistryManagementConstants.FIELD_SECRETS_COMMENT, "setec astronomy")
-                        )
-                );
+                                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE,
+                                        Instant.EPOCH.truncatedTo(ChronoUnit.SECONDS))
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER,
+                                        Instant.EPOCH.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS))
+                                .put(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION, HASH_FUNCTION_SHA256)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH,
+                                        "2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f")
+                                .put(RegistryManagementConstants.FIELD_SECRETS_SALT, "abc")
+                                .put(RegistryManagementConstants.FIELD_SECRETS_COMMENT, "setec astronomy")));
 
         final PasswordCredential credential = jsonCredential.mapTo(PasswordCredential.class);
 
@@ -179,5 +176,51 @@ public class CredentialsTest {
         assertEquals("abc", secret.getSalt());
         assertEquals(HASH_FUNCTION_SHA256, secret.getHashFunction());
         assertEquals("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f", secret.getPasswordHash());
+    }
+
+    /**
+     * Test to ensure we can decode what we encoded.
+     */
+    @Test
+    public void testEncodeDecode1() {
+
+        final String authId = "abcd+#:,%\"";
+        final Instant notAfter = Instant.parse("1992-09-11T11:38:00.123456Z");
+
+        // create credentials to encode
+
+        final PasswordSecret secret = new PasswordSecret();
+        secret.setPasswordHash("setec astronomy");
+        secret.setSalt("abc");
+        secret.setNotAfter(notAfter);
+
+        final PasswordCredential cred = new PasswordCredential();
+        cred.setAuthId(authId);
+        cred.setSecrets(Arrays.asList(secret));
+
+        // encode
+
+        final String encode = Json.encode(new CommonCredential[] { cred });
+
+        // Test for the exact format
+
+        assertEquals(
+                "[{\"type\":\"hashed-password\",\"secrets\":[{\"not-after\":\"1992-09-11T11:38:00Z\",\"pwd-hash\":\"setec astronomy\",\"salt\":\"abc\"}],\"auth-id\":\"abcd+#:,%\\\"\"}]",
+                encode);
+
+        // now decode
+
+        final CommonCredential[] decode = Json.decodeValue(encode, CommonCredential[].class);
+
+        // and assert
+
+        final PasswordCredential decodeCredential = (PasswordCredential) decode[0];
+
+        assertThat(decodeCredential, instanceOf(PasswordCredential.class));
+        assertEquals(authId, decodeCredential.getAuthId());
+        assertThat(decodeCredential.getSecrets(), iterableWithSize(1));
+        final PasswordSecret decodeSecret = decodeCredential.getSecrets().get(0);
+        assertEquals(decodeSecret.getNotAfter(), Instant.parse("1992-09-11T11:38:00Z"));
+
     }
 }

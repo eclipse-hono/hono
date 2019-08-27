@@ -13,7 +13,6 @@
 package org.eclipse.hono.service.management.credentials;
 
 
-import io.vertx.core.json.Json;
 import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS;
 import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_NOT_BEFORE;
 import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_AUTH_ID;
@@ -48,8 +47,6 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * Verifies {@link CommonSecret} and others.
@@ -172,8 +169,6 @@ public class SecretsTest {
      */
     @Test
     public void testDateFormats() {
-
-        Json.mapper.registerModule(new JavaTimeModule());
 
         final JsonObject json = new JsonObject()
                 .put(FIELD_SECRETS_COMMENT, "test")
