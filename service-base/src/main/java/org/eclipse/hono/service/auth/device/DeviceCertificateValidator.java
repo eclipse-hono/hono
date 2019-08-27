@@ -21,8 +21,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.PKIXParameters;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -31,8 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.impl.CompositeFutureImpl;
-
 
 /**
  * Validates a device's certificate chain using a {@link CertPathValidator}.
@@ -64,27 +61,9 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
         }
 
         final Future<Void> result = Future.future();
-        final List<Future<Void>> futures = new ArrayList<>();
-
-        trustAnchors.forEach(trustAnchor -> {
-            futures.add(doValidate(chain, trustAnchor));
-        });
-        CompositeFutureImpl.any(futures.toArray(Future[]::new)).setHandler(validationCheck -> {
-            if (validationCheck.succeeded()) {
-                result.complete();
-            } else {
-                result.fail(validationCheck.cause());
-            }
-        });
-        return result;
-    }
-
-    private Future<Void> doValidate(final List<X509Certificate> chain, final TrustAnchor trustAnchor) {
-
-        final Future<Void> result = Future.future();
 
         try {
-            final PKIXParameters params = new PKIXParameters(Collections.singleton(trustAnchor));
+            final PKIXParameters params = new PKIXParameters(new HashSet<>(trustAnchors));
             // TODO do we need to check for revocation?
             params.setRevocationEnabled(false);
             final CertificateFactory factory = CertificateFactory.getInstance("X.509");
@@ -104,5 +83,6 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
             }
         }
         return result;
+
     }
 }

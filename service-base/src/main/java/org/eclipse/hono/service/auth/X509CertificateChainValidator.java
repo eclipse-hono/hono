@@ -45,8 +45,8 @@ public interface X509CertificateChainValidator {
      * @param chain The certificate chain to validate. The end certificate
      *              must be at position 0.
      * @param trustAnchors The list of trust anchors to use for validating the chain.
-     * @return A completed future if the certificate path is valid for any of the trust anchors.
-     *         Otherwise, the future will be failed when all the trust anchors cannot be validated by the certificate path.
+     * @return A completed future if the path is valid (according to the implemented tests).
+     *         Otherwise, the future will be failed with a {@link CertificateException}.
      *
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the chain and/or trust anchors is empty.
