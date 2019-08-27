@@ -35,6 +35,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -50,6 +51,15 @@ public abstract class AbstractHonoClient {
      * The key that the timestamp from last sending a message is stored under in a {@code ProtonLink}'s attachments.
      */
     public static final String KEY_LAST_SEND_TIME = "last-send-time";
+    /**
+     * The vert.x event bus address to which local close events of receiver links are published.
+     */
+    public static final String EVENT_BUS_ADDRESS_CLIENT_RECEIVER_CLOSE = "client.receiver.close";
+    /**
+     * The vert.x event bus address to which local close events of sender links are published.
+     */
+    public static final String EVENT_BUS_ADDRESS_CLIENT_SENDER_CLOSE = "client.sender.close";
+
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
@@ -182,20 +192,32 @@ public abstract class AbstractHonoClient {
     protected final void closeLinks(final Handler<Void> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
+
+        final Vertx vertx = connection.getVertx();
         if (autoCloseLinksTimerId != null) {
-            connection.getVertx().cancelTimer(autoCloseLinksTimerId);
+            vertx.cancelTimer(autoCloseLinksTimerId);
         }
 
         final Handler<Void> closeReceiver = s -> {
             if (receiver != null) {
-                LOG.debug("locally closing receiver link [{}]", receiver.getSource().getAddress());
+                final String sourceAddress = receiver.getSource().getAddress();
+                LOG.debug("locally closing receiver link [{}]", sourceAddress);
+                connection.closeAndFree(receiver, receiverClosed -> {
+                    vertx.eventBus().publish(EVENT_BUS_ADDRESS_CLIENT_RECEIVER_CLOSE, sourceAddress);
+                    closeHandler.handle(null);
+                });
+            } else {
+                closeHandler.handle(null);
             }
-            connection.closeAndFree(receiver, receiverClosed -> closeHandler.handle(null));
         };
 
         if (sender != null) {
-            LOG.debug("locally closing sender link [{}]", sender.getTarget().getAddress());
-            connection.closeAndFree(sender, senderClosed -> closeReceiver.handle(null));
+            final String targetAddress = sender.getTarget().getAddress();
+            LOG.debug("locally closing sender link [{}]", targetAddress);
+            connection.closeAndFree(sender, senderClosed -> {
+                vertx.eventBus().publish(EVENT_BUS_ADDRESS_CLIENT_SENDER_CLOSE, targetAddress);
+                closeReceiver.handle(null);
+            });
         } else if (receiver != null) {
             closeReceiver.handle(null);
         }
