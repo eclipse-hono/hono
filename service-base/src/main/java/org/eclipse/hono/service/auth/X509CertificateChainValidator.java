@@ -16,18 +16,14 @@ package org.eclipse.hono.service.auth;
 import java.security.cert.CertificateException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import io.vertx.core.Future;
-import io.vertx.core.impl.CompositeFutureImpl;
 
 /**
  * A function for validating certificate paths.
  *
  */
-@FunctionalInterface
 public interface X509CertificateChainValidator {
 
     /**
@@ -45,8 +41,6 @@ public interface X509CertificateChainValidator {
 
     /**
      * Validates a certificate path based on a list of trust anchors.
-     * <p>
-     * This default implementation simply calls {@link #validate(List, TrustAnchor)} for each trust anchor in the list.
      * 
      * @param chain The certificate chain to validate. The end certificate
      *              must be at position 0.
@@ -57,29 +51,5 @@ public interface X509CertificateChainValidator {
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the chain and/or trust anchors is empty.
      */
-    default Future<Void> validate(List<X509Certificate> chain, List<TrustAnchor> trustAnchors) {
-
-        Objects.requireNonNull(chain);
-        Objects.requireNonNull(trustAnchors);
-
-        if (chain.isEmpty() || trustAnchors.isEmpty()) {
-            throw new IllegalArgumentException("certificate chain and/or trust anchors must not be empty");
-        }
-
-        final Future<Void> result = Future.future();
-        final List<Future<Void>> futures = new ArrayList<>();
-
-        trustAnchors.forEach(trustAnchor -> {
-            futures.add(validate(chain, trustAnchor));
-        });
-        CompositeFutureImpl.any(futures.toArray(Future[]::new)).setHandler(validationCheck -> {
-            if (validationCheck.succeeded()) {
-                result.complete();
-            } else {
-                result.fail(validationCheck.cause());
-            }
-        });
-        return result;
-
-    }
+    Future<Void> validate(List<X509Certificate> chain, List<TrustAnchor> trustAnchors);
 }

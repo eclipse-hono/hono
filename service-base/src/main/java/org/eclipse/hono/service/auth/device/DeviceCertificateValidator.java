@@ -21,6 +21,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.PKIXParameters;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.impl.CompositeFutureImpl;
 
 
 /**
@@ -45,13 +47,39 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
      */
     @Override
     public Future<Void> validate(final List<X509Certificate> chain, final TrustAnchor trustAnchor) {
+        return validate(chain, List.of(trustAnchor));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> validate(final List<X509Certificate> chain, final List<TrustAnchor> trustAnchors) {
 
         Objects.requireNonNull(chain);
-        Objects.requireNonNull(trustAnchor);
+        Objects.requireNonNull(trustAnchors);
 
-        if (chain.isEmpty()) {
-            throw new IllegalArgumentException("certificate chain must not be empty");
+        if (chain.isEmpty() || trustAnchors.isEmpty()) {
+            throw new IllegalArgumentException("certificate chain and/or trust anchors must not be empty");
         }
+
+        final Future<Void> result = Future.future();
+        final List<Future<Void>> futures = new ArrayList<>();
+
+        trustAnchors.forEach(trustAnchor -> {
+            futures.add(doValidate(chain, trustAnchor));
+        });
+        CompositeFutureImpl.any(futures.toArray(Future[]::new)).setHandler(validationCheck -> {
+            if (validationCheck.succeeded()) {
+                result.complete();
+            } else {
+                result.fail(validationCheck.cause());
+            }
+        });
+        return result;
+    }
+
+    private Future<Void> doValidate(final List<X509Certificate> chain, final TrustAnchor trustAnchor) {
 
         final Future<Void> result = Future.future();
 
