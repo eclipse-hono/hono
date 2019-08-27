@@ -12,10 +12,7 @@
  */
 package org.eclipse.hono.service.plan;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -28,14 +25,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.DataVolume;
+import org.eclipse.hono.util.DataVolumePeriod;
 import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.ResourceLimits;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,10 +104,9 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testConnectionLimitIsNotReached(final VertxTestContext ctx) {
 
         givenCurrentConnections(9);
-        final JsonObject limitsConfig = new JsonObject()
-                .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_CONNECTIONS, 10);
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, limitsConfig);
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
+                .setResourceLimits(new ResourceLimits()
+                        .setMaxConnections(10));
 
         limitChecksImpl.isConnectionLimitReached(tenant).setHandler(
                 ctx.succeeding(response -> {
@@ -131,10 +128,9 @@ public class PrometheusBasedResourceLimitChecksTest {
     public void testConnectionLimitIsReached(final VertxTestContext ctx) {
 
         givenCurrentConnections(10);
-        final JsonObject limitsConfig = new JsonObject()
-                .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_CONNECTIONS, 10);
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, limitsConfig);
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
+                .setResourceLimits(new ResourceLimits()
+                        .setMaxConnections(10));
 
         limitChecksImpl.isConnectionLimitReached(tenant).setHandler(
                 ctx.succeeding(response -> {
@@ -144,83 +140,6 @@ public class PrometheusBasedResourceLimitChecksTest {
                     });
                     ctx.completeNow();
                 }));
-    }
-
-    /**
-     * Verifies that the default value for connection limit is used when
-     * no specific limits have been set for a tenant.
-     */
-    @Test
-    public void testGetConnectionsLimitDefaultValue() {
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertThat(limitChecksImpl.getConnectionsLimit(tenant),
-                is(PrometheusBasedResourceLimitChecks.DEFAULT_MAX_CONNECTIONS));
-    }
-
-    /**
-     * Verifies that the default max-bytes is used when
-     * no specific limits have been set for a tenant.
-     */
-    @Test
-    public void testGetMaxBytesLimitDefaultValue() {
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertThat(limitChecksImpl.getMaximumNumberOfBytes(tenant),
-                is(PrometheusBasedResourceLimitChecks.DEFAULT_MAX_BYTES));
-    }
-
-    /**
-     * Verifies that the default period of days is used when
-     * no specific limits have been set for a tenant.
-     */
-    @Test
-    public void testGetPeriodInDaysDefaultValue() {
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertThat(limitChecksImpl.getPeriodInDays(tenant),
-                is(PrometheusBasedResourceLimitChecks.DEFAULT_PERIOD_IN_DAYS));
-    }
-
-    /**
-     * Verifies that the connection limit is checked based on the value
-     * specified for a tenant.
-     */
-    @Test
-    public void testGetConnectionsLimit() {
-        final JsonObject limitsConfig = new JsonObject()
-                .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_CONNECTIONS, 2);
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS, limitsConfig);
-        assertThat(limitChecksImpl.getConnectionsLimit(tenant), is(2L));
-    }
-
-    /**
-     * Verifies that the data volume limit is checked based on the values
-     * specified for a tenant.
-     */
-    @Test
-    public void testGetMaxBytesLimit() {
-
-        final JsonObject dataVolumeConfig = new JsonObject()
-                .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 20_000_000)
-                .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 90)
-                .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30Z");
-
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setProperty(TenantConstants.FIELD_RESOURCE_LIMITS,
-                new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME, dataVolumeConfig));
-
-        assertThat(limitChecksImpl.getMaximumNumberOfBytes(tenant), is(20_000_000L));
-        assertThat(limitChecksImpl.getPeriodInDays(tenant), is(90L));
-        assertThat(limitChecksImpl.getEffectiveSince(tenant), is(
-                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30Z", OffsetDateTime::from).toInstant()));
-    }
-
-    /**
-     * Verifies that the default value for the effective-since parameter is {@code null}.
-     */
-    @Test
-    public void testEffectiveSinceWhenNotSet() {
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertNull(limitChecksImpl.getEffectiveSince(tenant));
     }
 
     /**
@@ -234,12 +153,14 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         givenDataVolumeUsageInBytes(90);
         final long incomingMessageSize = 10;
-        final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
-                new JsonObject()
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
-        final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setDataVolume(new DataVolume()
+                                .setMaxBytes(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new DataVolumePeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
                 .setHandler(ctx.succeeding(response -> {
@@ -261,12 +182,14 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         givenDataVolumeUsageInBytes(100);
         final long incomingMessageSize = 20;
-        final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
-                new JsonObject()
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
-        final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setDataVolume(new DataVolume()
+                                .setMaxBytes(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new DataVolumePeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
                 .setHandler(ctx.succeeding(response -> {
@@ -309,12 +232,14 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         when(limitsCache.get(any())).thenReturn(100L);
         final long incomingMessageSize = 20;
-        final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
-                new JsonObject()
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
-        final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setDataVolume(new DataVolume()
+                                .setMaxBytes(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new DataVolumePeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
                 .setHandler(ctx.succeeding(response -> {
@@ -337,12 +262,14 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         givenDataVolumeUsageInBytes(100);
         final long incomingMessageSize = 20;
-        final JsonObject limitsConfig = new JsonObject().put(PrometheusBasedResourceLimitChecks.FIELD_DATA_VOLUME,
-                new JsonObject()
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_MAX_BYTES, 100)
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_EFFECTIVE_SINCE, "2019-01-03T14:30Z")
-                        .put(PrometheusBasedResourceLimitChecks.FIELD_PERIOD_IN_DAYS, 30));
-        final TenantObject tenant = TenantObject.from("tenant", true).setResourceLimits(limitsConfig);
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setDataVolume(new DataVolume()
+                                .setMaxBytes(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new DataVolumePeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
                 .setHandler(ctx.succeeding(response -> {
