@@ -46,6 +46,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.NoopBasedMetrics;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
@@ -66,6 +67,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -589,6 +591,56 @@ public class AbstractProtocolAdapterBaseTest {
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
             ctx.completeNow();
         }));
+    }
+
+    /**
+     * Verifies that starting the adapter registers a handler for removing the metrics when the tenant's sender link
+     * times out.
+     *
+     */
+    @Test
+    public void testRegisterForLinkCloseEvent() {
+
+        final EventBus eb = mock(EventBus.class);
+        when(vertx.eventBus()).thenReturn(eb);
+
+        final io.vertx.core.eventbus.Message message = mock(io.vertx.core.eventbus.Message.class);
+        when(message.body()).thenReturn("telemetry/tenant1");
+
+        // immediately call the handler when registering a consumer
+        when(eb.consumer(anyString(), any())).thenAnswer(invocation -> {
+            final Handler<io.vertx.core.eventbus.Message> handler = invocation.getArgument(1);
+            handler.handle(message);
+            return null;
+        });
+
+        // GIVEN an adapter with a metrics object that is not an instance of NoopBasedMetrics
+        final Metrics metrics = mock(Metrics.class);
+        adapter.setMetrics(metrics);
+
+        // WHEN starting the adapter
+        adapter.startInternal();
+
+        // THEN the handler is registered, called and the metrics are removed
+        verify(metrics).removeTelemetryMetricsForTenant(MetricsTags.EndpointType.TELEMETRY, "tenant1");
+    }
+
+    /**
+     * Verifies that starting the adapter with a no-op metrics does not register an eventbus consumer.
+     *
+     */
+    @Test
+    public void testDoNotRegisterForNoopMetrics() {
+        // GIVEN an adapter with a metrics object that is an instance of NoopBasedMetrics
+        final NoopBasedMetrics noopBasedMetrics = mock(NoopBasedMetrics.class);
+        adapter.setMetrics(noopBasedMetrics);
+
+        // WHEN starting the adapter
+        adapter.startInternal();
+
+        // THEN no consumer is registered and no metrics are tried to remove
+        verify(vertx, never()).eventBus();
+        verify(noopBasedMetrics, never()).removeTelemetryMetricsForTenant(any(), anyString());
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> newProtocolAdapter(

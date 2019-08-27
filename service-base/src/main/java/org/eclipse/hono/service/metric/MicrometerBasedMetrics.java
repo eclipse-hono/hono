@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.Timer.Sample;
@@ -83,6 +84,12 @@ public class MicrometerBasedMetrics implements Metrics {
         Objects.requireNonNull(registry);
 
         this.registry = registry;
+        // the handler is executed synchronized in MeterRegistry#remove(Meter); triggered in decrementConnections()
+        this.registry.config().onMeterRemoved(meter -> {
+            if (METER_CONNECTIONS_AUTHENTICATED.equals(meter.getId().getName())) {
+                authenticatedConnections.remove(meter.getId().getTag(MetricsTags.TAG_TENANT));
+            }
+        });
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
     }
 
@@ -110,8 +117,14 @@ public class MicrometerBasedMetrics implements Metrics {
     public final void decrementConnections(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
+        final long connections = gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections,
+                tenantId, AtomicLong::new)
                 .decrementAndGet();
+        if (connections == 0) {
+            final Tag tenantTag = MetricsTags.getTenantTag(tenantId);
+            registry.find(METER_CONNECTIONS_AUTHENTICATED).tags(Tags.of(tenantTag)).meters().forEach(registry::remove);
+            // the onMeterRemoved() handler removes it also from this.authenticatedConnections
+        }
         this.totalCurrentConnections.decrementAndGet();
 
     }
@@ -218,6 +231,20 @@ public class MicrometerBasedMetrics implements Metrics {
                 // nothing to do
             }
         }
+    }
+
+    @Override
+    public void removeTelemetryMetricsForTenant(final MetricsTags.EndpointType type, final String tenantId) {
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(tenantId);
+
+        if (type != MetricsTags.EndpointType.TELEMETRY && type != MetricsTags.EndpointType.EVENT) {
+            throw new IllegalArgumentException("invalid type, must be either telemetry or event");
+        }
+
+        final Tags tags = Tags.of(MetricsTags.getTenantTag(tenantId), type.asTag());
+        registry.find(METER_MESSAGES_PAYLOAD).tags(tags).meters().forEach(registry::remove);
+        registry.find(METER_MESSAGES_RECEIVED).tags(tags).meters().forEach(registry::remove);
     }
 
     @Override

@@ -84,8 +84,10 @@ import org.mockito.ArgumentCaptor;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -1034,6 +1036,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+
+        adapter.init(Vertx.vertx(), mock(Context.class));
         return adapter;
     }
 

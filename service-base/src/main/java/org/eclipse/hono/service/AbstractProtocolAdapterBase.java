@@ -43,12 +43,15 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
+import org.eclipse.hono.client.impl.AbstractHonoClient;
 import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.NoopBasedMetrics;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.plan.NoopResourceLimitChecks;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
@@ -448,7 +451,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("Device Connection client factory must be set"));
         } else {
             connectToService(tenantClientFactory, "Tenant service");
-            connectToService(downstreamSenderFactory, "AMQP Messaging Network");
+            connectToService(downstreamSenderFactory, "AMQP Messaging Network")
+                    .setHandler(c -> registerForLinkCloseEvent());
             connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
             connectToService(deviceConnectionClientFactory, "Device Connection service");
@@ -466,6 +470,21 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             doStart(result);
         }
         return result;
+    }
+
+    private void registerForLinkCloseEvent() {
+        if (this.metrics instanceof NoopBasedMetrics) {
+            return;
+        }
+
+        vertx.eventBus().consumer(AbstractHonoClient.EVENT_BUS_ADDRESS_CLIENT_SENDER_CLOSE, message -> {
+            final ResourceIdentifier linkAddress = ResourceIdentifier.fromString(String.valueOf(message.body()));
+            final MetricsTags.EndpointType type = MetricsTags.EndpointType.fromString(linkAddress.getEndpoint());
+            if (type == MetricsTags.EndpointType.TELEMETRY || type == MetricsTags.EndpointType.EVENT) {
+                final String tenantId = linkAddress.getTenantId();
+                metrics.removeTelemetryMetricsForTenant(type, tenantId);
+            }
+        });
     }
 
     /**

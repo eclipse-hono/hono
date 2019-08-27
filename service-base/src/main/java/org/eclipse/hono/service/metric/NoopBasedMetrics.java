@@ -15,9 +15,9 @@ package org.eclipse.hono.service.metric;
 
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
-import org.eclipse.hono.util.TenantObject;
 
 /**
  * A no-op metrics implementation.
@@ -77,6 +77,10 @@ public class NoopBasedMetrics implements Metrics {
             final int payloadSize,
             final MetricsTags.TtdStatus ttdStatus,
             final Sample timer) {
+    }
+
+    @Override
+    public void removeTelemetryMetricsForTenant(final MetricsTags.EndpointType type, final String tenantId) {
     }
 
     @Override

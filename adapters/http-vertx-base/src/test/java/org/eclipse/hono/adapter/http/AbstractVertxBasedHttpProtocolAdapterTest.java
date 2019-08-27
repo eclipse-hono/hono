@@ -77,6 +77,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -136,6 +137,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             task.handle(null);
             return 1L;
         });
+        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
 
         config = new HttpProtocolAdapterProperties();
         config.setInsecurePortEnabled(true);

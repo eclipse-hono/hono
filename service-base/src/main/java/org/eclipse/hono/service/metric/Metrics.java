@@ -13,8 +13,10 @@
 
 package org.eclipse.hono.service.metric;
 
-import io.micrometer.core.instrument.Timer.Sample;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.TenantObject;
+
+import io.micrometer.core.instrument.Timer.Sample;
 
 /**
  * A collector for metrics.
@@ -122,6 +124,21 @@ public interface Metrics {
             int payloadSize,
             MetricsTags.TtdStatus ttdStatus,
             Sample timer);
+
+    /**
+     *
+     * Removes the metrics of telemetry or event messages for the given tenant.
+     * <p>
+     * This is used to clean the metrics for tenants that are no longer active.
+     * 
+     * @see ClientConfigProperties#getInactiveLinkTimeout()
+     *
+     * @param type The type of messages to be removed, e.g. <em>telemetry</em> or <em>event</em>.
+     * @param tenantId The tenant to be removed from the metrics.
+     * @throws NullPointerException if any of the parameters except the tenant object are {@code null}.
+     * @throws IllegalArgumentException if type is neither telemetry nor event.
+     */
+    void removeTelemetryMetricsForTenant(MetricsTags.EndpointType type, String tenantId);
 
     /**
      * Reports a command &amp; control message being transferred to/from a device.
