@@ -66,6 +66,7 @@ import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.plan.ResourceLimitChecks;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -703,7 +704,21 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testConnectionCount() {
 
         // GIVEN an AMQP adapter
+        final ConnectionEventProducer connectionEventProducer = mock(ConnectionEventProducer.class);
+        when(connectionEventProducer.connected(
+                any(ConnectionEventProducer.Context.class),
+                anyString(),
+                anyString(),
+                any(),
+                any())).thenReturn(Future.succeededFuture());
+        when(connectionEventProducer.disconnected(
+                any(ConnectionEventProducer.Context.class),
+                anyString(),
+                anyString(),
+                any(),
+                any())).thenReturn(Future.succeededFuture());
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        adapter.setConnectionEventProducer(connectionEventProducer);
 
         // WHEN a device connects
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
@@ -711,6 +726,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(record);
+        when(deviceConnection.getRemoteContainer()).thenReturn("deviceContainer");
         adapter.onConnectRequest(deviceConnection);
         final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor.forClass(Handler.class);
         verify(deviceConnection).openHandler(openHandler.capture());
@@ -718,6 +734,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // THEN the connection count is incremented
         verify(metrics).incrementConnections(TEST_TENANT_ID);
+        // and a connected event has been fired
+        verify(connectionEventProducer).connected(
+                any(ConnectionEventProducer.Context.class),
+                anyString(),
+                eq(adapter.getTypeName()),
+                eq(authenticatedDevice),
+                any());
 
         // WHEN the connection to the device is lost
         final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandler = ArgumentCaptor.forClass(Handler.class);
@@ -726,6 +749,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // THEN the connection count is decremented
         verify(metrics).decrementConnections(TEST_TENANT_ID);
+        // and a disconnected event has been fired
+        verify(connectionEventProducer).disconnected(
+                any(ConnectionEventProducer.Context.class),
+                eq("deviceContainer"),
+                eq(adapter.getTypeName()),
+                eq(authenticatedDevice),
+                any());
 
         // WHEN the device closes its connection to the adapter
         final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
@@ -734,6 +764,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // THEN the connection count is decremented
         verify(metrics, times(2)).decrementConnections(TEST_TENANT_ID);
+        // and a disconnected event has been fired
+        verify(connectionEventProducer, times(2)).disconnected(
+                any(ConnectionEventProducer.Context.class),
+                eq("deviceContainer"),
+                eq(adapter.getTypeName()),
+                eq(authenticatedDevice),
+                any());
     }
 
     /**

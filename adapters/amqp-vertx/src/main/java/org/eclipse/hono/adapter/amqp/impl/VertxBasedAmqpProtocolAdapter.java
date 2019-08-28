@@ -371,6 +371,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
 
         connectAuthorizationCheck
+        .compose(ok -> sendConnectedEvent(
+                Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
+                authenticatedDevice))
         .map(ok -> {
             con.setContainer(getTypeName());
             con.open();
@@ -468,6 +471,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         } else {
             metrics.decrementConnections(device.getTenantId());
         }
+        sendDisconnectedEvent(
+                Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
+                device);
     }
 
     /**
