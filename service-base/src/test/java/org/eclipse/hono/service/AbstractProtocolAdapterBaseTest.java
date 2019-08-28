@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -633,8 +634,8 @@ public class AbstractProtocolAdapterBaseTest {
     @Test
     public void testDoNotRegisterForNoopMetrics() {
         // GIVEN an adapter with a metrics object that is an instance of NoopBasedMetrics
-        final Metrics noopBasedMetrics = new NoopBasedMetrics() {
-        };
+        final Metrics noopBasedMetrics = spy(new NoopBasedMetrics() {
+        });
         adapter.setMetrics(noopBasedMetrics);
 
         // WHEN starting the adapter
