@@ -233,7 +233,7 @@ public class MicrometerBasedMetricsTest {
         final String tenant1 = "tenant1";
         final String tenant2 = "tenant2";
 
-        // GIVEN a metrics instance that has recorded one telemetry message and one event per tenant
+        // GIVEN a metrics instance that has recorded two tenants with two connections each
         metrics.incrementConnections(tenant1);
         metrics.incrementConnections(tenant1);
         metrics.incrementConnections(tenant2);
@@ -250,6 +250,7 @@ public class MicrometerBasedMetricsTest {
 
         // THEN the metric for this tenant is removed
         assertEquals(1, search.meters().size());
+        assertEquals(tenant2, search.meter().getId().getTag(MetricsTags.TAG_TENANT));
         assertEquals(2, metrics.getNumberOfConnections());
 
     }
@@ -284,12 +285,21 @@ public class MicrometerBasedMetricsTest {
         // WHEN removing the telemetry metrics for tenant1
         metrics.removeTelemetryMetricsForTenant(EndpointType.TELEMETRY, tenant1);
 
-        // THEN only the metric for telemetry and this tenant is removed
-        assertEquals(1,
-                registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(tenantTag1).meters().size());
-        assertEquals(1,
-                registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).tags(tenantTag1).meters().size());
+        // THEN the metrics for telemetry of this tenant is removed
+        final Tags telemetryTenant1 = Tags.of(MetricsTags.getTenantTag(tenant1), EndpointType.TELEMETRY.asTag());
+        assertEquals(0,
+                registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(telemetryTenant1).meters().size());
+        assertEquals(0,
+                registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).tags(telemetryTenant1).meters().size());
 
+        // while the events are still present ...
+        final Tags eventsTenant1 = Tags.of(MetricsTags.getTenantTag(tenant1), EndpointType.EVENT.asTag());
+        assertEquals(1,
+                registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(eventsTenant1).meters().size());
+        assertEquals(1,
+                registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).tags(eventsTenant1).meters().size());
+
+        // removing the events works as well
         metrics.removeTelemetryMetricsForTenant(EndpointType.EVENT, tenant1);
         assertEquals(0,
                 registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(tenantTag1).meters().size());

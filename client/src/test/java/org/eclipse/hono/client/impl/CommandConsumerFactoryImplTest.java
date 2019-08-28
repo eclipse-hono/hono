@@ -96,6 +96,7 @@ public class CommandConsumerFactoryImplTest {
         vertx = mock(Vertx.class);
         context = HonoClientUnitTestHelper.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
+        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);
             handler.handle(null);
@@ -219,7 +220,6 @@ public class CommandConsumerFactoryImplTest {
         when(deviceSpecificCommandReceiver.getRemoteSource()).thenReturn(source);
         when(deviceSpecificCommandReceiver.isOpen()).thenReturn(Boolean.TRUE);
         when(vertx.setPeriodic(anyLong(), anyHandler())).thenReturn(10L);
-        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
 
         // GIVEN a command consumer
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, 5000L)
@@ -266,7 +266,6 @@ public class CommandConsumerFactoryImplTest {
         when(deviceSpecificCommandReceiver.getSource()).thenReturn(source);
         when(deviceSpecificCommandReceiver.getRemoteSource()).thenReturn(source);
         when(vertx.setPeriodic(anyLong(), anyHandler())).thenReturn(10L);
-        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);
             handler.handle(null);

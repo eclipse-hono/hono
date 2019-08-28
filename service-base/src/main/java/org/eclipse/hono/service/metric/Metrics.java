@@ -126,10 +126,9 @@ public interface Metrics {
             Sample timer);
 
     /**
-     *
      * Removes the metrics of telemetry or event messages for the given tenant.
      * <p>
-     * This is used to clean the metrics for tenants that are no longer active.
+     * This is done to prevent reporting of never changing meter values for inactive tenants.
      * 
      * @see ClientConfigProperties#getInactiveLinkTimeout()
      *
