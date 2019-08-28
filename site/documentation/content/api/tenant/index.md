@@ -135,8 +135,11 @@ The JSON structure below contains example information for tenant `TEST_TENANT`. 
     "max-connections": 100000,
     "data-volume": {
       "max-bytes": 2147483648,
-      "period-in-days": 30,
-      "effective-since": "2019-04-27"
+      "period": {
+        "mode": "days",
+        "no-of-days": 30
+      },
+      "effective-since": "2019-07-27T14:30:00Z"
     }
   },
   "adapters" : [
@@ -214,11 +217,20 @@ The table below contains the properties which are used to configure a tenant's d
 
 | Name                     | Mandatory | JSON Type     | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *effective-since*        | *yes*     | *string*      | `-`           | The point in time at which the current settings became effective, i.e. the start of the first accounting period based on these settings. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).|
 | *max-bytes*              | *no*      | *number*      | `-1`          | The maximum number of bytes allowed for the tenant for each accounting period. MUST be an integer. A negative value indicates that no limit is set. |
-| *period-in-days*         | *no*      | *number*      | `30`          | The length of an accounting period, i.e. the number of days over which the data usage is to be limited. MUST be a positive integer. |
-| *effective-since*        | *yes*     | *string*      | `-`           | The point in time at which the current settings became effective, i.e. the start of the first accounting period based on these settings. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).
+| *period*                 | *no*      | *object*      | `-`          | The mode and length of an accounting period, i.e. the data usage can limited based on the defined number of days or on a monthly basis. |
 
 Protocol adapters SHOULD use this information to determine if a message originating from or destined to a device should be accepted for processing.
+
+### Data Volume Period Configuration Format
+
+The table below contains the properties which are used to configure a tenant's data volume period:
+
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *mode*                   | *yes*     | *string*      | `-`           | The mode of the data usage calculation. The default implementation supports two modes namely `days` and `monthly`.|
+| *no-of-days*             | *no*      | *number*      | `-`           | When the mode is set as `days`, then this value represents the length of an accounting period , i.e. the number of days over which the data usage is to be limited. MUST be a positive integer.|
 
 ## Delivery States used by the Tenant API
 
