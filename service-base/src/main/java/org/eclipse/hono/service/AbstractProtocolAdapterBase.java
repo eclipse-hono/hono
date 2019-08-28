@@ -133,7 +133,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param metrics The metrics to use.
      * @throws NullPointerException if metrics is {@code null}.
      */
-    public AbstractProtocolAdapterBase(final U metrics) {
+    protected AbstractProtocolAdapterBase(final U metrics) {
         this.metrics = Objects.requireNonNull(metrics);
     }
 
