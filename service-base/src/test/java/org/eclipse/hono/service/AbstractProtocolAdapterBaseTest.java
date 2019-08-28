@@ -141,6 +141,7 @@ public class AbstractProtocolAdapterBaseTest {
             return 1L;
         });
         context = mock(Context.class);
+        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
         adapter.init(vertx, context);
     }
 
@@ -632,7 +633,8 @@ public class AbstractProtocolAdapterBaseTest {
     @Test
     public void testDoNotRegisterForNoopMetrics() {
         // GIVEN an adapter with a metrics object that is an instance of NoopBasedMetrics
-        final NoopBasedMetrics noopBasedMetrics = mock(NoopBasedMetrics.class);
+        final Metrics noopBasedMetrics = new NoopBasedMetrics() {
+        };
         adapter.setMetrics(noopBasedMetrics);
 
         // WHEN starting the adapter
@@ -669,7 +671,7 @@ public class AbstractProtocolAdapterBaseTest {
             final Handler<Void> commandConnectionLostHandler) {
 
         final AbstractProtocolAdapterBase<ProtocolAdapterProperties, Metrics> result = new AbstractProtocolAdapterBase<>(
-                mock(NoopBasedMetrics.class)) {
+                mock(Metrics.class)) {
 
             @Override
             public String getTypeName() {
