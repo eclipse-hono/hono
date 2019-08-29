@@ -70,8 +70,12 @@ public class ResourceLimits {
      * 
      * @param maxTtl The time-to-live in seconds.
      * @return A reference to this for fluent use.
+     * @throws IllegalArgumentException if the time-to-live is set to less than -1.
      */
     public ResourceLimits setMaxTtl(final long maxTtl) {
+        if (maxTtl < -1) {
+            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+        }
         this.maxTtl = maxTtl;
         return this;
     }
