@@ -22,6 +22,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -218,10 +219,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         if (maxBytes == -1 || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode) || payloadSize <= 0) {
             return Future.succeededFuture(Boolean.FALSE);
         } else {
-            final long dataUsagePeriod = calculateDataUsagePeriod(
-                    OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC), periodMode, periodInDays);
-            final long allowedMaxBytes = calculateDataVolume(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
-                    periodMode, maxBytes);
+            final long allowedMaxBytes = getAndStoreInCache(limitsCache,
+                    String.format("%s_allowed_max_bytes", tenant.getTenantId()),
+                    () -> calculateDataVolume(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC), periodMode, maxBytes));
+            final long dataUsagePeriod = getAndStoreInCache(limitsCache,
+                    String.format("%s_data_usage_period", tenant.getTenantId()),
+                    () -> calculateDataUsagePeriod(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC), periodMode, periodInDays));
 
             if (dataUsagePeriod <= 0) {
                 return Future.succeededFuture(Boolean.FALSE);
@@ -408,6 +411,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         default:
             return 0L;
         }
+    }
+
+    private long getAndStoreInCache(final ExpiringValueCache<Object, Object> cache, final String key,
+            final Supplier<Long> valueSupplier) {
+        return Optional.ofNullable(cache)
+                .map(success -> cache.get(key))
+                .map(cachedValue -> (long) cachedValue)
+                .orElseGet(() -> addToCache(cache, key, valueSupplier.get()));
     }
 
     private long addToCache(final ExpiringValueCache<Object, Object> cache, final String key, final long result) {

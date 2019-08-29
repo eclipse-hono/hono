@@ -275,7 +275,12 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .setHandler(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
-                        verify(cacheProvider.getCache(any())).put(any(), any(), any(Duration.class));
+                        verify(cacheProvider.getCache(any())).put(eq("tenant_bytes_consumed"), any(),
+                                any(Duration.class));
+                        verify(cacheProvider.getCache(any())).put(eq("tenant_allowed_max_bytes"), any(),
+                                any(Duration.class));
+                        verify(cacheProvider.getCache(any())).put(eq("tenant_data_usage_period"), any(),
+                                any(Duration.class));
                     });
                     ctx.completeNow();
                 }));
