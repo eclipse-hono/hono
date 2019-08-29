@@ -76,6 +76,7 @@ public class Application extends AbstractBaseApplication {
                 log.info("Deploying: {}", verticle);
                 final Future<String> result = Future.future();
                 getVertx().deployVerticle(verticle, result);
+                futures.add(result);
             }
 
             return CompositeFuture.all(futures);
