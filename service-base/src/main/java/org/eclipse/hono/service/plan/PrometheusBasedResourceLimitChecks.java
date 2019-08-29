@@ -223,7 +223,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             final long allowedMaxBytes = calculateDataVolume(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
                     periodMode, maxBytes);
 
-            if (dataUsagePeriod <= 0 || allowedMaxBytes <= 0) {
+            if (dataUsagePeriod <= 0) {
                 return Future.succeededFuture(Boolean.FALSE);
             }
 
@@ -253,7 +253,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             return Boolean.FALSE;
                         } else {
                             log.trace(
-                                    "data limit exceeded for tenant. [{}] are [bytesUsed:{}, allowed max-bytes:{}, {}:{}, {}:{}, {}:{}]",
+                                    "Data limit exceeded for the tenant [{}]. [consumed bytes:{}, allowed max-bytes:{}, {}:{}, {}:{}, {}:{}]",
                                     tenant.getTenantId(), bytesConsumed, allowedMaxBytes,
                                     TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
                                     TenantConstants.FIELD_PERIOD_MODE, periodMode,
@@ -365,7 +365,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             final long maxBytes) {
         if (PeriodMode.MONTHLY.equals(mode)
                 && maxBytes > 0
-                && OffsetDateTime.now(effectiveSince.getOffset()).compareTo(effectiveSince) >= 0
+                && !OffsetDateTime.now(effectiveSince.getOffset()).isBefore(effectiveSince)
                 && YearMonth.from(OffsetDateTime.now(effectiveSince.getOffset())).equals(YearMonth.from(effectiveSince))
                 && effectiveSince.getDayOfMonth() != 1) {
             final OffsetDateTime lastDayOfMonth = effectiveSince.with(TemporalAdjusters.lastDayOfMonth());
@@ -393,20 +393,21 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             final long periodInDays) {
         final long inclusiveDaysBetween = DAYS.between(effectiveSince,
                 OffsetDateTime.now(effectiveSince.getOffset())) + 1;
-        if (PeriodMode.DAYS.equals(mode)) {
+        switch (mode) {
+        case DAYS:
             if (inclusiveDaysBetween > 0 && periodInDays > 0) {
                 final long dataUsagePeriodInDays = inclusiveDaysBetween % periodInDays;
                 return dataUsagePeriodInDays == 0 ? periodInDays : dataUsagePeriodInDays;
             }
-        }
-
-        if (PeriodMode.MONTHLY.equals(mode) && inclusiveDaysBetween > 0) {
+            return 0L;
+        case MONTHLY:
             if (YearMonth.now().equals(YearMonth.from(effectiveSince)) && effectiveSince.getDayOfMonth() != 1) {
                 return inclusiveDaysBetween;
             }
             return OffsetDateTime.now(effectiveSince.getOffset()).getDayOfMonth();
+        default:
+            return 0L;
         }
-        return 0L;
     }
 
     private long addToCache(final ExpiringValueCache<Object, Object> cache, final String key, final long result) {
