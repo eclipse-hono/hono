@@ -100,7 +100,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
     @Override
     protected final String createMessageId() {
 
-        return String.format("%s-%s", TenantConstants.MESSAGE_ID_PREFIX, UUID.randomUUID());
+        return String.format("tenant-client-%s", UUID.randomUUID());
     }
 
     @Override

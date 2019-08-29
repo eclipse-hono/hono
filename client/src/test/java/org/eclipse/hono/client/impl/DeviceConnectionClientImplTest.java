@@ -18,7 +18,7 @@ import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 import static org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAction.GET_LAST_GATEWAY;
 import static org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -284,7 +284,7 @@ public class DeviceConnectionClientImplTest {
         verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(sentMessage), is("deviceId"));
-        assertThat(sentMessage.getMessageId().toString(), startsWith(DeviceConnectionConstants.MESSAGE_ID_PREFIX));
+        assertThat(sentMessage.getMessageId(), is(notNullValue()));
         assertThat(sentMessage.getSubject(), is(GET_LAST_GATEWAY.getSubject()));
         assertNull(MessageHelper.getJsonPayload(sentMessage));
     }
@@ -304,7 +304,7 @@ public class DeviceConnectionClientImplTest {
         verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(sentMessage), is("deviceId"));
-        assertThat(sentMessage.getMessageId().toString(), startsWith(DeviceConnectionConstants.MESSAGE_ID_PREFIX));
+        assertThat(sentMessage.getMessageId(), is(notNullValue()));
         assertThat(sentMessage.getSubject(), is(SET_LAST_GATEWAY.getSubject()));
         assertNull(MessageHelper.getJsonPayload(sentMessage));
     }

@@ -98,7 +98,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
     @Override
     protected final String createMessageId() {
 
-        return String.format("%s-%s", DeviceConnectionConstants.MESSAGE_ID_PREFIX, UUID.randomUUID());
+        return String.format("devcon-client-%s", UUID.randomUUID());
     }
 
     @Override

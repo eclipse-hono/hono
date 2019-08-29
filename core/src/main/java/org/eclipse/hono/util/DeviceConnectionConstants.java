@@ -20,10 +20,6 @@ package org.eclipse.hono.util;
 public final class DeviceConnectionConstants extends RequestResponseApiConstants {
 
     /**
-     * Messages that are sent by the Hono client for the Device Connection API use this as a prefix for the messageId.
-     */
-    public static final String MESSAGE_ID_PREFIX = "devcon-client";
-    /**
      * The name of the field that contains the identifier of a gateway.
      */
     public static final String FIELD_GATEWAY_ID = "gateway-id";

@@ -37,10 +37,6 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * The default message size is set to 0, which implies no minimum size is defined.
      */
     public static final int DEFAULT_MINIMUM_MESSAGE_SIZE = 0;
-    /**
-     *  Messages that are sent by the Hono client for the Tenant API use this as a prefix for the messageId.
-     */
-    public static final String MESSAGE_ID_PREFIX = "tenant-client";
 
     /**
      * The name of the property that contains configuration options for specific

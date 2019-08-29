@@ -15,7 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.startsWith;
+import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -295,7 +295,7 @@ public class TenantClientImplTest {
         verify(sender).send(messageCaptor.capture(), anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertNull(MessageHelper.getTenantId(sentMessage));
-        assertThat(sentMessage.getMessageId().toString(), startsWith(TenantConstants.MESSAGE_ID_PREFIX));
+        assertThat(sentMessage.getMessageId().toString(), is(notNullValue()));
         assertThat(sentMessage.getSubject(), is(TenantConstants.TenantAction.get.toString()));
         assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
     }
