@@ -204,7 +204,7 @@ The table below contains the properties which are used to configure a tenant's r
 | Name                | Mandatory | JSON Type     | Default Value | Description |
 | :------------------ | :-------: | :------------ | :------------ | :---------- |
 | *max-connections*   | *no*      | *number*      | `-1`          | The maximum number of concurrent connections allowed from devices of this tenant. The default value `-1` indicates that no limit is set. |
-| *max-ttl*           | *no*      | *number*      | `-1`          | The maximum time-to-live (in seconds) to use for events published by  devices of this tenant. Any default TTL value specified at either the tenant or device level will be limited to the max value specified here. If this property is set to a value other than `-1` and no default TTL is specified for a device, the max value will be used for events published by the device. A value of `-1` (the default) indicates that no limit is set. |
+| *max-ttl*           | *no*      | *number*      | `-1`          | The maximum time-to-live (in seconds) to use for events published by  devices of this tenant. Any default TTL value specified at either the tenant or device level will be limited to the max value specified here. If this property is set to a value greater than `-1` and no default TTL is specified for a device, the max value will be used for events published by the device. A value of `-1` (the default) indicates that no limit is set. |
 | *data-volume*       | *no*      | *object*      | `-`           | The maximum data volume allowed for the given tenant. Refer to  [Data Volume Configuration Format]({{< relref "#data-volume-configuration-format" >}}) for details.|
 
 Protocol adapters SHOULD use the *max-connections* property to determine if a device's connection request should be accepted or rejected.
@@ -215,8 +215,8 @@ Protocol adapters SHOULD use the *max-ttl* property to determine the *effective 
 1. If the event published by the device
    1. contains a *ttl* property and *effective ttl* is not `-1` and the *ttl* value provided by the device is smaller than the
       *effective ttl*, use the device provided *ttl* value as the new *effective ttl*.
-   1. does not contain a *ttl* property but a default *ttl* value is configured for the device (either at the tenant or the device level)
-      and *effective ttl* is not `-1` and the default value is smaller than the *effective ttl*,
+   1. does not contain a *ttl* property but a default *ttl* value is configured for the device (with the device level taking precedence
+      over the tenant level) and *effective ttl* is not `-1` and the default value is smaller than the *effective ttl*,
       use the default *ttl* value as the new *effective ttl*.
 1. If *effective ttl* is not `-1`, set the downstream event message's *ttl* property to its value.
 

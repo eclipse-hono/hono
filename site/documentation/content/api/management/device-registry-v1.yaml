@@ -535,7 +535,7 @@ components:
                             devices of this tenant. Any default TTL value specified
                             at either the tenant or device level will be limited to
                             the max value specified here.
-                            If this property is set to a value other than -1 and no
+                            If this property is set to a value greater than -1 and no
                             default TTL is specified for a device, the max value will
                             be used for events published by the device.
                             A value of -1 (the default) indicates that no limit is set.
