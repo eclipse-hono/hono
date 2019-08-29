@@ -16,6 +16,10 @@ import static java.time.temporal.ChronoUnit.DAYS;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -54,6 +58,57 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
     private static final String QUERY_URI = "/api/v1/query";
     private static final String LIMITS_CACHE_NAME = "resource-limits";
+
+    /**
+     * The mode of the data volume calculation.
+     *
+     */
+    private enum PeriodMode {
+        /**
+         * The mode of the data volume calculation in terms of days.
+         */
+        DAYS("days"),
+        /**
+         * The mode of the data volume calculation is monthly.
+         */
+        MONTHLY("monthly"),
+        /**
+         * The unknown mode.
+         */
+        UNKNOWN("unknown");
+
+        private final String mode;
+
+        PeriodMode(final String mode) {
+            this.mode = mode;
+        }
+
+        /**
+         * Construct a PeriodMode from a given value.
+         *
+         * @param value The value from which the PeriodMode needs to be constructed.
+         * @return The PeriodMode as enum
+         */
+        static PeriodMode from(final String value) {
+            if (value != null) {
+                for (PeriodMode mode : values()) {
+                    if (value.equalsIgnoreCase(mode.value())) {
+                        return mode;
+                    }
+                }
+            }
+            return UNKNOWN;
+        }
+
+        /**
+         * Gets the string equivalent of the mode.
+         *
+         * @return The value of the mode.
+         */
+        String value() {
+            return this.mode;
+        }
+    }
 
     private final WebClient client;
     private final PrometheusBasedResourceLimitChecksConfig config;
@@ -112,6 +167,23 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     /**
      * Checks if the maximum data volume for the messages configured for a tenant
      * have been reached.
+     * <p>
+     * There are two supported modes of calculation which are <em>days</em> and 
+     * <em>monthly</em> and can be set using {@link TenantConstants#FIELD_PERIOD_MODE}. 
+     * <p>
+     * In the <em>monthly</em> mode, the data usage is calculated from the 
+     * beginning till the end of the current (Gregorian) calendar month and 
+     * compared with the maxBytes already set using {@link TenantConstants#FIELD_MAX_BYTES}.
+     * There is an exception to this calculation in the first month on which this
+     * limit becomes effective. In this case, the maxBytes value is recalculated 
+     * based on the remaining days in the month from the effectiveSince date.
+     * The data usage for these remaining days is then compared with the above 
+     * recalculated value.
+     * <p>
+     * If the mode is set as <em>days</em> then the data usage is calculated 
+     * based on the number of days set using {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS} 
+     * and compared with the maxBytes.
+     * 
      * @param tenant The tenant configuration to check the limit against.
      * @param payloadSize The message payload size in bytes.
      * @return A future indicating the outcome of the check.
@@ -132,21 +204,26 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         final DataVolume dataVolumeConfig = tenant.getResourceLimits().getDataVolume();
         final long maxBytes = dataVolumeConfig.getMaxBytes();
         final Instant effectiveSince = dataVolumeConfig.getEffectiveSince();
+        final PeriodMode periodMode = PeriodMode.from(dataVolumeConfig.getPeriod().getMode());
         final long periodInDays = Optional.ofNullable(dataVolumeConfig.getPeriod())
                 .map(DataVolumePeriod::getNoOfDays)
                 .orElse(0);
 
-        log.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
+        log.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
                 TenantConstants.FIELD_MAX_BYTES, maxBytes,
                 TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
+                TenantConstants.FIELD_PERIOD_MODE, periodMode,
                 TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
 
-        if (maxBytes == -1 || effectiveSince == null || periodInDays <= 0 || payloadSize <= 0) {
+        if (maxBytes == -1 || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode) || payloadSize <= 0) {
             return Future.succeededFuture(Boolean.FALSE);
         } else {
-            final long dataUsagePeriod = calculateDataUsagePeriod(effectiveSince, periodInDays);
+            final long dataUsagePeriod = calculateDataUsagePeriod(
+                    OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC), periodMode, periodInDays);
+            final long allowedMaxBytes = calculateDataVolume(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                    periodMode, maxBytes);
 
-            if (dataUsagePeriod <= 0) {
+            if (dataUsagePeriod <= 0 || allowedMaxBytes <= 0) {
                 return Future.succeededFuture(Boolean.FALSE);
             }
 
@@ -172,13 +249,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                     .orElseGet(() -> executeQuery(queryParams)
                             .map(bytesConsumed -> addToCache(limitsCache, key, bytesConsumed)))
                     .map(bytesConsumed -> {
-                        if ((bytesConsumed + payloadSize) <= maxBytes) {
+                        if ((bytesConsumed + payloadSize) <= allowedMaxBytes) {
                             return Boolean.FALSE;
                         } else {
-                            log.trace("data limit exceeded for tenant. [{}] are [bytesUsed:{}, {}:{}, {}:{}, {}:{}]",
-                                    tenant.getTenantId(), bytesConsumed, TenantConstants.FIELD_MAX_BYTES,
-                                    maxBytes,
+                            log.trace(
+                                    "data limit exceeded for tenant. [{}] are [bytesUsed:{}, allowed max-bytes:{}, {}:{}, {}:{}, {}:{}]",
+                                    tenant.getTenantId(), bytesConsumed, allowedMaxBytes,
                                     TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
+                                    TenantConstants.FIELD_PERIOD_MODE, periodMode,
                                     TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
                             return Boolean.TRUE;
                         }
@@ -261,19 +339,74 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     /**
-     * Calculate the period for which the data usage is to be retrieved from the prometheus server.
+     * Calculates the data volume (in bytes) that is allowed for a tenant for 
+     * the current period based on the mode defined by 
+     * {@link TenantConstants#FIELD_PERIOD_MODE}.
+     * <p>
+     * In <em>monthly</em> mode, if the effectiveSince date doesn't fall on the 
+     * first day of the month then the allowed data volume for the tenant is 
+     * calculated as below. For rest of the months and the <em>days</em> mode,
+     * the maxBytes defined by {@link TenantConstants#FIELD_MAX_BYTES} is used directly.
+     * <pre>
+     *             maxBytes 
+     *   ---------------------------------- x No. of days from effectiveSince till lastDayOfCurrentMonth.
+     *    No. of days in the current month
+     * </pre>
+     * <p>
      * 
-     * @param effectiveSince The instant on which the data volume limit came into effect.
-     * @param periodInDays The number of days for which the data usage is to be calculated.
-     * @return The period for which the data usage is to be calculated.
+     * @param effectiveSince The point of time on which the data volume limit 
+     *                       came into effect.
+     * @param mode The mode of the period. 
+     * @param maxBytes The maximum allowed bytes defined in configuration by 
+     *                 {@link TenantConstants#FIELD_MAX_BYTES}. 
+     * @return The allowed data-volume in bytes.
      */
-    private long calculateDataUsagePeriod(final Instant effectiveSince, final long periodInDays) {
-        final long inclusiveDaysBetween = DAYS.between(effectiveSince, Instant.now()) + 1;
-        if (inclusiveDaysBetween > 0 && periodInDays > 0) {
-            final long dataUsagePeriodInDays = inclusiveDaysBetween % periodInDays;
-            return dataUsagePeriodInDays == 0 ? periodInDays : dataUsagePeriodInDays;
+    private long calculateDataVolume(final OffsetDateTime effectiveSince, final PeriodMode mode,
+            final long maxBytes) {
+        if (PeriodMode.MONTHLY.equals(mode)
+                && maxBytes > 0
+                && OffsetDateTime.now(effectiveSince.getOffset()).compareTo(effectiveSince) >= 0
+                && YearMonth.from(OffsetDateTime.now(effectiveSince.getOffset())).equals(YearMonth.from(effectiveSince))
+                && effectiveSince.getDayOfMonth() != 1) {
+            final OffsetDateTime lastDayOfMonth = effectiveSince.with(TemporalAdjusters.lastDayOfMonth());
+            final long daysBetween = DAYS
+                    .between(effectiveSince, lastDayOfMonth) + 1;
+            return Double.valueOf(Math.ceil(daysBetween * maxBytes / lastDayOfMonth.getDayOfMonth())).longValue();
         }
-        return -1L;
+        return maxBytes;
+    }
+
+    /**
+     * Calculates the period for which the data usage is to be retrieved from the
+     * prometheus server based on the mode defined by 
+     * {@link TenantConstants#FIELD_PERIOD_MODE}.
+     *
+     * @param effectiveSince The point of time on which the data volume limit came
+     *                      into effect.
+     * @param mode The mode of the period defined by
+     *                   {@link TenantConstants#FIELD_PERIOD_MODE}.
+     * @param periodInDays The number of days defined by 
+     *                     {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}. 
+     * @return The period in days for which the data usage is to be calculated.
+     */
+    private long calculateDataUsagePeriod(final OffsetDateTime effectiveSince, final PeriodMode mode,
+            final long periodInDays) {
+        final long inclusiveDaysBetween = DAYS.between(effectiveSince,
+                OffsetDateTime.now(effectiveSince.getOffset())) + 1;
+        if (PeriodMode.DAYS.equals(mode)) {
+            if (inclusiveDaysBetween > 0 && periodInDays > 0) {
+                final long dataUsagePeriodInDays = inclusiveDaysBetween % periodInDays;
+                return dataUsagePeriodInDays == 0 ? periodInDays : dataUsagePeriodInDays;
+            }
+        }
+
+        if (PeriodMode.MONTHLY.equals(mode) && inclusiveDaysBetween > 0) {
+            if (YearMonth.now().equals(YearMonth.from(effectiveSince)) && effectiveSince.getDayOfMonth() != 1) {
+                return inclusiveDaysBetween;
+            }
+            return OffsetDateTime.now(effectiveSince.getOffset()).getDayOfMonth();
+        }
+        return 0L;
     }
 
     private long addToCache(final ExpiringValueCache<Object, Object> cache, final String key, final long result) {
