@@ -1222,8 +1222,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 final boolean isEvent = target.getEndpoint().equals(EventConstants.EVENT_ENDPOINT);
                 if (isEvent && message.getTtl() == 0 && Number.class.isInstance(prop.getValue())) {
                     final long defaultTtl = ((Number) prop.getValue()).longValue();
-                    if (maxTtl > -1 && defaultTtl > maxTtl) {
-                            message.setTtl(maxTtl);
+                    if (maxTtl != TenantConstants.UNLIMITED_TTL && defaultTtl > maxTtl) {
+                        message.setTtl(maxTtl);
                     } else {
                         message.setTtl(defaultTtl);
                     }
