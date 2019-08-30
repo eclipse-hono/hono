@@ -21,14 +21,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
@@ -138,7 +136,6 @@ public class TelemetrySenderImplTest {
             handler.handle(timerId);
             return timerId;
         });
-        when(sender.getTarget()).thenReturn(new Target());
         final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant", "telemetry/tenant");
 
         // WHEN sending a message
@@ -148,25 +145,5 @@ public class TelemetrySenderImplTest {
 
         // THEN the given Span will nonetheless be finished.
         verify(span).finish();
-    }
-
-    /**
-     * Verifies that sending a message sets the "last-send-time", which is used for the automatic link timeout.
-     */
-    @Test
-    public void testMessageSendSetsLastSendTime() {
-
-        // GIVEN a sender
-        final DownstreamSender messageSender = new TelemetrySenderImpl(connection, sender, "tenant",
-                "telemetry/tenant");
-
-        // WHEN sending messages
-        final Message msg = ProtonHelper.message("telemetry/tenant/deviceId", "some payload");
-        messageSender.sendAndWaitForOutcome(msg);
-        messageSender.send(msg, null);
-        messageSender.send("dev1", null, "some payload", "application/text");
-
-        // THEN the last sent time is reset each time
-        verify(sender.attachments(), times(3)).set(eq(AbstractHonoClient.KEY_LAST_SEND_TIME), any(), anyLong());
     }
 }

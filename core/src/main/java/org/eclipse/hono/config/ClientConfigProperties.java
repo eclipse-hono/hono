@@ -15,7 +15,6 @@ package org.eclipse.hono.config;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
@@ -41,11 +40,6 @@ public class ClientConfigProperties extends AbstractConfig {
      * when no frames have been received from the remote peer.
      */
     public static final int DEFAULT_IDLE_TIMEOUT = 16000; //ms
-    /**
-     * The default duration after which a sender link will be closed when no message has been sent on it. The default
-     * value disables automatic link timeout.
-     */
-    public static final Duration DEFAULT_INACTIVE_LINK_TIMEOUT = Duration.ZERO;
     /**
      * The default number of credits issued by the receiver side of a link.
      */
@@ -87,7 +81,6 @@ public class ClientConfigProperties extends AbstractConfig {
     private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
     private int idleTimeoutMillis = DEFAULT_IDLE_TIMEOUT;
-    private Duration inactiveLinkTimeout = DEFAULT_INACTIVE_LINK_TIMEOUT;
     private int initialCredits = DEFAULT_INITIAL_CREDITS;
     private long linkEstablishmentTimeout = DEFAULT_LINK_ESTABLISHMENT_TIMEOUT;
     private String name;
@@ -122,7 +115,6 @@ public class ClientConfigProperties extends AbstractConfig {
         this.host = otherProperties.host;
         this.hostnameVerificationRequired = otherProperties.hostnameVerificationRequired;
         this.idleTimeoutMillis = otherProperties.idleTimeoutMillis;
-        this.inactiveLinkTimeout = otherProperties.inactiveLinkTimeout;
         this.initialCredits = otherProperties.initialCredits;
         this.linkEstablishmentTimeout = otherProperties.linkEstablishmentTimeout;
         this.name = otherProperties.name;
@@ -764,30 +756,4 @@ public class ClientConfigProperties extends AbstractConfig {
             this.idleTimeoutMillis = idleTimeoutMillis;
         }
     }
-
-    /**
-     * Gets the duration after which a sender link will be closed when no message has been sent on it.
-     * <p>
-     * The default value of this property is {@link #DEFAULT_INACTIVE_LINK_TIMEOUT}, which disables automatic link
-     * timeout.
-     *
-     * @return The duration to wait for inactive links.
-     */
-    public final Duration getInactiveLinkTimeout() {
-        return inactiveLinkTimeout;
-    }
-
-    /**
-     * Sets the duration after which a sender link will be closed when no message has been sent on it.
-     * <p>
-     * The default value of this property is {@link #DEFAULT_INACTIVE_LINK_TIMEOUT}, which disables automatic link
-     * timeout.
-     * 
-     * @param inactiveLinkTimeout The duration to wait for inactive links.
-     * @throws NullPointerException if inactiveLinkTimeout is {@code null}.
-     */
-    public final void setInactiveLinkTimeout(final Duration inactiveLinkTimeout) {
-        this.inactiveLinkTimeout = Objects.requireNonNull(inactiveLinkTimeout);
-    }
-
 }

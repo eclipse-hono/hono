@@ -162,7 +162,6 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
 
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
-        storeLastSendTime();
 
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);

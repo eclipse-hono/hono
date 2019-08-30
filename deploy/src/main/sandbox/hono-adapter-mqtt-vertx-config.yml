@@ -19,34 +19,28 @@ hono:
     host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     amqpHostname: hono-internal
-    inactiveLinkTimeout: 1h
   registration:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-    inactiveLinkTimeout: 1h
   credentials:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-    inactiveLinkTimeout: 1h
   tenant:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-    inactiveLinkTimeout: 1h
   deviceConnection:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.service}${service.suffix}
     port: 5672
     credentialsPath: /run/secrets/mqtt-adapter.credentials
-    inactiveLinkTimeout: 1h
   command:
     name: 'Hono MQTT Adapter'
     host: ${hono.amqp-network.service}${service.suffix}
     port: 5673
     amqpHostname: hono-internal
-    inactiveLinkTimeout: 1h

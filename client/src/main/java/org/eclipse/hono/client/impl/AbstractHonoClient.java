@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -46,10 +45,6 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class AbstractHonoClient {
 
-    /**
-     * The key that the timestamp from last sending a message is stored under in a {@code ProtonLink}'s attachments.
-     */
-    public static final String KEY_LAST_SEND_TIME = "last-send-time";
     private static final Logger LOG = LoggerFactory.getLogger(AbstractHonoClient.class);
 
     /**
@@ -69,8 +64,6 @@ public abstract class AbstractHonoClient {
      * The capabilities offered by the peer.
      */
     protected List<Symbol> offeredCapabilities = Collections.emptyList();
-
-    private Long autoCloseLinksTimerId = null;
 
     /**
      * Creates a client for a connection.
@@ -182,9 +175,6 @@ public abstract class AbstractHonoClient {
     protected final void closeLinks(final Handler<Void> closeHandler) {
 
         Objects.requireNonNull(closeHandler);
-        if (autoCloseLinksTimerId != null) {
-            connection.getVertx().cancelTimer(autoCloseLinksTimerId);
-        }
 
         final Handler<Void> closeReceiver = s -> {
             if (receiver != null) {
@@ -229,60 +219,6 @@ public abstract class AbstractHonoClient {
 
             final ApplicationProperties applicationProperties = new ApplicationProperties(propsToAdd);
             msg.setApplicationProperties(applicationProperties);
-        }
-    }
-
-    /**
-     * Starts a timer with the delay configured by {@link ClientConfigProperties#getInactiveLinkTimeout()}. The timer
-     * checks if a message has been sent on the sender link in this period (subclass needs to call
-     * {@link #storeLastSendTime()} when sending a message). If no message has been sent in the timout period, it closes
-     * the links, otherwise a new timer is scheduled to recheck.
-     * <p>
-     * This method needs to be called by subclasses where {@link #sender} is set.
-     * <p>
-     * If {@link ClientConfigProperties#getInactiveLinkTimeout()} is zero, this method does nothing.
-     */
-    protected final void startAutoCloseLinksTimer() {
-        final Duration inactiveLinkTimeout = connection.getConfig().getInactiveLinkTimeout();
-        if (!inactiveLinkTimeout.isZero()) {
-            startAutoCloseLinksTimer(inactiveLinkTimeout.toMillis());
-        }
-    }
-
-    /**
-     * Stores the current time stamp on the sender link. This is used to detect and close inactive sender links as
-     * documented in {@link #startAutoCloseLinksTimer()}.
-     */
-    protected final void storeLastSendTime() {
-        sender.attachments().set(KEY_LAST_SEND_TIME, Long.class, System.currentTimeMillis());
-    }
-
-    private void startAutoCloseLinksTimer(final long delay) {
-        autoCloseLinksTimerId = connection.getVertx().setTimer(delay, id -> {
-            autoCloseLinksTimerId = null;
-            final Long lastSendTime = sender.attachments().get(KEY_LAST_SEND_TIME, Long.class);
-            long remaining = 0;
-            if (lastSendTime != null) {
-                remaining = getRemainingTimeout(lastSendTime, System.currentTimeMillis(),
-                        connection.getConfig().getInactiveLinkTimeout().toMillis());
-            }
-
-            if (lastSendTime == null || remaining == 0) {
-                closeLinks(v -> {
-                });
-            } else {
-                startAutoCloseLinksTimer(remaining);
-            }
-        });
-    }
-
-    // visible for testing
-    long getRemainingTimeout(final long lastSend, final long now, final long timeout) {
-        final long timeDiff = now - lastSend;
-        if (timeDiff >= timeout) {
-            return 0L;
-        } else {
-            return timeout - timeDiff;
         }
     }
 }

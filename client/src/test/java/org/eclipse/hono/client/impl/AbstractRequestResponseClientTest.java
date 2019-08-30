@@ -483,22 +483,6 @@ public class AbstractRequestResponseClientTest  {
         assertThat(client.getCredit(), is(0));
     }
 
-    /**
-     * Verifies that sending a message sets the "last-send-time", which is used for the automatic link timeout.
-     */
-    @Test
-    public void testMessageSendSetsLastSendTime() {
-
-        // GIVEN a simple request-response client
-        // WHEN sending a request message
-        final JsonObject payload = new JsonObject().put("key", "value");
-        client.createAndSendRequest("get", payload.toBuffer(), s -> {
-        });
-
-        // THEN the last sent time is reset
-        verify(client.sender.attachments()).set(eq(AbstractHonoClient.KEY_LAST_SEND_TIME), any(), anyLong());
-    }
-
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {
 
         final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
