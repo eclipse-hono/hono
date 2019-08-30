@@ -196,7 +196,7 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
                 logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
             } else {
                 LOG.warn("peer did not settle message [message ID: {}, remote state: {}]",
-                        messageId, remoteState.getClass().getSimpleName());
+                        messageId, remoteState);
                 TracingHelper.logError(currentSpan, new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
                         "peer did not settle message, failing delivery"));

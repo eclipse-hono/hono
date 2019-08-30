@@ -863,10 +863,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 }
             } else {
                 LOG.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
-                        remoteState.getClass().getSimpleName());
+                        remoteState);
                 final Map<String, Object> logItems = new HashMap<>(2);
                 logItems.put(Fields.EVENT, "device did not settle command");
-                logItems.put("remote state", remoteState.getClass().getSimpleName());
+                logItems.put("remote state", remoteState);
                 commandContext.getCurrentSpan().log(logItems);
                 commandContext.release(1);
                 outcome = ProcessingOutcome.UNDELIVERABLE;

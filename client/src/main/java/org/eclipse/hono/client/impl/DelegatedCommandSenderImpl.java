@@ -153,7 +153,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                 result.complete(deliveryUpdated);
             } else {
                 LOG.debug("peer did not settle message [message ID: {}, remote state: {}], failing delivery",
-                        messageId, remoteState.getClass().getSimpleName());
+                        messageId, remoteState);
                 final ServiceInvocationException e = new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
                         "peer did not settle message, failing delivery");
