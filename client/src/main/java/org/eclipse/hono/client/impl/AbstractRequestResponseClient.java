@@ -219,7 +219,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
         this(connection, tenantId);
         this.sender = Objects.requireNonNull(sender);
         this.receiver = Objects.requireNonNull(receiver);
-        startAutoCloseLinksTimer();
     }
 
     /**
@@ -396,7 +395,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 }).compose(sender -> {
                     LOG.debug("request-response client for peer [{}] created", connection.getConfig().getHost());
                     this.sender = sender;
-                    startAutoCloseLinksTimer();
                     return Future.succeededFuture();
                 });
     }
@@ -856,7 +854,6 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 TracingHelper.injectSpanContext(connection.getTracer(), currentSpan.context(), request);
                 replyMap.put(correlationId, handler);
 
-                storeLastSendTime();
                 sender.send(request, deliveryUpdated -> {
                     final Future<R> failedResult = Future.future();
                     final DeliveryState remoteState = deliveryUpdated.getRemoteState();

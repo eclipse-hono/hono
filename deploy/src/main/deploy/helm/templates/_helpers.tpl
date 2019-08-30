@@ -140,7 +140,6 @@ messaging:
 {{- else }}
   {{ required "A .Values.adapters.amqpMessagingNetworkSpec needs to be set when not using the example AMQP Messaging Network" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml | nindent 2 -}}
 {{- end -}}
-  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 command:
 {{- if .dot.Values.amqpMessagingNetworkDeployExample }}
   name: Hono {{ $adapter }}
@@ -154,7 +153,6 @@ command:
 {{- else }}
   {{ .dot.Values.adapters.commandAndControlSpec | toYaml | nindent 2}}
 {{- end -}}
-  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 tenant:
 {{- if .dot.Values.deviceRegistryDeployExample }}
   name: Hono {{ $adapter }}
@@ -166,7 +164,6 @@ tenant:
 {{- else }}
   {{- .dot.Values.adapters.tenantSpec | toYaml | indent 2 }}
 {{- end }}
-  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 registration:
 {{- if .dot.Values.deviceRegistryDeployExample }}
   name: Hono {{ $adapter }}
@@ -178,7 +175,6 @@ registration:
 {{- else }}
   {{- .dot.Values.adapters.deviceRegistrationSpec | toYaml | indent 2 }}
 {{- end }}
-  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 credentials:
 {{- if .dot.Values.deviceRegistryDeployExample }}
   name: Hono {{ $adapter }}
@@ -190,7 +186,6 @@ credentials:
 {{- else }}
   {{- .dot.Values.adapters.credentialsSpec | toYaml | indent 2 }}
 {{- end }}
-  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 deviceConnection:
 {{- if .dot.Values.adapters.deviceConnectionSpec }}
   {{- .dot.Values.adapters.deviceConnectionSpec | toYaml | indent 2 }}
@@ -210,7 +205,6 @@ deviceConnection:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- end }}
-  inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 {{- end }}
 
 {{/*

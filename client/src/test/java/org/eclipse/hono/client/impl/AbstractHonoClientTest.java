@@ -13,38 +13,24 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.proton.ProtonSender;
 
 
 /**
@@ -81,82 +67,5 @@ public class AbstractHonoClientTest {
 
         verify(msg).setApplicationProperties(applicationPropsCaptor.capture());
         assertThat(applicationPropsCaptor.getValue().getValue(), is(applicationProps));
-    }
-
-    /**
-     * Verifies that the automatic close of inactive sender links is disabled by default.
-     */
-    @Test
-    public void testNoAutoCloseOnDefault() {
-        final AbstractHonoClient client = createClient();
-        client.startAutoCloseLinksTimer();
-        verify(client.connection.getVertx(), never()).setTimer(anyLong(), anyHandler());
-    }
-
-    /**
-     * Verifies that a timer is started to automatically close inactive sender links if a timeout is configured.
-     */
-    @Test
-    public void testTimeoutExceededAndNeverSent() {
-        final AbstractHonoClient client = createClient();
-        client.connection.getConfig().setInactiveLinkTimeout(Duration.ofMillis(1));
-        when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class)).thenReturn(0L);
-
-        client.startAutoCloseLinksTimer();
-        verify(client.connection.getVertx()).setTimer(anyLong(), anyHandler());
-        verify(client.connection).closeAndFree(eq(client.sender), anyHandler());
-    }
-
-    /**
-     * Verifies that the timer to automatically close inactive sender links is restarted if the configured timeout is
-     * not exceeded.
-     */
-    @Test
-    public void testTimerIsRestartedWhenTimeoutNotExceeded() {
-        final long timeoutMillis = 10L;
-        final AbstractHonoClient client = createClient();
-        client.connection.getConfig().setInactiveLinkTimeout(Duration.ofMillis(timeoutMillis));
-        when(client.sender.attachments().get(AbstractHonoClient.KEY_LAST_SEND_TIME, Long.class))
-                .thenReturn(System.currentTimeMillis());
-
-        client.startAutoCloseLinksTimer();
-        verify(client.connection.getVertx(), timeout(timeoutMillis).atLeast(2)).setTimer(anyLong(), anyHandler());
-        verify(client.connection).closeAndFree(eq(client.sender), anyHandler());
-    }
-
-    private AbstractHonoClient createClient() {
-        final ProtonSender protonSender = HonoClientUnitTestHelper.mockProtonSender();
-        when(protonSender.getTarget()).thenReturn(new Target());
-
-        final Vertx vertx = mock(Vertx.class);
-        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
-            final Handler<Long> handler = invocation.getArgument(1);
-            final long timerId = 1;
-            handler.handle(timerId);
-            return timerId;
-        });
-
-        final HonoConnection connection = mock(HonoConnection.class);
-        when(connection.getVertx()).thenReturn(vertx);
-        when(connection.getConfig()).thenReturn(new ClientConfigProperties());
-
-        final AbstractHonoClient client = new AbstractHonoClient(connection) {
-        };
-        client.sender = protonSender;
-        return client;
-    }
-
-    /**
-     * Verifies that the remaining timeout is the difference between now and lastSend but min. 0 and max. the configured
-     * timeout.
-     */
-    @Test
-    public void testRemainingTimeout() {
-        final AbstractHonoClient client = new AbstractHonoClient(mock(HonoConnectionImpl.class)) {
-        };
-        assertEquals(0L, client.getRemainingTimeout(0, 20, 5));
-        assertEquals(0L, client.getRemainingTimeout(10, 20, 5));
-        assertEquals(1L, client.getRemainingTimeout(10, 20, 11));
-        assertEquals(5L, client.getRemainingTimeout(20, 20, 5));
     }
 }

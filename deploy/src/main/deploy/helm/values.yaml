@@ -128,10 +128,6 @@ adapters:
     enabled: false
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-kura:${project.version}
-  # Configures a timeout for inactive sender links.
-  # Please refer to the Spring Boot documentation for the supported syntax:
-  # https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-conversion-duration
-  inactiveLinkTimeout: 1h
 
 deviceConnectionService:
   # Docker image repository
