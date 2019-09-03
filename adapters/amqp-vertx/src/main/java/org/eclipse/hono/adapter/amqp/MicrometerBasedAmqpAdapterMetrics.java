@@ -14,9 +14,11 @@
 package org.eclipse.hono.adapter.amqp;
 
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Micrometer based metrics for the AMQP adapter.
@@ -28,10 +30,12 @@ public class MicrometerBasedAmqpAdapterMetrics extends MicrometerBasedMetrics im
      * Create a new metrics instance for the AMQP adapter.
      * 
      * @param registry The meter registry to use.
+     * @param vertx The Vert.x instance to use.
      * 
      * @throws NullPointerException if either parameter is {@code null}.
      */
-    public MicrometerBasedAmqpAdapterMetrics(final MeterRegistry registry) {
-        super(registry);
+    @Autowired
+    public MicrometerBasedAmqpAdapterMetrics(final MeterRegistry registry, final Vertx vertx) {
+        super(registry, vertx);
     }
 }

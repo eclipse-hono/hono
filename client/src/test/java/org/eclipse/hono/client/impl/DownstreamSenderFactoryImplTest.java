@@ -21,7 +21,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.notNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSender;
@@ -35,6 +38,7 @@ import org.mockito.ArgumentCaptor;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonQoS;
@@ -65,6 +69,7 @@ public class DownstreamSenderFactoryImplTest {
             return 1L;
         });
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
+        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
         factory = new DownstreamSenderFactoryImpl(connection);
     }
 

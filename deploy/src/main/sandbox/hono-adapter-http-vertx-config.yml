@@ -14,6 +14,7 @@ hono:
     certPath: /run/secrets/hono.eclipse.org-cert.pem
     jmsVendorPropsEnabled: true
     maxPayloadSize: 8096
+    tenantIdleTimeout: 1h
   messaging:
     name: 'Hono HTTP Adapter'
     host: ${hono.amqp-network.service}${service.suffix}

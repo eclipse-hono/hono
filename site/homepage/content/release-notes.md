@@ -11,6 +11,11 @@ title = "Release Notes"
   ({{% doclink "/api/tenant#resource-limits-configuration-format" %}}) for details.
   The AMQP, HTTP, MQTT and Kura protocol adapters consider this property when setting a TTL on
   downstream event messages.
+* A protocol adapter can now be configured with a timeout for idle tenants. When there has been no 
+  communication between a protocol adapter instance and the devices of a tenant, the former one releases 
+  allocated resources of the tenant. Currently this means that it closes AMQP links. The timeout is 
+  configured with the property `tenantIdleTimeout` for a protocol   adapter. Please refer to the protocol 
+  adapter [configuration guides]({{% doclink "/admin-guide/" %}}) for details.
 
 ## 1.0-M7
 

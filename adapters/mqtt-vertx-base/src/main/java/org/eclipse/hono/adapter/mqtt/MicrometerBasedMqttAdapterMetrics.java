@@ -14,9 +14,11 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Metrics for the MQTT based adapters.
@@ -28,10 +30,12 @@ public class MicrometerBasedMqttAdapterMetrics extends MicrometerBasedMetrics im
      * Create a new metrics instance for MQTT adapters.
      * 
      * @param registry The meter registry to use.
+     * @param vertx The Vert.x instance to use.
      * 
      * @throws NullPointerException if either parameter is {@code null}.
      */
-    public MicrometerBasedMqttAdapterMetrics(final MeterRegistry registry) {
-        super(registry);
+    @Autowired
+    public MicrometerBasedMqttAdapterMetrics(final MeterRegistry registry, final Vertx vertx) {
+        super(registry, vertx);
     }
 }

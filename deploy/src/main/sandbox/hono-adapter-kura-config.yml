@@ -13,6 +13,7 @@ hono:
     keyPath: /run/secrets/hono.eclipse.org-key.pem
     certPath: /run/secrets/hono.eclipse.org-cert.pem
     maxPayloadSize: 8096
+    tenantIdleTimeout: 1h
   messaging:
     name: 'Hono Kura Adapter'
     host: ${hono.amqp-network.service}${service.suffix}

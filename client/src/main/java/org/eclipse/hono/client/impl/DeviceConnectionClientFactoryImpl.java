@@ -16,11 +16,13 @@ package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
 
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.Message;
 
 
 /**
@@ -41,6 +43,8 @@ public class DeviceConnectionClientFactoryImpl extends AbstractHonoClientFactory
     public DeviceConnectionClientFactoryImpl(final HonoConnection connection) {
         super(connection);
         this.deviceConnectionClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
+        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                this::handleTenantTimeout);
     }
 
     /**
@@ -73,5 +77,13 @@ public class DeviceConnectionClientFactoryImpl extends AbstractHonoClientFactory
 
     private void removeDeviceConnectionClient(final String tenantId) {
         deviceConnectionClientFactory.removeClient(DeviceConnectionClientImpl.getTargetAddress(tenantId));
+    }
+
+    private void handleTenantTimeout(final Message<String> msg) {
+        final String address = DeviceConnectionClientImpl.getTargetAddress(msg.body());
+        final DeviceConnectionClient client = deviceConnectionClientFactory.getClient(address);
+        if (client != null) {
+            client.close(v -> deviceConnectionClientFactory.removeClient(address));
+        }
     }
 }

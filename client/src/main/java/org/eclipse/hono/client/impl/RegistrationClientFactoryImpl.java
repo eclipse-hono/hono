@@ -20,8 +20,10 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.Message;
 
 
 /**
@@ -46,6 +48,8 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
         super(connection);
         this.registrationClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
+        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                this::handleTenantTimeout);
     }
 
     /**
@@ -79,5 +83,13 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
 
     private void removeRegistrationClient(final String tenantId) {
         registrationClientFactory.removeClient(RegistrationClientImpl.getTargetAddress(tenantId));
+    }
+
+    private void handleTenantTimeout(final Message<String> msg) {
+        final String address = RegistrationClientImpl.getTargetAddress(msg.body());
+        final RegistrationClient client = registrationClientFactory.getClient(address);
+        if (client != null) {
+            client.close(v -> registrationClientFactory.removeClient(address));
+        }
     }
 }

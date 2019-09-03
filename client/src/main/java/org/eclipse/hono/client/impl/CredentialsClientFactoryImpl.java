@@ -20,8 +20,10 @@ import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.Message;
 
 
 /**
@@ -45,6 +47,8 @@ public class CredentialsClientFactoryImpl extends AbstractHonoClientFactory impl
         super(connection);
         credentialsClientFactory = new CachingClientFactory<>(connection.getVertx(), c -> c.isOpen());
         this.cacheProvider = cacheProvider;
+        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                this::handleTenantTimeout);
     }
 
     /**
@@ -78,5 +82,13 @@ public class CredentialsClientFactoryImpl extends AbstractHonoClientFactory impl
 
     private void removeCredentialsClient(final String tenantId) {
         credentialsClientFactory.removeClient(CredentialsClientImpl.getTargetAddress(tenantId));
+    }
+
+    private void handleTenantTimeout(final Message<String> msg) {
+        final String address = CredentialsClientImpl.getTargetAddress(msg.body());
+        final CredentialsClient client = credentialsClientFactory.getClient(address);
+        if (client != null) {
+            client.close(v -> credentialsClientFactory.removeClient(address));
+        }
     }
 }

@@ -19,8 +19,10 @@ import java.util.Objects;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.Future;
+import io.vertx.core.eventbus.Message;
 
 
 /**
@@ -37,6 +39,8 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
     public DownstreamSenderFactoryImpl(final HonoConnection connection) {
         super(connection);
         clientFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
+        connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                this::handleTenantTimeout);
     }
 
     /**
@@ -81,5 +85,19 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
                             }),
                     result);
         });
+    }
+
+    private void handleTenantTimeout(final Message<String> msg) {
+        final String telemetryAddress = TelemetrySenderImpl.getTargetAddress(msg.body(), null);
+        final DownstreamSender telemetryClient = clientFactory.getClient(telemetryAddress);
+        if (telemetryClient != null) {
+            telemetryClient.close(v -> clientFactory.removeClient(telemetryAddress));
+        }
+
+        final String eventAddress = EventSenderImpl.getTargetAddress(msg.body(), null);
+        final DownstreamSender eventClient = clientFactory.getClient(eventAddress);
+        if (eventClient != null) {
+            eventClient.close(v -> clientFactory.removeClient(eventAddress));
+        }
     }
 }

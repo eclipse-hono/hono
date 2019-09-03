@@ -33,6 +33,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.apache.qpid.proton.amqp.transport.Target;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.mockito.Mockito;
@@ -74,6 +75,7 @@ public final class HonoClientUnitTestHelper {
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
         when(sender.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
+        when(sender.getTarget()).thenReturn(mock(Target.class));
 
         return sender;
     }
