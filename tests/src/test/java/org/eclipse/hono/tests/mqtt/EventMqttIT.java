@@ -89,7 +89,7 @@ public class EventMqttIT extends MqttPublishTestBase {
     }
 
     /**
-     * Verifies that an event frmo a device for which a default TTL has been
+     * Verifies that an event from a device for which a default TTL has been
      * specified cannot be consumed after the TTL has expired.
      * 
      * @param ctx The vert.x test context.
@@ -101,7 +101,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final Tenant tenant = new Tenant();
-        tenant.getDefaults().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 500);
+        tenant.getDefaults().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 3); // seconds
         final Async setup = ctx.async();
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")
@@ -120,7 +120,7 @@ public class EventMqttIT extends MqttPublishTestBase {
             }
         })).compose(ok -> {
             final Future<MessageConsumer> consumerCreated = Future.future();
-            VERTX.setTimer(1000, tid -> {
+            VERTX.setTimer(4000, tid -> {
                 LOGGER.info("opening event consumer for tenant [{}]", tenantId);
                 // THEN no messages can be consumed after the TTL has expired
                 createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
@@ -129,7 +129,7 @@ public class EventMqttIT extends MqttPublishTestBase {
             return consumerCreated;
         }).compose(c -> {
             final Future<Void> done = Future.future();
-            VERTX.setTimer(500, tid -> {
+            VERTX.setTimer(1000, tid -> {
                 if (receivedMessageCount.get() > 0) {
                     done.fail(new IllegalStateException("should not have received any events after TTL has expired"));
                 } else {

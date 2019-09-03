@@ -539,6 +539,9 @@ components:
                             default TTL is specified for a device, the max value will
                             be used for events published by the device.
                             A value of -1 (the default) indicates that no limit is set.
+                            Note that this property contains the TTL in seconds whereas
+                            the AMQP 1.0 specification defines a message's ttl header
+                            to use milliseconds.
             "data-volume":
                $ref: '#/components/schemas/DataVolume'
             "ext":

@@ -355,7 +355,7 @@ public class AbstractProtocolAdapterBaseTest {
         assertThat(
                 MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-device", Boolean.class),
                 is(Boolean.TRUE));
-        assertThat(message.getTtl(), is(30L));
+        assertThat(message.getTtl(), is(30000L));
     }
 
     /**
@@ -376,7 +376,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         adapter.addProperties(message, target, null, tenant, assertion, null);
 
-        assertThat(message.getTtl(), is(15L));
+        assertThat(message.getTtl(), is(15000L));
     }
 
     /**
@@ -394,7 +394,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         adapter.addProperties(message, target, null, tenant, assertion, null);
 
-        assertThat(message.getTtl(), is(15L));
+        assertThat(message.getTtl(), is(15000L));
     }
 
     /**

@@ -1178,9 +1178,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .orElse(TenantConstants.UNLIMITED_TTL);
 
         final boolean isEvent = target.getEndpoint().equals(EventConstants.EVENT_ENDPOINT);
-        if (isEvent && maxTtl != TenantConstants.UNLIMITED_TTL && message.getTtl() > maxTtl) {
-            LOG.debug("adjusting device provided TTL [{}] to max TTL [{}]", message.getTtl(), maxTtl);
-            message.setTtl(maxTtl);
+        // AMQP spec defines TTL as milliseconds
+        final long maxTtlMillis = maxTtl * 1000L;
+        if (isEvent && maxTtl != TenantConstants.UNLIMITED_TTL && message.getTtl() > maxTtlMillis) {
+            LOG.debug("adjusting device provided TTL [{}ms] to max TTL [{}ms]", message.getTtl(), maxTtlMillis);
+            message.setTtl(maxTtlMillis);
         }
 
         if (getConfig().isDefaultsEnabled()) {
@@ -1223,9 +1225,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 if (isEvent && message.getTtl() == 0 && Number.class.isInstance(prop.getValue())) {
                     final long defaultTtl = ((Number) prop.getValue()).longValue();
                     if (maxTtl != TenantConstants.UNLIMITED_TTL && defaultTtl > maxTtl) {
-                        message.setTtl(maxTtl);
+                        // AMQP spec defines TTL as milliseconds
+                        message.setTtl(maxTtl * 1000L);
                     } else {
-                        message.setTtl(defaultTtl);
+                     // AMQP spec defines TTL as milliseconds
+                        message.setTtl(defaultTtl * 1000L);
                     }
                 }
                 break;
