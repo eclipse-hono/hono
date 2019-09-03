@@ -219,17 +219,21 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
      * Creates a new sender for sending the delegated command messages to the AMQP network.
      *
      * @param con The connection to the AMQP network.
-     * @param closeHook A handler to invoke if the peer closes the link unexpectedly.
+     * @param tenantId The tenant identifier.
+     * @param deviceId The device identifier.
+     * @param closeHook A handler to invoke if the peer closes the link unexpectedly (may be {@code null}).
      * @return A future indicating the result of the creation attempt.
      * @throws NullPointerException if con is {@code null}.
      */
     public static Future<DelegatedCommandSender> create(
             final HonoConnection con,
+            final String tenantId,
+            final String deviceId,
             final Handler<String> closeHook) {
 
         Objects.requireNonNull(con);
 
-        final String targetAddress = ""; // use anonymous relay (ie. use empty address)
+        final String targetAddress = getTargetAddress(tenantId, deviceId);
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
                 .map(sender -> (DelegatedCommandSender) new DelegatedCommandSenderImpl(con, sender));
     }

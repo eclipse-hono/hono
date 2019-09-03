@@ -64,8 +64,6 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
      */
     public static final long MIN_LIVENESS_CHECK_INTERVAL_MILLIS = 2000;
 
-    private static final String RESOURCE_KEY_DELEGATED_COMMAND_SENDER = "DelegatedCommandSender";
-
     private final CachingClientFactory<MessageConsumer> deviceSpecificCommandConsumerFactory;
 
     private final CachingClientFactory<MessageConsumer> tenantScopedCommandConsumerFactory;
@@ -169,7 +167,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
         final AtomicReference<ProtonReceiver> receiverRefHolder = new AtomicReference<>();
 
         final DelegateViaDownstreamPeerCommandHandler delegatingCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
-                tenantIdParam -> getOrCreateDelegatedCommandSender(tenantIdParam));
+                (tenantIdParam, deviceIdParam) -> createDelegatedCommandSender(tenantIdParam, deviceIdParam));
 
         final GatewayMappingCommandHandler gatewayMappingCommandHandler = new GatewayMappingCommandHandler(
                 gatewayMapper, commandContext -> {
@@ -225,15 +223,10 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                 .map(c -> (MessageConsumer) c);
     }
 
-    private Future<DelegatedCommandSender> getOrCreateDelegatedCommandSender(final String tenantId) {
+    private Future<DelegatedCommandSender> createDelegatedCommandSender(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
         return connection.executeOrRunOnContext(result -> {
-            delegatedCommandSenderFactory.getOrCreateClient(
-                    RESOURCE_KEY_DELEGATED_COMMAND_SENDER,
-                    () -> DelegatedCommandSenderImpl.create(connection,
-                            onSenderClosed -> {
-                                delegatedCommandSenderFactory.removeClient(RESOURCE_KEY_DELEGATED_COMMAND_SENDER);
-                            }),
+            delegatedCommandSenderFactory.createClient(() -> DelegatedCommandSenderImpl.create(connection, tenantId, deviceId, null), // FIXME
                     result);
         });
     }

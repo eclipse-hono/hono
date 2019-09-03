@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
@@ -36,17 +36,17 @@ public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandC
 
     private static final Logger LOG = LoggerFactory.getLogger(DelegateViaDownstreamPeerCommandHandler.class);
 
-    private final Function<String, Future<DelegatedCommandSender>> delegatedCommandSenderSupplier;
+    private final BiFunction<String, String, Future<DelegatedCommandSender>> delegatedCommandSenderSupplier;
 
     /**
      * Creates a new DelegateViaDownstreamPeerCommandHandler.
      *
      * @param delegatedCommandSenderSupplier Function to get a Future with a sender to send the delegated command via
-     *            the downstream peer. The function parameter is the tenant id. The function is supposed to get or
-     *            create such a sender and, if successful, succeed the returned Future with it. If sender creation
-     *            failed, a failed Future is to be returned.
+     *            the downstream peer. The first function parameter is the tenant id, the second is the device id.
+     *            The function is supposed to create such a sender and, if successful, succeed the returned Future
+     *            with it. If sender creation failed, a failed Future is to be returned.
      */
-    public DelegateViaDownstreamPeerCommandHandler(final Function<String, Future<DelegatedCommandSender>> delegatedCommandSenderSupplier) {
+    public DelegateViaDownstreamPeerCommandHandler(final BiFunction<String, String, Future<DelegatedCommandSender>> delegatedCommandSenderSupplier) {
         this.delegatedCommandSenderSupplier = delegatedCommandSenderSupplier;
     }
 
@@ -59,7 +59,7 @@ public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandC
         LOG.trace("delegate command for device {} to matching consumer via downstream peer", deviceId);
 
         // send message to AMQP network
-        final Future<DelegatedCommandSender> delegatedCommandSender = delegatedCommandSenderSupplier.apply(tenantId);
+        final Future<DelegatedCommandSender> delegatedCommandSender = delegatedCommandSenderSupplier.apply(tenantId, deviceId);
         delegatedCommandSender.setHandler(cmdSenderResult -> {
             if (cmdSenderResult.succeeded()) {
                 final DelegatedCommandSender sender = cmdSenderResult.result();
@@ -77,6 +77,7 @@ public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandC
                                 "failed to send command message to downstream peer: " + sendResult.cause());
                         commandContext.release();
                     }
+                    sender.close(c -> {});
                 });
             } else {
                 // failed to create sender
