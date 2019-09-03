@@ -107,7 +107,6 @@ public class HonoConnectionImpl implements HonoConnection {
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
-    private boolean ignoreTerminalCondition = true;
 
     private ProtonClientOptions clientOptions;
     private AtomicInteger connectAttempts;
@@ -205,14 +204,6 @@ public class HonoConnectionImpl implements HonoConnection {
     @Override
     public final void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
         reconnectListeners.add(listener);
-    }
-
-    public void setIgnoreTerminalCondition(final boolean ignoreTerminalCondition) {
-        this.ignoreTerminalCondition = ignoreTerminalCondition;
-    }
-
-    private boolean isIgnoreTerminalCondition() {
-        return this.ignoreTerminalCondition;
     }
 
     /**
@@ -376,11 +367,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                if ((!isIgnoreTerminalCondition()) && isTerminalConnectionError(conAttempt.cause())) {
-                                    failConnectionAttempt(conAttempt.cause(), connectionHandler);
-                                } else {
-                                    reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
-                                }
+                                reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
                             } else {
                                 final ProtonConnection newConnection = conAttempt.result();
                                 if (shuttingDown.get()) {
@@ -501,7 +488,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
         } else {
             if (connectionFailureCause != null) {
-                log.debug("connection attempt failed", connectionFailureCause);
+                logConnectionError(connectionFailureCause);
             }
             // apply exponential backoff with jitter
             // determine the max delay for this reconnect attempt as 2^attempt * delayIncrement
@@ -527,7 +514,20 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    private boolean isTerminalConnectionError(final Throwable connectionFailureCause) {
+    /**
+     * Log the connection error.
+     * 
+     * @param connectionFailureCause The connection error to log, never is {@code null}.
+     */
+    private void logConnectionError(final Throwable connectionFailureCause) {
+        if (isNoteworthyError(connectionFailureCause)) {
+            log.warn("connection attempt failed", connectionFailureCause);
+        } else {
+            log.debug("connection attempt failed", connectionFailureCause);
+        }
+    }
+
+    private boolean isNoteworthyError(final Throwable connectionFailureCause) {
 
         return connectionFailureCause instanceof SSLException ||
                 connectionFailureCause instanceof AuthenticationException ||
