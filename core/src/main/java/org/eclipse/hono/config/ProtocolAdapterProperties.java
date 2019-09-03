@@ -13,17 +13,27 @@
 
 package org.eclipse.hono.config;
 
+import java.time.Duration;
+import java.util.Objects;
+
 /**
  * Common configuration properties for protocol adapters of Hono.
  *
  */
 public class ProtocolAdapterProperties extends ServiceConfigProperties {
 
+    /**
+     * The default duration after which a tenant times out when no message has been sent for it. The default value
+     * disables automatic tenant timeout.
+     */
+    public static final Duration DEFAULT_TENANT_IDLE_TIMEOUT = Duration.ZERO;
+
     private boolean authenticationRequired = true;
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
     private long eventLoopBlockedCheckTimeout = 5000L;
     private int maxConnections = 0;
+    private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
@@ -193,5 +203,30 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      */
     public final boolean isConnectionLimitConfigured() {
         return maxConnections > 0;
+    }
+
+    /**
+     * Gets the duration after which a tenant times out when no messages had been sent for it.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_TENANT_IDLE_TIMEOUT}, which disables automatic tenant
+     * timeout.
+     *
+     * @return The duration to wait for idle tenants.
+     */
+    public Duration getTenantIdleTimeout() {
+        return tenantIdleTimeout;
+    }
+
+    /**
+     * Sets the duration after which a tenant times out when no messages had been sent for it.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_TENANT_IDLE_TIMEOUT}, which disables automatic tenant
+     * timeout.
+     *
+     * @param tenantIdleTimeout The duration to wait for idle tenants.
+     * @throws NullPointerException if parameter is {@code null}.
+     */
+    public void setTenantIdleTimeout(final Duration tenantIdleTimeout) {
+        this.tenantIdleTimeout = Objects.requireNonNull(tenantIdleTimeout);
     }
 }

@@ -24,7 +24,6 @@ import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
-import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -88,8 +87,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         final Vertx vertx = mock(Vertx.class);
         when(connection.getVertx()).thenReturn(vertx);
         when(vertx.setTimer(anyLong(), anyHandler())).thenReturn(1L);
-        protonSender = mock(ProtonSender.class);
-        when(protonSender.getTarget()).thenReturn(new Target());
+        protonSender = HonoClientUnitTestHelper.mockProtonSender();
     }
 
     /**

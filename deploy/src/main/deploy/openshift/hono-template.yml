@@ -338,6 +338,7 @@ objects:
           certPath: /etc/tls/tls.crt
           keyFormat: PEM
           nativeTlsRequired: true
+          tenantIdleTimeout: 1h
         messaging:
           name: 'Hono AMQP Adapter'
           credentialsPath: /etc/secrets/downstream.properties
@@ -678,6 +679,7 @@ objects:
           certPath: /etc/tls/tls.crt
           keyFormat: PEM
           nativeTlsRequired: true
+          tenantIdleTimeout: 1h
         messaging:
           name: 'Hono MQTT Adapter'
           credentialsPath: /etc/secrets/downstream.properties
@@ -1048,6 +1050,7 @@ objects:
           certPath: /etc/tls/tls.crt
           keyFormat: PEM
           nativeTlsRequired: true
+          tenantIdleTimeout: 1h
         messaging:
           name: 'Hono HTTP Adapter'
           credentialsPath: /etc/secrets/downstream.properties

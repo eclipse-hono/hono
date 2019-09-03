@@ -15,13 +15,18 @@
 package org.eclipse.hono.service.metric;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import java.time.Duration;
 import java.util.stream.Stream;
 
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
@@ -37,6 +42,8 @@ import io.micrometer.graphite.GraphiteConfig;
 import io.micrometer.graphite.GraphiteMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 
 /**
@@ -44,6 +51,8 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
  *
  */
 public class MicrometerBasedMetricsTest {
+
+    private final String tenant = "tenant";
 
     /**
      * Gets the Micrometer registries that the tests should be run against.
@@ -67,7 +76,7 @@ public class MicrometerBasedMetricsTest {
     @MethodSource("registries")
     public void testReportTelemetryWithOptionalQos(final MeterRegistry registry) {
 
-        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry);
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
 
         // GIVEN a sample
         final Sample sample = metrics.startTimer();
@@ -116,7 +125,7 @@ public class MicrometerBasedMetricsTest {
     @MethodSource("registries")
     public void testReportTelemetryWithUnknownTagValues(final MeterRegistry registry) {
 
-        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry);
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
 
         metrics.reportTelemetry(
                 MetricsTags.EndpointType.TELEMETRY,
@@ -147,7 +156,7 @@ public class MicrometerBasedMetricsTest {
     @MethodSource("registries")
     public void testReportTelemetryInvokesLegacyMetrics(final MeterRegistry registry) {
 
-        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry);
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
 
         final LegacyMetrics legacyMetrics = mock(LegacyMetrics.class);
         metrics.setLegacyMetrics(legacyMetrics);
@@ -174,7 +183,7 @@ public class MicrometerBasedMetricsTest {
     @MethodSource("registries")
     public void testPayloadSizeForTelemetryMessages(final MeterRegistry registry) {
 
-        final Metrics metrics = new MicrometerBasedMetrics(registry);
+        final Metrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
         final TenantObject tenantObject = TenantObject.from("TEST_TENANT", true)
                 .setMinimumMessageSize(4 * 1024);
 
@@ -202,7 +211,7 @@ public class MicrometerBasedMetricsTest {
     @MethodSource("registries")
     public void testPayloadSizeForCommandMessages(final MeterRegistry registry) {
 
-        final Metrics metrics = new MicrometerBasedMetrics(registry);
+        final Metrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
         final TenantObject tenantObject = TenantObject.from("TEST_TENANT", true)
                 .setMinimumMessageSize(4 * 1024);
 
@@ -216,6 +225,107 @@ public class MicrometerBasedMetricsTest {
 
         assertEquals(4 * 1024,
                 registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).summary().totalAmount());
+    }
+
+    /**
+     * Verifies that collecting the last message send time is disabled by default.
+     * 
+     * @param registry : the registry that the tests should be run against.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testNoTenantTimeoutOnDefault(final MeterRegistry registry) {
+
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+
+        reportTelemetry(metrics);
+        assertTrue(metrics.getLastSendTimestampsPerTenant().isEmpty());
+
+        metrics.setProtocolAdapterProperties(new ProtocolAdapterProperties());
+        reportTelemetry(metrics);
+        assertTrue(metrics.getLastSendTimestampsPerTenant().isEmpty());
+
+        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
+        config.setTenantIdleTimeout(Duration.ZERO);
+        metrics.setProtocolAdapterProperties(config);
+        reportTelemetry(metrics);
+        assertTrue(metrics.getLastSendTimestampsPerTenant().isEmpty());
+    }
+
+    /**
+     * Verifies that when sending the first message for a tenant the timestamp is recorded and a timer is started to
+     * check the timeout.
+     * 
+     * @param registry : the registry that the tests should be run against.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testTimeoutEvent(final MeterRegistry registry) {
+
+        // GIVEN a metrics instance...
+        final Vertx vertx = mock(Vertx.class);
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, vertx);
+
+        // ... with tenantIdleTimeout configured
+        final long timeoutMillis = 10L;
+        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
+        config.setTenantIdleTimeout(Duration.ofMillis(timeoutMillis));
+        metrics.setProtocolAdapterProperties(config);
+
+        // WHEN sending a message
+        reportTelemetry(metrics);
+
+        // THEN the tenant is added to the map that stores the last send time per tenant...
+        assertEquals(1, metrics.getLastSendTimestampsPerTenant().size());
+        assertNotNull(metrics.getLastSendTimestampsPerTenant().get(tenant));
+
+        // ... and a timer is started
+        verify(vertx).setTimer(eq(timeoutMillis), any(Handler.class));
+    }
+
+    /**
+     * Verifies that sending messages updates the stored timestamp for the tenant.
+     * 
+     * @param registry : the registry that the tests should be run against.
+     * @throws InterruptedException if thread sleep is interrupted.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testTenantLastSendIsUpdated(final MeterRegistry registry) throws InterruptedException {
+
+        // GIVEN a metrics instance...
+        final Vertx vertx = mock(Vertx.class);
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, vertx);
+
+        // ... with tenantIdleTimeout configured
+        final long timeoutMillis = 10L;
+        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
+        config.setTenantIdleTimeout(Duration.ofMillis(timeoutMillis));
+        metrics.setProtocolAdapterProperties(config);
+
+        // WHEN sending a message...
+        reportTelemetry(metrics);
+        final long timestampOfFirstMessage = metrics.getLastSendTimestampsPerTenant().get(tenant);
+
+        // and later a second message
+        Thread.sleep(1L);
+        reportTelemetry(metrics);
+
+        // THEN the timestamp for the tenant has been updated
+        assertEquals(1, metrics.getLastSendTimestampsPerTenant().size());
+        assertNotEquals(timestampOfFirstMessage, metrics.getLastSendTimestampsPerTenant().get(tenant));
+    }
+
+    private void reportTelemetry(final MicrometerBasedMetrics metrics) {
+        metrics.reportTelemetry(
+                EndpointType.TELEMETRY,
+                tenant,
+                TenantObject.from(tenant, true),
+                MetricsTags.ProcessingOutcome.FORWARDED,
+                QoS.UNKNOWN,
+                1024,
+                TtdStatus.NONE,
+                metrics.startTimer());
     }
 
 }

@@ -14,9 +14,11 @@
 package org.eclipse.hono.adapter.coap;
 
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.core.Vertx;
 
 /**
  * Metrics for the COAP based adapters.
@@ -28,10 +30,12 @@ public class MicrometerBasedCoapAdapterMetrics extends MicrometerBasedMetrics im
      * Create a new metrics instance for COAP adapters.
      * 
      * @param registry The meter registry to use.
+     * @param vertx The Vert.x instance to use.
      * 
      * @throws NullPointerException if either parameter is {@code null}.
      */
-    public MicrometerBasedCoapAdapterMetrics(final MeterRegistry registry) {
-        super(registry);
+    @Autowired
+    public MicrometerBasedCoapAdapterMetrics(final MeterRegistry registry, final Vertx vertx) {
+        super(registry, vertx);
     }
 }

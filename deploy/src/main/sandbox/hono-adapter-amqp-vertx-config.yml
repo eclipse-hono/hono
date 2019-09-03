@@ -12,6 +12,7 @@ hono:
     insecurePortEnabled: true
     keyPath: /run/secrets/hono.eclipse.org-key.pem
     certPath: /run/secrets/hono.eclipse.org-cert.pem
+    tenantIdleTimeout: 1h
   messaging:
     name: 'Hono AMQP Adapter'
     amqpHostname: hono-internal

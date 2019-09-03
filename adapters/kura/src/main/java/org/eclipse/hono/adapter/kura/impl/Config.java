@@ -110,7 +110,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     public MqttAdapterMetrics adapterMetrics(final MeterRegistry registry) {
-        return new MicrometerBasedMqttAdapterMetrics(registry);
+        return new MicrometerBasedMqttAdapterMetrics(registry, vertx());
     }
 
     /**

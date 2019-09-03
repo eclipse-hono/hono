@@ -121,6 +121,11 @@ public final class Constants {
     public static final String EVENT_BUS_ADDRESS_CONNECTION_CLOSED = "hono.connection.closed";
 
     /**
+     * The vert.x event bus address that the ID of a tenant that timed out is published to.
+     */
+    public static final String EVENT_BUS_ADDRESS_TENANT_TIMED_OUT = "tenant.timeout";
+
+    /**
      * The AMQP 1.0 port defined by IANA for unencrypted connections.
      */
     public static final int PORT_AMQP = 5672;
