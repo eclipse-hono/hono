@@ -14,9 +14,15 @@ package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -395,42 +401,54 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     protected final Future<Void> startInternal() {
 
-        final Future<Void> result = Future.future();
+        // check pre-conditions
 
         if (Strings.isNullOrEmpty(getTypeName())) {
-            result.fail(new IllegalStateException("adapter does not define a typeName"));
+            return Future.failedFuture(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClientFactory == null) {
-            result.fail(new IllegalStateException("Tenant client factory must be set"));
+            return Future.failedFuture(new IllegalStateException("Tenant client factory must be set"));
         } else if (downstreamSenderFactory == null) {
-            result.fail(new IllegalStateException("AMQP Messaging Network client must be set"));
+            return Future.failedFuture(new IllegalStateException("AMQP Messaging Network client must be set"));
         } else if (registrationClientFactory == null) {
-            result.fail(new IllegalStateException("Device Registration client factory must be set"));
+            return Future.failedFuture(new IllegalStateException("Device Registration client factory must be set"));
         } else if (credentialsClientFactory == null) {
-            result.fail(new IllegalStateException("Credentials client factory must be set"));
+            return Future.failedFuture(new IllegalStateException("Credentials client factory must be set"));
         } else if (commandConsumerFactory == null) {
-            result.fail(new IllegalStateException("Command & Control client factory must be set"));
+            return Future.failedFuture(new IllegalStateException("Command & Control client factory must be set"));
         } else if (deviceConnectionClientFactory == null) {
-            result.fail(new IllegalStateException("Device Connection client factory must be set"));
-        } else {
-            connectToService(tenantClientFactory, "Tenant service");
-            connectToService(downstreamSenderFactory, "AMQP Messaging Network");
-            connectToService(registrationClientFactory, "Device Registration service");
-            connectToService(credentialsClientFactory, "Credentials service");
-            connectToService(deviceConnectionClientFactory, "Device Connection service");
-
-            connectToService(
-                    commandConsumerFactory,
-                    "Command & Control",
-                    this::onCommandConnectionLost,
-                    this::onCommandConnectionEstablished)
-            .setHandler(c -> {
-                if (c.succeeded()) {
-                    onCommandConnectionEstablished(c.result());
-                }
-            });
-            doStart(result);
+            return Future.failedFuture(new IllegalStateException("Device Connection client factory must be set"));
         }
-        return result;
+
+        // start connecting ...
+
+        @SuppressWarnings("rawtypes")
+        final List<Future> futures = new LinkedList<>();
+
+        futures.add(connectToService(tenantClientFactory, "Tenant service"));
+        futures.add(connectToService(downstreamSenderFactory, "AMQP Messaging Network"));
+        futures.add(connectToService(registrationClientFactory, "Device Registration service"));
+        futures.add(connectToService(credentialsClientFactory, "Credentials service"));
+        futures.add(connectToService(deviceConnectionClientFactory, "Device Connection service"));
+
+        futures.add(connectToService(
+                commandConsumerFactory, "Command & Control",
+                this::onCommandConnectionLost, this::onCommandConnectionEstablished)
+                        .map(c -> {
+                            onCommandConnectionEstablished(c);
+                            return null;
+                        }));
+
+        // ... wait until all connections are done reporting in ...
+
+        return CompositeFuture.all(futures)
+                .compose(x -> {
+                    final Future<Void> startFuture = Future.future();
+                    // ... then signal "do start" ...
+                    doStart(startFuture);
+                    // ... return
+                    return startFuture;
+                });
+
     }
 
     /**
@@ -751,10 +769,26 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
+     * Return map of all connections this adapter depends on.
+     * 
+     * @return An unmodifiable map of all connections this adapter depends on.
+     */
+    protected Map<String, ConnectionLifecycle<HonoConnection>> getDependantConnections() {
+        final Map<String, ConnectionLifecycle<HonoConnection>> connections = new HashMap<>();
+        connections.put("Tenant", this.tenantClientFactory);
+        connections.put("Device Registration", this.registrationClientFactory);
+        connections.put("Credentials", this.credentialsClientFactory);
+        connections.put("Messaging", this.downstreamSenderFactory);
+        connections.put("Command & Control", this.commandConsumerFactory);
+        connections.put("Device Connection", this.deviceConnectionClientFactory);
+        return Collections.unmodifiableMap(connections);
+    }
+
+    /**
      * Checks if this adapter is connected to the services it depends on.
      * <p>
-     * Subclasses may override this method in order to add checks or omit checks for
-     * connection to services that are not used/needed by the adapter.
+     * Subclasses may override this method in order to add checks or omit checks for connection to services that are not
+     * used/needed by the adapter.
      *
      * @return A future indicating the outcome of the check. The future will succeed if this adapter is currently
      *         connected to
@@ -764,38 +798,48 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         <li>a Credentials service</li>
      *         <li>a service implementing the south bound Telemetry &amp; Event APIs</li>
      *         <li>a service implementing the south bound Command &amp; Control API</li>
+     *         <li>a Device Connection service</li>
      *         </ul>
      *         Otherwise, the future will fail.
      */
     protected Future<Void> isConnected() {
+        return checkConnections(this::isConnected)
+                .mapEmpty();
+    }
 
-        final Future<Void> tenantCheck = Optional.ofNullable(tenantClientFactory)
+    /**
+     * Check if a connection is connected.
+     * 
+     * @param name The name of the connection.
+     * @param connection The connection.
+     * @return A future, providing the outcome of the check.
+     */
+    protected Future<?> isConnected(final String name, final ConnectionLifecycle<HonoConnection> connection) {
+        return Optional.ofNullable(connection)
                 .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Tenant client factory is not set")));
-        final Future<Void> registrationCheck = Optional.ofNullable(registrationClientFactory)
-                .map(client -> client.isConnected())
-                .orElse(Future
-                        .failedFuture(new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration client factory is not set")));
-        final Future<Void> credentialsCheck = Optional.ofNullable(credentialsClientFactory)
-                .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set")));
-        final Future<Void> messagingCheck = Optional.ofNullable(downstreamSenderFactory)
-                .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set")));
-        final Future<Void> commandCheck = Optional.ofNullable(commandConsumerFactory)
-                .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set")));
-        final Future<Void> deviceConnectionCheck = Optional.ofNullable(deviceConnectionClientFactory)
-                .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set")));
-        return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck,
-                deviceConnectionCheck).mapEmpty();
+                .orElseGet(() -> Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, name + " client factory is not set")));
+    }
+
+    /**
+     * Perform a check on all connections this service depends on.
+     * <p>
+     * This method will execute the provided check for each connection returned by {@link #getDependantConnections()}.
+     * 
+     * @param check The check to perform.
+     * @return A composite future of all checks.
+     */
+    protected Future<?> checkConnections(
+            final BiFunction<String, ConnectionLifecycle<HonoConnection>, Future<?>> check) {
+
+        @SuppressWarnings("rawtypes")
+        final List<Future> futures = new LinkedList<>();
+        for (final var entry : getDependantConnections().entrySet()) {
+            futures.add(check.apply(entry.getKey(), entry.getValue()));
+        }
+
+        return CompositeFuture.all(futures);
+
     }
 
     /**
