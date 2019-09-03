@@ -19,12 +19,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.*;
 
-import io.vertx.core.Vertx;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -41,6 +41,7 @@ import org.mockito.ArgumentCaptor;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -58,6 +59,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     private DelegatedCommandSender delegatedCommandSender;
     private String replyTo;
     private HonoConnection connection;
+    private ProtonSender protonSender;
 
     /**
      * Sets up common fixture.
@@ -79,13 +81,15 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         commandContext = spy(CommandContext.from(command, commandDelivery, receiver, currentSpan));
 
         delegateViaDownstreamPeerCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
-                tenantIdParam -> Future.succeededFuture(delegatedCommandSender));
+                (tenantIdParam, deviceIdParam) -> Future.succeededFuture(delegatedCommandSender));
 
         connection= mock(HonoConnection.class);
         when(connection.getConfig()).thenReturn(new ClientConfigProperties());
         final Vertx vertx = mock(Vertx.class);
         when(connection.getVertx()).thenReturn(vertx);
         when(vertx.setTimer(anyLong(), anyHandler())).thenReturn(1L);
+        protonSender = mock(ProtonSender.class);
+        when(protonSender.getTarget()).thenReturn(new Target());
     }
 
     /**
@@ -99,7 +103,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         final ProtonDelivery protonDelivery = mock(ProtonDelivery.class);
         when(protonDelivery.getRemoteState()).thenReturn(Accepted.getInstance());
         // not using a DelegatedCommandSender mock here since mocking the #sendAndWaitForOutcome(Message, SpanContext) method (which has a default implementation) doesn't seem to work
-        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -133,7 +137,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         final ErrorCondition error = new ErrorCondition(Symbol.valueOf("someError"), "error message");
         rejected.setError(error);
         when(protonDelivery.getRemoteState()).thenReturn(rejected);
-        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -168,7 +172,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         modified.setDeliveryFailed(true);
         modified.setUndeliverableHere(true);
         when(protonDelivery.getRemoteState()).thenReturn(modified);
-        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -199,7 +203,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // GIVEN a message sender that returns an 'Released' delivery result
         final ProtonDelivery protonDelivery = mock(ProtonDelivery.class);
         when(protonDelivery.getRemoteState()).thenReturn(Released.getInstance());
-        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 assertThat(message.getAddress(),
@@ -227,7 +231,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     public void testHandleWithFailureToSend() {
 
         // GIVEN a message sender that fails to send the message
-        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, mock(ProtonSender.class)) {
+        delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
                 return Future.failedFuture("expected send failure");
@@ -251,7 +255,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
 
         // GIVEN a scenario where sender creation fails
         delegateViaDownstreamPeerCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
-                tenantIdParam -> Future.failedFuture("expected sender creation failure"));
+                (tenantIdParam, deviceIdParam) -> Future.failedFuture("expected sender creation failure"));
 
         // WHEN handle() is invoked
         delegateViaDownstreamPeerCommandHandler.handle(commandContext);
