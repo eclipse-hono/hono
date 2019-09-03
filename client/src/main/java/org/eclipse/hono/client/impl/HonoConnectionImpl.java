@@ -107,6 +107,7 @@ public class HonoConnectionImpl implements HonoConnection {
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
+    private boolean ignoreTerminalCondition = true;
 
     private ProtonClientOptions clientOptions;
     private AtomicInteger connectAttempts;
@@ -206,6 +207,14 @@ public class HonoConnectionImpl implements HonoConnection {
         reconnectListeners.add(listener);
     }
 
+    public void setIgnoreTerminalCondition(final boolean ignoreTerminalCondition) {
+        this.ignoreTerminalCondition = ignoreTerminalCondition;
+    }
+
+    private boolean isIgnoreTerminalCondition() {
+        return this.ignoreTerminalCondition;
+    }
+
     /**
      * Executes some code on the vert.x Context that has been used to establish the
      * connection to the peer.
@@ -234,7 +243,6 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final Future<Void> isConnected() {
-
         return executeOrRunOnContext(result -> checkConnected(result));
     }
 
@@ -244,7 +252,6 @@ public class HonoConnectionImpl implements HonoConnection {
      * @return A succeeded future if this client is connected.
      */
     protected final Future<Void> checkConnected() {
-
         final Future<Void> result = Future.future();
         checkConnected(result);
         return result;
@@ -369,7 +376,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                if (isTerminalConnectionError(conAttempt.cause())) {
+                                if ((!isIgnoreTerminalCondition()) && isTerminalConnectionError(conAttempt.cause())) {
                                     failConnectionAttempt(conAttempt.cause(), connectionHandler);
                                 } else {
                                     reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
@@ -444,7 +451,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void notifyReconnectHandlers(final AsyncResult<HonoConnection> reconnectAttempt) {
         if (reconnectAttempt.succeeded()) {
-            for (ReconnectListener<HonoConnection> listener : reconnectListeners) {
+            for (final ReconnectListener<HonoConnection> listener : reconnectListeners) {
                 listener.onReconnect(this);
             }
         }
@@ -464,7 +471,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void notifyDisconnectHandlers() {
 
-        for (DisconnectListener<HonoConnection> listener : disconnectListeners) {
+        for (final DisconnectListener<HonoConnection> listener : disconnectListeners) {
             listener.onDisconnect(this);
         }
     }
