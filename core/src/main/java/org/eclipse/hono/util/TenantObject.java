@@ -56,7 +56,7 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     private List<Map<String, Object>> adapterConfigurations;
     @JsonIgnore
-    private ResourceLimits resourceLimits;    
+    private ResourceLimits resourceLimits;
     @JsonIgnore
     private TrustAnchor trustAnchor;
 

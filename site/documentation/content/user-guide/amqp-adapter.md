@@ -337,6 +337,17 @@ The adapter also considers *defaults* registered for the device at either the [t
 
 Note that of the standard AMQP 1.0 message properties only the *content-type* and *ttl* can be set this way to a default value.
 
+### Event Message Time-to-live
+
+Events published by devices will usually be persisted by the AMQP Messaging Network in order to support deferred delivery to downstream consumers.
+In most cases the AMQP Messaging Network can be configured with a maximum *time-to-live* to apply to the events so that the events will be removed
+from the persistent store if no consumer has attached to receive the event before the message expires.
+
+In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the protocol adapter supports setting a
+downstream event message's *ttl* property based on the default *ttl* and *max-ttl* values configured for a tenant/device as described in the [Tenant API]
+({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
+
+
 ## Tenant specific Configuration
 
 The adapter uses the [Tenant API]({{< ref "/api/tenant#get-tenant-information" >}}) to retrieve *tenant specific configuration* for adapter type `hono-amqp`.

@@ -142,6 +142,7 @@ class TenantTest {
         final JsonObject tenantSpec = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
                         .put(TenantConstants.FIELD_MAX_CONNECTIONS, 100)
+                        .put(TenantConstants.FIELD_MAX_TTL, 30)
                         .put(TenantConstants.FIELD_DATA_VOLUME, new JsonObject()
                                 .put(TenantConstants.FIELD_MAX_BYTES, 20_000_000)
                                 .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00Z")
@@ -153,9 +154,10 @@ class TenantTest {
         assertNotNull(tenant);
         assertNull(tenant.getEnabled());
 
-        final var limits = tenant.getResourceLimits();
+        final ResourceLimits limits = tenant.getResourceLimits();
         assertNotNull(limits);
         assertEquals(100, limits.getMaxConnections());
+        assertEquals(30, limits.getMaxTtl());
         assertNotNull(limits.getDataVolume());
         assertEquals(
                 DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00Z", OffsetDateTime::from).toInstant(),

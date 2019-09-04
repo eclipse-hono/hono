@@ -31,7 +31,7 @@ public class DataVolume {
     private Instant effectiveSince;
 
     @JsonProperty(TenantConstants.FIELD_MAX_BYTES)
-    private long maxBytes = TenantConstants.DEFAULT_MAX_BYTES;
+    private long maxBytes = TenantConstants.UNLIMITED_BYTES;
 
     @JsonProperty(TenantConstants.FIELD_PERIOD)
     private DataVolumePeriod period;
@@ -63,7 +63,7 @@ public class DataVolume {
      * {@link TenantConstants#FIELD_PERIOD_MODE} and 
      * {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}.
      *
-     * @return The maximum number of bytes or {@link TenantConstants#DEFAULT_MAX_BYTES} 
+     * @return The maximum number of bytes or {@link TenantConstants#UNLIMITED_BYTES} 
      *         if not set.
      */
     public final long getMaxBytes() {

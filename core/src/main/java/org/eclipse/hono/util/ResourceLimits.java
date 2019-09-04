@@ -28,7 +28,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class ResourceLimits {
 
     @JsonProperty(TenantConstants.FIELD_MAX_CONNECTIONS)
-    private int maxConnections = TenantConstants.DEFAULT_MAX_CONNECTIONS;
+    private int maxConnections = TenantConstants.UNLIMITED_CONNECTIONS;
+    @JsonProperty(TenantConstants.FIELD_MAX_TTL)
+    private long maxTtl = TenantConstants.UNLIMITED_TTL;
 
     @JsonProperty(TenantConstants.FIELD_DATA_VOLUME)
     private DataVolume dataVolume;
@@ -55,11 +57,37 @@ public class ResourceLimits {
     /**
      * Gets the maximum number of connected devices a tenant supports.
      * 
-     * @return The maximum number of connections or {@link TenantConstants#DEFAULT_MAX_CONNECTIONS}
+     * @return The maximum number of connections or {@link TenantConstants#UNLIMITED_CONNECTIONS}
      *         if not set.
      */
     public final int getMaxConnections() {
         return this.maxConnections;
+    }
+
+    /**
+     * Sets the maximum time-to-live to use for events published by
+     * devices of a tenant.
+     * 
+     * @param maxTtl The time-to-live in seconds.
+     * @return A reference to this for fluent use.
+     * @throws IllegalArgumentException if the time-to-live is set to less than -1.
+     */
+    public ResourceLimits setMaxTtl(final long maxTtl) {
+        if (maxTtl < -1) {
+            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+        }
+        this.maxTtl = maxTtl;
+        return this;
+    }
+
+    /**
+     * Gets the maximum time-to-live to use for events published by
+     * devices of a tenant.
+     * 
+     * @return The time-to-live in seconds.
+     */
+    public long getMaxTtl() {
+        return this.maxTtl;
     }
 
     /**

@@ -1173,14 +1173,32 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final TenantObject tenant,
             final JsonObject registrationInfo) {
 
+        final long maxTtl = Optional.ofNullable(tenant.getResourceLimits())
+                .map(limits -> limits.getMaxTtl())
+                .orElse(TenantConstants.UNLIMITED_TTL);
+
+        final boolean isEvent = target.getEndpoint().equals(EventConstants.EVENT_ENDPOINT);
+        // AMQP spec defines TTL as milliseconds
+        final long maxTtlMillis = maxTtl * 1000L;
+        if (isEvent && maxTtl != TenantConstants.UNLIMITED_TTL && message.getTtl() > maxTtlMillis) {
+            LOG.debug("adjusting device provided TTL [{}ms] to max TTL [{}ms]", message.getTtl(), maxTtlMillis);
+            message.setTtl(maxTtlMillis);
+        }
+
         if (getConfig().isDefaultsEnabled()) {
             final JsonObject defaults = tenant.getDefaults().copy();
             final JsonObject deviceDefaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
             if (deviceDefaults != null) {
                 defaults.mergeIn(deviceDefaults);
             }
+
+            if (isEvent && maxTtl != TenantConstants.UNLIMITED_TTL && !defaults.containsKey(MessageHelper.SYS_HEADER_PROPERTY_TTL)) {
+                // use max TTL as default TTL if no default is set explicitly
+                defaults.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, maxTtl);
+            }
+
             if (!defaults.isEmpty()) {
-                addDefaults(message, target, defaults);
+                addDefaults(message, target, defaults, maxTtl);
             }
         }
         if (Strings.isNullOrEmpty(message.getContentType())) {
@@ -1193,7 +1211,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
     }
 
-    private void addDefaults(final Message message, final ResourceIdentifier target, final JsonObject defaults) {
+    private void addDefaults(
+            final Message message,
+            final ResourceIdentifier target,
+            final JsonObject defaults,
+            final long maxTtl) {
 
         defaults.forEach(prop -> {
 
@@ -1201,7 +1223,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             case MessageHelper.SYS_HEADER_PROPERTY_TTL:
                 final boolean isEvent = target.getEndpoint().equals(EventConstants.EVENT_ENDPOINT);
                 if (isEvent && message.getTtl() == 0 && Number.class.isInstance(prop.getValue())) {
-                    message.setTtl(((Number) prop.getValue()).longValue());
+                    final long defaultTtl = ((Number) prop.getValue()).longValue();
+                    if (maxTtl != TenantConstants.UNLIMITED_TTL && defaultTtl > maxTtl) {
+                        // AMQP spec defines TTL as milliseconds
+                        message.setTtl(maxTtl * 1000L);
+                    } else {
+                     // AMQP spec defines TTL as milliseconds
+                        message.setTtl(defaultTtl * 1000L);
+                    }
                 }
                 break;
             case MessageHelper.SYS_PROPERTY_CONTENT_TYPE:
