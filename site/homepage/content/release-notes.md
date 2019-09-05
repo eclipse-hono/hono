@@ -8,7 +8,7 @@ title = "Release Notes"
 
 * A tenant can now be configured with a *max-ttl* which is used as a upper boundary for default
   TTL values configured for devices/tenants. Please refer to the [Tenant API]
-  ({{< relref "/api/tenant#resource-limits-configuration-format" >}}) for details.
+  ({{% doclink "/api/tenant#resource-limits-configuration-format" %}}) for details.
   The AMQP, HTTP, MQTT and Kura protocol adapters consider this property when setting a TTL on
   downstream event messages.
 
