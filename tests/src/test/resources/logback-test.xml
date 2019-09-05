@@ -34,6 +34,7 @@
     <appender-ref ref="STDOUT" />
   </root>
 
+  <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
   <logger name="org.eclipse.hono" level="INFO"/>
   <logger name="org.eclipse.hono.client" level="INFO"/>
   <logger name="org.eclipse.hono.client.impl" level="INFO"/>

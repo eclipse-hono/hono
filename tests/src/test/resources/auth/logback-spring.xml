@@ -50,6 +50,7 @@
   </springProfile>
 
   <springProfile name="prod">
+    <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
     <logger name="org.eclipse.hono" level="INFO"/>
     <logger name="org.eclipse.hono.auth" level="INFO"/>
 
