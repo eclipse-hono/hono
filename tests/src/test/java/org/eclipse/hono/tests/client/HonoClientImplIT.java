@@ -50,8 +50,8 @@ public class HonoClientImplIT {
     }
 
     /**
-     * Verifies that a connection attempt where no credentials are given fails
-     * immediately with a ClientErrorException with status code 401.
+     * Verifies that a connection attempt where no credentials are given fails after two retries with a
+     * ClientErrorException with status code 401.
      * 
      * @param ctx The vert.x test context.
      */
@@ -62,7 +62,7 @@ public class HonoClientImplIT {
         final ClientConfigProperties downstreamProps = new ClientConfigProperties();
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
-        downstreamProps.setReconnectAttempts(-1);
+        downstreamProps.setReconnectAttempts(2);
 
         clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
@@ -76,8 +76,8 @@ public class HonoClientImplIT {
     }
 
     /**
-     * Verifies that a connection attempt where the TLS handshake cannot be finished successfully fails
-     * immediately with a ClientErrorException with status code 400.
+     * Verifies that a connection attempt where the TLS handshake cannot be finished successfully fails after two
+     * retries with a ClientErrorException with status code 400.
      * 
      * @param ctx The vert.x test context.
      */
@@ -90,7 +90,7 @@ public class HonoClientImplIT {
         downstreamProps.setHost(IntegrationTestSupport.DOWNSTREAM_HOST);
         downstreamProps.setPort(IntegrationTestSupport.DOWNSTREAM_PORT);
         downstreamProps.setTlsEnabled(true);
-        downstreamProps.setReconnectAttempts(-1);
+        downstreamProps.setReconnectAttempts(2);
 
         clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
