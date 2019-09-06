@@ -48,6 +48,12 @@ public class LoraConstants {
     public static final String APP_PROPERTY_FUNCTION_PORT = "function_port";
     public static final String APP_PROPERTY_FUNCTION_LATITUDE = "latitude";
     public static final String APP_PROPERTY_FUNCTION_LONGITUDE = "longitude";
+    public static final String GATEWAYS = "gateways";
+    public static final String GATEWAY_ID = "gateway_id";
+    public static final String DATA_RATE = "data_rate";
+    public static final String CODING_RATE = "coding_rate";
+    public static final String FREQUENCY = "frequency";
+    public static final String FRAME_COUNT = "frame_count";
 
     private LoraConstants() {
         // prevent instantiation

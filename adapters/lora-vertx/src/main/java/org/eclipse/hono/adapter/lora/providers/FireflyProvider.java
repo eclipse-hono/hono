@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
@@ -36,6 +37,15 @@ public class FireflyProvider implements LoraProvider {
 
     private static final String FIELD_FIREFLY_DEVICE = "device";
     private static final String FIELD_FIREFLY_DEVICE_EUI = "eui";
+    private static final String FIELD_FIREFLY_GATEWAY_RX = "gwrx";
+    private static final String FIELD_FIREFLY_GATEWAY_EUI = "gweui";
+    private static final String FIELD_FIREFLY_RSSI = "rssi";
+    private static final String FIELD_FIREFLY_LSNR = "lsnr";
+    private static final String FIELD_FIREFLY_DATA_RATE = "datr";
+    private static final String FIELD_FIREFLY_CODING_RATE = "codr";
+    private static final String FIELD_FIREFLY_FREQUENCY ="freq";
+    private static final String FIELD_FIREFLY_PARSED_PACKET = "parsed_packet";
+    private static final String FIELD_FIREFLY_FRAME_COUNT = "fcnt";
 
     @Override
     public String getProviderName() {
@@ -76,6 +86,43 @@ public class FireflyProvider implements LoraProvider {
         if (loraMessage.containsKey(FIELD_FIREFLY_FUNCTION_PORT)) {
             returnMap.put(LoraConstants.APP_PROPERTY_FUNCTION_PORT, loraMessage.getInteger(FIELD_FIREFLY_FUNCTION_PORT));
         }
+        final JsonObject dataRateJson = loraMessage.getJsonObject(FIELD_FIREFLY_SERVER_DATA, new JsonObject());
+
+        if (dataRateJson.containsKey(FIELD_FIREFLY_DATA_RATE)) {
+            returnMap.put(LoraConstants.DATA_RATE, dataRateJson.getString(FIELD_FIREFLY_DATA_RATE));
+        }
+        if (dataRateJson.containsKey(FIELD_FIREFLY_CODING_RATE)) {
+            returnMap.put(LoraConstants.CODING_RATE, dataRateJson.getString(FIELD_FIREFLY_CODING_RATE));
+        }
+        if (dataRateJson.containsKey(FIELD_FIREFLY_FREQUENCY)) {
+            returnMap.put(LoraConstants.FREQUENCY, dataRateJson.getDouble(FIELD_FIREFLY_FREQUENCY));
+        }
+
+        final JsonObject parsedPacketJson = loraMessage.getJsonObject(FIELD_FIREFLY_PARSED_PACKET, new JsonObject());
+        if (parsedPacketJson.containsKey(FIELD_FIREFLY_FRAME_COUNT)) {
+            returnMap.put(LoraConstants.FRAME_COUNT, parsedPacketJson.getInteger(FIELD_FIREFLY_FRAME_COUNT));
+        }
+
+        if (dataRateJson.containsKey(FIELD_FIREFLY_GATEWAY_RX)) {
+            final JsonArray gwRxs = dataRateJson.getJsonArray(FIELD_FIREFLY_GATEWAY_RX);
+            final JsonArray normalizedGatways = new JsonArray();
+            for (int i = 0; i < gwRxs.size(); i++) {
+                final JsonObject gwRx = gwRxs.getJsonObject(i);
+                final JsonObject normalizedGatway = new JsonObject();
+                if (gwRx.containsKey(FIELD_FIREFLY_GATEWAY_EUI)) {
+                    normalizedGatway.put(LoraConstants.GATEWAY_ID, gwRx.getString(FIELD_FIREFLY_GATEWAY_EUI));
+                }
+                if (gwRx.containsKey(FIELD_FIREFLY_RSSI)) {
+                    normalizedGatway.put(LoraConstants.APP_PROPERTY_RSS, gwRx.getInteger(FIELD_FIREFLY_RSSI));
+                }
+                if (gwRx.containsKey(FIELD_FIREFLY_LSNR)) {
+                    normalizedGatway.put(LoraConstants.APP_PROPERTY_SNR, gwRx.getDouble(FIELD_FIREFLY_LSNR));
+                }
+                normalizedGatways.add(normalizedGatway);
+            }
+            returnMap.put(LoraConstants.GATEWAYS, normalizedGatways.toString());
+        }
+
         return returnMap;
     }
 
