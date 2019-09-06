@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.service.plan;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,14 +27,16 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.DataVolumePeriod;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -199,6 +202,88 @@ public class PrometheusBasedResourceLimitChecksTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies the calculated data volume for various scenarios.
+     *
+     */
+    @Test
+    public void testCalculateDataVolume() {
+        final long maxBytes = 9300;
+
+        // Monthly mode
+        // The case where the effectiveSince lies on the past months of the target date.
+        assertEquals(maxBytes,
+                limitChecksImpl.calculateDataVolume(
+                        OffsetDateTime.parse("2019-08-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
+                        maxBytes));
+        // The case where the effectiveSince lies on the the same month as of the target date 
+        // and first day of the month.
+        assertEquals(9300,
+                limitChecksImpl.calculateDataVolume(
+                        OffsetDateTime.parse("2019-09-01T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
+                        maxBytes));
+        // The case where the effectiveSince lies on the the same month as of the target date
+        // and not on the first day of the month.
+        assertEquals(8990,
+                limitChecksImpl.calculateDataVolume(
+                        OffsetDateTime.parse("2019-09-02T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
+                        maxBytes));
+
+        // Days mode
+        assertEquals(maxBytes,
+                limitChecksImpl.calculateDataVolume(
+                        OffsetDateTime.parse("2019-09-02T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.DAYS,
+                        maxBytes));
+    }
+
+    /**
+     * Verifies the calculated data usage period for various scenarios.
+     *
+     */
+    @Test
+    public void testCalculateDataUsagePeriod() {
+        final long noOfDays = 30;
+        // Monthly mode
+        // The case where the effectiveSince lies on the past months of the target date.
+        assertEquals(6,
+                limitChecksImpl.calculateDataUsagePeriod(
+                        OffsetDateTime.parse("2019-08-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
+                        noOfDays));
+        // The case where the effectiveSince lies on the the same month as of the target date.
+        assertEquals(5,
+                limitChecksImpl.calculateDataUsagePeriod(
+                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-10T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.MONTHLY,
+                        noOfDays));
+
+        // Days mode
+        // The case where the effectiveSince lies on the past months of the target date.
+        assertEquals(6,
+                limitChecksImpl.calculateDataUsagePeriod(
+                        OffsetDateTime.parse("2019-08-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-10T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.DAYS,
+                        noOfDays));
+        // The case where the effectiveSince lies on the the same month as of the target date.
+        assertEquals(5,
+                limitChecksImpl.calculateDataUsagePeriod(
+                        OffsetDateTime.parse("2019-09-06T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        OffsetDateTime.parse("2019-09-10T14:30:00Z", DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        PrometheusBasedResourceLimitChecks.PeriodMode.DAYS,
+                        noOfDays));
     }
 
     /**
