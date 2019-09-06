@@ -64,7 +64,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      * The mode of the data volume calculation.
      *
      */
-    private enum PeriodMode {
+    protected enum PeriodMode {
         /**
          * The mode of the data volume calculation in terms of days.
          */
@@ -219,12 +219,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         if (maxBytes == -1 || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode) || payloadSize <= 0) {
             return Future.succeededFuture(Boolean.FALSE);
         } else {
-            final long allowedMaxBytes = getAndStoreInCache(limitsCache,
+            final long allowedMaxBytes = getOrAddToCache(limitsCache,
                     String.format("%s_allowed_max_bytes", tenant.getTenantId()),
-                    () -> calculateDataVolume(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC), periodMode, maxBytes));
-            final long dataUsagePeriod = getAndStoreInCache(limitsCache,
+                    () -> calculateDataVolume(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                            OffsetDateTime.now(ZoneOffset.UTC), periodMode, maxBytes));
+            final long dataUsagePeriod = getOrAddToCache(limitsCache,
                     String.format("%s_data_usage_period", tenant.getTenantId()),
-                    () -> calculateDataUsagePeriod(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC), periodMode, periodInDays));
+                    () -> calculateDataUsagePeriod(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                            OffsetDateTime.now(ZoneOffset.UTC), periodMode, periodInDays));
 
             if (dataUsagePeriod <= 0) {
                 return Future.succeededFuture(Boolean.FALSE);
@@ -352,24 +354,29 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      * the maxBytes defined by {@link TenantConstants#FIELD_MAX_BYTES} is used directly.
      * <pre>
      *             maxBytes 
-     *   ---------------------------------- x No. of days from effectiveSince till lastDayOfCurrentMonth.
+     *   ---------------------------------- x No. of days from effectiveSince till lastDay of the targetDateMonth.
      *    No. of days in the current month
      * </pre>
      * <p>
      * 
      * @param effectiveSince The point of time on which the data volume limit 
      *                       came into effect.
+     * @param targetDateTime The target point of time used for the data usage period 
+     *                       calculation.
      * @param mode The mode of the period. 
      * @param maxBytes The maximum allowed bytes defined in configuration by 
      *                 {@link TenantConstants#FIELD_MAX_BYTES}. 
      * @return The allowed data-volume in bytes.
      */
-    private long calculateDataVolume(final OffsetDateTime effectiveSince, final PeriodMode mode,
+    long calculateDataVolume(
+            final OffsetDateTime effectiveSince,
+            final OffsetDateTime targetDateTime,
+            final PeriodMode mode,
             final long maxBytes) {
         if (PeriodMode.MONTHLY.equals(mode)
                 && maxBytes > 0
-                && !OffsetDateTime.now(effectiveSince.getOffset()).isBefore(effectiveSince)
-                && YearMonth.from(OffsetDateTime.now(effectiveSince.getOffset())).equals(YearMonth.from(effectiveSince))
+                && !targetDateTime.isBefore(effectiveSince)
+                && YearMonth.from(targetDateTime).equals(YearMonth.from(effectiveSince))
                 && effectiveSince.getDayOfMonth() != 1) {
             final OffsetDateTime lastDayOfMonth = effectiveSince.with(TemporalAdjusters.lastDayOfMonth());
             final long daysBetween = DAYS
@@ -386,16 +393,20 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      *
      * @param effectiveSince The point of time on which the data volume limit came
      *                      into effect.
+     * @param targetDateTime The target point of time used for the data usage period 
+     *                       calculation.
      * @param mode The mode of the period defined by
      *                   {@link TenantConstants#FIELD_PERIOD_MODE}.
      * @param periodInDays The number of days defined by 
      *                     {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}. 
      * @return The period in days for which the data usage is to be calculated.
      */
-    private long calculateDataUsagePeriod(final OffsetDateTime effectiveSince, final PeriodMode mode,
+    long calculateDataUsagePeriod(
+            final OffsetDateTime effectiveSince,
+            final OffsetDateTime targetDateTime,
+            final PeriodMode mode,
             final long periodInDays) {
-        final long inclusiveDaysBetween = DAYS.between(effectiveSince,
-                OffsetDateTime.now(effectiveSince.getOffset())) + 1;
+        final long inclusiveDaysBetween = DAYS.between(effectiveSince, targetDateTime) + 1;
         switch (mode) {
         case DAYS:
             if (inclusiveDaysBetween > 0 && periodInDays > 0) {
@@ -404,16 +415,17 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             }
             return 0L;
         case MONTHLY:
-            if (YearMonth.now().equals(YearMonth.from(effectiveSince)) && effectiveSince.getDayOfMonth() != 1) {
+            if (YearMonth.from(targetDateTime).equals(YearMonth.from(effectiveSince))
+                    && effectiveSince.getDayOfMonth() != 1) {
                 return inclusiveDaysBetween;
             }
-            return OffsetDateTime.now(effectiveSince.getOffset()).getDayOfMonth();
+            return targetDateTime.getDayOfMonth();
         default:
             return 0L;
         }
     }
 
-    private long getAndStoreInCache(final ExpiringValueCache<Object, Object> cache, final String key,
+    private long getOrAddToCache(final ExpiringValueCache<Object, Object> cache, final String key,
             final Supplier<Long> valueSupplier) {
         return Optional.ofNullable(cache)
                 .map(success -> cache.get(key))
