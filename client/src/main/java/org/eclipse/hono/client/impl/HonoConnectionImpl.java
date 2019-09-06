@@ -234,7 +234,6 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final Future<Void> isConnected() {
-
         return executeOrRunOnContext(result -> checkConnected(result));
     }
 
@@ -244,7 +243,6 @@ public class HonoConnectionImpl implements HonoConnection {
      * @return A succeeded future if this client is connected.
      */
     protected final Future<Void> checkConnected() {
-
         final Future<Void> result = Future.future();
         checkConnected(result);
         return result;
@@ -369,11 +367,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                if (isTerminalConnectionError(conAttempt.cause())) {
-                                    failConnectionAttempt(conAttempt.cause(), connectionHandler);
-                                } else {
-                                    reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
-                                }
+                                reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
                             } else {
                                 final ProtonConnection newConnection = conAttempt.result();
                                 if (shuttingDown.get()) {
@@ -444,7 +438,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void notifyReconnectHandlers(final AsyncResult<HonoConnection> reconnectAttempt) {
         if (reconnectAttempt.succeeded()) {
-            for (ReconnectListener<HonoConnection> listener : reconnectListeners) {
+            for (final ReconnectListener<HonoConnection> listener : reconnectListeners) {
                 listener.onReconnect(this);
             }
         }
@@ -464,7 +458,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void notifyDisconnectHandlers() {
 
-        for (DisconnectListener<HonoConnection> listener : disconnectListeners) {
+        for (final DisconnectListener<HonoConnection> listener : disconnectListeners) {
             listener.onDisconnect(this);
         }
     }
@@ -494,7 +488,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
         } else {
             if (connectionFailureCause != null) {
-                log.debug("connection attempt failed", connectionFailureCause);
+                logConnectionError(connectionFailureCause);
             }
             // apply exponential backoff with jitter
             // determine the max delay for this reconnect attempt as 2^attempt * delayIncrement
@@ -520,7 +514,20 @@ public class HonoConnectionImpl implements HonoConnection {
         }
     }
 
-    private boolean isTerminalConnectionError(final Throwable connectionFailureCause) {
+    /**
+     * Log the connection error.
+     * 
+     * @param connectionFailureCause The connection error to log, never is {@code null}.
+     */
+    private void logConnectionError(final Throwable connectionFailureCause) {
+        if (isNoteworthyError(connectionFailureCause)) {
+            log.warn("connection attempt failed", connectionFailureCause);
+        } else {
+            log.debug("connection attempt failed", connectionFailureCause);
+        }
+    }
+
+    private boolean isNoteworthyError(final Throwable connectionFailureCause) {
 
         return connectionFailureCause instanceof SSLException ||
                 connectionFailureCause instanceof AuthenticationException ||
