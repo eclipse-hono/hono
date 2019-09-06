@@ -105,11 +105,14 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Adds multiple endpoints to this server.
+     * <p>
+     * Subclasses may override this method to only include {@link AmqpEndpoint}
+     * instances with a certain qualifier.
      *
      * @param definedEndpoints The endpoints.
      */
     @Autowired(required = false)
-    public final void addEndpoints(final List<AmqpEndpoint> definedEndpoints) {
+    public void addEndpoints(final List<AmqpEndpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
         for (final AmqpEndpoint ep : definedEndpoints) {
             addEndpoint(ep);
