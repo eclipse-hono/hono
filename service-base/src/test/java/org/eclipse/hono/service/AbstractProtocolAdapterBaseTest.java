@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -395,6 +396,45 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.addProperties(message, target, null, tenant, assertion, null);
 
         assertThat(message.getTtl(), is(15000L));
+    }
+
+    /**
+     * Verifies that the TTL for a downstream event is set to the given <em>time-to-live</em> duration.
+     */
+    @Test
+    public void testNewMessageUsesGivenTtlValue() {
+        final Duration timeToLive = Duration.ofSeconds(10);
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
+                Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 30));
+        final JsonObject assertion = newRegistrationAssertionResult();
+        assertion.put(
+                RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
+                new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15));
+
+        final Message message = adapter.newMessage(target, null, "application/text", Buffer.buffer("test"), tenant,
+                assertion, null, timeToLive);
+
+        assertEquals(timeToLive.toMillis(), message.getTtl());
+    }
+
+    /**
+     * Verifies that the TTL for a downstream event is limited by the <em>max-ttl</em> specified for
+     * a tenant, if the given <em>time-to-live</em> duration exceeds the <em>max-ttl</em> value.
+     */
+    @Test
+    public void testNewMessageLimitsTtlToMaxValue() {
+        final Duration timeToLive = Duration.ofSeconds(50);
+        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
+                Constants.DEFAULT_TENANT, "4711");
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 15));
+
+        final Message message = adapter.newMessage(target, null, "application/text", Buffer.buffer("test"), tenant,
+                new JsonObject(), null, timeToLive);
+
+        assertEquals(15000L, message.getTtl());
     }
 
     /**

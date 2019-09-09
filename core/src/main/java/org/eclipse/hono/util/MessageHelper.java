@@ -13,6 +13,7 @@
 package org.eclipse.hono.util;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Objects;
@@ -492,6 +493,20 @@ public final class MessageHelper {
      */
     public static String getCacheDirective(final Message msg) {
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_CACHE_CONTROL, String.class);
+    }
+
+    /**
+     * Sets the <em>time-to-live</em> of the AMQP 1.0 message.
+     * 
+     * @param message the message for that the <em>time-to-live</em> is set.
+     * @param timeToLive The <em>time-to-live</em> duration to be set in the message.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static void setTimeToLive(final Message message, final Duration timeToLive) {
+        Objects.requireNonNull(message);
+        Objects.requireNonNull(timeToLive);
+
+        message.setTtl(timeToLive.toMillis());
     }
 
     /**
