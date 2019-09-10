@@ -50,8 +50,6 @@ import io.vertx.proton.ProtonSender;
  */
 public class DelegateViaDownstreamPeerCommandHandlerTest {
 
-    private String tenantId;
-    private String deviceId;
     private CommandContext commandContext;
     private ProtonDelivery commandDelivery;
     private DelegateViaDownstreamPeerCommandHandler delegateViaDownstreamPeerCommandHandler;
@@ -65,8 +63,8 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
      */
     @Before
     public void setup() {
-        tenantId = "testTenant";
-        deviceId = "testDevice";
+        final String tenantId = "testTenant";
+        final String deviceId = "testDevice";
         replyTo = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, "the-reply-to-id");
 
         final Message commandMessage = mock(Message.class);
@@ -104,10 +102,6 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
-                assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));
                 return Future.succeededFuture(protonDelivery);
             }
@@ -138,10 +132,6 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
-                assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));
                 return Future.succeededFuture(protonDelivery);
             }
@@ -173,10 +163,6 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
-                assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));
                 return Future.succeededFuture(protonDelivery);
             }
@@ -204,10 +190,6 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         delegatedCommandSender = new DelegatedCommandSenderImpl(connection, protonSender) {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext parent) {
-                assertThat(message.getAddress(),
-                        is(String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.tenantId,
-                                DelegateViaDownstreamPeerCommandHandlerTest.this.deviceId)));
                 assertThat(message.getReplyTo(), is(replyTo));
                 return Future.succeededFuture(protonDelivery);
             }
