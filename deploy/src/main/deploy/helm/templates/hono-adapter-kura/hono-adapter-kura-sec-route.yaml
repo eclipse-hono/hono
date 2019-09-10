@@ -1,5 +1,5 @@
 {{- if and (eq .Values.platform "openshift") .Values.adapters.kura.enabled }}
-apiVersion: v1
+apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   {{- $args := dict "dot" . "component" "adapter-kura" "name" "adapter-kura-sec" }}
