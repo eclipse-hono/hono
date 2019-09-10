@@ -1,12 +1,12 @@
 {{- if eq .Values.platform "openshift" }}
-apiVersion: v1
+apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   {{- $args := dict "dot" . "component" "adapter-http-vertx" "name" "adapter-http-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   port:
-    targetPort: 8080
+    targetPort: http
   to:
     kind: Service
     name: {{ .Release.Name }}-adapter-http-vertx

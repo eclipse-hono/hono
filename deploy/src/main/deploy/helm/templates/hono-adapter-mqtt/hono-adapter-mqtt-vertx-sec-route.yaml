@@ -1,12 +1,12 @@
 {{- if eq .Values.platform "openshift" }}
-apiVersion: v1
+apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   {{- $args := dict "dot" . "component" "adapter-mqtt-vertx" "name" "adapter-mqtt-vertx-sec" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   port:
-    targetPort: 8883
+    targetPort: secure-mqtt
   tls:
     termination: passthrough
   to:
