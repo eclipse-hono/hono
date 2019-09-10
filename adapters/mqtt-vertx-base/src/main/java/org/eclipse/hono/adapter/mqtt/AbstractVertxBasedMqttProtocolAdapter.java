@@ -1349,22 +1349,31 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         TracingHelper.TAG_CLIENT_ID.set(commandContext.getCurrentSpan(), endpoint.clientIdentifier());
         final Command command = commandContext.getCommand();
-        // example: control/DEFAULT_TENANT/4711/req/xyz/light
-        // one-way commands have an empty requestId, like control/DEFAULT_TENANT/4711/req//light
-        final String commandRequestId = (command.isOneWay() ? "" : command.getRequestId());
+
+        // build topic string; examples:
+        // command///req/xyz/light (authenticated device)
+        // command///req//light (authenticated device, one-way)
+        // command/DEFAULT_TENANT/4711/req/xyz/light (unauthenticated device)
+        // command//4712/req/xyz/light (authenticated gateway)
+
+        final String topicTenantId = subscription.isAuthenticated() ? "" : subscription.getTenant();
+        final String topicDeviceId = command.isTargetedAtGateway() ? command.getOriginalDeviceId()
+                : subscription.isAuthenticated() ? "" : subscription.getDeviceId();
+        final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
+
         final String topic = String.format("%s/%s/%s/%s/%s/%s",
-                subscription.getEndpoint(),
-                // no need to include tenant and device ID in topic
-                // if device is authenticated,
-                // i.e. publish to control///req/xyz/light
-                subscription.isAuthenticated() ? "" : subscription.getTenant(),
-                subscription.isAuthenticated() ? "" : subscription.getDeviceId(),
-                subscription.getRequestPart(),
-                commandRequestId,
-                command.getName());
-        LOG.debug("Publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
-                subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
-                subscription.getQos());
+                subscription.getEndpoint(), topicTenantId, topicDeviceId, subscription.getRequestPart(),
+                topicCommandRequestId, command.getName());
+
+        if (command.isTargetedAtGateway()) {
+            LOG.debug("Publishing command to gateway [tenant-id: {}, gateway-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
+                    subscription.getTenant(), subscription.getDeviceId(), command.getOriginalDeviceId(),
+                    subscription.getClientId(), subscription.getQos());
+        } else {
+            LOG.debug("Publishing command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
+                    subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
+                    subscription.getQos());
+        }
         final Map<String, String> items = new HashMap<>(3);
         items.put(Fields.EVENT, "Publishing command to device");
         items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());

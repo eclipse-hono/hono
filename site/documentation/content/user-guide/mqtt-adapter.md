@@ -220,8 +220,8 @@ An authenticated device MUST use the following topic filter to subscribe to comm
 
 The adapter will then publish commands for the device to topic:
 
-* for *Request/Response* commands: `command///req/${req-id}/${command}[/*][/property-bag]`
-* for *one-way* commands: `command///req//${command}[/*][/property-bag]`
+* for *Request/Response* commands: `command///req/${req-id}/${command}`
+* for *one-way* commands: `command///req//${command}`
 
 
 **Example**
@@ -251,13 +251,34 @@ An unauthenticated device MUST use the following topic filter to subscribe to co
 
 The adapter will then publish *Request/Response* commands for the device to topic:
 
-* `command/${tenant-id}/${device-id}/req/${req-id}/${command}[/*][/property-bag]`
+* `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
 
 and *one-way* commands to the topic:
 
-* `command/${tenant-id}/${device-id}/req//${command}[/*][/property-bag]`
+* `command/${tenant-id}/${device-id}/req//${command}`
 
 (For an example of the incoming command see above at authenticated device)
+
+### Receiving Commands (authenticated Gateway)
+
+*Gateway* components can receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details.
+
+If a device is configured in such a way that there can be *one* gateway, acting on behalf of the device, a command sent to this device will by default be directed to that gateway.
+
+If a device is configured to be used with *multiple* gateways, the particular gateway that last acted on behalf of the device will be the target that commands for that device will be routed to. The mapping of device and gateway last used by the device is updated whenever a device sends a telemetry, event or command response message via the gateway. This means that for a device configured to be used via multiple gateways to receive commands, the device first has to send at least one telemetry or event message to establish which gateway to use for receiving commands for that device.
+
+An authenticated gateway MUST use the following topic filter to subscribe to to commands for all the devices it acts on behalf of:
+
+* `command/+/+/req/#`
+
+**Example**
+
+    mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command/+/+/req/#
+
+The adapter will then publish commands for devices, that the gateway has acted on behalf of, to topic:
+
+* for *Request/Response* commands: `command//${device-id}/req/${req-id}/${command}`
+* for *one-way* commands: `command//${device-id}/req//${command}`
 
 ### Sending a Response to a Command (authenticated Device)
 
@@ -282,6 +303,18 @@ An unauthenticated device MUST send the response to a previously received comman
 After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
 
     mosquitto_pub -t command/DEFAULT_TENANT/4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+
+### Sending a Response to a Command (authenticated Gateway)
+
+An authenticated gateway MUST send the response to a previously received command to the following topic:
+
+* `command///res/${req-id}/${status}`
+
+**Example**
+
+After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
+
+    mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t command///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 
 ## Downstream Meta Data
 
