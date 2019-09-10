@@ -59,11 +59,21 @@ and *one-way* commands on the topic:
 
 * `command/[${tenant}]/[${device-id}]/req//${command}`
 
+In the above topics, `${tenant}` and `${device-id}` are kept empty for authenticated devices. 
+
 Authenticated devices typically subscribe to
 
 * `command/+/+/req/#`
 
-while unauthenticated devices have to fully specify their `${tenant}` and `${device-id}` during the subscription.
+while unauthenticated devices have to fully specify their `${tenant}` and `${device-id}` in the subscription topic:
+
+* `command/${tenant-id}/${device-id}/req/#`
+
+Authenticated gateways subscribe to
+
+* `command/+/+/req/#`
+
+and will receive commands on a topic that contains the target device id.
 
 The response of the command will be sent by the device to 
 

@@ -234,6 +234,10 @@ public final class Command {
 
     /**
      * Gets the device's identifier.
+     * <p>
+     * In the case that the command got redirected to a gateway,
+     * the id returned here is a gateway id. See {@link #getOriginalDeviceId()}
+     * for the original device id in that case.
      *
      * @return The identifier.
      * @throws IllegalStateException if this command is invalid.
@@ -241,6 +245,48 @@ public final class Command {
     public String getDeviceId() {
         if (isValid()) {
             return deviceId;
+        } else {
+            throw new IllegalStateException("command is invalid");
+        }
+    }
+
+    /**
+     * Checks whether the command is targeted at a gateway.
+     * <p>
+     * This is the case when the commands got redirected and hence
+     * the device id (ie. the gateway id in that case) is different
+     * from the original device id.
+     *
+     * @return {@code true} if the device id is a gateway id.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    public boolean isTargetedAtGateway() {
+        if (isValid()) {
+            final String originalDeviceId = getOriginalDeviceId();
+            return originalDeviceId != null && !originalDeviceId.equals(getDeviceId());
+        } else {
+            throw new IllegalStateException("command is invalid");
+        }
+    }
+
+    /**
+     * Gets the device identifier used in the original command. It is extracted from the
+     * <em>to</em> property of the command AMQP message.
+     * <p>
+     * This id differs from {@link #getDeviceId()} if the command got redirected to a gateway
+     * ({@link #getDeviceId()} returns the gateway id in that case).
+     *
+     * @return The identifier.
+     * @throws IllegalStateException if this command is invalid.
+     */
+    public String getOriginalDeviceId() {
+        if (isValid()) {
+            // commands directed at the legacy control endpoint didn't have to have the message address set
+            // (and it's content didn't get checked), that's why the 'deviceId' field is used as fallback here
+            final String addressDeviceId = message.getAddress() != null
+                    ? ResourceIdentifier.fromString(message.getAddress()).getResourceId()
+                    : null;
+            return addressDeviceId != null ? addressDeviceId : deviceId;
         } else {
             throw new IllegalStateException("command is invalid");
         }
