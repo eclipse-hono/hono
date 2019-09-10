@@ -178,13 +178,9 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
     @Override
     public Future<ProtonDelivery> sendCommandMessage(final Command command, final SpanContext spanContext) {
         Objects.requireNonNull(command);
-        final String tenantId = command.getTenant();
-        final String deviceId = command.getDeviceId();
-        final String targetAddress = getTargetAddress(tenantId, deviceId);
         final String replyToAddress = command.isOneWay() ? null
-                : String.format("%s/%s/%s", command.getReplyToEndpoint(), tenantId, command.getReplyToId());
-        return sendAndWaitForOutcome(
-                createDelegatedCommandMessage(command.getCommandMessage(), targetAddress, replyToAddress),
+                : String.format("%s/%s/%s", command.getReplyToEndpoint(), command.getTenant(), command.getReplyToId());
+        return sendAndWaitForOutcome(createDelegatedCommandMessage(command.getCommandMessage(), replyToAddress),
                 spanContext);
     }
 
@@ -201,14 +197,10 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                 Objects.requireNonNull(deviceId));
     }
 
-    private static Message createDelegatedCommandMessage(final Message originalMessage, final String targetAddress,
-            final String replyToAddress) {
-        Objects.requireNonNull(targetAddress);
+    private static Message createDelegatedCommandMessage(final Message originalMessage, final String replyToAddress) {
         Objects.requireNonNull(originalMessage);
         // copy original message
         final Message msg = MessageHelper.getShallowCopy(originalMessage);
-        // set target address
-        msg.setAddress(targetAddress);
         msg.setReplyTo(replyToAddress);
         // use original message id as correlation id
         msg.setCorrelationId(originalMessage.getMessageId());
@@ -235,7 +227,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
 
         final String targetAddress = getTargetAddress(tenantId, deviceId);
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-                .map(sender -> (DelegatedCommandSender) new DelegatedCommandSenderImpl(con, sender));
+                .map(sender -> new DelegatedCommandSenderImpl(con, sender));
     }
 
     @Override
