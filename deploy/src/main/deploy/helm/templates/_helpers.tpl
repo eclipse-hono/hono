@@ -138,7 +138,7 @@ messaging:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-{{ required "A .Values.adapters.amqpMessagingNetworkSpec needs to be set when not using the example AMQP Messaging Network" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml | indent 2 -}}
+  {{ required "A .Values.adapters.amqpMessagingNetworkSpec needs to be set when not using the example AMQP Messaging Network" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml | nindent 2 -}}
 {{- end -}}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 command:
@@ -152,7 +152,7 @@ command:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-{{ .dot.Values.adapters.commandAndControlSpec | toYaml | indent 2}}
+  {{ .dot.Values.adapters.commandAndControlSpec | toYaml | nindent 2}}
 {{- end -}}
   inactiveLinkTimeout: {{ .dot.Values.adapters.inactiveLinkTimeout }}
 tenant:

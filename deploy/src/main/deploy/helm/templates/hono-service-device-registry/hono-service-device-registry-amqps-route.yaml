@@ -1,12 +1,12 @@
 {{- if eq .Values.platform "openshift" }}
-apiVersion: v1
+apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry-amqps" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   port:
-    targetPort: 5671
+    targetPort: amqps
   tls:
     termination: passthrough
   to:
