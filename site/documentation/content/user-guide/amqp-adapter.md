@@ -98,7 +98,7 @@ All other combinations are not supported by the adapter and will result in the m
 
 ## Publish Telemetry Data (authenticated Device)
 
-The AMQP adapter supports publishing of telemetry data to Hono's Telemetry API. Telemetry messages can be published using either *AT LEAS ONCE* or *AT MOST ONCE delivery semantics.
+The AMQP adapter supports publishing of telemetry data to Hono's Telemetry API. Telemetry messages can be published using either *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics.
 
 * Message Address: `telemetry` or `t`
   * This refers to the `to` property of the message.

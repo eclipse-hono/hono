@@ -316,13 +316,13 @@ public class KerlinkProvider implements LoraProvider {
     private void invalidateCacheForGatewayDevice(final JsonObject gatewayDevice) {
         final String cacheId = getCacheIdForGatewayDevice(gatewayDevice);
         LOG.debug("Invalidating item in cache with id '{}'", cacheId);
-        // Ugly to directly remove it from the underlaying cache, but Hono cache does not implement evict method yet.
+        // Ugly to directly remove it from the underlying cache, but Hono cache does not implement evict method yet.
         cacheManager.getCache(KerlinkProvider.class.getName()).evict(cacheId);
     }
 
-    private String getCacheIdForGatewayDevice(final JsonObject gatwayDevice) {
-        return gatwayDevice.getString(JSON_FIELD_TENANT_ID) + "_" + gatwayDevice.getString(JSON_FIELD_DEVICE_ID) + "_"
-                + LoraUtils.getLoraConfigFromLoraGatewayDevice(gatwayDevice).getString(FIELD_AUTH_ID);
+    private String getCacheIdForGatewayDevice(final JsonObject gatewayDevice) {
+        return gatewayDevice.getString(JSON_FIELD_TENANT_ID) + "_" + gatewayDevice.getString(JSON_FIELD_DEVICE_ID) + "_"
+                + LoraUtils.getLoraConfigFromLoraGatewayDevice(gatewayDevice).getString(FIELD_AUTH_ID);
     }
 
     private boolean isValidDownlinkKerlinkGateway(final JsonObject gatewayDevice) {

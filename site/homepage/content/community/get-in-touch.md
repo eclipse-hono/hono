@@ -22,7 +22,7 @@ Please make sure to search the existing issues for similar symptoms before you o
 
 The most direct way of interacting with the Hono developers is by means of [joining our room on Gitter](https://gitter.im/eclipse/hono).
 
-Keep in mind, though, that our Gitter room is mainly used by committers and contributors for discussing issues related to development of new features and organizational stuff. The preferred way of posting questions regaring usage of Hono is via [StackOverflow](https://stackoverflow.com/questions/tagged/eclipse-hono).
+Keep in mind, though, that our Gitter room is mainly used by committers and contributors for discussing issues related to development of new features and organizational stuff. The preferred way of posting questions regarding usage of Hono is via [StackOverflow](https://stackoverflow.com/questions/tagged/eclipse-hono).
 
 ## Mailing List
 
