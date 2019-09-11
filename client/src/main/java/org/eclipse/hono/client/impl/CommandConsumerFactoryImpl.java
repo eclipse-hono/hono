@@ -226,8 +226,8 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
     private Future<DelegatedCommandSender> createDelegatedCommandSender(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
         return connection.executeOrRunOnContext(result -> {
-            delegatedCommandSenderFactory.createClient(() -> DelegatedCommandSenderImpl.create(connection, tenantId, deviceId, null), // FIXME
-                    result);
+            delegatedCommandSenderFactory.createClient(
+                    () -> DelegatedCommandSenderImpl.create(connection, tenantId, deviceId, null), result);
         });
     }
 
