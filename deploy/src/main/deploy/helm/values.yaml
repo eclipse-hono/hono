@@ -123,6 +123,11 @@ adapters:
   mqtt:
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-mqtt-vertx:${project.version}
+  lora:
+    # enabled indicates if Hono's Lora adapter should be deployed.
+    enabled: false
+    # Docker image repository
+    imageName: ${docker.repository}/hono-adapter-lora-vertx:${project.version}
   kura:
     # enabled indicates if Hono's (deprecated) Kura adapter should be deployed.
     enabled: false

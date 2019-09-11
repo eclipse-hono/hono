@@ -24,6 +24,9 @@ data:
     {{- end }}
     {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-amqp-vertx") | nindent 4 }}
     {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-http-vertx") | nindent 4 }}
+    {{- if .Values.adapters.lora.enabled }}
+      {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-lora") | nindent 4 }}
+    {{- end }}
     {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-mqtt-vertx") | nindent 4 }}
     {{- if .Values.adapters.kura.enabled }}
       {{- include "hono.prometheus.scrapeJob" (dict "dot" . "serviceName" "adapter-kura") | nindent 4 }}
