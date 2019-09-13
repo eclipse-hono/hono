@@ -37,9 +37,10 @@ import io.vertx.core.Vertx;
 /**
  * Micrometer based metrics implementation.
  * <p>
- * Also checks if tenant {@link ProtocolAdapterProperties#getTenantIdleTimeout()} is exceeded and publishes the tenantId
- * on the event bus address {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} once a tenant times out.
- * 
+ * This implementation monitors the {@code TenantIdleTimeout}, if configured to a non zero duration
+ * ({@link ProtocolAdapterProperties#setTenantIdleTimeout(java.time.Duration)}). If the tenant had not interacted with
+ * the protocol adapter instance for the configured period, it publishes an event on the event bus. The event bus
+ * address is {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} and the body of the message is the tenantId.
  */
 public class MicrometerBasedMetrics implements Metrics {
 
@@ -77,7 +78,7 @@ public class MicrometerBasedMetrics implements Metrics {
     protected final MeterRegistry registry;
 
     private final Map<String, AtomicLong> authenticatedConnections = new ConcurrentHashMap<>();
-    private final Map<String, Long> lastSendTimestampsPerTenant = new ConcurrentHashMap<>();
+    private final Map<String, Long> lastSeenTimestampPerTenant = new ConcurrentHashMap<>();
     private final AtomicLong unauthenticatedConnections;
     private final AtomicInteger totalCurrentConnections = new AtomicInteger();
     private final Vertx vertx;
@@ -119,6 +120,7 @@ public class MicrometerBasedMetrics implements Metrics {
         gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
                 .incrementAndGet();
         this.totalCurrentConnections.incrementAndGet();
+        updateLastSeenTimestamp(tenantId);
 
     }
 
@@ -129,6 +131,7 @@ public class MicrometerBasedMetrics implements Metrics {
         gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
                 .decrementAndGet();
         this.totalCurrentConnections.decrementAndGet();
+        updateLastSeenTimestamp(tenantId);
 
     }
 
@@ -206,7 +209,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .register(this.registry)
             .record(calculatePayloadSize(payloadSize, tenantObject));
 
-        updateLastSendForTenant(tenantId);
+        updateLastSeenTimestamp(tenantId);
     }
 
     @Override
@@ -241,7 +244,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .register(this.registry)
             .record(calculatePayloadSize(payloadSize, tenantObject));
 
-        updateLastSendForTenant(tenantId);
+        updateLastSeenTimestamp(tenantId);
     }
 
     /**
@@ -322,16 +325,16 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     // visible for testing
-    Map<String, Long> getLastSendTimestampsPerTenant() {
-        return lastSendTimestampsPerTenant;
+    Map<String, Long> getLastSeenTimestampPerTenant() {
+        return lastSeenTimestampPerTenant;
     }
 
-    private void updateLastSendForTenant(final String tenantId) {
+    private void updateLastSeenTimestamp(final String tenantId) {
         if (tenantIdleTimeout == DEFAULT_TENANT_IDLE_TIMEOUT) {
             return;
         }
 
-        final Long previousVal = lastSendTimestampsPerTenant.put(tenantId, System.currentTimeMillis());
+        final Long previousVal = lastSeenTimestampPerTenant.put(tenantId, System.currentTimeMillis());
         if (previousVal == null) {
             newTenantTimeoutTimer(tenantId, tenantIdleTimeout);
         }
@@ -339,19 +342,24 @@ public class MicrometerBasedMetrics implements Metrics {
 
     private void newTenantTimeoutTimer(final String tenantId, final long delay) {
         vertx.setTimer(delay, id -> {
-            final Long lastSend = lastSendTimestampsPerTenant.get(tenantId);
-            final long remaining = tenantIdleTimeout - (System.currentTimeMillis() - lastSend);
+            final Long lastSeen = lastSeenTimestampPerTenant.get(tenantId);
+            final long remaining = tenantIdleTimeout - (System.currentTimeMillis() - lastSeen);
 
             if (remaining > 0) {
                 newTenantTimeoutTimer(tenantId, remaining);
             } else {
-                if (lastSendTimestampsPerTenant.remove(tenantId, lastSend)) {
+                if (!isConnected(tenantId) && lastSeenTimestampPerTenant.remove(tenantId, lastSeen)) {
                     handleTenantTimeout(tenantId);
                 } else { // not ready -> reset timeout
                     newTenantTimeoutTimer(tenantId, tenantIdleTimeout);
                 }
             }
         });
+    }
+
+    private boolean isConnected(final String tenantId) {
+        final AtomicLong count = authenticatedConnections.get(tenantId);
+        return count != null && count.get() > 0;
     }
 
     private void handleTenantTimeout(final String tenantId) {

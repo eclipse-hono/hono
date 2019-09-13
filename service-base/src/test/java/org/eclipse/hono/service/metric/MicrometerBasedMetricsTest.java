@@ -212,17 +212,17 @@ public class MicrometerBasedMetricsTest {
         final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
 
         reportTelemetry(metrics);
-        assertTrue(metrics.getLastSendTimestampsPerTenant().isEmpty());
+        assertTrue(metrics.getLastSeenTimestampPerTenant().isEmpty());
 
         metrics.setProtocolAdapterProperties(new ProtocolAdapterProperties());
         reportTelemetry(metrics);
-        assertTrue(metrics.getLastSendTimestampsPerTenant().isEmpty());
+        assertTrue(metrics.getLastSeenTimestampPerTenant().isEmpty());
 
         final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
         config.setTenantIdleTimeout(Duration.ZERO);
         metrics.setProtocolAdapterProperties(config);
         reportTelemetry(metrics);
-        assertTrue(metrics.getLastSendTimestampsPerTenant().isEmpty());
+        assertTrue(metrics.getLastSeenTimestampPerTenant().isEmpty());
     }
 
     /**
@@ -242,16 +242,14 @@ public class MicrometerBasedMetricsTest {
 
         // ... with tenantIdleTimeout configured
         final long timeoutMillis = 10L;
-        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
-        config.setTenantIdleTimeout(Duration.ofMillis(timeoutMillis));
-        metrics.setProtocolAdapterProperties(config);
+        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(timeoutMillis));
 
         // WHEN sending a message
         reportTelemetry(metrics);
 
         // THEN the tenant is added to the map that stores the last send time per tenant...
-        assertEquals(1, metrics.getLastSendTimestampsPerTenant().size());
-        assertNotNull(metrics.getLastSendTimestampsPerTenant().get(tenant));
+        assertEquals(1, metrics.getLastSeenTimestampPerTenant().size());
+        assertNotNull(metrics.getLastSeenTimestampPerTenant().get(tenant));
 
         // ... and a timer is started
         verify(vertx).setTimer(eq(timeoutMillis), any(Handler.class));
@@ -265,29 +263,83 @@ public class MicrometerBasedMetricsTest {
      */
     @ParameterizedTest
     @MethodSource("registries")
-    public void testTenantLastSendIsUpdated(final MeterRegistry registry) throws InterruptedException {
+    public void testLastSeenIsUpdatedOnMessageSend(final MeterRegistry registry) throws InterruptedException {
 
-        // GIVEN a metrics instance...
-        final Vertx vertx = mock(Vertx.class);
-        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, vertx);
+        // GIVEN a metrics instance with tenantIdleTimeout configured
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(10L));
 
-        // ... with tenantIdleTimeout configured
-        final long timeoutMillis = 10L;
-        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
-        config.setTenantIdleTimeout(Duration.ofMillis(timeoutMillis));
-        metrics.setProtocolAdapterProperties(config);
+        // WHEN connecting
+        metrics.incrementConnections(tenant);
+        final long before = metrics.getLastSeenTimestampPerTenant().get(tenant);
 
-        // WHEN sending a message...
-        reportTelemetry(metrics);
-        final long timestampOfFirstMessage = metrics.getLastSendTimestampsPerTenant().get(tenant);
-
-        // and later a second message
+        // and later sending a message
         Thread.sleep(1L);
         reportTelemetry(metrics);
 
         // THEN the timestamp for the tenant has been updated
-        assertEquals(1, metrics.getLastSendTimestampsPerTenant().size());
-        assertNotEquals(timestampOfFirstMessage, metrics.getLastSendTimestampsPerTenant().get(tenant));
+        assertEquals(1, metrics.getLastSeenTimestampPerTenant().size());
+        assertNotEquals(before, metrics.getLastSeenTimestampPerTenant().get(tenant));
+    }
+
+    /**
+     * Verifies that disconnecting updates the stored timestamp for the tenant.
+     * 
+     * @param registry : the registry that the tests should be run against.
+     * @throws InterruptedException if thread sleep is interrupted.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testLastSeenIsUpdatedOnDisconnect(final MeterRegistry registry) throws InterruptedException {
+
+        // GIVEN a metrics instance with tenantIdleTimeout configured
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(10L));
+
+        // WHEN connecting
+        metrics.incrementConnections(tenant);
+        final long before = metrics.getLastSeenTimestampPerTenant().get(tenant);
+
+        // and later disconnect
+        Thread.sleep(1L);
+        metrics.decrementConnections(tenant);
+
+        // THEN the timestamp for the tenant has been updated
+        assertEquals(1, metrics.getLastSeenTimestampPerTenant().size());
+        assertNotEquals(before, metrics.getLastSeenTimestampPerTenant().get(tenant));
+    }
+
+    /**
+     * Verifies that re-connecting updates the stored timestamp for the tenant.
+     * 
+     * @param registry : the registry that the tests should be run against.
+     * @throws InterruptedException if thread sleep is interrupted.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testLastSeenIsUpdatedOnReconnect(final MeterRegistry registry) throws InterruptedException {
+
+        // GIVEN a metrics instance with tenantIdleTimeout configured
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
+        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(10L));
+
+        // WHEN disconnect
+        metrics.decrementConnections(tenant);
+        final long before = metrics.getLastSeenTimestampPerTenant().get(tenant);
+
+        // and later reconnect
+        Thread.sleep(1L);
+        metrics.incrementConnections(tenant);
+
+        // THEN the timestamp for the tenant has been updated
+        assertEquals(1, metrics.getLastSeenTimestampPerTenant().size());
+        assertNotEquals(before, metrics.getLastSeenTimestampPerTenant().get(tenant));
+    }
+
+    private ProtocolAdapterProperties configWithTenantIdleTimeout(final long timeoutMillis) {
+        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
+        config.setTenantIdleTimeout(Duration.ofMillis(timeoutMillis));
+        return config;
     }
 
     private void reportTelemetry(final MicrometerBasedMetrics metrics) {
