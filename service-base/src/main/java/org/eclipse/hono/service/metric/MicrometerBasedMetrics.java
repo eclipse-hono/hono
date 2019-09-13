@@ -339,17 +339,22 @@ public class MicrometerBasedMetrics implements Metrics {
 
     private void newTenantTimeoutTimer(final String tenantId, final long delay) {
         vertx.setTimer(delay, id -> {
-            final long lastSend = lastSendTimestampsPerTenant.get(tenantId);
-            long remaining = tenantIdleTimeout - (System.currentTimeMillis() - lastSend);
-            if (remaining <= 0) {
+            final Long lastSend = lastSendTimestampsPerTenant.get(tenantId);
+            final long remaining = tenantIdleTimeout - (System.currentTimeMillis() - lastSend);
+
+            if (remaining > 0) {
+                newTenantTimeoutTimer(tenantId, remaining);
+            } else {
                 if (lastSendTimestampsPerTenant.remove(tenantId, lastSend)) {
-                    vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
-                    return;
-                } else { // had been updated since last get -> timeout needs to be reset
-                    remaining = tenantIdleTimeout;
+                    handleTenantTimeout(tenantId);
+                } else { // not ready -> reset timeout
+                    newTenantTimeoutTimer(tenantId, tenantIdleTimeout);
                 }
             }
-            newTenantTimeoutTimer(tenantId, remaining);
         });
+    }
+
+    private void handleTenantTimeout(final String tenantId) {
+        vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
     }
 }
