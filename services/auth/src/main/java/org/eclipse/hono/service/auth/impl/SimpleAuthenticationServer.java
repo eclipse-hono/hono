@@ -13,24 +13,13 @@
 
 package org.eclipse.hono.service.auth.impl;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
-import org.eclipse.hono.auth.Authorities;
-import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
+import org.eclipse.hono.service.auth.AddressAuthzHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -42,34 +31,15 @@ import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
-
 /**
- * An authentication server serving JSON Web Tokens to clients that have been authenticated using SASL.
- *
+ * An authentication server for clients that have been authenticated using SASL.
+ * <p>
+ * The server provides support for serving JSON Web Tokens (via the {@link AuthenticationEndpoint} if registered)
+ * and for sending back the authenticated clients' authorities in accordance to the Qpid Dispatch Router's
+ * <em>ADDRESS_AUTHZ</em> capability (via the {@link AddressAuthzHelper} implementation).
  */
 public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
 
-    /**
-     * The AMQP symbol used to indicate support for Qpid Dispatch Router's
-     * <em>Authentication Server</em> functionality.
-     */
-    public static final Symbol CAPABILITY_ADDRESS_AUTHZ = Symbol.valueOf("ADDRESS-AUTHZ");
-    /**
-     * The AMQP symbol used as key for the collection of authorities granted to a client.
-     */
-    public static final Symbol PROPERTY_ADDRESS_AUTHZ = Symbol.valueOf("address-authz");
-    /**
-     * The AMQP symbol used as key for the authenticated client's authorization identity.
-     */
-    public static final Symbol PROPERTY_AUTH_IDENTITY = Symbol.valueOf("authenticated-identity");
-    /**
-     * The AMQP symbol used as key for the Qpid Dispatch Router version.
-     */
-    public static final Symbol PROPERTY_CLIENT_VERSION = Symbol.valueOf("version");
-
-    private static final int IDX_MAJOR_VERSION = 0;
-    private static final int IDX_MINOR_VERSION = 1;
-    private static final int IDX_PATCH_VERSION = 2;
     private static final Logger LOG = LoggerFactory.getLogger(SimpleAuthenticationServer.class);
 
     @Autowired
@@ -87,6 +57,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
     protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
         connection.sessionOpenHandler(remoteOpenSession -> handleSessionOpen(connection, remoteOpenSession));
         connection.senderOpenHandler(remoteOpenSender -> handleSenderOpen(connection, remoteOpenSender));
+        // no receiverOpenHandler set here
         connection.disconnectHandler(con -> {
             con.close();
             con.disconnect();
@@ -110,17 +81,15 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
      * Checks if the open frame contains a desired <em>ADDRESS_AUTHZ</em> capability and if so,
      * adds the authenticated clients' authorities to the properties of the open frame sent
      * to the peer in response.
-     * 
+     *
      * @param connection The connection opened by the peer.
      */
     @Override
     protected void processRemoteOpen(final ProtonConnection connection) {
-        final boolean isAddressAuthz = Arrays.stream(connection.getRemoteDesiredCapabilities())
-                .anyMatch(symbol -> symbol.equals(CAPABILITY_ADDRESS_AUTHZ));
-        if (isAddressAuthz) {
+        if (AddressAuthzHelper.isAddressAuthzCapabilitySet(connection)) {
             LOG.debug("client [container: {}] requests transfer of authenticated user's authorities in open frame",
                     connection.getRemoteContainer());
-            processAddressAuthzCapability(connection);
+            AddressAuthzHelper.processAddressAuthzCapability(connection);
         }
         connection.open();
         vertx.setTimer(5000, closeCon -> {
@@ -130,101 +99,6 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
                         "client must retrieve token within 5 secs after opening connection")).close();
             }
         });
-    }
-
-    /**
-     * Processes a peer's AMQP <em>open</em> frame as described in
-     * <a href="https://github.com/EnMasseProject/enmasse/issues/702">
-     * enMasse issue #702</a>.
-     * 
-     * @param connection The connection to get authorities for.
-     */
-    private void processAddressAuthzCapability(final ProtonConnection connection) {
-
-        if (LOG.isDebugEnabled()) {
-            final Map<Symbol, Object> remoteProperties = connection.getRemoteProperties();
-            if (remoteProperties != null) {
-                final String props = remoteProperties.entrySet().stream()
-                        .map(entry -> String.format("[%s: %s]", entry.getKey(), entry.getValue().toString()))
-                        .collect(Collectors.joining(", "));
-                LOG.debug("client connection [container: {}] includes properties: {}", connection.getRemoteContainer(), props);
-            }
-        }
-        final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
-        final Map<String, String[]> permissions = getPermissionsFromAuthorities(clientPrincipal.getAuthorities());
-        final Map<Symbol, Object> properties = new HashMap<>();
-        final boolean isLegacy = isLegacyClient(connection);
-        if (isLegacy) {
-            properties.put(PROPERTY_AUTH_IDENTITY, clientPrincipal.getName());
-        } else {
-            properties.put(PROPERTY_AUTH_IDENTITY, Collections.singletonMap("sub", clientPrincipal.getName()));
-        }
-        properties.put(PROPERTY_ADDRESS_AUTHZ, permissions);
-        connection.setProperties(properties);
-        connection.setOfferedCapabilities(new Symbol[] { CAPABILITY_ADDRESS_AUTHZ });
-        LOG.debug("transferring {} permissions of client [container: {}, user: {}] in open frame [legacy format: {}]",
-                permissions.size(), connection.getRemoteContainer(), clientPrincipal.getName(), isLegacy);
-    }
-
-    private boolean isLegacyClient(final ProtonConnection con) {
-
-        return Optional.ofNullable(con.getRemoteProperties()).map(props -> {
-            final Object obj = props.get(PROPERTY_CLIENT_VERSION);
-            if (obj instanceof String) {
-                final int[] version = parseVersionString((String) obj);
-                return version[IDX_MAJOR_VERSION] == 1 && version[IDX_MINOR_VERSION] < 4;
-            } else {
-                return false;
-            }
-        }).orElse(false);
-    }
-
-    private int[] parseVersionString(final String version) {
-
-        final int[] result = new int[] { 0, 0, 0 };
-        final String[] versionNumbers = version.split("\\.", 3);
-        try {
-            if (versionNumbers.length > IDX_MAJOR_VERSION) {
-                result[IDX_MAJOR_VERSION] = Integer.parseInt(versionNumbers[IDX_MAJOR_VERSION]);
-            }
-            if (versionNumbers.length > IDX_MINOR_VERSION) {
-                result[IDX_MINOR_VERSION] = Integer.parseInt(versionNumbers[IDX_MINOR_VERSION]);
-            }
-            if (versionNumbers.length > IDX_PATCH_VERSION) {
-                result[IDX_PATCH_VERSION] = Integer.parseInt(versionNumbers[IDX_PATCH_VERSION]);
-            }
-        } catch (final NumberFormatException e) {
-            // return current result
-        }
-        LOG.debug("client Dispatch Router version [major: {}, minor: {}, patch: {}]",
-                result[IDX_MAJOR_VERSION],
-                result[IDX_MINOR_VERSION],
-                result[IDX_PATCH_VERSION]);
-        return result;
-    }
-
-    private Map<String, String[]> getPermissionsFromAuthorities(final Authorities authorities) {
-
-        return authorities.asMap().entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith(AuthoritiesImpl.PREFIX_RESOURCE))
-                .collect(Collectors.toMap(
-                        entry -> entry.getKey().substring(AuthoritiesImpl.PREFIX_RESOURCE.length()),
-                        entry -> getAuthorities((String) entry.getValue())));
-    }
-
-    private String[] getAuthorities(final String activities) {
-
-        final Set<String> result = activities.chars().mapToObj(act -> {
-            switch(act) {
-            case 'R':
-                return "recv";
-            case 'W':
-                return "send";
-            default:
-                return null;
-            }
-        }).filter(Objects::nonNull).collect(Collectors.toSet());
-        return result.toArray(String[]::new);
     }
 
     @Override

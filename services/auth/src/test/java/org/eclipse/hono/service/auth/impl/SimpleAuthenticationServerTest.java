@@ -27,6 +27,7 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.service.auth.AddressAuthzHelper;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -75,10 +76,10 @@ public class SimpleAuthenticationServerTest {
         when(client.getExpirationTime()).thenReturn(Instant.now().plusSeconds(60));
         when(client.getName()).thenReturn("application X");
 
-        final Map<Symbol, Object> properties = Collections.singletonMap(SimpleAuthenticationServer.PROPERTY_CLIENT_VERSION, version);
+        final Map<Symbol, Object> properties = Collections.singletonMap(AddressAuthzHelper.PROPERTY_CLIENT_VERSION, version);
         final RecordImpl attachments = new RecordImpl();
         final ProtonConnection con = mock(ProtonConnection.class);
-        when(con.getRemoteDesiredCapabilities()).thenReturn(new Symbol[] { SimpleAuthenticationServer.CAPABILITY_ADDRESS_AUTHZ });
+        when(con.getRemoteDesiredCapabilities()).thenReturn(new Symbol[] { AddressAuthzHelper.CAPABILITY_ADDRESS_AUTHZ });
         when(con.attachments()).thenReturn(attachments);
         when(con.getRemoteContainer()).thenReturn("client container");
         when(con.getRemoteProperties()).thenReturn(properties);
@@ -90,10 +91,10 @@ public class SimpleAuthenticationServerTest {
         server.processRemoteOpen(con);
         final ArgumentCaptor<Symbol[]> offeredCapabilitiesCaptor = ArgumentCaptor.forClass(Symbol[].class);
         verify(con).setOfferedCapabilities(offeredCapabilitiesCaptor.capture());
-        assertTrue(Arrays.stream(offeredCapabilitiesCaptor.getValue()).anyMatch(symbol -> symbol.equals(SimpleAuthenticationServer.CAPABILITY_ADDRESS_AUTHZ)));
+        assertTrue(Arrays.stream(offeredCapabilitiesCaptor.getValue()).anyMatch(symbol -> symbol.equals(AddressAuthzHelper.CAPABILITY_ADDRESS_AUTHZ)));
         final ArgumentCaptor<Map<Symbol, Object>> propsCaptor = ArgumentCaptor.forClass(Map.class);
         verify(con).setProperties(propsCaptor.capture());
-        final Map<String, String[]> authz = (Map<String, String[]>) propsCaptor.getValue().get(SimpleAuthenticationServer.PROPERTY_ADDRESS_AUTHZ);
+        final Map<String, String[]> authz = (Map<String, String[]>) propsCaptor.getValue().get(AddressAuthzHelper.PROPERTY_ADDRESS_AUTHZ);
         assertNotNull(authz);
         assertThat(authz.get("telemetry/DEFAULT_TENANT"), is(new String[] { "recv" }));
         connectionPropertiesAssertion.handle(propsCaptor.getValue());
@@ -101,12 +102,12 @@ public class SimpleAuthenticationServerTest {
 
     @SuppressWarnings("unchecked")
     private void assertClientIdentity(final Map<Symbol, Object> connectionProperties) {
-        final Map<String, Object> authenticatedIdentity = (Map<String, Object>) connectionProperties.get(SimpleAuthenticationServer.PROPERTY_AUTH_IDENTITY);
+        final Map<String, Object> authenticatedIdentity = (Map<String, Object>) connectionProperties.get(AddressAuthzHelper.PROPERTY_AUTH_IDENTITY);
         assertThat(authenticatedIdentity.get("sub"), is("application X"));
     }
 
     private void assertLegacyClientIdentity(final Map<Symbol, Object> connectionProperties) {
-        assertThat(connectionProperties.get(SimpleAuthenticationServer.PROPERTY_AUTH_IDENTITY), is("application X"));
+        assertThat(connectionProperties.get(AddressAuthzHelper.PROPERTY_AUTH_IDENTITY), is("application X"));
     }
 
 }
