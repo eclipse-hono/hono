@@ -21,7 +21,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_AMQP_CERT_PATH`<br>`--hono.amqp.certPath` | no | - | The absolute path to the PEM file containing the certificate that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_AMQP_KEY_PATH`.<br>Alternatively, the `HONO_AMQP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_AMQP_DEFAULTS_ENABLED`<br>`--hono.amqp.defaultsEnabled` | no | `true` | If set to `true` the protocol adapter uses *default values* registered for a device to augment messages published by the device with missing information like a content type. In particular, the protocol adapter adds default values registered for the device as (application) properties with the same name to the AMQP 1.0 messages it sends downstream to the AMQP Messaging Network. |
 | `HONO_AMQP_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.amqp.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_AMQP_INSECURE_PORT`<br>`--hono.amqp.insecurePort` | no | `4040` | The port number that the protocol adapter should listen on for insecure connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_AMQP_INSECURE_PORT`<br>`--hono.amqp.insecurePort` | no | `5672` | The port number that the protocol adapter should listen on for insecure connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AMQP_INSECURE_PORT_ENABLED`<br>`--hono.amqp.insecurePortEnabled` | no | `false` | If set to `true` the protocol adapter will open an insecure port (not secured by TLS) using either the port number set via `HONO_AMQP_INSECURE_PORT` or the default AMQP port number (`1883`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AMQP_KEY_PATH`<br>`--hono.amqp.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_AMQP_CERT_PATH`. Alternatively, the `HONO_AMQP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_AMQP_KEY_STORE_PASSWORD`<br>`--hono.amqp.keyStorePassword` | no | - | The password required to read the contents of the key store. |
@@ -31,7 +31,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_AMQP_MAX_PAYLOAD_SIZE`<br>`--hono.amqp.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming AMQP message in bytes. When a client sends a message with a larger payload, the message is discarded and the link to the client is closed. |
 | `HONO_AMQP_MAX_SESSION_FRAMES`<br>`--hono.amqp.maxSessionFrames` | no | `30` | The maximum number of AMQP transfer frames for sessions created on this connection. This is the number of transfer frames that may simultaneously be in flight for all links in the session. |
 | `HONO_AMQP_NATIVE_TLS_REQUIRED`<br>`--hono.amqp.nativeTlsRequired` | no | `false` | The server will probe for OpenSSL on startup if a secure port is configured. By default, the server will fall back to the JVM's default SSL engine if not available. However, if set to `true`, the server will fail to start at all in this case. |
-| `HONO_AMQP_PORT`<br>`--hono.amqp.port` | no | `4041` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_AMQP_PORT`<br>`--hono.amqp.port` | no | `5671` | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_AMQP_SECURE_PROTOCOLS`<br>`--hono.amqp.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
 | `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of verticle instances to deploy. If not set, one verticle per processor core is deployed. |
 
@@ -56,7 +56,7 @@ There are two alternative ways for doing so:
 1. either setting the `HONO_AMQP_KEY_STORE_PATH` and the `HONO_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
 1. setting the `HONO_AMQP_KEY_PATH` and `HONO_AMQP_CERT_PATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
 
-When starting up, the protocol adapter will bind a TLS secured socket to the default secure port 4041. The port number can also be set explicitly using the `HONO_AMQP_PORT` variable.
+When starting up, the protocol adapter will bind a TLS secured socket to the default secure port 5671. The port number can also be set explicitly using the `HONO_AMQP_PORT` variable.
 
 The `HONO_AMQP_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
 
@@ -65,9 +65,9 @@ The `HONO_AMQP_BIND_ADDRESS` variable can be used to specify the network interfa
 The secure port will mostly be required for production scenarios. However, it might be desirable to expose a non-TLS secured port instead, e.g. for testing purposes. In any case, the non-secure port needs to be explicitly enabled either by
 
 - explicitly setting `HONO_AMQP_INSECURE_PORT` to a valid port number, or by
-- implicitly configuring the default adapter port (4040) by simply setting `HONO_AMQP_INSECURE_PORT_ENABLED` to `true`.
+- implicitly configuring the default adapter port (5672) by simply setting `HONO_AMQP_INSECURE_PORT_ENABLED` to `true`.
 
-The protocol adapter issues a warning on the console if `HONO_AMQP_INSECURE_PORT` is set to the default secure port (4041) used by the adapter for secure connections.
+The protocol adapter issues a warning on the console if `HONO_AMQP_INSECURE_PORT` is set to the default secure port (5671) used by the adapter for secure connections.
 
 The `HONO_AMQP_INSECURE_PORT_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used to e.g. expose the non-TLS secured port on a local interface only, thus providing easy access from within the local network, while still requiring encrypted communication when accessed from the outside over public network infrastructure.
 

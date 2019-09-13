@@ -53,7 +53,8 @@
                   <build>
                     <from>${java-base-image.name}</from>
                     <ports>
-                      <port>4040</port>
+                      <port>5671</port>
+                      <port>5672</port>
                       <port>${vertx.health.port}</port>
                     </ports>
                     <cmd>

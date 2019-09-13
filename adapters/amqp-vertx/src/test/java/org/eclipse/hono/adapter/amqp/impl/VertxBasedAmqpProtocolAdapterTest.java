@@ -181,7 +181,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         config = new AmqpAdapterProperties();
         config.setAuthenticationRequired(false);
-        config.setInsecurePort(4040);
+        config.setInsecurePort(5672);
     }
 
     /**
