@@ -502,7 +502,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        final KeyPair keyPair = helper.newEcKeyPair();
+        final KeyPair keyPair = IntegrationTestSupport.newEcKeyPair();
 
         // GIVEN a tenant configured with a trust anchor
         helper.getCertificate(deviceCert.certificatePath())

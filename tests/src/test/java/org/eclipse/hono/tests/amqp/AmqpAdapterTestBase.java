@@ -14,6 +14,7 @@ package org.eclipse.hono.tests.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.eclipse.hono.tests.CustomSignedCertificate;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
@@ -24,6 +25,8 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.net.KeyCertOptions;
+import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.VertxTestContext;
@@ -171,18 +174,36 @@ public abstract class AmqpAdapterTestBase {
     }
 
     /**
-     * Connects to the AMQP protocol adapter using a client certificate.
+     * Connects to the AMQP protocol adapter using a self-signed client certificate.
      * 
      * @param clientCertificate The certificate to use for authentication.
      * @return A succeeded future containing the established connection.
      */
     protected Future<ProtonConnection> connectToAdapter(final SelfSignedCertificate clientCertificate) {
 
+        return connectToAdapter(clientCertificate.keyCertOptions());
+    }
+    /**
+     * Connects to the AMQP protocol adapter using a ca-signed client certificate.
+     * 
+     * @param clientCertificate The certificate to use for authentication.
+     * @return A succeeded future containing the established connection.
+     */
+    protected Future<ProtonConnection> connectToAdapter(final CustomSignedCertificate clientCertificate) {
+
+        final PemKeyCertOptions keyCertOptions = new PemKeyCertOptions()
+                .setKeyPath(clientCertificate.privateKeyFile().getAbsolutePath())
+                .setCertPath(clientCertificate.certificateFile().getAbsolutePath());
+
+        return connectToAdapter(keyCertOptions);
+    }
+
+    private Future<ProtonConnection> connectToAdapter(final KeyCertOptions keyCertOptions) {
         final Future<ProtonConnection> result = Future.future();
         final ProtonClient client = ProtonClient.create(VERTX);
 
         final ProtonClientOptions secureOptions = new ProtonClientOptions(defaultOptions);
-        secureOptions.setKeyCertOptions(clientCertificate.keyCertOptions());
+        secureOptions.setKeyCertOptions(keyCertOptions);
         secureOptions.addEnabledSaslMechanism(ProtonSaslExternalImpl.MECH_NAME);
         client.connect(
                 secureOptions,
@@ -191,7 +212,6 @@ public abstract class AmqpAdapterTestBase {
                 result);
         return result.compose(this::handleConnectAttempt);
     }
-
     private Future<ProtonConnection> handleConnectAttempt(final ProtonConnection unopenedConnection) {
 
         final Future<ProtonConnection> result = Future.future();

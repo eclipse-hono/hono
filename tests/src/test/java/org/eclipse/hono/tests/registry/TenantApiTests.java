@@ -16,9 +16,6 @@ package org.eclipse.hono.tests.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.security.cert.TrustAnchor;
@@ -32,6 +29,7 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.DataVolumePeriod;
@@ -206,7 +204,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         final String tenantId = getHelper().getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
-        final PublicKey publicKey = getRandomPublicKey();
+        final PublicKey publicKey = IntegrationTestSupport.newRsaKey();
 
         final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, publicKey);
 
@@ -244,7 +242,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         final String tenantId = getHelper().getRandomTenantId();
         final X500Principal subjectDn = new X500Principal("CN=ca-http,OU=Hono,O=Eclipse");
 
-        final PublicKey publicKey = getRandomPublicKey();
+        final PublicKey publicKey = IntegrationTestSupport.newRsaKey();
 
         final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, publicKey);
 
@@ -256,23 +254,4 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
             ctx.completeNow();
         }));
     }
-
-    /**
-     * Creates a random RSA public key.
-     * 
-     * @return The key.
-     */
-    public static PublicKey getRandomPublicKey() {
-
-        try {
-            final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            keyGen.initialize(1024);
-            final KeyPair keypair = keyGen.genKeyPair();
-            return keypair.getPublic();
-        } catch (final NoSuchAlgorithmException e) {
-            // cannot happen because RSA mandatory on every JRE
-            throw new IllegalStateException("JRE does not support RSA algorithm");
-        }
-    }
-
 }

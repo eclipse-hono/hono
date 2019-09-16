@@ -130,12 +130,27 @@ public final class DeviceRegistryHttpClient {
     public Future<MultiMap> addTenant(final String tenantId, final Tenant requestPayload, final String contentType,
             final int expectedStatusCode) {
 
-        final String uri = String.format("%s/%s", URI_ADD_TENANT, tenantId);
         final JsonObject payload = JsonObject.mapFrom(requestPayload);
-        return httpClient.create(uri, payload, contentType,
-                response -> response.statusCode() == expectedStatusCode, true);
+
+        return addTenant(tenantId, payload, contentType, expectedStatusCode);
     }
 
+    /**
+     * Adds configuration information for a tenant.
+     *
+     * @param tenantId The id of the tenant to add.
+     * @param requestPayload The request JSON payload.
+     * @param contentType The content type to set in the request.
+     * @param expectedStatusCode The status code indicating a successful outcome.
+     * @return A future indicating the outcome of the operation. The future will succeed if the response contained the
+     *         expected status code. Otherwise the future will fail with a {@link ServiceInvocationException}.
+     */
+    public Future<MultiMap> addTenant(final String tenantId, final JsonObject requestPayload, final String contentType,
+            final int expectedStatusCode) {
+        final String uri = String.format("%s/%s", URI_ADD_TENANT, tenantId);
+        return httpClient.create(uri, requestPayload, contentType,
+                response -> response.statusCode() == expectedStatusCode, true);
+    }
     /**
      * Gets configuration information for a tenant.
      * <p>

@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
+import java.security.cert.CertificateException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -24,6 +25,7 @@ import javax.security.sasl.SaslException;
 
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.CustomSignedCertificate;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
@@ -226,7 +228,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final KeyPair keyPair = helper.newEcKeyPair();
+        final KeyPair keyPair = IntegrationTestSupport.newEcKeyPair();
 
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
 
@@ -247,6 +249,34 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the adapter succeeds in authenticating a device belonging to a tenant which is configured with
+     * a non expired trusted certificate.
+     * 
+     * @param ctx The test context.
+     * @throws CertificateException if the CA certificate cannot be created.
+     */
+    @Test
+    public void testConnectSucceedsForValidTrustedCaForTenant(final VertxTestContext ctx) throws CertificateException {
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        final String fqdn = UUID.randomUUID().toString();
+        final io.netty.handler.ssl.util.SelfSignedCertificate ca = new io.netty.handler.ssl.util.SelfSignedCertificate(fqdn);
+
+        final KeyPair deviceKeyPair = IntegrationTestSupport.generateKeyPair("RSA");
+        final CustomSignedCertificate deviceCert = IntegrationTestSupport.generateCustomSignedCertificate(ca, deviceKeyPair);
+
+        // GIVEN a tenant configured with a non-expired root trusted CA
+        final Tenant tenant = Tenants.createTenantForTrustAnchor(ca.cert());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, deviceCert.certificate())
+        .compose(ok -> {
+            // WHEN a device tries to connect to the adapter
+            // using a client certificate signed by the CA configured for the tenant
+            return connectToAdapter(deviceCert);
+        }).setHandler(ctx.succeeding());
     }
 
 }

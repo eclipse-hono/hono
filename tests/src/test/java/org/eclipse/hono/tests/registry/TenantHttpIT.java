@@ -17,12 +17,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
+import java.security.PublicKey;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.util.ResourceLimits;
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -121,6 +125,28 @@ public class TenantHttpIT {
     }
 
     /**
+     * Verifies that the service accepts an add tenant request containing multiple valid trust anchors.
+     * 
+     * @param context The Vert.x test context.
+     */
+    public void testAddTenantSucceedsWithMultipleTrustAnchors(final VertxTestContext context) {
+
+        final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
+
+        final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, IntegrationTestSupport.newRsaKey());
+
+        final PublicKey publicKey = IntegrationTestSupport.newRsaKey();
+        final var trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=ca, OU=Hono, O=Eclipse")
+                .setPublicKey(publicKey.getEncoded())
+                .setKeyAlgorithm(publicKey.getAlgorithm());
+
+        tenant.addTrustedCAConfig(trustedCa);
+
+        registry.addTenant(tenantId, tenant, HttpURLConnection.HTTP_CREATED).setHandler(context.completing());
+    }
+
+    /**
      * Verifies that a correctly filled JSON payload to add a tenant for an already existing record is
      * responded with {@link HttpURLConnection#HTTP_CONFLICT} and a non empty error response message.
      * 
@@ -214,6 +240,12 @@ public class TenantHttpIT {
     public void testRemoveTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenantPayload = buildTenantPayload();
+        final var trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=ca, OU=Hono, O=Eclipse")
+                .setPublicKey(IntegrationTestSupport.newRsaKey().getEncoded())
+                .setKeyAlgorithm("RSA");
+
+        tenantPayload.addTrustedCAConfig(trustedCa);
         registry.addTenant(tenantId, tenantPayload)
             .compose(ar -> registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
             .setHandler(context.completing());
@@ -268,8 +300,26 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantFailsForMalformedTrustConfiguration(final VertxTestContext context) {
 
-        final Tenant requestBody = Tenants.createTenantForTrustAnchor("test-dn", "NotBased64Encoded".getBytes(), "RSA");
+        final Tenant requestBody = Tenants.createTenantForTrustAnchor("CN=ca, OU=Hono, O=Eclipse", "NotBased64Encoded".getBytes(), "RSA");
 
+        registry.addTenant(tenantId, requestBody, HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
+    }
+
+    /**
+     * Verifies that the service returns a 400 status code for an add tenant request with a <em>trusted-ca</em> configuration
+     * containing a JSON object as a value.
+     * 
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsWhenOldTrustModelIsUsed(final VertxTestContext context) {
+        final JsonObject trustConfig = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, IntegrationTestSupport.newRsaKey().getEncoded());
+        final JsonObject requestBody = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "test-id")
+                .put(TenantConstants.FIELD_ENABLED, true)
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustConfig);
         registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
     }
 

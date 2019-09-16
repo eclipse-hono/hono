@@ -236,4 +236,21 @@ public class Tenant {
         return this;
     }
 
+    /**
+     * Adds the specified trust CA configuration to the list of trust configurations for this tenant.
+     * 
+     * @param trustedCa The trusted CA configuration to add for this tenant.
+     * @return          This instance, to allow chained invocations.
+     * @throws          NullPointerException if the trustedCa is {@code null}
+     */
+    public Tenant addTrustedCAConfig(final TrustedCertificateAuthority trustedCa) {
+
+        Objects.requireNonNull(trustedCa);
+
+        if (trustedAuthorities == null) {
+            trustedAuthorities = new LinkedList<>();
+        }
+        trustedAuthorities.add(trustedCa);
+        return this;
+    }
 }

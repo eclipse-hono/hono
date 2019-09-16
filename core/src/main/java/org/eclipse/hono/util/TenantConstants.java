@@ -101,7 +101,6 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
     /**
-<<<<<<< HEAD
      * The name of the property that contains the period details for which the data usage is calculated.
      */
     public static final String FIELD_PERIOD = "period";

@@ -163,6 +163,18 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+      <!--
+        Bouncy Castle - only needed for ITs to:
+        - Create certificates with custom validity periods, and
+        - Create and sign certificates with a given CA certificate.
+      -->
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk15on</artifactId>
+        <version>1.54</version>
+        <scope>test</scope>
+        <optional>true</optional>
+      </dependency>
   </dependencies>
 
   <build>

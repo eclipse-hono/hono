@@ -22,8 +22,14 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.sql.Date;
+import java.time.Instant;
+import java.time.Period;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -52,9 +58,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxException;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -1231,13 +1239,84 @@ public final class IntegrationTestSupport {
      * @return The key pair.
      * @throws GeneralSecurityException if the JVM doesn't support ECC.
      */
-    public KeyPair newEcKeyPair() throws GeneralSecurityException {
+    public static KeyPair newEcKeyPair() throws GeneralSecurityException {
+        return generateKeyPair("EC");
+    }
 
-        final KeyPairGenerator gen = KeyPairGenerator.getInstance("EC");
-        return gen.generateKeyPair();
+    /**
+     * Creates a new RSA public key.
+     * 
+     * @return The key.
+     */
+    public static PublicKey newRsaKey() {
+        return generateKeyPair("RSA").getPublic();
+    }
+
+    /**
+     * Creates a new valid self-signed certificate instance based on the given fully qualified domain name.
+     * 
+     * @param ca   The self-signed CA certificate to use for signing the device certificate.
+     * @param deviceKeyPair They private/public key pair of the device to generate a certificate for.
+     * 
+     * @return The certificate instance.
+     * @throws VertxException if the certificate instance cannot be created.
+     */
+    public static CustomSignedCertificate generateCustomSignedCertificate(final SelfSignedCertificate ca,
+            final KeyPair deviceKeyPair) {
+        final Instant defaultNotBefore = Instant.now();
+        final Instant defaultNotAfter = Instant.now().plus(Period.ofDays(3650));
+
+        return generateCustomSignedCertificate(ca, deviceKeyPair, defaultNotBefore, defaultNotAfter);
+    }
+
+    /**
+     * Creates a new certificate signed by the given trusted CA.
+     * 
+     * <p>
+     * The X509 certificate and private key is extracted from the given self-signed CA certificate.
+     * 
+     * @param ca            The self-signed CA certificate to use for signing the device certificate.
+     * @param deviceKeyPair They private/public key pair of the device to generate a certificate for.
+     * @param notBefore     Start date of the certificate validity period.
+     * @param notAfter      End date of the certificate validity period.
+     * 
+     * @return              The certificate instance.
+     * @throws VertxException if the certificate cannot be created.
+     */
+    public static CustomSignedCertificate generateCustomSignedCertificate(final SelfSignedCertificate ca,
+            final KeyPair deviceKeyPair, final Instant notBefore, final Instant notAfter) {
+        try {
+            final String fqdn = UUID.randomUUID().toString();
+            final X509Certificate caCertificate = ca.cert();
+            final PrivateKey caKey = ca.key();
+            return new CustomSignedCertificate(fqdn, caCertificate, caKey, deviceKeyPair, Date.from(notBefore),
+                    Date.from(notAfter));
+        } catch (final CertificateException e) {
+            throw new VertxException(e);
+        }
+    }
+
+    /**
+     * Generates a public/private key pair for the specified algorithm.
+     * 
+     * @param algorithmn The algorithm to generate a keypair for.
+     * @return The generated key pair.
+     */
+    public static KeyPair generateKeyPair(final String algorithmn) {
+        try {
+            final KeyPairGenerator keyGen = KeyPairGenerator.getInstance(algorithmn);
+            if ("RSA".equals(algorithmn)) {
+                keyGen.initialize(1024);
+            }
+            return keyGen.genKeyPair();
+        } catch (NoSuchAlgorithmException e) {
+            // cannot happen because RSA mandatory on every JRE
+            throw new IllegalStateException("JRE does not support RSA algorithm");
+        }
     }
 
     //----------------------------------< private methods >---
+
     private Future<Buffer> loadFile(final String path) {
 
         final Future<Buffer> result = Future.future();
