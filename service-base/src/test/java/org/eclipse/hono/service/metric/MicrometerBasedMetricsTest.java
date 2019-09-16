@@ -17,13 +17,17 @@ package org.eclipse.hono.service.metric;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -44,6 +48,7 @@ import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 
 
 /**
@@ -70,7 +75,7 @@ public class MicrometerBasedMetricsTest {
      * Verifies that arbitrary telemetry messages with or without a QoS
      * can be reported successfully.
      *
-     * @param registry : the registry that the tests should be run against.
+     * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest
     @MethodSource("registries")
@@ -119,7 +124,7 @@ public class MicrometerBasedMetricsTest {
      * Verifies that when reporting a downstream message no tags for
      * {@link QoS#UNKNOWN} nor {@link TtdStatus#NONE} are included.
      *
-     * @param registry : the registry that the tests should be run against.
+     * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest
     @MethodSource("registries")
@@ -203,7 +208,7 @@ public class MicrometerBasedMetricsTest {
     /**
      * Verifies that collecting the last message send time is disabled by default.
      * 
-     * @param registry : the registry that the tests should be run against.
+     * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest
     @MethodSource("registries")
@@ -229,7 +234,7 @@ public class MicrometerBasedMetricsTest {
      * Verifies that when sending the first message for a tenant the timestamp is recorded and a timer is started to
      * check the timeout.
      * 
-     * @param registry : the registry that the tests should be run against.
+     * @param registry The registry that the tests should be run against.
      */
     @SuppressWarnings("unchecked")
     @ParameterizedTest
@@ -256,9 +261,60 @@ public class MicrometerBasedMetricsTest {
     }
 
     /**
+     * Verifies that the metrics are removed when the tenant timeout is exceeded.
+     *
+     * @param registry The registry that the tests should be run against.
+     * @throws InterruptedException if thread sleep is interrupted.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testTimeoutRemovesMetrics(final MeterRegistry registry) throws InterruptedException {
+
+        final Tags tenantTags = Tags.of(MetricsTags.getTenantTag(tenant));
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(mock(EventBus.class));
+        // a mocked Vert.x timer, that can be fired deliberately later in the test
+        final AtomicReference<Handler<Long>> timerHandler = new AtomicReference<>();
+        when(vertx.setTimer(anyLong(), any())).thenAnswer(invocation -> {
+            final Handler<Long> task = invocation.getArgument(1);
+            timerHandler.set(task);
+            return 1L;
+        });
+
+        // GIVEN a metrics instance with tenantIdleTimeout configured ...
+        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, vertx);
+        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(1L));
+
+        // ... with a device connected and a telemetry message and a command recorded
+        metrics.incrementConnections(tenant);
+        reportTelemetry(metrics);
+        reportCommand(metrics);
+
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_RECEIVED).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED).tags(tenantTags).meter());
+
+        // WHEN the device disconnects ...
+        metrics.decrementConnections(tenant);
+        // ... and the timeout timer fires
+        Thread.sleep(2L);
+        timerHandler.get().handle(null);
+
+        // THEN the metrics have been removed
+        assertNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_RECEIVED).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED).tags(tenantTags).meter());
+
+    }
+
+    /**
      * Verifies that sending messages updates the stored timestamp for the tenant.
      * 
-     * @param registry : the registry that the tests should be run against.
+     * @param registry The registry that the tests should be run against.
      * @throws InterruptedException if thread sleep is interrupted.
      */
     @ParameterizedTest
@@ -285,7 +341,7 @@ public class MicrometerBasedMetricsTest {
     /**
      * Verifies that disconnecting updates the stored timestamp for the tenant.
      * 
-     * @param registry : the registry that the tests should be run against.
+     * @param registry The registry that the tests should be run against.
      * @throws InterruptedException if thread sleep is interrupted.
      */
     @ParameterizedTest
@@ -312,7 +368,7 @@ public class MicrometerBasedMetricsTest {
     /**
      * Verifies that re-connecting updates the stored timestamp for the tenant.
      * 
-     * @param registry : the registry that the tests should be run against.
+     * @param registry The registry that the tests should be run against.
      * @throws InterruptedException if thread sleep is interrupted.
      */
     @ParameterizedTest
@@ -351,6 +407,16 @@ public class MicrometerBasedMetricsTest {
                 QoS.UNKNOWN,
                 1024,
                 TtdStatus.NONE,
+                metrics.startTimer());
+    }
+
+    private void reportCommand(final MicrometerBasedMetrics metrics) {
+        metrics.reportCommand(
+                MetricsTags.Direction.REQUEST,
+                tenant,
+                TenantObject.from(tenant, true),
+                MetricsTags.ProcessingOutcome.FORWARDED,
+                1 * 1024,
                 metrics.startTimer());
     }
 

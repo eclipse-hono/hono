@@ -39,8 +39,9 @@ import io.vertx.core.Vertx;
  * <p>
  * This implementation monitors the {@code TenantIdleTimeout}, if configured to a non zero duration
  * ({@link ProtocolAdapterProperties#setTenantIdleTimeout(java.time.Duration)}). If the tenant had not interacted with
- * the protocol adapter instance for the configured period, it publishes an event on the event bus. The event bus
- * address is {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} and the body of the message is the tenantId.
+ * the protocol adapter instance for the configured period, it stops reporting metrics for that tenant and publishes an
+ * event on the event bus. The event bus address is {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} and the body of
+ * the message is the tenantId.
  */
 public class MicrometerBasedMetrics implements Metrics {
 
@@ -98,6 +99,13 @@ public class MicrometerBasedMetrics implements Metrics {
 
         this.registry = registry;
         this.vertx = vertx;
+
+        this.registry.config().onMeterRemoved(meter -> {
+            // execution is synchronized in MeterRegistry#remove(Meter)
+            if (METER_CONNECTIONS_AUTHENTICATED.equals(meter.getId().getName())) {
+                authenticatedConnections.remove(meter.getId().getTag(MetricsTags.TAG_TENANT));
+            }
+        });
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
     }
 
@@ -362,7 +370,29 @@ public class MicrometerBasedMetrics implements Metrics {
         return count != null && count.get() > 0;
     }
 
+    /**
+     * <b> On synchronization: </b>
+     * <p>
+     * Each remove operation ({@link MeterRegistry#remove(io.micrometer.core.instrument.Meter)}) is synchronized
+     * internally. The removal operations are not synchronized together.
+     * </p>
+     * <b>Rationale:</b>
+     * <p>
+     * It is a) unlikely that a tenant connects during the cleanup (timeout is rather in hours than in very small time
+     * units). And b) if it happens, a metrics would temporarily be not 100% accurate. This does not justify additional
+     * locking for every message that is send to Hono.
+     */
     private void handleTenantTimeout(final String tenantId) {
+        final Tags tenantTag = Tags.of(MetricsTags.getTenantTag(tenantId));
+
+        // the onMeterRemoved() handler removes it also from this.authenticatedConnections
+        registry.find(METER_CONNECTIONS_AUTHENTICATED).tags(tenantTag).meters().forEach(registry::remove);
+
+        registry.find(METER_MESSAGES_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_MESSAGES_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_COMMANDS_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_COMMANDS_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
+
         vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
     }
 }

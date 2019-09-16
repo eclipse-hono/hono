@@ -13,9 +13,10 @@ title = "Release Notes"
   downstream event messages.
 * A protocol adapter can now be configured with a timeout for idle tenants. When there has been no 
   communication between a protocol adapter instance and the devices of a tenant, the former one releases 
-  allocated resources of the tenant. Currently this means that it closes AMQP links. The timeout is 
-  configured with the property `tenantIdleTimeout` for a protocol   adapter. Please refer to the protocol 
-  adapter [configuration guides]({{% doclink "/admin-guide/" %}}) for details.
+  allocated resources of the tenant. Currently this means that it closes AMQP links and stops reporting 
+  metrics for this tenant. The timeout is configured with the property `tenantIdleTimeout` for a protocol 
+  adapter. Please refer to the protocol adapter [configuration guides]({{% doclink "/admin-guide/" %}})
+  for details.
 * The accounting period for the *message limit* checks can now be configured as `monthly`.
   In this case the data usage for a tenant is calculated from the beginning till the end of the 
   (Gregorian) calendar month. Refer [resource limits] ({{% doclink "/concepts/resource-limits/" %}})
