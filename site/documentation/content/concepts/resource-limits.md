@@ -5,7 +5,7 @@ weight = 196
 
 Resource limits such as the maximum number of device connections allowed per tenant or the allowed data volume of the messages over a period of time per tenant can be set in Hono. 
 
-Hono specifies an API `ResourceLimitChecks` that is used by the protocol adapters for the verification of the configured resource limits. A default implementation of this API is shipped with Hono. This default implementation uses the live metrics data retrieved from a Prometheus server to verify the resource-limits, if configured. To enable and use this default implementation, please refer to the protocol adapter admin guides. Based on the requirements, a custom version of the above API can be implemented and used. The resource-limits for a tenant can be set using the tenant configuration. Please refer to the [Tenant API]({{< relref "/api/tenant#request-payload" >}}) for more details.
+Hono specifies an API `ResourceLimitChecks` that is used by the protocol adapters for the verification of the configured resource limits. A default implementation of this API is shipped with Hono. This default implementation uses the live metrics data retrieved from a Prometheus server to verify the resource-limits, if configured. To enable and use this default implementation, please refer to the protocol adapter admin guides. Based on the requirements, a custom version of the above API can be implemented and used. The resource-limits for a tenant can be set using the tenant configuration. Please refer to the [Tenant API]({{< relref "/api/tenant#tenant-information-format" >}}) for more details.
 
 
 ## Connections Limit
