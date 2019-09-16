@@ -166,7 +166,7 @@ A device that publishes data on behalf of another device is called a gateway dev
 
 **Examples**
 
-A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`:
+A gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`:
 
     # in directory: hono/cli/target/
     java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.username=gw@DEFAULT_TENANT --hono.client.password=gw-secret --message.address=t/DEFAULT_TENANT/4711
@@ -235,7 +235,7 @@ Publish some JSON data for device `4711`:
 
 **Examples**
 
-A Gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`:
+A gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `gw-secret` as password and then publishing some JSON data for device `4711`:
 
     # in directory: hono/cli/target/
     java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.username=gw@DEFAULT_TENANT --hono.client.password=gw-secret --message.address=e/DEFAULT_TENANT/4711
@@ -256,7 +256,7 @@ The AMQP adapter checks the configured [message limit] ({{< relref "/concepts/re
 
 A device MUST use the following source address in its *attach* frame to open a link for receiving commands:
 
-* `command` (authenticated device)
+* `command` (authenticated device/gateway)
 * `command/${tenant}/${device-id}` (unauthenticated device)
 
 {{% note %}}
@@ -272,6 +272,13 @@ Once the link has been established, the adapter will send command messages havin
 | *subject*         | yes             | *properties*             | *string*    | Contains the name of the command to be executed. |
 | *reply-to*        | no              | *properties*             | *string*    | Contains the address to which the command response should be sent. This property will be empty for *one-way* commands. |
 | *correlation-id*  | no              | *properties*             | *string*    | This property will be empty for *one-way* commands, otherwise it will contain the identifier used to correlate the response with the command request. |
+| *device_id*       | no              | *application-properties* | *string*    | This property will only be set if an authenticated gateway has connected to the adapter. It will contain the id of the device (connected to the gateway) that the command is targeted at. |
+
+Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details.
+
+If a device is configured in such a way that there can be *one* gateway, acting on behalf of the device, a command sent to this device will by default be directed to that gateway.
+
+If a device is configured to be used with *multiple* gateways, the particular gateway that last acted on behalf of the device will be the target that commands for that device will be routed to. The mapping of device and gateway last used by the device is updated whenever a device sends a telemetry, event or command response message via the gateway. This means that for a device configured to be used via multiple gateways to receive commands, the device first has to send at least one telemetry or event message to establish which gateway to use for receiving commands for that device.
 
 ### Sending a Response to a Command
 

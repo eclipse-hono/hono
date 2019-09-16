@@ -842,6 +842,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             // fall back to message ID
             msg.setCorrelationId(msg.getMessageId());
         }
+        if (command.isTargetedAtGateway()) {
+            MessageHelper.addDeviceId(msg, command.getOriginalDeviceId());
+        }
 
         // TODO time out waiting for disposition update
         sender.send(msg, delivery -> {
