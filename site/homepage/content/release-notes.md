@@ -52,7 +52,7 @@ title = "Release Notes"
   have been removed. The alternate variant of these methods which accepts an additional OpenTracing span parameter 
   should be used.  
 
-### Depreciations
+### Deprecations
 
 * The deprecated Kura adapter is no longer deployed by default by the Helm chart.
   However, it can still be deployed by means of [setting a configuration property]
@@ -287,7 +287,7 @@ which got deprecated, are planned to be dropped in 1.1.
   as sender link address is still possible but gateway agnostic addressing of devices is not supported for 
   such command messages.
 
-### Depreciations
+### Deprecations
 
 * Instructions for script based deployment to Kubernetes have been removed from the deployment guide.
   Using Helm is now the only supported way of deploying Hono to Kubernetes.
@@ -403,7 +403,7 @@ which got deprecated, are planned to be dropped in 1.1.
   `org.eclipse.hono.client.HonoConnection` to better reflect its sole responsibility
   for establishing (and maintaining) the connection to a Hono service endpoint.
 
-### Depreciations
+### Deprecations
 
 * The optional operations defined by the Tenant, Device Registration and Credentials API
   have been deprecated. They will be removed from Hono 1.0 altogether.
@@ -429,7 +429,7 @@ which got deprecated, are planned to be dropped in 1.1.
 * The `org.eclipse.hono.service.tenant.CompleteBaseTenantService` class now rejects malformed
   encodings of public keys/certificates included in a request to add a trust anchor to a tenant.
 
-### Depreciations
+### Deprecations
 
 * The `HonoClient.closeCommandConsumer()` method will be removed in Hono 1.0.
   The `CommandConsumer.close()` method should be used instead.
@@ -480,7 +480,7 @@ which got deprecated, are planned to be dropped in 1.1.
   connection establishment but also for the SASL handshake and the exchange of the AMQP *open* frame.
 * The (already deprecated) Hono Messaging component has been removed from Hono.
 
-### Depreciations
+### Deprecations
 
 * The script based deployment to Kubernetes has been deprecated and will be removed in the next version.
   The Helm based deployment should be used instead.
@@ -524,7 +524,7 @@ which got deprecated, are planned to be dropped in 1.1.
   of the component that a metric has been reported by. Please refer to the [Metrics API]({{% doclink "/api/metrics/" %}})
   for details. Note that these changes do not affect the legacy Graphite based metrics back end.
 
-### Depreciations
+### Deprecations
 
 * The Hono Messaging component is now  deprecated and will be removed from Hono in version 0.9 altogether.
   The example deployment has not been using Hono Messaging since 0.6 and there is no practical reason for
@@ -614,7 +614,7 @@ which got deprecated, are planned to be dropped in 1.1.
   `release(int)` and `reject(ErrorCondition, int)` methods which all accept an integer indicating the number of credits to flow to the sender.
   These methods will also finish the OpenTracing span contained in the `CommandContext` implicitly.
 
-### Depreciations
+### Deprecations
 
 * The Kura protocol adapter is being deprecated with 0.8. It will still be part
   of Hono 0.8, but may be removed in a future version. Starting with Kura 4.0
