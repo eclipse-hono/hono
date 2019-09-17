@@ -89,7 +89,7 @@ title = "Release Notes"
 * The health check server endpoint will now bind to a default port value of 8088 if no values
   are set explicitly in the configuration. It is also possible to start both a secure and an insecure
   server (using different ports)
-  Refer to the [Monitoring configuration guide]({{% doclink "/admin-guide/monitoring-tracing-config.md" %}})
+  Refer to the [Monitoring configuration guide]({{% doclink "/admin-guide/monitoring-tracing-config" %}})
   for details.
 
 ### API Changes
@@ -202,13 +202,13 @@ which got deprecated, are planned to be dropped in 1.1.
 
 * The optional methods of the [Tenant API]({{% doclink "/api/tenant/" %}}) have been
   removed. Implementations of the Tenant API are encouraged to expose the *tenants* endpoint defined by
-  [Hono's HTTP based management API]({{% doclink "/api/device-registry-v1.yaml" %}}) instead.
+  [Hono's HTTP based management API]({{% doclink "/api/management" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 * The optional methods of the 
   [Device Registration API]({{% doclink "/api/device-registration/" %}}) have been 
   removed. Implementations of the Device Registration API are encouraged to expose the *devices* endpoint defined by
-  [Hono's HTTP based management API]({{% doclink "/api/device-registry-v1.yaml" %}}) instead.
+  [Hono's HTTP based management API]({{% doclink "/api/management" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 * The response message format of the *assert Device Registration* operation of the Device Registration API
@@ -219,7 +219,7 @@ which got deprecated, are planned to be dropped in 1.1.
   from `org.eclipse.hono.client.RegistrationClient` and `org.eclipse.hono.client.impl.RegistrationClientImpl`.
 * The optional methods of the [Credentials API]({{% doclink "/api/credentials/" %}}) 
   have been removed. Implementations of the Credentials API are encouraged to expose the *credentials* endpoint defined
-  by [Hono's HTTP based management API]({{% doclink "/api/device-registry-v1.yaml" %}}) instead.
+  by [Hono's HTTP based management API]({{% doclink "/api/management" %}}) instead.
   Several of the formerly mandatory to include properties of the request and response messages have
   been made optional or removed altogether. Existing clients should not be affected by these changes, though.
 * The `control` prefix in the northbound and southbound Command & Control endpoints has been renamed to `command`. 
@@ -250,7 +250,7 @@ which got deprecated, are planned to be dropped in 1.1.
   [Device Registry Admin Guide]({{% doclink "/admin-guide/device-registry-config/" %}}) 
   for details regarding the configuration properties to use.
 * There is now an official specification of an HTTP API for managing the content of a device registry.
-  The [HTTP Management API]({{% doclink "/api/device-registry-v1.yaml" %}}) is defined using by 
+  The [HTTP Management API]({{% doclink "/api/management" %}}) is defined using by 
   means of OpenAPI v3. Note, that the API is not yet implemented by the example device registry that comes with Hono.
 * The Command & Control feature now supports gateway agnostic addressing of devices. This means that applications are
   able to send commands to devices without knowing the particular gateway they may be connected to.
