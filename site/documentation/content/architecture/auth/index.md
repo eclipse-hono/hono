@@ -17,7 +17,7 @@ This page describes how authentication and authorization of devices, consumers (
 
 The following diagram provides an overview of the components involved in use cases requiring authentication and authorization.
 
-{{< figure src="../Hono-Auth-Overview-Today.jpg">}}
+{{< figure src="Hono-Auth-Overview-Today.jpg">}}
 
 ### Device Auth
 
@@ -29,7 +29,7 @@ Client components opening an AMQP connection to a server component are authentic
 
 Based on the components shown above, the following sequence diagram shows how the *MQTT Adapter* connects to the *Device Registry* and gets authenticated transparently using the *Auth Server*.
 
-{{< figure src="../MQTT-Adapter-authentication-today.png" width="80%" >}}
+{{< figure src="MQTT-Adapter-authentication-today.png" width="80%" >}}
 
 Client components are authorized whenever they open a new AMQP link on an existing connection to the server. When a client tries to open a receiver link, the server checks if the client is authorized to *read* from the source address the client has specified in its AMQP *attach* frame. Analogously, when a client tries to open a sender link, the server checks if the client is authorized to *write* to the target address from the client's *attach* frame.
 

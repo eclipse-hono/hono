@@ -30,7 +30,7 @@ Protocol adapters use this command to *look up* credentials of a particular type
 
 **Message Flow**
 
-{{< figure src="../getCredentials_Success.svg" title="Client looking up credentials for a device" alt="A client sends a request message for looking up device credentials and receives a response containing the credentials" >}}
+{{< figure src="getCredentials_Success.svg" title="Client looking up credentials for a device" alt="A client sends a request message for looking up device credentials and receives a response containing the credentials" >}}
 
 
 **Request Message Format**
