@@ -47,36 +47,13 @@ reporting the metrics. However, Prometheus is different in that it *polls*
 (or *scrapes*) all components periodically for new metrics data.
 For this to work, the Prometheus server needs to be configured with the IP
 addresses of the components to monitor. In the example deployment that comes
-with Hono, the Kubernetes *pods* that the Hono components are running in are
-marked by means of a label. The Prometheus server then periodically queries
-the Kubernetes API to determine a list of pods (and their IP addresses) that
-have the corresponding label.
+with Hono, the Prometheus server is configured with the names of the Kubernetes
+services corresponding to the Hono components that it should scrape.
 The components themselves need to expose a corresponding HTTP endpoint that
 the Prometheus server can connect to for scraping the meter data. All
 Hono components that report metrics can be configured to expose such an
 endpoint via their [*Health Check* server]({{< relref "#health-check-server-configuration" >}})
 which already exposes endpoints for determining the component's readiness and liveness status.
-
-### Legacy Metrics Support
-
-In addition to using standard Micrometer back ends, Hono also provides out of
-the box support for the pre-0.8 Graphite based format. This will configure the
-Graphite adapter to output metrics in the legacy format
-used by Hono versions before 0.8. Further configuration of the Graphite adapter
-can be made using the standard Spring Boot configuration of Micrometer.
-The legacy support can be enabled using the following configuration switch:
-
-| Environment Variable<br>Command Line Option                   | Mandatory | Default | Description |
-| :------------------------------------------------------------ | :-------: | :------ | :---------- |
-| `HONO_METRICS_LEGACY`<br><nobr>`--hono.metrics.legacy`</nobr> | no  | `false` | Enable legacy metrics using graphite. |
-
-It is also necessary to enable the build profile for Graphite (`metrics-graphite`),
-as the legacy back end is based on the Graphite wire format. The profile will
-add the necessary dependencies to the build. If the dependencies are missing,
-the startup of the Hono components will fail.
-
-The names and semantics of the individual metrics being reported by the components
-are described in the [Legacy Metrics specification]({{< ref "/api/Metrics.md#legacy-metrics" >}}).
 
 ## Health Check Server Configuration
 

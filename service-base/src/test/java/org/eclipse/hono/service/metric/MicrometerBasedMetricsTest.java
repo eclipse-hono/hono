@@ -147,33 +147,6 @@ public class MicrometerBasedMetricsTest {
     }
 
     /**
-     * Verifies that when reporting a downstream message the legacy metrics
-     * are also reported, if set.
-     *
-     * @param registry : the registry that the tests should be run against.
-     */
-    @ParameterizedTest
-    @MethodSource("registries")
-    public void testReportTelemetryInvokesLegacyMetrics(final MeterRegistry registry) {
-
-        final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
-
-        final LegacyMetrics legacyMetrics = mock(LegacyMetrics.class);
-        metrics.setLegacyMetrics(legacyMetrics);
-        metrics.reportTelemetry(
-                MetricsTags.EndpointType.TELEMETRY,
-                "tenant",
-                TenantObject.from("tenant", true),
-                MetricsTags.ProcessingOutcome.FORWARDED,
-                MetricsTags.QoS.UNKNOWN,
-                1024,
-                MetricsTags.TtdStatus.NONE,
-                metrics.startTimer());
-
-        verify(legacyMetrics).incrementProcessedMessages(eq(EndpointType.TELEMETRY), eq("tenant"));
-    }
-
-    /**
      * Verifies that the payload size is calculated based on the configured minimum message size 
      * when reporting downstream telemetry messages.
      * 
@@ -258,6 +231,7 @@ public class MicrometerBasedMetricsTest {
      * 
      * @param registry : the registry that the tests should be run against.
      */
+    @SuppressWarnings("unchecked")
     @ParameterizedTest
     @MethodSource("registries")
     public void testTimeoutEvent(final MeterRegistry registry) {

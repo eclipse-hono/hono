@@ -83,8 +83,6 @@ public class MicrometerBasedMetrics implements Metrics {
     private final Vertx vertx;
     private long tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
 
-    private LegacyMetrics legacyMetrics;
-
     /**
      * Creates a new metrics instance.
      * 
@@ -100,16 +98,6 @@ public class MicrometerBasedMetrics implements Metrics {
         this.registry = registry;
         this.vertx = vertx;
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
-    }
-
-    /**
-     * Sets the legacy metrics.
-     * 
-     * @param legacyMetrics The additional legacy metrics to report.
-     */
-    @Autowired(required = false)
-    public final void setLegacyMetrics(final LegacyMetrics legacyMetrics) {
-        this.legacyMetrics = legacyMetrics;
     }
 
     /**
@@ -219,35 +207,6 @@ public class MicrometerBasedMetrics implements Metrics {
             .record(calculatePayloadSize(payloadSize, tenantObject));
 
         updateLastSendForTenant(tenantId);
-
-        if (legacyMetrics != null) {
-
-             // Some of the legacy metrics are based on different meter types
-             // than the ones used now. It is necessary to report the legacy
-             // metric in addition to the new ones because the meter types
-             // are incompatible (e.g. duration vs. occurrences).
-            switch(outcome) {
-            case FORWARDED:
-                legacyMetrics.incrementProcessedMessages(type, tenantId);
-                break;
-            case UNDELIVERABLE:
-                legacyMetrics.incrementUndeliverableMessages(type, tenantId);
-                break;
-            case UNPROCESSABLE:
-                // no corresponding legacy metric
-            }
-
-            // The legacy metrics contain a separate metric for
-            // counting the number of messages that contained
-            // an expired TTD value.
-            switch(ttdStatus) {
-            case EXPIRED:
-                legacyMetrics.incrementNoCommandReceivedAndTTDExpired(tenantId);
-                break;
-            default:
-                // nothing to do
-            }
-        }
     }
 
     @Override
@@ -283,19 +242,6 @@ public class MicrometerBasedMetrics implements Metrics {
             .record(calculatePayloadSize(payloadSize, tenantObject));
 
         updateLastSendForTenant(tenantId);
-
-        if (legacyMetrics != null) {
-
-            switch(direction) {
-            case ONE_WAY:
-            case REQUEST:
-                legacyMetrics.incrementCommandDeliveredToDevice(tenantId);
-                break;
-            case RESPONSE:
-                legacyMetrics.incrementCommandResponseDeliveredToApplication(tenantId);
-                break;
-            }
-        }
     }
 
     /**

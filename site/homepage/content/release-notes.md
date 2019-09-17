@@ -17,6 +17,10 @@ title = "Release Notes"
   configured with the property `tenantIdleTimeout` for a protocol   adapter. Please refer to the protocol 
   adapter [configuration guides]({{% doclink "/admin-guide/" %}}) for details.
 
+### API Changes
+
+* The already deprecated *legacy metrics* support has been removed.
+
 ## 1.0-M7
 
 ### New Features
