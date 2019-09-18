@@ -91,6 +91,13 @@ keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
 subjectAltName       = DNS.1:hono-adapter-http-vertx,DNS.2:hono-adapter-http-vertx.hono,DNS.3:localhost
 
+[ req_ext_lora-adapter ]
+
+subjectKeyIdentifier = hash
+keyUsage             = keyAgreement,keyEncipherment,digitalSignature
+extendedKeyUsage     = serverAuth, clientAuth
+subjectAltName       = DNS.1:hono-adapter-lora-vertx,DNS.2:hono-adapter-lora-vertx.hono,DNS.3:localhost
+
 [ req_ext_mqtt-adapter ]
 
 subjectKeyIdentifier = hash
