@@ -22,6 +22,7 @@ import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
+import io.vertx.core.net.TrustOptions;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
@@ -93,9 +94,12 @@ public abstract class AmqpCliClient extends AbstractCliClient {
         options.setHeartbeat(properties.getHeartbeatInterval());
         Optional.ofNullable(properties.getAmqpHostname()).ifPresent(s -> options.setVirtualHost(s));
 
+        addTlsTrustOptions(options, properties);
+
         if (!Strings.isNullOrEmpty(properties.getUsername()) && !Strings.isNullOrEmpty(properties.getPassword())) {
             // SASL PLAIN auth
             options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
+
 
             LOG.info("connecting to AMQP org.eclipse.hono.cli.app.adapter using SASL PLAIN [host: {}, port: {}, username: {}]",
                     properties.getHost(), properties.getPort(), properties.getUsername());
@@ -110,9 +114,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
         } else {
             if (properties.getKeyCertOptions() != null && properties.getTrustOptions() != null) {
                 // SASL EXTERNAL auth
-                options.setSsl(true);
                 options.setKeyCertOptions(properties.getKeyCertOptions());
-                options.setTrustOptions(properties.getTrustOptions());
             } else {
                 // SASL ANONYMOUS auth
             }
@@ -126,5 +128,25 @@ public abstract class AmqpCliClient extends AbstractCliClient {
             unopenedConnection.open();
             return con;
         });
+    }
+
+    private void addTlsTrustOptions(final ProtonClientOptions clientOptions, final ClientConfigProperties config) {
+
+        if (config.isTlsEnabled()) {
+            clientOptions.setSsl(true);
+        }
+
+        final TrustOptions trustOptions = config.getTrustOptions();
+        if (trustOptions != null) {
+            clientOptions.setSsl(true).setTrustOptions(trustOptions);
+        }
+
+        if (clientOptions.isSsl()) {
+            if (config.isHostnameVerificationRequired()) {
+                clientOptions.setHostnameVerificationAlgorithm("HTTPS");
+            } else {
+                clientOptions.setHostnameVerificationAlgorithm("");
+            }
+        }
     }
 }
