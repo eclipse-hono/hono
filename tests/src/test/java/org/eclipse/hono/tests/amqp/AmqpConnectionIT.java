@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
+import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +26,6 @@ import javax.security.sasl.SaslException;
 
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.tests.CustomSignedCertificate;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
@@ -36,6 +36,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.net.SelfSignedCertificate;
+import io.vertx.ext.unit.TestContext;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -252,31 +253,72 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
     }
 
     /**
-     * Verifies that the adapter succeeds in authenticating a device belonging to a tenant which is configured with
-     * a non expired trusted certificate.
+     * Verifies that the adapter succeeds in authenticating a device belonging to a tenant configured with
+     * two valid trusted certificate authorities, one of which signed the client certificate of the device
+     * wanting to establish a connection to the adapter.
      * 
      * @param ctx The test context.
      * @throws CertificateException if the CA certificate cannot be created.
      */
     @Test
-    public void testConnectSucceedsForValidTrustedCaForTenant(final VertxTestContext ctx) throws CertificateException {
+    public void testConnectSucceedsForValidTrustedCaForTenant(final TestContext ctx) throws CertificateException {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
-        final String fqdn = UUID.randomUUID().toString();
-        final io.netty.handler.ssl.util.SelfSignedCertificate ca = new io.netty.handler.ssl.util.SelfSignedCertificate(fqdn);
-
-        final KeyPair deviceKeyPair = IntegrationTestSupport.generateKeyPair("RSA");
-        final CustomSignedCertificate deviceCert = IntegrationTestSupport.generateCustomSignedCertificate(ca, deviceKeyPair);
-
-        // GIVEN a tenant configured with a non-expired root trusted CA
-        final Tenant tenant = Tenants.createTenantForTrustAnchor(ca.cert());
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, deviceCert.certificate())
-        .compose(ok -> {
+        // GIVEN a tenant configured with two valid trust anchors
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        final PublicKey caPublicKey = IntegrationTestSupport.newRsaKey();
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            final Tenant tenant = Tenants.createTenantForTrustAnchor(cert);
+            final var trustedCa = Tenants.createTrustedCA(cert.getSubjectX500Principal(), caPublicKey);
+            tenant.addTrustedCAConfig(trustedCa);
+            ctx.assertEquals(2, tenant.getTrustedAuthorities().size());
+            return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+        }).compose(ok -> {
             // WHEN a device tries to connect to the adapter
-            // using a client certificate signed by the CA configured for the tenant
+            // using a client certificate signed by one of the
+            // trusted CAs configured for the tenant.
             return connectToAdapter(deviceCert);
-        }).setHandler(ctx.succeeding());
+        }).setHandler(ctx.asyncAssertSuccess(t -> {
+            // THEN the connection is established
+        }));
     }
 
+    /**
+     * Verifies that the adapter will fail to authenticate a device if the device's client certificate's signature cannot be
+     * validated by any of the trust anchors registered for the tenant that the device belongs to.
+     * 
+     * @param ctx The test context.
+     * @throws GeneralSecurityException if the CA key pair cannot be created.
+     */
+    @Test
+    public void testConnectFailsForMultipleInValidTrustAnchorsForTenant(final TestContext ctx) throws GeneralSecurityException {
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        // GIVEN a tenant configured with two valid trust anchors
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        final PublicKey caPublicKey = IntegrationTestSupport.newRsaKey();
+        final KeyPair OtherCaPublicKey = IntegrationTestSupport.newEcKeyPair();
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
+            final var caTrustConfig = Tenants.createTrustedCA(cert.getSubjectX500Principal(), caPublicKey);
+            final var otherCaTrustConfig = Tenants.createTrustedCA(cert.getSubjectX500Principal(), OtherCaPublicKey.getPublic());
+
+            final Tenant tenant = new Tenant();
+            tenant.addTrustedCAConfig(caTrustConfig);
+            tenant.addTrustedCAConfig(otherCaTrustConfig);
+            ctx.assertEquals(2, tenant.getTrustedAuthorities().size());
+            return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+        }).compose(ok -> {
+            // WHEN a device tries to connect to the adapter
+            // using a client certificate that cannot be validated
+            // by any of the trust anchors registered for the device's tenant
+            return connectToAdapter(deviceCert);
+        }).setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection is not established
+            ctx.assertTrue(t instanceof SaslException);
+        }));
+    }
 }

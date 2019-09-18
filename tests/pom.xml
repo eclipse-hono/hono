@@ -163,18 +163,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
-      <!--
-        Bouncy Castle - only needed for ITs to:
-        - Create certificates with custom validity periods, and
-        - Create and sign certificates with a given CA certificate.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
-        <version>1.54</version>
-        <scope>test</scope>
-        <optional>true</optional>
-      </dependency>
   </dependencies>
 
   <build>
@@ -974,6 +962,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
                 <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>
                 <trust-store.path>${project.build.directory}/certs/trusted-certs.pem</trust-store.path>
+                <device-4711-cert.path>${project.build.directory}/certs/device-4711-cert.pem</device-4711-cert.path>
+                <device-4711-key.path>${project.build.directory}/certs/device-4711-key.pem</device-4711-key.path>
+                <default-tenant-CA.path>${project.build.directory}/certs/default_tenant-cert.pem</default-tenant-CA.path>
                 <test.env>${test.env}</test.env>
                 <max.bcrypt.iterations>${max.bcrypt.iterations}</max.bcrypt.iterations>
                 <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>

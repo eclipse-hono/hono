@@ -463,7 +463,10 @@ components:
             "tracing":
                $ref: '#/components/schemas/TracingConfig'
             "trusted-ca":
-               $ref: '#/components/schemas/TrustedCA'
+               type: array
+               description: The list of trusted root CAs for a tenant.
+               items:
+                  $ref: '#/components/schemas/TrustedCA'
 
       TrustedCA:
          type: object
@@ -487,6 +490,21 @@ components:
                description: The Base64 encoded binary DER encoding of the
                             trusted root certificate. Either this property
                             or `public-key` must be set.
+            "not-before":
+               type: string
+               format: date-time
+               example: 2015-01-01T00:00:00+0000
+               description: The start date/time of the trusted certificate's validity period.
+                            If the `cert` property is used to provide an X.509 certificate then
+                            the validity is determined from the certificate and this property is ignored.
+            "not-after":
+               type: string
+               format: date-time
+               example: 2025-01-01T00:00:00+0000
+               description: The end date/time of the trusted root certificate's validity period.
+                            If the `cert` property is used to provide an X.509 certificate then
+                            the validity is determined from the certificate and this property is ignored.
+
             "algorithm":
                type: string
                description: The algorithm used for the public key of the CA.

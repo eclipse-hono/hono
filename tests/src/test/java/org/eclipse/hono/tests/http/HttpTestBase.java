@@ -19,7 +19,6 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -30,15 +29,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import javax.security.auth.x500.X500Principal;
-
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -496,8 +492,6 @@ public abstract class HttpTestBase {
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
     public void testUploadFailsForNonMatchingTrustAnchor(final VertxTestContext ctx) throws GeneralSecurityException {
 
-        final Tenant tenant = new Tenant();
-
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
@@ -508,17 +502,8 @@ public abstract class HttpTestBase {
         helper.getCertificate(deviceCert.certificatePath())
                 .compose(cert -> {
 
-                    final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority();
-
-                    trustedCertificateAuthority
-                            .setSubjectDn(cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                            .setPublicKey(keyPair.getPublic().getEncoded())
-                            .setKeyAlgorithm(keyPair.getPublic().getAlgorithm());
-
-                    final var trustedAuthorities = new ArrayList<TrustedCertificateAuthority>();
-                    trustedAuthorities.add(trustedCertificateAuthority);
-                    tenant.setTrustedAuthorities(trustedAuthorities);
-
+                    final Tenant tenant = Tenants.createTenantForTrustAnchor(cert.getIssuerX500Principal(),
+                            keyPair.getPublic());
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
                 })
                 // WHEN a device tries to upload data and authenticate with a client

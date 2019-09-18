@@ -113,7 +113,7 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * is calculated.
      */
     public static final String FIELD_PERIOD_MODE = "mode";    
-    /*
+    /**
      * The name of the property indicating the valid starting date of the trusted root certificate.
      */
     public static final String FIELD_PAYLOAD_NOT_BEFORE = "not-before";

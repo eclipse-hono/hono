@@ -18,6 +18,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -27,9 +28,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.PublicKey;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
@@ -119,6 +123,8 @@ public class TenantObjectTest {
                         new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toString())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(360)))
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm()));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
@@ -216,8 +222,12 @@ public class TenantObjectTest {
     @Test
     public void testGetTrustAnchorUsesPublicKey() throws GeneralSecurityException {
 
+        final PublicKey publicKey = trustedCaCert.getPublicKey();
+        final X500Principal subjectDn = trustedCaCert.getSubjectX500Principal();
+        final Instant notBefore = trustedCaCert.getNotBefore().toInstant();
+        final Instant notAfter = trustedCaCert.getNotAfter().toInstant();
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .addTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal());
+                .addTrustAnchor(publicKey, subjectDn, notBefore, notAfter);
 
         final List<TrustAnchor> trustAnchors = obj.getTrustAnchors();
         assertThat(trustAnchors.size(), is(1));
@@ -236,7 +246,9 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64"));
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64")
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toString())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(3650)).toString()));
 
         final TenantObject obj = tenantPayload.mapTo(TenantObject.class);
 
@@ -245,6 +257,58 @@ public class TenantObjectTest {
             fail("should not have been able to read trust anchor from malformed Base64");
         } catch (final GeneralSecurityException e) {
             // as expected
+        }
+    }
+
+    /**
+     * Verifies that a tenant configured with a valid Base64 encoding of a trusted CA public key
+     * but without a validity period will return a {@code null} trust anchor.
+     */
+    @Test
+    public void testGetTrustAnchorForPublicKeyWithoutValidityPeriod() {
+        final JsonObject tenantPayload = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64".getBytes()));
+        final TenantObject obj = tenantPayload.mapTo(TenantObject.class);
+        try {
+            assertNull(obj.getTrustAnchors());
+        } catch (GeneralSecurityException e) {
+            // should never get here
+        }
+    }
+
+    /**
+     * Verify that a trust anchor is constructed only for valid trusted certificate authorities configured
+     * for a tenant.
+     */
+    @Test
+    public void testGetTrustAnchorForExpiredTrustedCa() {
+
+        final JsonArray trustedCa = new JsonArray()
+                // expired certificate
+                .add(new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(365)).toString())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().minus(Period.ofDays(5)).toString()))
+                // valid certificate
+                .add(new JsonObject()
+                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(5)).toString())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(50)).toString()));
+        final JsonObject tenantPayload = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+
+        try {
+            final TenantObject tenant = tenantPayload.mapTo(TenantObject.class);
+            assertThat(tenant.getTrustAnchors(), is(1));
+        } catch (Exception e) {
+            // ignore -> should never get here
+            System.out.println(e);
         }
     }
 

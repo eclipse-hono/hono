@@ -129,6 +129,7 @@ public class TenantHttpIT {
      * 
      * @param context The Vert.x test context.
      */
+    @Test
     public void testAddTenantSucceedsWithMultipleTrustAnchors(final VertxTestContext context) {
 
         final X500Principal subjectDn = new X500Principal("CN=ca, OU=Hono, O=Eclipse");
@@ -313,13 +314,10 @@ public class TenantHttpIT {
      */
     @Test
     public void testAddTenantFailsWhenOldTrustModelIsUsed(final VertxTestContext context) {
-        final JsonObject trustConfig = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "test-dn")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, IntegrationTestSupport.newRsaKey().getEncoded());
         final JsonObject requestBody = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "test-id")
                 .put(TenantConstants.FIELD_ENABLED, true)
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustConfig);
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject());
         registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
     }
 
