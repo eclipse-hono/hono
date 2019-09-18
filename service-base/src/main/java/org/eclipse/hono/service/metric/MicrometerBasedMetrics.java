@@ -37,9 +37,11 @@ import io.vertx.core.Vertx;
 /**
  * Micrometer based metrics implementation.
  * <p>
- * Also checks if tenant {@link ProtocolAdapterProperties#getTenantIdleTimeout()} is exceeded and publishes the tenantId
- * on the event bus address {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} once a tenant times out.
- * 
+ * This implementation monitors the {@code TenantIdleTimeout}, if configured to a non zero duration
+ * ({@link ProtocolAdapterProperties#setTenantIdleTimeout(java.time.Duration)}). If the tenant had not interacted with
+ * the protocol adapter instance for the configured period, it stops reporting metrics for that tenant and publishes an
+ * event on the event bus. The event bus address is {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} and the body of
+ * the message is the tenantId.
  */
 public class MicrometerBasedMetrics implements Metrics {
 
@@ -77,7 +79,7 @@ public class MicrometerBasedMetrics implements Metrics {
     protected final MeterRegistry registry;
 
     private final Map<String, AtomicLong> authenticatedConnections = new ConcurrentHashMap<>();
-    private final Map<String, Long> lastSendTimestampsPerTenant = new ConcurrentHashMap<>();
+    private final Map<String, Long> lastSeenTimestampPerTenant = new ConcurrentHashMap<>();
     private final AtomicLong unauthenticatedConnections;
     private final AtomicInteger totalCurrentConnections = new AtomicInteger();
     private final Vertx vertx;
@@ -97,6 +99,13 @@ public class MicrometerBasedMetrics implements Metrics {
 
         this.registry = registry;
         this.vertx = vertx;
+
+        this.registry.config().onMeterRemoved(meter -> {
+            // execution is synchronized in MeterRegistry#remove(Meter)
+            if (METER_CONNECTIONS_AUTHENTICATED.equals(meter.getId().getName())) {
+                authenticatedConnections.remove(meter.getId().getTag(MetricsTags.TAG_TENANT));
+            }
+        });
         this.unauthenticatedConnections = registry.gauge(METER_CONNECTIONS_UNAUTHENTICATED, new AtomicLong());
     }
 
@@ -119,6 +128,7 @@ public class MicrometerBasedMetrics implements Metrics {
         gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
                 .incrementAndGet();
         this.totalCurrentConnections.incrementAndGet();
+        updateLastSeenTimestamp(tenantId);
 
     }
 
@@ -129,6 +139,7 @@ public class MicrometerBasedMetrics implements Metrics {
         gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
                 .decrementAndGet();
         this.totalCurrentConnections.decrementAndGet();
+        updateLastSeenTimestamp(tenantId);
 
     }
 
@@ -206,7 +217,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .register(this.registry)
             .record(calculatePayloadSize(payloadSize, tenantObject));
 
-        updateLastSendForTenant(tenantId);
+        updateLastSeenTimestamp(tenantId);
     }
 
     @Override
@@ -241,7 +252,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .register(this.registry)
             .record(calculatePayloadSize(payloadSize, tenantObject));
 
-        updateLastSendForTenant(tenantId);
+        updateLastSeenTimestamp(tenantId);
     }
 
     /**
@@ -322,16 +333,16 @@ public class MicrometerBasedMetrics implements Metrics {
     }
 
     // visible for testing
-    Map<String, Long> getLastSendTimestampsPerTenant() {
-        return lastSendTimestampsPerTenant;
+    Map<String, Long> getLastSeenTimestampPerTenant() {
+        return lastSeenTimestampPerTenant;
     }
 
-    private void updateLastSendForTenant(final String tenantId) {
+    private void updateLastSeenTimestamp(final String tenantId) {
         if (tenantIdleTimeout == DEFAULT_TENANT_IDLE_TIMEOUT) {
             return;
         }
 
-        final Long previousVal = lastSendTimestampsPerTenant.put(tenantId, System.currentTimeMillis());
+        final Long previousVal = lastSeenTimestampPerTenant.put(tenantId, System.currentTimeMillis());
         if (previousVal == null) {
             newTenantTimeoutTimer(tenantId, tenantIdleTimeout);
         }
@@ -339,17 +350,49 @@ public class MicrometerBasedMetrics implements Metrics {
 
     private void newTenantTimeoutTimer(final String tenantId, final long delay) {
         vertx.setTimer(delay, id -> {
-            final long lastSend = lastSendTimestampsPerTenant.get(tenantId);
-            long remaining = tenantIdleTimeout - (System.currentTimeMillis() - lastSend);
-            if (remaining <= 0) {
-                if (lastSendTimestampsPerTenant.remove(tenantId, lastSend)) {
-                    vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
-                    return;
-                } else { // had been updated since last get -> timeout needs to be reset
-                    remaining = tenantIdleTimeout;
+            final Long lastSeen = lastSeenTimestampPerTenant.get(tenantId);
+            final long remaining = tenantIdleTimeout - (System.currentTimeMillis() - lastSeen);
+
+            if (remaining > 0) {
+                newTenantTimeoutTimer(tenantId, remaining);
+            } else {
+                if (!isConnected(tenantId) && lastSeenTimestampPerTenant.remove(tenantId, lastSeen)) {
+                    handleTenantTimeout(tenantId);
+                } else { // not ready -> reset timeout
+                    newTenantTimeoutTimer(tenantId, tenantIdleTimeout);
                 }
             }
-            newTenantTimeoutTimer(tenantId, remaining);
         });
+    }
+
+    private boolean isConnected(final String tenantId) {
+        final AtomicLong count = authenticatedConnections.get(tenantId);
+        return count != null && count.get() > 0;
+    }
+
+    /**
+     * <b> On synchronization: </b>
+     * <p>
+     * Each remove operation ({@link MeterRegistry#remove(io.micrometer.core.instrument.Meter)}) is synchronized
+     * internally. The removal operations are not synchronized together.
+     * </p>
+     * <b>Rationale:</b>
+     * <p>
+     * It is a) unlikely that a tenant connects during the cleanup (timeout is rather in hours than in very small time
+     * units). And b) if it happens, a metrics would temporarily be not 100% accurate. This does not justify additional
+     * locking for every message that is send to Hono.
+     */
+    private void handleTenantTimeout(final String tenantId) {
+        final Tags tenantTag = Tags.of(MetricsTags.getTenantTag(tenantId));
+
+        // the onMeterRemoved() handler removes it also from this.authenticatedConnections
+        registry.find(METER_CONNECTIONS_AUTHENTICATED).tags(tenantTag).meters().forEach(registry::remove);
+
+        registry.find(METER_MESSAGES_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_MESSAGES_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_COMMANDS_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_COMMANDS_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
+
+        vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
     }
 }
