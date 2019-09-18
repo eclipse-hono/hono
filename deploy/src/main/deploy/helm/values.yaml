@@ -120,6 +120,11 @@ adapters:
   http:
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-http-vertx:${project.version}
+  lora:
+    # enabled indicates if Hono's Lora adapter should be deployed.
+    enabled: false
+    # Docker image repository
+    imageName: ${docker.repository}/hono-adapter-lora-vertx:${project.version}
   mqtt:
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-mqtt-vertx:${project.version}
