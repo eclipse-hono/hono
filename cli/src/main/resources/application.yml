@@ -38,12 +38,16 @@ message:
 
 ---
 
+# For use with the demo certificates.
+# Do not use this profile for certificates that the JVM trusts, e.g. for the Hono sandbox. Simply set hono.client.tlsEnabled 
+# to true. 
 spring:
   profiles: ssl
 hono:
   client:
     hostnameVerificationRequired: false
     trustStorePath: target/config/hono-demo-certs-jar/trusted-certs.pem
+    tlsEnabled: true
 
 ---
 
