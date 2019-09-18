@@ -65,6 +65,10 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_EFFECTIVE_SINCE = "effective-since";
     /**
+     * The name of the field that contains the extension fields.
+     */
+    public static final String FIELD_EXT = "ext";
+    /**
      * The name of the property that contains the maximum number of bytes to be allowed for a tenant.
      */
     public static final String FIELD_MAX_BYTES = "max-bytes";

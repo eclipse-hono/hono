@@ -365,10 +365,8 @@ public final class TenantObject extends JsonBackedValueObject {
      * <p>
      * The returned value is determined as follows:
      * <ol>
-     * <li>if this tenant configuration contains an integer typed {@link TenantConstants#FIELD_MAX_TTD} property
-     * specific to the given adapter type, then return its value if it is &gt;= 0</li>
-     * <li>otherwise, if this tenant configuration contains a general integer typed
-     * {@link TenantConstants#FIELD_MAX_TTD} property, then return its value if it is &gt;= 0</li>
+     * <li>if this tenant configuration extensions contains an integer typed {@link TenantConstants#FIELD_MAX_TTD} 
+     * property specific to the given adapter type, then return its value provided it is &gt;= 0</li>
      * <li>otherwise, return {@link TenantConstants#DEFAULT_MAX_TTD}</li>
      * </ol>
      * 
@@ -380,20 +378,11 @@ public final class TenantObject extends JsonBackedValueObject {
 
         Objects.requireNonNull(typeName);
 
-        final int maxTtd = Optional
-                .ofNullable(getAdapterConfiguration(typeName))
-                .map(conf -> {
-                    return Optional.ofNullable(getProperty(conf, TenantConstants.FIELD_MAX_TTD, Integer.class))
-                            .orElse(TenantConstants.DEFAULT_MAX_TTD);
-                })
-                .orElse(Optional.ofNullable(getProperty(TenantConstants.FIELD_MAX_TTD, Integer.class))
-                        .orElse(TenantConstants.DEFAULT_MAX_TTD));
-
-        if (maxTtd < 0) {
-            return TenantConstants.DEFAULT_MAX_TTD;
-        } else {
-            return maxTtd;
-        }
+        return Optional.ofNullable(getAdapterConfiguration(typeName))
+                .map(conf -> getProperty(conf, TenantConstants.FIELD_EXT, JsonObject.class))
+                .map(extension -> getProperty(extension, TenantConstants.FIELD_MAX_TTD, Integer.class))
+                .map(maxTtd -> maxTtd < 0 ? TenantConstants.DEFAULT_MAX_TTD : maxTtd)
+                .orElse(TenantConstants.DEFAULT_MAX_TTD);
     }
 
     /**

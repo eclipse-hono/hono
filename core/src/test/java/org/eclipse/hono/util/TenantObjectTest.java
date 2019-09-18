@@ -218,29 +218,22 @@ public class TenantObjectTest {
     }
 
     /**
-     * Verifies that a TTD value specific to an adapter has higher priority than
-     * a value specified for all adapter types.
+     * Verifies that the maximum <em>time till disconnect</em> value is read from the extensions 
+     * section of the given adapter configuration.
      */
     @Test
-    public void testGetMaxTTDReturnsAdapterSpecificValue() {
-        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        obj.addAdapterConfiguration(TenantObject.newAdapterConfig("custom", true).put(TenantConstants.FIELD_MAX_TTD, 10));
-        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(10));
+    public void testGetMaxTTDFromAdapterConfiguration() {
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenantObject.addAdapterConfiguration(
+                TenantObject.newAdapterConfig("custom", true)
+                        .put(TenantConstants.FIELD_EXT, new JsonObject()
+                                .put(TenantConstants.FIELD_MAX_TTD, 10)));
+        assertThat(tenantObject.getMaxTimeUntilDisconnect("custom"), is(10));
     }
 
     /**
-     * Verifies that a generic TTD value has higher priority than the default value.
-     */
-    @Test
-    public void testGetMaxTTDReturnsGenericValue() {
-        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        obj.setProperty(TenantConstants.FIELD_MAX_TTD, 15);
-        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(15));
-    }
-
-    /**
-     * Verifies that the default TTD value is used if no specific or generic value is
-     * set.
+     * Verifies that the default value is used if no maximum <em>time till disconnect</em> value 
+     * is set.
      */
     @Test
     public void testGetMaxTTDReturnsDefaultValue() {
@@ -249,13 +242,16 @@ public class TenantObjectTest {
     }
 
     /**
-     * Verifies that the default TTD value is used if the max TTD is set to a value &lt; 0.
+     * Verifies that the default value is used if the max TTD is set to a value &lt; 0.
      */
     @Test
     public void testGetMaxTTDReturnsDefaultValueInsteadOfIllegalValue() {
-        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        obj.setProperty(TenantConstants.FIELD_MAX_TTD, -2);
-        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenantObject.addAdapterConfiguration(
+                TenantObject.newAdapterConfig("custom", true)
+                        .put(TenantConstants.FIELD_EXT, new JsonObject()
+                                .put(TenantConstants.FIELD_MAX_TTD, -10)));
+        assertThat(tenantObject.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
     }
 
     /**
