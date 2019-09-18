@@ -38,6 +38,8 @@ title = "Release Notes"
   could only subscribe to commands directed at any of the devices that the gateway has acted on behalf of.
   With the new feature of also being able to subscribe to commands for specific devices, northbound
   applications will get notified of such a subscription along with the specific device id.
+* Now a *max-ttd* value, which is used as an upper boundary for the *hono-ttd* value specified by the devices,
+  can be set as an *extension* property in the adapters section of the tenant configuration.  
 
 ### API Changes
 

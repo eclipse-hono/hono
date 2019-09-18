@@ -787,8 +787,12 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN a device publishes a telemetry message that belongs to a tenant with
         // a max TTD of 20 secs
-        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(
-            Future.succeededFuture(TenantObject.from("tenant", true).setProperty(TenantConstants.FIELD_MAX_TTD, 20)));
+        when(tenantClient.get(eq("tenant"), any())).thenReturn(
+                Future.succeededFuture(TenantObject.from("tenant", true)
+                        .addAdapterConfiguration(
+                                TenantObject.newAdapterConfig(ADAPTER_TYPE, true)
+                                        .put(TenantConstants.FIELD_EXT, new JsonObject()
+                                                .put(TenantConstants.FIELD_MAX_TTD, 20)))));
 
         // and includes a TTD value of 40 in its request
         final Buffer payload = Buffer.buffer("some payload");
