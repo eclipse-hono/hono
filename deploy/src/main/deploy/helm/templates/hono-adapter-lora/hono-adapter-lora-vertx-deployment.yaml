@@ -1,0 +1,68 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  {{- $args := dict "dot" . "component" "adapter-lora-vertx" "name" "adapter-lora-vertx" }}
+  {{- include "hono.metadata" $args | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "hono.matchLabels" $args | nindent 6 }}
+  template:
+    metadata:
+      {{- include "hono.metadata" $args | nindent 6 }}
+    spec:
+      containers:
+      {{- include "hono.jaeger.agent" . | indent 6 }}
+      - image: {{ .Values.adapters.lora.imageName }}
+        imagePullPolicy: IfNotPresent
+        name: eclipse-hono-adapter-lora-vertx
+        ports:
+        - name: health
+          containerPort: {{ .Values.healthCheckPort }}
+          protocol: TCP
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        - name: https
+          containerPort: 8443
+          protocol: TCP
+        securityContext:
+          privileged: false
+        env:
+        - name: SPRING_CONFIG_LOCATION
+          value: file:///etc/hono/
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: LOGGING_CONFIG
+          value: classpath:logback-spring.xml
+        - name: _JAVA_OPTIONS
+          value: "{{ .Values.defaultJavaOptions }}"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- include "hono.jaeger.clientConf" $args | indent 8 }}
+        volumeMounts:
+        - mountPath: /etc/hono
+          name: conf
+          readOnly: true
+        resources:
+          limits:
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: {{ .Values.healthCheckPort }}
+            scheme: HTTPS
+          initialDelaySeconds: 180
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: {{ .Values.healthCheckPort }}
+            scheme: HTTPS
+          initialDelaySeconds: 10
+      volumes:
+      - name: conf
+        secret:
+          secretName: {{ .Release.Name }}-adapter-lora-vertx-conf
