@@ -21,6 +21,9 @@ title = "Release Notes"
   In this case the data usage for a tenant is calculated from the beginning till the end of the 
   (Gregorian) calendar month. Refer [resource limits] ({{% doclink "/concepts/resource-limits/" %}})
   for more information.
+* The devices can now indicate a *time-to-live* duration for event messages published using 
+  the HTTP adapter by setting the *hono-ttl* property in requests explicitly - please refer to the
+  [HTTP Adapter]({{% doclink "/user-guide/http-adapter/" %}}) for details.
 
 ### API Changes
 

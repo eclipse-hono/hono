@@ -274,6 +274,7 @@ content-length: 23
   * (optional) `authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) `content-type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `hono-ttl`: The *time-to-live* in number of seconds for event messages.  
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
@@ -316,6 +317,7 @@ content-length: 0
 * Request Headers:
   * (required) `content-type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `hono-ttl`: The *time-to-live* in number of seconds for event messages.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
@@ -359,6 +361,7 @@ content-length: 0
   * (optional) `authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) `content-type`: The type of payload contained in the body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
+  * (optional) `hono-ttl`: The *time-to-live* in number of seconds for event messages.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
@@ -583,7 +586,8 @@ In most cases the AMQP Messaging Network can be configured with a maximum *time-
 from the persistent store if no consumer has attached to receive the event before the message expires.
 
 In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the protocol adapter supports setting a
-downstream event message's *ttl* property based on the default *ttl* and *max-ttl* values configured for a tenant/device as described in the [Tenant API]
+downstream event message's *ttl* property based on the *hono-ttl* property set as a header or a query parameter in the event requests by the devices.
+Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]
 ({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
 
 

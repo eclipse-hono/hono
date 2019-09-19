@@ -213,7 +213,10 @@ public final class Constants {
      * events.
      */
     public static final String HEADER_TIME_TILL_DISCONNECT = "hono-ttd";
-
+    /**
+     * The header name defined for setting the <em>time-to-live</em> for the event messages.
+     */
+    public static final String HEADER_TIME_TO_LIVE = "hono-ttl";
     /**
      * The header name defined for setting the <em>time to deliver</em> for device command readiness notification events.
      * @deprecated Use {@link #HEADER_TIME_TILL_DISCONNECT} instead

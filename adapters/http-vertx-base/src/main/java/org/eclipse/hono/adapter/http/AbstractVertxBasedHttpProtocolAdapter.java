@@ -674,7 +674,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             payload,
                             tenantTracker.result(),
                             tokenTracker.result(),
-                            ttd);
+                            ttd,
+                            EndpointType.EVENT.equals(endpoint) ? HttpUtils.getTimeToLive(ctx) : null);
                     customizeDownstreamMessage(downstreamMessage, ctx);
 
                     addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);

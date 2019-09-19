@@ -93,4 +93,48 @@ public class HttpUtilsTest {
         assertNull(HttpUtils.getTimeTillDisconnect(routingContext));
     }
 
+    /**
+     * Verifies that the {@link Constants#HEADER_TIME_TO_LIVE} header is used by
+     * the {@link HttpUtils#getTimeToLive(RoutingContext)} method.
+     */
+    @Test
+    public void testGetTimeToLiveUsesHeader() {
+
+        // GIVEN a time to live in seconds
+        final long timeToLive = 60L;
+        // WHEN evaluating a routingContext that has this value set as a header
+        when(httpServerRequest.getHeader(Constants.HEADER_TIME_TO_LIVE))
+                .thenReturn(String.valueOf(timeToLive));
+
+        // THEN the get method returns this value
+        assertEquals(timeToLive, HttpUtils.getTimeToLive(routingContext).toSeconds());
+    }
+
+    /**
+     * Verifies that the {@link Constants#HEADER_TIME_TO_LIVE} query parameter is used by
+     * the {@link HttpUtils#getTimeToLive(RoutingContext)} method.
+     */
+    @Test
+    public void testGetTimeToLiveUsesQueryParam() {
+
+        // GIVEN a time to live in seconds
+        final long timeToLive = 60L;
+        // WHEN evaluating a routingContext that has this value set as a query param
+        when(httpServerRequest.getParam(Constants.HEADER_TIME_TO_LIVE))
+                .thenReturn(String.valueOf(timeToLive));
+
+        // THEN the get method returns this value
+        assertEquals(timeToLive, HttpUtils.getTimeToLive(routingContext).toSeconds());
+    }
+
+    /**
+     * Verifies that the {@link HttpUtils#getTimeToLive(RoutingContext)} method 
+     * returns {@code null} if {@link Constants#HEADER_TIME_TO_LIVE} is neither
+     * provided as query parameter nor as header.
+     */
+    @Test
+    public void testGetTimeToLiveReturnsNullIfNotSpecified() {
+
+        assertNull(HttpUtils.getTimeToLive(routingContext));
+    }
 }

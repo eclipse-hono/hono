@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -283,6 +284,35 @@ public final class HttpUtils {
         }
 
         return null;
+    }
+
+    /**
+     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} HTTP header for a request.
+     * If no such header can be found, the query is searched for containing a query parameter with the same key.
+     *
+     * @param ctx The routing context containing the HTTP request.
+     * @return The <em>time-to-live</em> duration or {@code null} if
+     * <ul>
+     *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} header 
+     *     or query parameter.</li>
+     *     <li>the contained value cannot be parsed as a Long</li>
+     * </ul>
+     * @throws NullPointerException if context is {@code null}.
+     */
+    public static Duration getTimeToLive(final RoutingContext ctx) {
+        Objects.requireNonNull(ctx);
+
+        try {
+            return Optional.ofNullable(ctx.request().getHeader(Constants.HEADER_TIME_TO_LIVE))
+                    .map(ttlInHeader -> Long.parseLong(ttlInHeader))
+                    .map(ttl -> Duration.ofSeconds(ttl))
+                    .orElse(Optional.ofNullable(ctx.request().getParam(Constants.HEADER_TIME_TO_LIVE))
+                            .map(ttlInParam -> Long.parseLong(ttlInParam))
+                            .map(ttl -> Duration.ofSeconds(ttl))
+                            .orElse(null));
+        } catch (final NumberFormatException e) {
+            return null;
+        }
     }
 
     /**
