@@ -70,11 +70,11 @@ div#landing-vp {
 
 /* Change font size to Bootstrap 4 defaults, which are similar to the values in theme "learn" (used for the documentation). */
 html {
-  font-size: 16px; /* defines the rem */
+  font-size: 1rem;
 }
 
 body {
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.5;
 }
 
@@ -111,6 +111,7 @@ pre {
   font-size: 0.9rem;
 }
 
+/*Dropdown menu*/
 .navbar ul.dropdown-menu li a {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
