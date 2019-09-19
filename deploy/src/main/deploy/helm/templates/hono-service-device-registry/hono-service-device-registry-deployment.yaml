@@ -1,3 +1,4 @@
+{{- if .Values.deviceRegistryDeployExample }}
 apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
@@ -12,7 +13,7 @@ spec:
     metadata:
       {{- include "hono.metadata" $args | nindent 6 }}
     spec:
-{{- if .Values.deviceRegistry.resetFiles }}
+    {{- if .Values.deviceRegistry.resetFiles }}
       initContainers:
       - name: copy-example-data
         image: busybox
@@ -27,7 +28,7 @@ spec:
           name: conf
         - mountPath: /var/lib/hono/device-registry
           name: registry
-{{- end }}
+    {{- end }}
       containers:
       {{- include "hono.jaeger.agent" . | indent 6 }}
       - image: {{ .Values.deviceRegistry.imageName }}
@@ -93,3 +94,4 @@ spec:
       - name: conf
         secret:
           secretName: {{ .Release.Name }}-service-device-registry-conf
+{{- end }}

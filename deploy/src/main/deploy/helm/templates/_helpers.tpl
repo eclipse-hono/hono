@@ -138,9 +138,7 @@ messaging:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- range $key, $value := .dot.Values.adapters.amqpMessagingNetworkSpec }}
-  {{ $key }}: {{ $value }}
-  {{- end }}
+  {{- required ".Values.adapters.amqpMessagingNetworkSpec MUST be set if example AQMP Messaging Network is disabled" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml | nindent 2 }}
 {{- end }}
 command:
 {{- if .dot.Values.amqpMessagingNetworkDeployExample }}
@@ -153,9 +151,7 @@ command:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- range $key, $value := .dot.Values.adapters.commandAndControlSpec }}
-  {{ $key }}: {{ $value }}
-  {{- end }}
+  {{- required ".Values.adapters.commandAndControlSpec MUST be set if example AQMP Messaging Network is disabled" .dot.Values.adapters.commandAndControlSpec | toYaml | nindent 2 }}
 {{- end }}
 tenant:
 {{- if .dot.Values.deviceRegistryDeployExample }}
@@ -166,7 +162,7 @@ tenant:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- .dot.Values.adapters.tenantSpec | toYaml | indent 2 }}
+  {{- required ".Values.adapters.tenantSpec MUST be set if example Device Registry is disabled" .dot.Values.adapters.tenantSpec | toYaml | nindent 2 }}
 {{- end }}
 registration:
 {{- if .dot.Values.deviceRegistryDeployExample }}
@@ -177,7 +173,7 @@ registration:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- .dot.Values.adapters.deviceRegistrationSpec | toYaml | indent 2 }}
+  {{- required ".Values.adapters.deviceRegistrationSpec MUST be set if example Device Registry is disabled" .dot.Values.adapters.deviceRegistrationSpec | toYaml | nindent 2 }}
 {{- end }}
 credentials:
 {{- if .dot.Values.deviceRegistryDeployExample }}
@@ -188,7 +184,7 @@ credentials:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- else }}
-  {{- .dot.Values.adapters.credentialsSpec | toYaml | indent 2 }}
+  {{- required ".Values.adapters.credentialsSpec MUST be set if example Device Registry is disabled" .dot.Values.adapters.credentialsSpec | toYaml | nindent 2 }}
 {{- end }}
 deviceConnection:
 {{- if .dot.Values.adapters.deviceConnectionSpec }}
