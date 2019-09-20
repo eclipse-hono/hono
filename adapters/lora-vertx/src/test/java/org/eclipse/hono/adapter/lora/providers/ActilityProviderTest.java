@@ -13,11 +13,14 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.junit.Assert;
 import org.junit.Test;
 
 import io.vertx.core.json.JsonObject;
+
+import java.util.Map;
 
 /**
  * Verifies behavior of {@link ActilityProvider}.
@@ -67,6 +70,17 @@ public class ActilityProviderTest {
         loraMessage.put("bumlux", "bumlux");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
         Assert.assertEquals(LoraMessageType.UNKNOWN, type);
+    }
+
+    /**
+     * Verifies that the extracted rssi matches 48.
+     */
+    @Test
+    public void extractRssiFromLoraMessage() {
+        final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
+        final Map<String, Object> map = provider.extractNormalizedData(loraMessage);
+        Assert.assertTrue(map.containsKey(LoraConstants.APP_PROPERTY_RSS));
+        Assert.assertEquals(48.0, map.getOrDefault(LoraConstants.APP_PROPERTY_RSS, null));
     }
 
 }
