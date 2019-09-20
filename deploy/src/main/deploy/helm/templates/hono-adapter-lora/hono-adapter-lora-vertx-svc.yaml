@@ -4,6 +4,10 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "adapter-lora-vertx" "name" "adapter-lora-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
+  {{- with .Values.adapters.lora.svc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   ports:
   - name: http
@@ -22,5 +26,8 @@ spec:
   type: LoadBalancer
 {{ else }}
   type: NodePort
+{{- end }}
+{{ if .Values.adapters.lora.svc.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.adapters.lora.svc.loadBalancerIP }}
 {{- end }}
 {{- end }}

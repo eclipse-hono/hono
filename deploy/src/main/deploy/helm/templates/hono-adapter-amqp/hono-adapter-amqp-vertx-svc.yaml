@@ -3,6 +3,10 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "adapter-amqp-vertx" "name" "adapter-amqp-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
+  {{- with .Values.adapters.amqp.svc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   ports:
   - name: amqp
@@ -21,4 +25,7 @@ spec:
   type: LoadBalancer
 {{ else }}
   type: NodePort
+{{- end }}
+{{ if .Values.adapters.amqp.svc.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.adapters.amqp.svc.loadBalancerIP }}
 {{- end }}

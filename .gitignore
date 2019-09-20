@@ -11,3 +11,6 @@
 **/.project
 **/.settings/
 .checkstyle
+
+# OS files
+.DS_Store
