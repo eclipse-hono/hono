@@ -219,26 +219,6 @@ public class TenantObjectTest {
     }
 
     /**
-     * Verifies that a TenantObject cannot be created from a JSON payload containing a valid Base64 encoding of a
-     * trusted CA public key with a missing validity period.
-     */
-    @Test
-    public void testGetTrustAnchorForPublicKeyWithoutValidityPeriod() {
-        final JsonObject tenantPayload = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64".getBytes()));
-
-        try {
-            tenantPayload.mapTo(TenantObject.class);
-            fail("should not have been able to create a TenantObject from a malformed trusted CA");
-        } catch (final IllegalArgumentException e) {
-            // expected
-        }
-    }
-
-    /**
      * Verify that a trust anchor is constructed only for valid trusted certificate authorities configured
      * for a tenant.
      */

@@ -744,14 +744,12 @@ public final class TenantObject extends JsonBackedValueObject {
     private boolean isValidTenantConfig(final JsonObject trustedCa) {
 
         final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+        final String cert = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_CERT, String.class);
         final String publicKey = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
-        final Instant notBefore = getNotBefore(trustedCa);
-        final Instant notAfter = getNotAfter(trustedCa);
 
         if (Strings.isNullOrEmpty(subjectDn) ||
-                // if the public key is present, then
-                // the validity period is required
-                publicKey != null && (notBefore == null || notAfter == null)) {
+                // public key or the encoded certificate must be present
+                Strings.isNullOrEmpty(cert) && Strings.isNullOrEmpty(publicKey)) {
             return false;
         }
         return true;
