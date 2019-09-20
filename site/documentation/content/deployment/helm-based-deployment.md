@@ -31,7 +31,7 @@ The [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/
 #### Hono Helm Chart
 
 The Helm chart is contained in the Hono archive that is available from [Hono's download page]({{% homelink "/downloads/" %}}).
-After the archive has been extracted, the chart can be found in the `eclipse-hono-$VERSION/deploy/helm/eclipse-hono` folder.
+After the archive has been extracted, the chart can be found in the `eclipse-hono-$VERSION/eclipse-hono` folder.
 
 #### Hono Command Line Client
 
@@ -43,7 +43,7 @@ The command line client requires a Java 11 runtime environment to run.
 The recommended way of deploying Hono is by means of using Helm's *Tiller* service running on the Kubernetes cluster:
 
 ~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/helm
+# in directory: eclipse-hono-$VERSION
 helm install --dep-up --name hono --namespace hono eclipse-hono/
 ~~~
 
@@ -64,19 +64,19 @@ In cases where installation of Helm's Tiller service into the cluster is not an 
 The following commands generate the resource descriptors:
 
 ~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
-helm dep update helm/
-helm template --name hono --namespace hono --output-dir . helm/
+# in directory: eclipse-hono-$VERSION
+mkdir resources
+helm dep update eclipse-hono/
+helm template --name hono --namespace hono --output-dir resources eclipse-hono/
 ~~~
 
-This will create an `eclipse-hono` folder containing all the resource descriptors which can then be deployed to the cluster using `kubectl`:
+This will create a `resources/eclipse-hono` folder containing all the resource descriptors which can then be deployed to the cluster using `kubectl`:
 
 ~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
+# in directory: eclipse-hono-$VERSION
 kubectl create namespace hono
 kubectl config set-context $(kubectl config current-context) --namespace=hono
-find . -path "./eclipse-hono/*" -name crd*.yaml -exec kubectl apply -f {} \;
-kubectl apply -f ./eclipse-hono -R
+kubectl apply -f ./resources -R
 ~~~
 
 ## Verifying the Installation
@@ -150,13 +150,60 @@ helm delete --purge hono
 A Hono instance that has been deployed manually using the resource files can be undeployed by running
 
 ~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
-kubectl delete -f ./eclipse-hono -R
+# in directory: eclipse-hono-$VERSION
+kubectl delete -f ./resources -R
 ~~~
+
+## Using the Device Connection Service
+
+Hono's example Device Registry component contains a simple in-memory implementation of the [Device Connection API]({{< relref "/api/device-connection" >}}).
+This example implementation is used by default when the example registry is deployed.
+
+Hono also contains a production ready, data grid based implementation of the Device Connection API which can be deployed and used instead of
+the example implementation. The component can be deployed by means of setting the *deviceConnectionService.enabled* property to `true` when
+running Helm:
+
+~~~sh
+# in directory: eclipse-hono-$VERSION
+helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true eclipse-hono/
+~~~
+
+This will deploy the Device Connection service and configure all protocol adapters to use it instead of the example Device Registry implementation.
+However, the service requires a connection to a data grid in order to store the device connection data.
+The Helm chart supports deployment of a simple data grid which can be used for experimenting by means of setting the
+*dataGridDeployExample* property to `true` when running Helm:
+
+~~~sh
+# in directory: eclipse-hono-$VERSION
+helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true --set dataGridDeployExample=true eclipse-hono/
+~~~
+
+This will deploy the data grid and configure the Device Connection service to use it for storing the connection data.
+
+The Device Connection service can also be configured to connect to an already existing data grid. Please refer to the
+[admin guide]({{< relref "/admin-guide/device-connection-config.md" >}}) for details regarding the corresponding configuration properties.
+
+
+## Deploying optional Adapters
+
+The Helm chart supports deployment of additional protocol adapters which are still considered experimental or have been deprecated.
+The following table provides an overview of the corresponding configuration properties that need to be set on deployment.
+
+| Property                     | Default  | Description                              |
+| :--------------------------- | :------- | :--------------------------------------- |
+| *adapters.kura.enabled*      | `false` | Indicates if the deprecated Kura protocol adapter should be deployed. |
+
+The following command will deploy the Kura adapter along with Hono's standard adapters:
+
+~~~sh
+# in directory: eclipse-hono-$VERSION
+helm install --dep-up --name hono --namespace hono --set adapters.kura.enabled=true eclipse-hono/
+~~~
+
 
 ## Deploying custom Container Images
 
-The sections above describe how Hono's pre-built container images can be deployed using Helm. In some cases it might be desirable to build Hono from source, e.g. in order to use a different metrics back end or to [use Jaeger tracing](#using-jaeger-tracing). In these cases, the Helm templates contained in the source tree can be used instead of the Helm chart from the download page.
+The sections above describe how Hono's pre-built container images can be deployed using Helm. In some cases it might be desirable to build Hono from source, e.g. in order to use a different metrics back end or to [use Jaeger tracing]({{< relref "#using-jaeger-tracing" >}}). In these cases, the Helm templates contained in the source tree can be used instead of the Helm chart from the download page.
 
 The container images created as part of the build process need to be made available to the Kubernetes cluster that Hono should be deployed to. This usually requires the images to be pushed to a (private) container registry that the cluster has pull access to. Please refer to the documentation of the employed Kubernetes service provider for details regarding the setup and configuration of a private container registry.
 
@@ -213,36 +260,7 @@ The newly built images can then be deployed using Helm:
 helm install --dep-up --name hono --namespace hono target/deploy/helm/eclipse-hono/
 ~~~
 
-## Using the Device Connection Service
-
-Hono's example Device Registry component contains a simple in-memory implementation of the [Device Connection API]({{< relref "/api/device-connection" >}}).
-This example implementation is used by default when the example registry is deployed.
-
-Hono also contains a production ready, data grid based implementation of the Device Connection API which can be deployed and used instead of
-the example implementation. The component can be deployed by means of setting the *deviceConnectionService.enabled* property to `true` when
-running Helm:
-
-~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true helm/eclipse-hono/
-~~~
-
-This will deploy the Device Connection service and configure all protocol adapters to use it instead of the example Device Registry implementation.
-However, the service requires a connection to a data grid in order to store the device connection data.
-The Helm chart supports deployment of a simple data grid which can be used for experimenting by means of setting the
-*dataGridDeployExample* property to `true` when running Helm:
-
-~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true --set dataGridDeployExample=true helm/eclipse-hono/
-~~~
-
-This will deploy the data grid and configure the Device Connection service to use it for storing the connection data.
-
-The Device Connection service can also be configured to connect to an already existing data grid. Please refer to the
-[admin guide]({{< relref "/admin-guide/device-connection-config.md" >}}) for details regarding the corresponding configuration properties.
-
-## Using Jaeger Tracing
+### Using Jaeger Tracing
 
 Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages flowing through the system.
 The Hono chart can be configured to report tracing information to the [Jaeger tracing system](https://jaegertracing.io). The *Spans* reported
@@ -251,6 +269,7 @@ by the components can then be viewed in a web browser.
 In order for Hono's components to use the Jaeger client for reporting tracing information, the container images need to be built
 with the `jaeger` Maven profile. Please refer to [Monitoring & Tracing]
 ({{< relref "/admin-guide/monitoring-tracing-config.md#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}}) for details.
+The newly built images also need to be made available to the target Kubernetes cluster as described in the two previous sections.
 
 The chart can be configured to deploy and use an example Jaeger back end by means of setting the *jaegerBackendDeployExample* property
 to `true` when running Helm:
@@ -277,18 +296,3 @@ the Jaeger Agent that is deployed with each of Hono's components.
 helm install --dep-up --name hono --namespace hono --set jaegerAgentConf.REPORTER_TYPE=tchannel --set jaegerAgentConf.REPORTER_TCHANNEL_HOST_PORT=my-jaeger-collector:14267 target/deploy/helm/eclipse-hono/
 ~~~
 
-## Deploying optional Adapters
-
-The Helm chart supports deployment of additional protocol adapters which are still considered experimental or have been deprecated.
-The following table provides an overview of the corresponding configuration properties that need to be set on deployment.
-
-| Property                     | Default  | Description                              |
-| :--------------------------- | :------- | :--------------------------------------- |
-| *adapters.kura.enabled*      | `false` | Indicates if the deprecated Kura protocol adapter should be deployed. |
-
-The following command will deploy the Kura adapter along with Hono's standard adapters:
-
-~~~sh
-# in directory: eclipse-hono-$VERSION/deploy/
-helm install --dep-up --name hono --namespace hono --set adapters.kura.enabled=true helm/eclipse-hono/
-~~~

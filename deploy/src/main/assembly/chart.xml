@@ -25,12 +25,12 @@
 
   <fileSets>
     <fileSet>
-      <outputDirectory>deploy/helm</outputDirectory>
-      <directory>${project.build.directory}/deploy/helm</directory>
+      <outputDirectory>eclipse-hono</outputDirectory>
+      <directory>${project.build.directory}/deploy/helm/eclipse-hono</directory>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <outputDirectory>deploy</outputDirectory>
+      <outputDirectory>/</outputDirectory>
       <directory>${project.build.directory}/deploy</directory>
       <includes>
         <include>*.sh</include>
