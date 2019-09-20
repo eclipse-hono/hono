@@ -241,12 +241,7 @@ public class TenantHttpIT {
     public void testRemoveTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenantPayload = buildTenantPayload();
-        final var trustedCa = new TrustedCertificateAuthority()
-                .setSubjectDn("CN=ca, OU=Hono, O=Eclipse")
-                .setPublicKey(IntegrationTestSupport.newRsaKey().getEncoded())
-                .setKeyAlgorithm("RSA");
 
-        tenantPayload.addTrustedCAConfig(trustedCa);
         registry.addTenant(tenantId, tenantPayload)
             .compose(ar -> registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
             .setHandler(context.completing());

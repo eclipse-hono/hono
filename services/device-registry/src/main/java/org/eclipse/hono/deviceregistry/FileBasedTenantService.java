@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import io.vertx.core.AbstractVerticle;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -397,7 +398,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             tenant.getValue().setTenantId(tenantId);
             final List<TenantObject> conflictingTenants = getByCa(tenant.getValue().getTrustedCaSubjectDns());
 
-            if (conflictingTenants != null && !conflictingTenants.isEmpty()) {
+            if (!conflictingTenants.isEmpty()) {
                 // we are trying to use the same CA as an already existing tenant
                 TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
                 return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
@@ -541,8 +542,8 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     private List<TenantObject> getByCa(final Set<X500Principal> subjectDns) {
-        if (subjectDns == null) {
-            return null;
+        if (subjectDns.isEmpty()) {
+            return Collections.emptyList();
         } else {
             final List<TenantObject> existingSubjectDns = new ArrayList<>();
             subjectDns.stream().forEach(subjectDn -> {
@@ -560,7 +561,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         return tenants.values()
                 .stream()
-                .filter(t -> Objects.nonNull(t.getValue().getTrustedCaSubjectDns()))
+                .filter(t -> !t.getValue().getTrustedCaSubjectDns().isEmpty())
                 .filter(t -> t.getValue().getTrustedCaSubjectDns().contains(subjectDn))
                 .findFirst().orElse(null);
 

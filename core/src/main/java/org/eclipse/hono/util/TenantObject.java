@@ -13,14 +13,9 @@
 
 package org.eclipse.hono.util;
 
-import java.io.ByteArrayInputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.CertificateParsingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
@@ -69,8 +64,6 @@ public final class TenantObject extends JsonBackedValueObject {
 
     @JsonIgnore
     private ResourceLimits resourceLimits;
-    @JsonIgnore
-    private TrustAnchor trustAnchor;
     @JsonIgnore
     private Map<String, List<JsonObject>> trustConfigurations;
 
@@ -131,23 +124,6 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Get the subject DN of the configured trusted CA.
-     * 
-     * @return The DN or {@code null} if no CA has been set.
-     */
-    @JsonIgnore
-    @Deprecated
-    public X500Principal getTrustedCaSubjectDn() {
-
-        final Set<X500Principal> subjectNames = getTrustedCaSubjectDns();
-        if (subjectNames == null) {
-           return null;
-        } else {
-            return subjectNames.stream().findFirst().orElse(null);
-        }
-    }
-
-    /**
      * Adds the trusted certificate authority to use for authenticating
      * devices of this tenant.
      * 
@@ -165,26 +141,28 @@ public final class TenantObject extends JsonBackedValueObject {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
+        Objects.requireNonNull(notBefore);
+        Objects.requireNonNull(notAfter);
 
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, notBefore.toString());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, notAfter.toString());
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, notBefore.toEpochMilli());
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, notAfter.toEpochMilli());
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
 
         return addTrustedCA(trustedCa);
     }
 
     /**
-     * Sets the trusted certificate authority to use for authenticating devices of this tenant. The certificate must
-     * contain a {@code NonNull} and non-empty subject DN value.
+     * Adds the trusted certificate authority to use for authenticating devices of this tenant.
+     * <p>
+     * This method extracts and stores the subjectDN, public key and validity period of the certificate.
      * 
      * @param certificate The CA certificate.
      * @return This tenant for command chaining.
      * @throws NullPointerException if certificate is {@code null}.
-     * @throws IllegalArgumentException if the certificate cannot be (binary) encoded or its subject DN is
-     *             missing or empty.
+     * @throws IllegalArgumentException if the subjectDn of the certificate is empty.
      */
     @JsonIgnore
     public TenantObject addTrustAnchor(final X509Certificate certificate) {
@@ -195,14 +173,13 @@ public final class TenantObject extends JsonBackedValueObject {
         if (Strings.isNullOrEmpty(subjectDn)) {
             throw new IllegalArgumentException("subject DN of certificate is either missing or empty");
         } else {
-            try {
                 final JsonObject trustedCa = new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn)
-                        .put(TenantConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, certificate.getPublicKey().getEncoded())
+                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, certificate.getNotBefore().toInstant().toEpochMilli())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, certificate.getNotAfter().toInstant().toEpochMilli());
                 return addTrustedCA(trustedCa);
-            } catch (final CertificateEncodingException e) {
-                throw new IllegalArgumentException("cannot encode certificate");
-            }
         }
     }
 
@@ -216,20 +193,17 @@ public final class TenantObject extends JsonBackedValueObject {
      * this method constructs a trust anchor for each JSON object contained in the list.
      * 
      * <ol>
-     * <li>If the object contains a <em>cert</em> property then its content is
-     * expected to contain the Base64 encoded (binary) DER encoding of the
-     * trusted certificate. The returned trust anchor will contain this certificate.</li>
-     * <li>Otherwise, if the object contains a <em>public-key</em> and a <em>subject-dn</em>
+     * <li>If the object contains a <em>public-key</em> and a <em>subject-dn</em>
      * property, then the public key property is expected to contain the Base64 encoded
      * DER encoding of the trusted certificate's public key. The returned trust anchor
      * will contain this public key.</li>
-     * <li>Otherwise, this method returns {@code null}.</li>
+     * <li>Otherwise, this method returns an empty list.</li>
      * </ol>
      * <p>
-     * Once a (non {@code null}) trust anchor has been created, it will be cached and
+     * Once a (non empty) list of trust anchors has been created, it will be cached and
      * returned on subsequent invocations of this method.
      * 
-     * @return The trust anchor or {@code null} if no trusted certificate authority
+     * @return The trust anchor or an empty list if no trusted certificate authority
      *         has been set.
      * @throws GeneralSecurityException if the value of the <em>trusted-ca</em> property
      *              cannot be parsed into a trust anchor, e.g. because of unsupported
@@ -237,54 +211,29 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public List<TrustAnchor> getTrustAnchors() throws GeneralSecurityException {
-        if (trustAnchors != null) {
-            return trustAnchors;
-        } else {
-            final List<JsonObject> configs = Optional.ofNullable(getTrustedCAs()).orElse(Collections.emptyList());
+        final List<JsonObject> configs = Optional.ofNullable(getTrustedCAs()).orElse(Collections.emptyList());
+        if (trustAnchors == null || trustAnchors.size() != configs.size()) {
+            trustAnchors = new ArrayList<>();
             for (JsonObject config : configs) {
                 final TrustAnchor anchor = getTrustAnchor(config);
                 if (anchor != null) {
-                    if (trustAnchors == null) {
-                        trustAnchors = new ArrayList<>();
-                    }
                     trustAnchors.add(anchor);
                 }
             }
             return trustAnchors;
         }
-
+        return trustAnchors;
     }
 
     @JsonIgnore
-    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) throws GeneralSecurityException {
-
-        if (keyProps == null) {
-            return null;
-        } else {
-            final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
-            final String encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
-            final Instant notBefore = getNotBefore(keyProps);
-            final Instant notAfter = getNotAfter(keyProps);
-            final Instant now = Instant.now();
-
-            if (subjectDn == null || encodedKey == null || notBefore == null || notAfter == null) {
-                return null;
-            } else if (now.isBefore(notBefore) || now.isAfter(notAfter)) {
-                // trusted CA is either too early for use or expired
-                return null;
-            } else {
-                try {
-                    final String type = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, String.class,
-                            "RSA");
-                    final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
-                    final KeyFactory factory = KeyFactory.getInstance(type);
-                    final PublicKey publicKey = factory.generatePublic(keySpec);
-                    return new TrustAnchor(subjectDn, publicKey, null);
-                } catch (final IllegalArgumentException e) {
-                    // Base64 decoding failed
-                    throw new InvalidKeySpecException("cannot decode Base64 encoded public key", e);
-                }
-            }
+    private PublicKey getPublicKey(final String encodedKey, final String keyType) throws GeneralSecurityException {
+        try {
+            final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+            final KeyFactory factory = KeyFactory.getInstance(keyType);
+            return factory.generatePublic(keySpec);
+        } catch (final IllegalArgumentException e) {
+            // Base64 decoding failed
+            throw new InvalidKeySpecException("cannot decode Base64 encoded public key", e);
         }
     }
 
@@ -697,13 +646,13 @@ public final class TenantObject extends JsonBackedValueObject {
     /**
      * Get the set of subject distinguished names configure for this tenant.
      * 
-     * @return The set of subject distinguished names or {@code null} if no CA has been configured for this tenant.
+     * @return The set of subject distinguished names or an empty set if no CA has been configured for this tenant.
      */
     @JsonIgnore
     public Set<X500Principal> getTrustedCaSubjectDns() {
 
         if (trustConfigurations == null) {
-            return null;
+            return Collections.emptySet();
         } else {
             final Set<X500Principal> subjectNames = new HashSet<>();
             trustConfigurations.keySet().forEach(subjectDn -> {
@@ -732,39 +681,24 @@ public final class TenantObject extends JsonBackedValueObject {
 
     @JsonIgnore
     private TrustAnchor getTrustAnchor(final JsonObject trustedCa) throws GeneralSecurityException {
-        final X509Certificate cert = getTrustedCertificateAuthority(trustedCa);
-        if (cert != null) {
-            return new TrustAnchor(cert, null);
-        } else {
-            return getTrustAnchorForPublicKey(trustedCa);
-        }
-    }
 
-    /**
-     * Get the X.509 certificate from the specified trusted CA configuration.
-     * 
-     * @param trustedCa The trusted CA configuration to construct an X.509 certificate from.
-     * 
-     * @return The certificate or {@code null} if no certificate authority
-     *          has been set or the validity period of the certificate is missing.
-     * @throws CertificateException if the value of <em>cert</em> property cannot be parsed into
-     *              an X.509 certificate.
-     */
-    @JsonIgnore
-    private X509Certificate getTrustedCertificateAuthority(final JsonObject trustedCa) throws CertificateException {
+        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+        final String encodedKey = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
+        final String type = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, String.class,
+                "RSA");
 
-        final String obj = (String) trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
-        if (obj == null) {
+        final Instant notBefore = getNotBefore(trustedCa);
+        final Instant notAfter = getNotAfter(trustedCa);
+        final Instant now = Instant.now();
+
+        if (subjectDn == null || encodedKey == null || notBefore == null || notAfter == null) {
+            return null;
+        } else if (now.isBefore(notBefore) || now.isAfter(notAfter)) {
+            // trusted CA is either too early for use or expired
             return null;
         } else {
-            try {
-                final byte[] derEncodedCert = Base64.getDecoder().decode(((String) obj));
-                final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
-            } catch (final IllegalArgumentException e) {
-                // ignore -> should never happen
-                throw new CertificateParsingException("cert property does not contain valid Base64 encoding scheme", e);
-            }
+            final PublicKey pubKey = getPublicKey(encodedKey, type);
+            return new TrustAnchor(subjectDn, pubKey, null);
         }
     }
 
@@ -775,7 +709,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * 
      * @return This tenant so the API can be used fluently.
      */
-    public TenantObject addTrustedCA(final JsonObject trustedCa) {
+    private TenantObject addTrustedCA(final JsonObject trustedCa) {
 
         if (trustConfigurations == null) {
             trustConfigurations = new HashMap<>();
@@ -792,18 +726,30 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     private Instant getNotBefore(final JsonObject trustedCa) {
-        final String notBefore = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, String.class);
-        if (notBefore == null) {
-            return null;
+        Instant instant = null;
+        final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, String.class);
+        if (strValue != null) {
+            instant = Instant.parse(strValue);
+        } else {
+            final Long epochMilli = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Long.class);
+            if (epochMilli != null) {
+                instant = Instant.ofEpochMilli(epochMilli);
+            }
         }
-        return Instant.parse(notBefore);
+        return instant;
     }
 
     private Instant getNotAfter(final JsonObject trustedCa) {
-        final String notAfter = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_AFTER, String.class);
-        if (notAfter == null) {
-            return null;
+        Instant instant = null;
+        final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_AFTER, String.class);
+        if (strValue != null) {
+            instant = Instant.parse(strValue);
+        } else {
+            final Long epochMilli = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Long.class);
+            if (epochMilli != null) {
+                instant = Instant.ofEpochMilli(epochMilli);
+            }
         }
-        return Instant.parse(notAfter);
+        return instant;
     }
 }

@@ -18,7 +18,6 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -123,8 +122,8 @@ public class TenantObjectTest {
                         new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(360)))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toEpochMilli())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(360)).toEpochMilli())
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm()));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
@@ -134,31 +133,6 @@ public class TenantObjectTest {
         final List<TrustAnchor> anchors = tenant.getTrustAnchors();
         assertThat(anchors.size(), is(1));
         assertThat(anchors.get(0).getCAPublicKey(), is(trustedCaCert.getPublicKey()));
-    }
-
-    /**
-     * Verifies that a trust anchor can be deserialized from a Base64 encoded public key.
-     * 
-     * @throws GeneralSecurityException if the trust anchor cannot be deserialized.
-     */
-    @Test
-    public void testDeserializationOfCertificateTrustAnchor() throws GeneralSecurityException {
-
-        final JsonObject config = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
-                .put(TenantConstants.FIELD_ENABLED, true)
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                        new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_CERT, Base64.getEncoder().encodeToString(trustedCaCert.getEncoded())));
-
-        final TenantObject tenant = config.mapTo(TenantObject.class);
-        final Set<X500Principal> subjectNames = tenant.getTrustedCaSubjectDns();
-        assertThat(subjectNames.size(), is(1));
-        assertTrue(subjectNames.contains(trustedCaCert.getSubjectX500Principal()));
-        final List<TrustAnchor> anchors = tenant.getTrustAnchors();
-        assertThat(anchors.size(), is(1));
-        assertThat(anchors.get(0).getTrustedCert(), is(trustedCaCert));
     }
 
     /**
@@ -199,22 +173,6 @@ public class TenantObjectTest {
     }
 
     /**
-     * Verifies that the trust anchor uses the configured trusted CA certificate.
-     * 
-     * @throws GeneralSecurityException if the certificate cannot be DER encoded.
-     */
-    @Test
-    public void testGetTrustAnchorUsesCertificate() throws GeneralSecurityException {
-
-        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
-                .addTrustAnchor(trustedCaCert);
-
-        final List<TrustAnchor> trustAnchors = obj.getTrustAnchors();
-        assertThat(trustAnchors.size(), is(1));
-        assertThat(trustAnchors.get(0).getTrustedCert(), is(trustedCaCert));
-    }
-
-    /**
      * Verifies that the trust anchor uses the configured trusted CA's public key and subject DN.
      * 
      * @throws GeneralSecurityException if the certificate cannot be DER encoded.
@@ -247,8 +205,8 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64")
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(3650)).toString()));
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toEpochMilli())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(3650)).toEpochMilli()));
 
         final TenantObject obj = tenantPayload.mapTo(TenantObject.class);
 
@@ -273,7 +231,7 @@ public class TenantObjectTest {
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64".getBytes()));
         final TenantObject obj = tenantPayload.mapTo(TenantObject.class);
         try {
-            assertNull(obj.getTrustAnchors());
+            assertThat(obj.getTrustAnchors().size(), is(0));
         } catch (GeneralSecurityException e) {
             // should never get here
         }
@@ -291,48 +249,26 @@ public class TenantObjectTest {
                 .add(new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(365)).toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().minus(Period.ofDays(5)).toString()))
+                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,  trustedCaCert.getPublicKey().getAlgorithm())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(365)).toEpochMilli())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().minus(Period.ofDays(5)).toEpochMilli()))
                 // valid certificate
                 .add(new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(5)).toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(50)).toString()));
+                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,  trustedCaCert.getPublicKey().getAlgorithm())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(5)).toEpochMilli())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(50)).toEpochMilli()));
         final JsonObject tenantPayload = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
         try {
             final TenantObject tenant = tenantPayload.mapTo(TenantObject.class);
-            assertThat(tenant.getTrustAnchors(), is(1));
+            assertThat(tenant.getTrustAnchors().size(), is(1));
         } catch (Exception e) {
             // ignore -> should never get here
             System.out.println(e);
-        }
-    }
-
-    /**
-     * Verifies that the trust anchor cannot be read from an invalid Base64 encoding of
-     * a certificate.
-     */
-    @Test
-    public void testGetTrustAnchorFailsForInvalidBase64EncodingOfCert() {
-
-        final JsonObject tenantPayload = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
-                .put(TenantConstants.FIELD_ENABLED, Boolean.TRUE)
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                        .put(TenantConstants.FIELD_PAYLOAD_CERT, "noBase64"));
-
-        final TenantObject obj = tenantPayload.mapTo(TenantObject.class);
-
-        try {
-            obj.getTrustAnchors();
-            fail("should not have been able to read trust anchor from malformed Base64");
-        } catch (final GeneralSecurityException e) {
-            // as expected
         }
     }
 
@@ -433,6 +369,30 @@ public class TenantObjectTest {
                 .from(Constants.DEFAULT_TENANT, true);
 
         assertEquals(TenantConstants.DEFAULT_MINIMUM_MESSAGE_SIZE, tenantObject.getMinimumMessageSize());
+    }
+
+    /**
+     * Verifies that a call to retrieve the trust anchors for a tenant will always return
+     * ALL the current trust anchors configured for the tenant.
+     * 
+     * @throws GeneralSecurityException if the trust anchor cannot be retrieved.
+     * 
+     */
+    @Test
+    public void testAddGetTrustAnchors() throws GeneralSecurityException {
+        final PublicKey publicKey = trustedCaCert.getPublicKey();
+        final X500Principal subjectDn = trustedCaCert.getSubjectX500Principal();
+        final Instant notBefore = trustedCaCert.getNotBefore().toInstant();
+        final Instant notAfter = trustedCaCert.getNotAfter().toInstant();
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .addTrustAnchor(publicKey, subjectDn, notBefore, notAfter);
+
+        assertEquals(1, obj.getTrustAnchors().size());
+        obj.addTrustAnchor(trustedCaCert);
+        assertEquals(2, obj.getTrustAnchors().size());
+        obj.addTrustAnchor(trustedCaCert);
+        obj.addTrustAnchor(trustedCaCert);
+        assertEquals(4, obj.getTrustAnchors().size());
     }
 
     private static X509Certificate getCaCertificate() throws GeneralSecurityException, IOException {
