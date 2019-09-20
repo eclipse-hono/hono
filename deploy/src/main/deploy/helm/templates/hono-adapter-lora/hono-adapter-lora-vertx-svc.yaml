@@ -1,3 +1,4 @@
+{{- if .Values.adapters.lora.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -21,4 +22,5 @@ spec:
   type: LoadBalancer
 {{ else }}
   type: NodePort
+{{- end }}
 {{- end }}

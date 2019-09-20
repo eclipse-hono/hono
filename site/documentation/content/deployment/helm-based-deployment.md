@@ -191,13 +191,14 @@ The following table provides an overview of the corresponding configuration prop
 
 | Property                     | Default  | Description                              |
 | :--------------------------- | :------- | :--------------------------------------- |
+| *adapters.lora.enabled*      | `false` | Indicates if the (experimental) LoRa WAN protocol adapter should be deployed. |
 | *adapters.kura.enabled*      | `false` | Indicates if the deprecated Kura protocol adapter should be deployed. |
 
-The following command will deploy the Kura adapter along with Hono's standard adapters:
+The following command will deploy the LoRa adapter along with Hono's standard adapters:
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
-helm install --dep-up --name hono --namespace hono --set adapters.kura.enabled=true eclipse-hono/
+helm install --dep-up --name hono --namespace hono --set adapters.lora.enabled=true eclipse-hono/
 ~~~
 
 

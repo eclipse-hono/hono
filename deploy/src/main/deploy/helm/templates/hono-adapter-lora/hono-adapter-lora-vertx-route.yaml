@@ -1,8 +1,8 @@
-{{- if eq .Values.platform "openshift" }}
+{{- if and (eq .Values.platform "openshift") .Values.adapters.lora.enabled }}
+{{- $args := dict "dot" . "component" "adapter-lora-vertx" "name" "adapter-lora-vertx" }}
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  {{- $args := dict "dot" . "component" "adapter-lora-vertx" "name" "adapter-lora-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   port:

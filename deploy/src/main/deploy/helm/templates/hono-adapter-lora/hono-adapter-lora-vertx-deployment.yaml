@@ -1,7 +1,8 @@
+{{- if .Values.adapters.lora.enabled }}
+{{- $args := dict "dot" . "component" "adapter-lora-vertx" "name" "adapter-lora-vertx" }}
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  {{- $args := dict "dot" . "component" "adapter-lora-vertx" "name" "adapter-lora-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   replicas: 1
@@ -66,3 +67,4 @@ spec:
       - name: conf
         secret:
           secretName: {{ .Release.Name }}-adapter-lora-vertx-conf
+{{- end }}
