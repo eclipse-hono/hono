@@ -493,14 +493,14 @@ components:
             "not-before":
                type: string
                format: date-time
-               example: 2015-01-01T00:00:00+0000
+               example: 2019-01-01T13:00:00Z
                description: The start date/time of the trusted certificate's validity period.
                             If the `cert` property is used to provide an X.509 certificate then
                             the validity is determined from the certificate and this property is ignored.
             "not-after":
                type: string
                format: date-time
-               example: 2025-01-01T00:00:00+0000
+               example: 2024-01-01T10:00:00Z
                description: The end date/time of the trusted root certificate's validity period.
                             If the `cert` property is used to provide an X.509 certificate then
                             the validity is determined from the certificate and this property is ignored.

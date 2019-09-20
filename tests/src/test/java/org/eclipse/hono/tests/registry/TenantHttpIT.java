@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.security.PublicKey;
+import java.time.Instant;
+import java.time.Period;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -140,6 +142,8 @@ public class TenantHttpIT {
         final var trustedCa = new TrustedCertificateAuthority()
                 .setSubjectDn("CN=ca, OU=Hono, O=Eclipse")
                 .setPublicKey(publicKey.getEncoded())
+                .setNotBefore(Instant.now())
+                .setNotAfter(Instant.now().plus(Period.ofDays(360)))
                 .setKeyAlgorithm(publicKey.getAlgorithm());
 
         tenant.addTrustedCAConfig(trustedCa);
@@ -314,6 +318,30 @@ public class TenantHttpIT {
                 .put(TenantConstants.FIELD_ENABLED, true)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject());
         registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
+    }
+
+    /**
+     * Verifies that the service returns a 400 status code for an add tenant request containing a malformed trusted CA
+     * configuration.
+     * 
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForMissingTrustAnchorValidityPeriod(final VertxTestContext context) {
+        // GIVEN a tenant payload containing a trust config in which
+        // the public key of the trust anchor is set without any validity period
+        final JsonObject trustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "cn=test")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NotBase64Encoded".getBytes());
+        final JsonObject requestBody = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
+                .put(TenantConstants.FIELD_ENABLED, true)
+                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+
+        // THEN a request to add such a tenant payload to the device registry
+        // fails with a 400 status code.
+        registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST)
+                .setHandler(context.completing());
     }
 
     /**

@@ -249,6 +249,8 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final Object encodedCert = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_CERT);
         final Object encodedKey = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY);
         final Object subjectDn = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN);
+        final Object notBefore = trustedCa.getValue(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+        final Object notAfter = trustedCa.getValue(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
 
         if (!String.class.isInstance(subjectDn)) {
             return false;
@@ -258,6 +260,9 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             return isEncodedCertificate(encodedCert);
         } else if (encodedKey != null && encodedCert == null) {
             // validate public-key
+            if (!String.class.isInstance(notBefore) || !String.class.isInstance(notAfter)) {
+                return false;
+            }
             final String algorithmName = Optional
                     .ofNullable((String) trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM)).orElse("RSA");
             return isEncodedPublicKey(encodedKey, algorithmName);

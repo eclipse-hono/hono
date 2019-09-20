@@ -164,21 +164,11 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public TenantObject addTrustAnchor(final X509Certificate certificate) {
-
-        Objects.requireNonNull(certificate);
-
-        final String subjectDn = certificate.getSubjectX500Principal().getName();
-        if (Strings.isNullOrEmpty(subjectDn)) {
-            throw new IllegalArgumentException("subject DN of certificate is either missing or empty");
-        } else {
-                final JsonObject trustedCa = new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn)
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, certificate.getPublicKey().getEncoded())
-                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, certificate.getNotBefore().toInstant().toEpochMilli())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, certificate.getNotAfter().toInstant().toEpochMilli());
-                return addTrustedCA(trustedCa);
-        }
+        return addTrustAnchor(
+                certificate.getPublicKey(),
+                certificate.getIssuerX500Principal(),
+                certificate.getNotBefore().toInstant(),
+                certificate.getNotAfter().toInstant());
     }
 
     /**
@@ -706,14 +696,16 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     private TenantObject addTrustedCA(final JsonObject trustedCa) {
 
-        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
-        if (Strings.isNullOrEmpty(subjectDn)) {
-            throw new IllegalArgumentException("missing required subject-dn property");
+        if (!isValidTenantConfig(trustedCa)) {
+            throw new IllegalArgumentException("invalid tenant configuration");
         }
 
         if (trustConfigurations == null) {
             trustConfigurations = new HashMap<>();
         }
+
+        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+
         final List<JsonObject> trustedCas = trustConfigurations.getOrDefault(subjectDn, new ArrayList<>());
 
         trustedCas.add(trustedCa);
@@ -747,5 +739,21 @@ public final class TenantObject extends JsonBackedValueObject {
             }
         }
         return instant;
+    }
+
+    private boolean isValidTenantConfig(final JsonObject trustedCa) {
+
+        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+        final String publicKey = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
+        final Instant notBefore = getNotBefore(trustedCa);
+        final Instant notAfter = getNotAfter(trustedCa);
+
+        if (Strings.isNullOrEmpty(subjectDn) ||
+                // if the public key is present, then
+                // the validity period is required
+                publicKey != null && (notBefore == null || notAfter == null)) {
+            return false;
+        }
+        return true;
     }
 }

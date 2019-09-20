@@ -16,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
+import java.time.Period;
 import java.util.List;
 import java.util.Optional;
 
@@ -257,7 +259,9 @@ public abstract class AbstractTenantServiceTest {
 
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY")
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final TenantObject tenant = TenantObject.from("tenant", true)
                 .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
@@ -373,7 +377,9 @@ public abstract class AbstractTenantServiceTest {
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY");
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY")
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final JsonObject tenant = buildTenantPayload("tenant")
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
@@ -405,7 +411,9 @@ public abstract class AbstractTenantServiceTest {
         final String publicKey = "NOTAPUBLICKEY";
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey);
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey)
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final JsonObject tenant = buildTenantPayload("tenant")
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
@@ -489,7 +497,9 @@ public abstract class AbstractTenantServiceTest {
         // GIVEN two tenants, one with a CA configured, the other with no CA
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY");
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY")
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final TenantObject tenantOne = TenantObject.from("tenantOne", true)
                 .setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
         final TenantObject tenantTwo = TenantObject.from("tenantTwo", true);
@@ -604,5 +614,13 @@ public abstract class AbstractTenantServiceTest {
                 .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE)
                 .put(RegistryManagementConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
         return tenantPayload;
+    }
+
+    private Long getNotBefore() {
+        return Instant.now().toEpochMilli();
+    }
+
+    private Long getNotAfter() {
+        return Instant.now().plus(Period.ofDays(360)).toEpochMilli();
     }
 }
