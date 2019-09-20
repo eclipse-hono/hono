@@ -940,6 +940,43 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final String deviceId,
             final Device authenticatedDevice,
             final SpanContext context) {
+        return getRegistrationAssertion(tenantId, deviceId, authenticatedDevice, context, true);
+    }
+
+    /**
+     * Gets an assertion for a device's registration status.
+     * <p>
+     * The returned JSON object may include <em>default</em>
+     * values for properties to set on messages published by the device under
+     * property {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
+     * <p>
+     * Note that this method will also update the last gateway associated with the given device if
+     * <em>updateLastGateway</em> is {@code true}.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to get the assertion for.
+     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
+     *            <p>
+     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
+     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
+     *            acting on behalf of the device.
+     * @param context The currently active OpenTracing span that is used to
+     *                trace the retrieval of the assertion.
+     * @param updateLastGateway If {@code true}, the last gateway associated with the given device will be updated.
+     *                          Setting this value to {@code false} and thereby skipping the update makes sense for
+     *                          protocol adapters where gateways subscribe to commands for a specific device (not
+     *                          for all devices connected to the gateway). This is usually the case for adapters
+     *                          that use short <em>ttd</em> (time-till-disconnect) values, possibly just expecting
+     *                          one command message for a specific device before closing the command consumer again.
+     * @return The assertion.
+     * @throws NullPointerException if any of tenant or device ID are {@code null}.
+     */
+    protected final Future<JsonObject> getRegistrationAssertion(
+            final String tenantId,
+            final String deviceId,
+            final Device authenticatedDevice,
+            final SpanContext context,
+            final boolean updateLastGateway) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -950,13 +987,15 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .compose(gwId -> getRegistrationClient(tenantId))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId.result(), context))
                 .compose(registrationAssertion -> {
-                    // the updateLastGateway invocation shouldn't delay or possibly fail the surrounding operation
-                    // so don't wait for the outcome here
-                    updateLastGateway(registrationAssertion, tenantId, deviceId, authenticatedDevice, context)
-                            .otherwise(t -> {
-                                LOG.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
-                                return null;
-                            });
+                    if (updateLastGateway) {
+                        // the updateLastGateway invocation shouldn't delay or possibly fail the surrounding operation
+                        // so don't wait for the outcome here
+                        updateLastGateway(registrationAssertion, tenantId, deviceId, authenticatedDevice, context)
+                                .otherwise(t -> {
+                                    LOG.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
+                                    return null;
+                                });
+                    }
                     return Future.succeededFuture(registrationAssertion);
                 });
     }

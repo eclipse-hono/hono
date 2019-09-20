@@ -634,7 +634,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 tenant,
                 deviceId,
                 authenticatedDevice,
-                currentSpan.context());
+                currentSpan.context(),
+                false);
         final int payloadSize = Optional.ofNullable(payload)
                 .map(ok -> payload.length())
                 .orElse(0);
@@ -1147,7 +1148,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             tenant,
                             deviceId,
                             authenticatedDevice,
-                            currentSpan.context());
+                            currentSpan.context(),
+                            false);
                     final Future<Void> tenantValidationTracker = CompositeFuture
                             .all(isAdapterEnabled(tenantTracker.result()),
                                     checkMessageLimit(tenantTracker.result(), payload.length()))
