@@ -60,10 +60,8 @@ public final class TenantObject extends JsonBackedValueObject {
     private List<Map<String, Object>> adapterConfigurations;
 
     @JsonIgnore
-    private List<TrustAnchor> trustAnchors;
-
-    @JsonIgnore
     private ResourceLimits resourceLimits;
+
     @JsonIgnore
     private Map<String, List<JsonObject>> trustConfigurations;
 
@@ -212,15 +210,12 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     public List<TrustAnchor> getTrustAnchors() throws GeneralSecurityException {
         final List<JsonObject> configs = Optional.ofNullable(getTrustedCAs()).orElse(Collections.emptyList());
-        if (trustAnchors == null || trustAnchors.size() != configs.size()) {
-            trustAnchors = new ArrayList<>();
-            for (JsonObject config : configs) {
-                final TrustAnchor anchor = getTrustAnchor(config);
-                if (anchor != null) {
-                    trustAnchors.add(anchor);
-                }
+        final List<TrustAnchor> trustAnchors = new ArrayList<>();
+        for (JsonObject config : configs) {
+            final TrustAnchor anchor = getTrustAnchor(config);
+            if (anchor != null) {
+                trustAnchors.add(anchor);
             }
-            return trustAnchors;
         }
         return trustAnchors;
     }
@@ -711,12 +706,13 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     private TenantObject addTrustedCA(final JsonObject trustedCa) {
 
-        if (trustConfigurations == null) {
-            trustConfigurations = new HashMap<>();
-        }
         final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
         if (Strings.isNullOrEmpty(subjectDn)) {
             throw new IllegalArgumentException("missing required subject-dn property");
+        }
+
+        if (trustConfigurations == null) {
+            trustConfigurations = new HashMap<>();
         }
         final List<JsonObject> trustedCas = trustConfigurations.getOrDefault(subjectDn, new ArrayList<>());
 
