@@ -181,7 +181,7 @@ If the *trusted-ca* property is provided, then it MUST contain a non-empty array
 
 **Examples**
 
-Below is an example for a payload of the response to a *get* request for tenant `TEST_TENANT`. The tenant is configured with two valid trusted certificate authorities having the same *public-key* and *subject-dn* but with overlapping validity periods.
+Below is an example payload for a response to a *get* request for tenant `TEST_TENANT`. The tenant is configured with two valid trusted certificate authorities, each using a different public key algorithm.
 
 ~~~json
  {
@@ -189,11 +189,11 @@ Below is an example for a payload of the response to a *get* request for tenant 
    "enabled" : true,
    "trusted-ca": [ {
            "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
-           "public-key": "NOTAPUBLICKEY==",
+           "public-key": "PublicKey==",
            "algorithm":  "RSA"
          }, {
-           "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
-           "public-key": "AnotherPublickey==",
+           "subject-dn": "CN=ca,OU=Hono,O=ACME Inc.",
+           "public-key": "ECKey==",
            "algorithm":  "EC"
          } ]
  }
