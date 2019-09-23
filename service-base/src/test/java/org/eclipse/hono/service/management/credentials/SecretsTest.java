@@ -13,17 +13,6 @@
 package org.eclipse.hono.service.management.credentials;
 
 
-import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS;
-import static org.eclipse.hono.util.CredentialsConstants.FIELD_SECRETS_NOT_BEFORE;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_AUTH_ID;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_EXT;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_COMMENT;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_KEY;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_PWD_HASH;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_SALT;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_TYPE;
-import static org.eclipse.hono.util.RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsMapContaining.hasEntry;
 import static org.hamcrest.collection.IsMapWithSize.aMapWithSize;
@@ -41,6 +30,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
@@ -74,10 +64,10 @@ public class SecretsTest {
         final JsonObject json = JsonObject.mapFrom(secret);
         assertNotNull(json);
 
-        assertEquals("abc", json.getString(FIELD_SECRETS_SALT));
+        assertEquals("abc", json.getString(CredentialsConstants.FIELD_SECRETS_SALT));
         assertEquals("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f",
-                json.getString(FIELD_SECRETS_PWD_HASH));
-        assertEquals("setec astronomy", json.getString(FIELD_SECRETS_COMMENT));
+                json.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+        assertEquals("setec astronomy", json.getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT));
     }
 
     /**
@@ -96,7 +86,7 @@ public class SecretsTest {
         final JsonObject json = JsonObject.mapFrom(secret);
         assertNotNull(json);
 
-        assertArrayEquals(new byte[] { 1, 2, 3 }, json.getBinary(FIELD_SECRETS_KEY));
+        assertArrayEquals(new byte[] { 1, 2, 3 }, json.getBinary(CredentialsConstants.FIELD_SECRETS_KEY));
         assertThat(
                 DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(json.getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE), OffsetDateTime::from).toInstant(),
                 is(notBefore));
@@ -120,8 +110,8 @@ public class SecretsTest {
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertNotNull(json);
-        assertThat(json.getString(FIELD_TYPE), is(SECRETS_TYPE_X509_CERT));
-        assertThat(json.getJsonObject(FIELD_EXT), nullValue());
+        assertThat(json.getString(RegistryManagementConstants.FIELD_TYPE), is(CredentialsConstants.SECRETS_TYPE_X509_CERT));
+        assertThat(json.getJsonObject(RegistryManagementConstants.FIELD_EXT), nullValue());
     }
 
     /**
@@ -134,9 +124,9 @@ public class SecretsTest {
         final OffsetDateTime notAfter = OffsetDateTime.of(2020, 1, 1, 00, 00, 00, 0, ZoneOffset.ofHours(0));
 
         final CommonCredential credential = new JsonObject()
-                .put(FIELD_TYPE, "foo")
-                .put(FIELD_AUTH_ID, "authId1")
-                .put(FIELD_SECRETS, new JsonArray()
+                .put(RegistryManagementConstants.FIELD_TYPE, "foo")
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "authId1")
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
                         .add(new JsonObject()
                                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, "2019-04-05T13:45:07-04:00")
                                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, "2020-01-01T00:00:00Z")
@@ -171,9 +161,9 @@ public class SecretsTest {
     public void testDateFormats() {
 
         final JsonObject json = new JsonObject()
-                .put(FIELD_SECRETS_COMMENT, "test")
-                .put(FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00")
-                .put(FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00Z");
+                .put(RegistryManagementConstants.FIELD_SECRETS_COMMENT, "test")
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, "2017-05-01T14:00:00+01:00")
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, "2037-06-01T14:00:00Z");
 
 
         final PasswordSecret secret = json.mapTo(PasswordSecret.class);

@@ -12,18 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.util.RegistryManagementConstants.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsIterableWithSize.iterableWithSize;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-
-import org.eclipse.hono.util.RegistryManagementConstants;
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -32,6 +28,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+
+import org.eclipse.hono.util.RegistryManagementConstants;
+import org.junit.jupiter.api.Test;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies {@link CommonCredential} and others.
@@ -52,7 +55,7 @@ public class CredentialsTest {
         secret.setPasswordHash("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f");
         secret.setSalt("abc");
 
-        secret.setHashFunction(HASH_FUNCTION_SHA256);
+        secret.setHashFunction(RegistryManagementConstants.HASH_FUNCTION_SHA256);
 
         final PasswordCredential credential = new PasswordCredential();
         credential.setAuthId("foo");
@@ -61,17 +64,17 @@ public class CredentialsTest {
 
         final JsonObject jsonCredential = JsonObject.mapFrom(credential);
         assertNotNull(jsonCredential);
-        assertEquals("hashed-password", jsonCredential.getString(FIELD_TYPE));
-        assertEquals(1, jsonCredential.getJsonArray(FIELD_SECRETS).size());
+        assertEquals("hashed-password", jsonCredential.getString(RegistryManagementConstants.FIELD_TYPE));
+        assertEquals(1, jsonCredential.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).size());
 
-        final JsonObject jsonSecret = jsonCredential.getJsonArray(FIELD_SECRETS).getJsonObject(0);
+        final JsonObject jsonSecret = jsonCredential.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
 
-        assertEquals("foo", jsonCredential.getString(FIELD_AUTH_ID));
+        assertEquals("foo", jsonCredential.getString(RegistryManagementConstants.FIELD_AUTH_ID));
         assertEquals("setec astronomy", jsonCredential.getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT));
 
-        assertEquals("abc", jsonSecret.getString(FIELD_SECRETS_SALT));
+        assertEquals("abc", jsonSecret.getString(RegistryManagementConstants.FIELD_SECRETS_SALT));
         assertEquals("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f",
-                jsonSecret.getString(FIELD_SECRETS_PWD_HASH));
+                jsonSecret.getString(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH));
     }
 
     /**
@@ -157,7 +160,7 @@ public class CredentialsTest {
                                         Instant.EPOCH.truncatedTo(ChronoUnit.SECONDS))
                                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER,
                                         Instant.EPOCH.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS))
-                                .put(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION, HASH_FUNCTION_SHA256)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION, RegistryManagementConstants.HASH_FUNCTION_SHA256)
                                 .put(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH,
                                         "2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f")
                                 .put(RegistryManagementConstants.FIELD_SECRETS_SALT, "abc")
@@ -174,7 +177,7 @@ public class CredentialsTest {
 
         assertEquals("setec astronomy", secret.getComment());
         assertEquals("abc", secret.getSalt());
-        assertEquals(HASH_FUNCTION_SHA256, secret.getHashFunction());
+        assertEquals(RegistryManagementConstants.HASH_FUNCTION_SHA256, secret.getHashFunction());
         assertEquals("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f", secret.getPasswordHash());
     }
 
