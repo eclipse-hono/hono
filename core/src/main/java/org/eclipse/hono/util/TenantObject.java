@@ -21,6 +21,7 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
@@ -718,7 +719,7 @@ public final class TenantObject extends JsonBackedValueObject {
         Instant instant = null;
         final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, String.class);
         if (strValue != null) {
-            instant = Instant.parse(strValue);
+            instant = DateTimeFormatter.ISO_INSTANT.parse(strValue, Instant::from);
         }
         return instant;
     }
@@ -727,7 +728,7 @@ public final class TenantObject extends JsonBackedValueObject {
         Instant instant = null;
         final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_AFTER, String.class);
         if (strValue != null) {
-            instant = Instant.parse(strValue);
+            instant = DateTimeFormatter.ISO_INSTANT.parse(strValue, Instant::from);
         }
         return instant;
     }

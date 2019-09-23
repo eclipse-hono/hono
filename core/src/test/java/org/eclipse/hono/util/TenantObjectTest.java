@@ -122,8 +122,8 @@ public class TenantObjectTest {
                         new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(360)).toString())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now()))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().plus(Period.ofDays(360))))
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm()));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
@@ -205,8 +205,8 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64")
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(3650)).toString()));
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now()))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().plus(Period.ofDays(3650)))));
 
         final TenantObject obj = tenantPayload.mapTo(TenantObject.class);
 
@@ -231,15 +231,15 @@ public class TenantObjectTest {
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,  trustedCaCert.getPublicKey().getAlgorithm())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(365)).toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().minus(Period.ofDays(5)).toString()))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now().minus(Period.ofDays(365))))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().minus(Period.ofDays(5)))))
                 // valid certificate
                 .add(new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,  trustedCaCert.getPublicKey().getAlgorithm())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Instant.now().minus(Period.ofDays(5)).toString())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Instant.now().plus(Period.ofDays(50)).toString()));
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now().minus(Period.ofDays(5))))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().plus(Period.ofDays(50)))));
         final JsonObject tenantPayload = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
@@ -383,5 +383,9 @@ public class TenantObjectTest {
             store.load(is, TRUST_STORE_PASSWORD.toCharArray());
             return (X509Certificate) store.getCertificate("ca");
         }
+    }
+
+    private static String toIsoFormatString(final Instant instant) {
+        return DateTimeFormatter.ISO_INSTANT.format(instant);
     }
 }
