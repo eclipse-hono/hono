@@ -145,8 +145,8 @@ public final class TenantObject extends JsonBackedValueObject {
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, notBefore.toEpochMilli());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, notAfter.toEpochMilli());
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, notBefore.toString());
+        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, notAfter.toString());
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
 
         return addTrustedCA(trustedCa);
@@ -719,11 +719,6 @@ public final class TenantObject extends JsonBackedValueObject {
         final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, String.class);
         if (strValue != null) {
             instant = Instant.parse(strValue);
-        } else {
-            final Long epochMilli = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, Long.class);
-            if (epochMilli != null) {
-                instant = Instant.ofEpochMilli(epochMilli);
-            }
         }
         return instant;
     }
@@ -733,11 +728,6 @@ public final class TenantObject extends JsonBackedValueObject {
         final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_AFTER, String.class);
         if (strValue != null) {
             instant = Instant.parse(strValue);
-        } else {
-            final Long epochMilli = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_AFTER, Long.class);
-            if (epochMilli != null) {
-                instant = Instant.ofEpochMilli(epochMilli);
-            }
         }
         return instant;
     }
