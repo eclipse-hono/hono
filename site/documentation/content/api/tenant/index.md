@@ -176,7 +176,9 @@ If the *trusted-ca* property is provided, then it MUST contain a non-empty array
 | Name                     | Mandatory  | Type          | Default Value | Description |
 | :------------------------| :--------: | :------------ | :------------ | :---------- |
 | *subject-dn*             | *yes*      | *string*      |               | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). Trusted CAs of the same tenant MAY share the same subject DN (e.g. allowing for the definition of overlapping validity periods). However, trusted CAs of different tenants MUST NOT share the same subject DN in order to allow for the look up of a tenant by the subject DN of one of its trusted CAs. |
-| *public-key*             | *yes*       | *string*     |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
+| *public-key*             | *yes*       | *string*     |               | The Base64 encoded binary DER encoding of the trusted root certificate's public key.  |
+| *not-before*             | *no*       | *string*     |               | The [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations) string representation of the start date of the trusted certificate's validity period.|
+| *not-after*              | *no*       | *string*     |               | The [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations) string representation of the end date of the trusted certificate's validity period. |
 | *algorithm*              | *no*       | *string*      | `RSA`        | The name of the public key algorithm. Supported values are `RSA` and `EC`. This property is ignored if the *cert* property is used to store a certificate. |
 
 **Examples**

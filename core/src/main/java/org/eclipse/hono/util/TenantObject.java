@@ -172,27 +172,28 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Gets the list of trust anchor(s) configured for this tenant.
+     * Gets the list of (valid) trust anchor(s) configured for this tenant.
      * <p>
-     * If the <em>trusted-ca</em> property contains a JSON object as value,
-     * then this method constructs a trust anchor based on the information contained
-     * in the JSON object.
      * <p>If the <em>trusted-ca</em> property contains a list of JSON objects, then
-     * this method constructs a trust anchor for each JSON object contained in the list.
-     * 
+     * this method constructs a trust anchor for each JSON object contained in the list,
+     * as described below:
      * <ol>
      * <li>If the object contains a <em>public-key</em> and a <em>subject-dn</em>
      * property, then the public key property is expected to contain the Base64 encoded
      * DER encoding of the trusted certificate's public key. The returned trust anchor
      * will contain this public key.</li>
+     * <li>If the object contains a <em>not-before</em> and <em>not-after</em> property for
+     * for the public key, then this method returns only the trust anchors that are currently
+     * valid for the tenant.</li>
      * <li>Otherwise, this method returns an empty list.</li>
      * </ol>
-     * <p>
-     * Once a (non empty) list of trust anchors has been created, it will be cached and
-     * returned on subsequent invocations of this method.
-     * 
-     * @return The trust anchor or an empty list if no trusted certificate authority
-     *         has been set.
+     *
+     * @return The (valid) trust anchors or an empty list if:
+     *         <ol>
+     *           <li>this tenant is not configured with any trusted CA or </li>
+     *           <li>when non of the configured trusted CAs are valid.</li>
+     *         </ol>
+     *
      * @throws GeneralSecurityException if the value of the <em>trusted-ca</em> property
      *              cannot be parsed into a trust anchor, e.g. because of unsupported
      *              key type, malformed certificate or public key encoding etc.
