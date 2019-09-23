@@ -218,13 +218,6 @@ public final class Constants {
      */
     public static final String HEADER_TIME_TO_LIVE = "hono-ttl";
     /**
-     * The header name defined for setting the <em>time to deliver</em> for device command readiness notification events.
-     * @deprecated Use {@link #HEADER_TIME_TILL_DISCONNECT} instead
-     */
-    @Deprecated
-    public static final String HEADER_TIME_TIL_DISCONNECT = HEADER_TIME_TILL_DISCONNECT;
-
-    /**
      * The header name defined for setting the <em>request id</em> for device responses to a command.
      * This id is sent to the device and has to be used in replies to the command to correlate the original command with
      * the response.
