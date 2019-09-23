@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -30,7 +31,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 
 /**
  * Spring Boot configuration for the MQTT protocol adapter.

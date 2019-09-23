@@ -24,22 +24,19 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
-
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
-
 import org.eclipse.hono.service.management.credentials.CredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.TenantManagementHttpEndpoint;
-
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
-
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -47,7 +44,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
