@@ -1,10 +1,15 @@
 *                                     @sophokles73
 
+/cli/                                 @calohmn
+/client/                              @calohmn
+
 /deploy/                              @dejanb
 /deploy/src/main/deploy/openshift/    @ctron
 
+/adapters/amqp-vertx/                 @calohmn
 /adapters/http-vertx/                 @ctron
 /adapters/http-vertx-base/            @ctron
+/adapters/lora-vertx/                 @calohmn
 /adapters/mqtt-vertx/                 @ctron
 /adapters/mqtt-vertx-base/            @ctron
 /adapters/sigfox-vertx/               @ctron
@@ -12,3 +17,4 @@
 /service-base/                        @dejanb
 /services/                            @dejanb
 /services/device-registry/            @ctron
+/services/device-connection/          @sophokles73
