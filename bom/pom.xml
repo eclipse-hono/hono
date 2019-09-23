@@ -60,9 +60,9 @@
     <qpid-jms.version>0.42.0</qpid-jms.version>
     <slf4j.version>1.7.26</slf4j.version>
     <snakeyaml.version>1.23</snakeyaml.version>
-    <spring.version>5.1.8.RELEASE</spring.version>
-    <spring-boot.version>2.1.5.RELEASE</spring-boot.version>
-    <spring-security-crypto.version>5.1.5.RELEASE</spring-security-crypto.version>
+    <spring.version>5.1.9.RELEASE</spring.version>
+    <spring-boot.version>2.1.8.RELEASE</spring-boot.version>
+    <spring-security-crypto.version>5.1.6.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.7.1</vertx.version>
     <wiremock.version>2.22.0</wiremock.version>
