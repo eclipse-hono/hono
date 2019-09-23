@@ -968,9 +968,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
               </systemProperties>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
-              <excludes>
-                <exclude>org.eclipse.hono.tests.registry.legacy/**IT.java</exclude>
-              </excludes>
             </configuration>
             <executions>
               <execution>
@@ -980,32 +977,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </goals>
               </execution>
             </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <!--
-    Test profile for the legacy device registry
-    -->
-    <profile>
-      <id>tests-legacy-device-registry</id>
-      <properties>
-        <deviceregistry.image>hono-service-device-registry-legacy</deviceregistry.image>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-failsafe-plugin</artifactId>
-            <configuration>
-              <includes>
-                <include>org.eclipse.hono.tests.registry.legacy/**IT.java</include>
-              </includes>
-              <excludes>
-                <exclude>org.eclipse.hono.tests.registry/**IT.java</exclude>
-              </excludes>
-            </configuration>
           </plugin>
         </plugins>
       </build>

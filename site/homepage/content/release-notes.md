@@ -28,6 +28,8 @@ title = "Release Notes"
 ### API Changes
 
 * The already deprecated *legacy metrics* support has been removed.
+* The already deprecated *legacy device registry* and the corresponding base classes, which had been deprecated 
+ as well, have been removed.
 
 ## 1.0-M7
 
