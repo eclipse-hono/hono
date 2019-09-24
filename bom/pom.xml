@@ -38,7 +38,7 @@
     <hamcrest-core.version>2.1</hamcrest-core.version>
     <infinispan.version>9.4.16.Final</infinispan.version>
     <infinispan.image.name>jboss/infinispan-server:9.4.11.Final</infinispan.image.name>
-    <jackson.version>2.9.8</jackson.version>
+    <jackson.version>2.9.10</jackson.version>
     <jaeger.version>0.34.0</jaeger.version>
     <jaeger-agent.image.name>jaegertracing/jaeger-agent:1.13.1</jaeger-agent.image.name>
     <jaeger-all-in-one.image.name>jaegertracing/all-in-one:1.13.1</jaeger-all-in-one.image.name>
@@ -212,6 +212,17 @@
         <groupId>com.github.tomakehurst</groupId>
         <artifactId>wiremock</artifactId>
         <version>${wiremock.version}</version>
+        <exclusions>
+          <!-- omit older version that is affected by CVEs -->
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+          </exclusion>
+        </exclusions>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -327,6 +338,12 @@
         <groupId>io.jsonwebtoken</groupId>
         <artifactId>jjwt-jackson</artifactId>
         <version>${jjwt.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <!-- required as a (missing) transient dependency for JJWT -->
@@ -344,6 +361,17 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-core</artifactId>
         <version>${vertx.version}</version>
+        <exclusions>
+          <!-- omit older version that is affected by CVEs -->
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
