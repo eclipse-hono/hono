@@ -19,6 +19,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.mqtt.MqttTopicSubscription;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,12 +27,12 @@ import org.slf4j.LoggerFactory;
  * The MQTT subscription of devices, to get commands.
  *
  * <p>
- * Format of subscription need to be: {@code control|c/+|TENANT/+|DEVICE_ID/req|q/#} - e.g.:
+ * Format of subscription need to be: {@code command|c/[TENANT]/[+|DEVICE_ID]/req|q/#} - e.g.:
  * </p>
  * <ol>
- * <li>{@code control/+/+/req/#} - authenticated device and verbose format</li>
- * <li>{@code c/+/+/q/#} - authenticated device with short format</li>
- * <li>{@code control/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format</li>
+ * <li>{@code command///req/#} - authenticated device and verbose format</li>
+ * <li>{@code c///q/#} - authenticated device with short format</li>
+ * <li>{@code command/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format</li>
  * </ol>
  */
 public class CommandSubscription {
@@ -48,35 +49,37 @@ public class CommandSubscription {
     private boolean isAuthenticated;
 
     private CommandSubscription(final String topic) {
+
         Objects.requireNonNull(topic);
-        this.topic = topic;
-        final String[] parts = topic.split("\\/");
-        if (parts.length != 5 || !"#".equals(parts[4])) {
+        final ResourceIdentifier resource = ResourceIdentifier.fromString(topic);
+
+        if (resource.length() != 5 || !"#".equals(resource.elementAt(4))) {
             throw new IllegalArgumentException(
                     "topic filter does not match pattern: " + CommandConstants.COMMAND_ENDPOINT + "|"
                             + CommandConstants.COMMAND_LEGACY_ENDPOINT + "|"
                             + CommandConstants.COMMAND_ENDPOINT_SHORT + "/+/+/req|q/#");
         }
-        endpoint = parts[0];
-        if (!CommandConstants.isCommandEndpoint(endpoint)) {
+        if (!CommandConstants.isCommandEndpoint(resource.getEndpoint())) {
             throw new IllegalArgumentException(
                     "the endpoint needs to be '" + CommandConstants.COMMAND_ENDPOINT + "' or '"
                             + CommandConstants.COMMAND_LEGACY_ENDPOINT + "' or '"
                             + CommandConstants.COMMAND_ENDPOINT_SHORT + "'");
         }
-        req = parts[3];
-        if (!CommandConstants.COMMAND_RESPONSE_REQUEST_PART.equals(req)
-                && !CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT.equals(req)) {
+        if (!CommandConstants.COMMAND_RESPONSE_REQUEST_PART.equals(resource.elementAt(3))
+                && !CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT.equals(resource.elementAt(3))) {
             throw new IllegalArgumentException(
                     "the request part needs to be '" + CommandConstants.COMMAND_RESPONSE_REQUEST_PART + "' or '"
                             + CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT + "'");
         }
-        if (!"+".equals(parts[1])) {
-            tenant = parts[1];
+        this.topic = topic;
+        this.endpoint = resource.getEndpoint();
+        if (!"+".equals(resource.getTenantId())) {
+            tenant = resource.getTenantId();
         }
-        if (!"+".equals(parts[2])) {
-            deviceId = parts[2];
+        if (!"+".equals(resource.getResourceId())) {
+            deviceId = resource.getResourceId();
         }
+        this.req = resource.elementAt(3);
     }
 
     private CommandSubscription(final String topic, final Device authenticatedDevice) {
@@ -96,7 +99,7 @@ public class CommandSubscription {
             if ((tenant != null && !authenticatedDevice.getTenantId().equals(tenant)) ||
                     (deviceId != null && !authenticatedDevice.getDeviceId().equals(deviceId))) {
                 throw new IllegalArgumentException(
-                        "for authenticated devices the given device-id and tenant need to match the authentication or be undefined ('+')");
+                        "tenant and device-id in topic filter do not match authenticated device");
             } else {
                 tenant = authenticatedDevice.getTenantId();
                 deviceId = authenticatedDevice.getDeviceId();
@@ -111,7 +114,7 @@ public class CommandSubscription {
     }
 
     /**
-     * Gets the tenant from topic or authentication .
+     * Gets the tenant from topic or authentication.
      *
      * @return The tenant.
      */

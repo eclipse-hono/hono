@@ -209,46 +209,61 @@ The following sections define the topic filters/names to use for subscribing to 
 * `q` instead of `req`
 * `s` instead of `res`
 
-{{% note %}}
-Previous versions of Hono used `control` instead of `command` as topic prefix. Using the `control` prefix is still supported but deprecated. 
+{{% note title="Deprecation" %}}
+Previous versions of Hono required devices to use `control` instead of `command` as the topic prefix.
+The `control` prefix is deprecated. Devices MAY still use it until support for it will be removed in a future Hono version.
 {{% /note %}}
 
 The following variables are used:
 
-* `${command}` : is an arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
-* `${req-id}` (only for *Request/Response* commands) : denotes the unique identifier of the command execution request and is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
-* `${status}` : is the HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* header.
+* `${command}` : An arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
+* `${req-id}` (only for *Request/Response* commands) : The unique identifier of the command execution request. The identifier is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
+* `${status}` : The HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* application property.
 
 ### Receiving Commands (authenticated Device)
 
 An authenticated device MUST use the following topic filter to subscribe to commands:
 
-* `command/+/+/req/#`
+* `command///req/#`
+
+{{% note title="Deprecation" %}}
+Previous versions of Hono required authenticated devices to use `command/+/+/req/#` for subscribing to commands.
+This old topic filter is deprecated. Devices MAY still use it until support for it will be removed in a future Hono version.
+{{% /note %}}
 
 **Example**
 
-    mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command/+/+/req/#
+```sh
+mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command///req/#
+```
 
-The adapter will then publish commands for the device to topic:
+The adapter will then publish *Request/Response* commands for the device to topic
 
-* for *Request/Response* commands: `command///req/${req-id}/${command}`
-* for *one-way* commands: `command///req//${command}`
+* `command///req/${req-id}/${command}`
 
+and *one-way* commands to topic
 
-**Example**
+* `command///req//${command}`
 
-For example, if the [HonoExampleApplication]({{< relref "/dev-guide/java_client_consumer.md" >}}) was started, after the `ttd` event requested by the subscription of mosquitto_sub, it layers a command that arrives as follows:  
+For example, a request/response command with name `setBrightness` from an application might look like this:
 
-    command///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness {
-       "brightness" : 79
-    }
+```
+command///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+{
+  "brightness" : 79
+}
+```
 
-If the command is a *one-way* command, it will arrive as follows:
+A corresponding *one-way* command might look like this:
 
-    command///q//setBrightness {
-       "brightness" : 79
-    }
+```
+command///q//setBrightness
+{
+  "brightness" : 79
+}
+```
 
+Note that the topic in the latter case doesn't contain a request identifier.
 
 ### Receiving Commands (unauthenticated Device)
 
@@ -258,17 +273,38 @@ An unauthenticated device MUST use the following topic filter to subscribe to co
 
 **Example**
 
-    mosquitto_sub -v -t command/DEFAULT_TENANT/4711/req/#
+```sh
+mosquitto_sub -v -t command/DEFAULT_TENANT/4711/req/#
+```
 
-The adapter will then publish *Request/Response* commands for the device to topic:
+The adapter will then publish *Request/Response* commands for the device to topic
 
 * `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
 
-and *one-way* commands to the topic:
+and *one-way* commands to topic
 
 * `command/${tenant-id}/${device-id}/req//${command}`
 
-(For an example of the incoming command see above at authenticated device)
+For example, a request/response command with name `setBrightness` from an application might look like this:
+
+```
+command/DEFAULT_TENANT/4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+{
+  "brightness" : 79
+}
+```
+
+A corresponding *one-way* command might look like this:
+
+```
+command/DEFAULT_TENANT/4711/q//setBrightness
+{
+  "brightness" : 79
+}
+```
+
+Note that the topic in the latter case doesn't contain a request identifier.
+
 
 ### Receiving Commands (authenticated Gateway)
 
@@ -280,16 +316,47 @@ If a device is configured to be used with *multiple* gateways, the particular ga
 
 An authenticated gateway MUST use the following topic filter to subscribe to to commands for all the devices it acts on behalf of:
 
-* `command/+/+/req/#`
+* `command//+/req/#`
+
+{{% note title="Deprecation" %}}
+Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
+This old topic filter is deprecated. Gateways MAY still use it until support for it will be removed in a future Hono version.
+{{% /note %}}
 
 **Example**
 
-    mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command/+/+/req/#
+```sh
+mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//+/req/#
+```
 
-The adapter will then publish commands for devices, that the gateway has acted on behalf of, to topic:
+The adapter will then publish *Request/Response* commands for devices, that the gateway has acted on behalf of, to topic
 
-* for *Request/Response* commands: `command//${device-id}/req/${req-id}/${command}`
-* for *one-way* commands: `command//${device-id}/req//${command}`
+* `command//${device-id}/req/${req-id}/${command}`
+
+and *one-way* commands to topic
+
+* `command//${device-id}/req//${command}`
+
+For example, a request/response command for device `4711` with name `setBrightness` from an application might look like this:
+
+```
+command//4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+{
+  "brightness" : 79
+}
+```
+
+A corresponding *one-way* command might look like this:
+
+```
+command//4711/q//setBrightness
+{
+  "brightness" : 79
+}
+```
+
+Note that the topic in the latter case doesn't contain a request identifier.
+
 
 ### Sending a Response to a Command (authenticated Device)
 
@@ -317,15 +384,15 @@ After a command has arrived as in the above example, you send a response using t
 
 ### Sending a Response to a Command (authenticated Gateway)
 
-An authenticated gateway MUST send the response to a previously received command to the following topic:
+An authenticated gateway MUST send a device's response to a command it has received on behalf of the device to the following topic:
 
-* `command///res/${req-id}/${status}`
+* `command//${device-id}/res/${req-id}/${status}`
 
 **Example**
 
-After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
+After a command has arrived as in the above example, the response is sent using the `${req-id}` from the topic that the command had been published to:
 
-    mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t command///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+    mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 
 ## Downstream Meta Data
 

@@ -71,14 +71,23 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     static Stream<MqttCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
-                new MqttCommandEndpointConfiguration(false, true, true),
-                new MqttCommandEndpointConfiguration(false, true, false),
-                new MqttCommandEndpointConfiguration(false, false, true),
-                new MqttCommandEndpointConfiguration(false, false, false),
+                new MqttCommandEndpointConfiguration(false, true, true, false),
+                new MqttCommandEndpointConfiguration(false, true, false, false),
+                new MqttCommandEndpointConfiguration(false, false, true, false),
+                new MqttCommandEndpointConfiguration(false, false, false, false),
+
+                // the following four variants can be removed once we no longer support the legacy topic filters
+                new MqttCommandEndpointConfiguration(false, true, true, true),
+                new MqttCommandEndpointConfiguration(false, true, false, true),
+                new MqttCommandEndpointConfiguration(false, false, true, true),
+                new MqttCommandEndpointConfiguration(false, false, false, true),
 
                 // gateway devices are supported with north bound "command" endpoint only
-                new MqttCommandEndpointConfiguration(true, false, false),
-                new MqttCommandEndpointConfiguration(true, true, false)
+                new MqttCommandEndpointConfiguration(true, false, false, true),
+                new MqttCommandEndpointConfiguration(true, true, false, true),
+
+                new MqttCommandEndpointConfiguration(true, false, false, false),
+                new MqttCommandEndpointConfiguration(true, true, false, false)
                 );
     }
 
