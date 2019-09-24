@@ -65,7 +65,7 @@
     <spring-security-crypto.version>5.1.6.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.7.1</vertx.version>
-    <wiremock.version>2.22.0</wiremock.version>
+    <wiremock.version>2.24.1</wiremock.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>
