@@ -31,6 +31,12 @@ title = "Release Notes"
 * The already deprecated *legacy device registry* and the corresponding base classes, which had been deprecated 
  as well, have been removed.
 
+### Deprecations
+
+* The OpenShift specific source-to-image deployoment model has been removed in
+  favor of the Helm charts and the Eclipse IoT Packages project. You can still
+  deploy Hono on OpenShift using the Helm charts. 
+
 ## 1.0-M7
 
 ### New Features
