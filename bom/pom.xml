@@ -32,7 +32,7 @@
     <assertj-core.version>3.13.2</assertj-core.version>
     <californium.version>2.0.0-M16</californium.version>
     <dispatch-router.image.name>quay.io/enmasse/qdrouterd-base:1.7.0</dispatch-router.image.name>
-    <grafana.version>5.3.2</grafana.version>
+    <grafana.version>6.2.5</grafana.version>
     <guava.version>25.0-jre</guava.version>
     <caffeine.version>2.6.2</caffeine.version>
     <hamcrest-core.version>2.1</hamcrest-core.version>
