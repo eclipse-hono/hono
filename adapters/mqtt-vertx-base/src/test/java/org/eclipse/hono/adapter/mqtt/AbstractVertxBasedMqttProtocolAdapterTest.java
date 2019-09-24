@@ -1241,6 +1241,80 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 }));
     }
 
+    /**
+     * Verifies that the TTL for a downstream event is set to the given <em>time-to-live</em> value 
+     * in the <em>property-bag</em>.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void verifyEventMessageUsesTtlValueGivenInPropertyBag(final TestContext ctx) {
+        // Given an adapter
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
+                getMqttServer(false));
+        forceClientMocksToConnected();
+
+        final DownstreamSender sender = mock(DownstreamSender.class);
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
+                .thenReturn(Future.succeededFuture(sender));
+
+        // WHEN a "device" of "tenant" publishes an event message with a TTL value of 30 seconds.
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn("e/tenant/device/?hono-ttl=30&param2=value2");
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        adapter.uploadEventMessage(
+                newMqttContext(msg, mockEndpoint()),
+                "tenant",
+                "device",
+                Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
+                    final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+                    verify(sender).sendAndWaitForOutcome(messageCaptor.capture(), (SpanContext) any());
+
+                    // THEN the TTL value of the amqp message is 10 seconds.
+                    assertEquals(30 * 1000, messageCaptor.getValue().getTtl());
+                }));
+    }
+
+    /**
+     * Verifies that the TTL for a downstream event is limited by the <em>max-ttl</em> specified for
+     * a tenant, if the given <em>time-to-live</em> duration in the <em>property-bag</em> exceeds 
+     * the <em>max-ttl</em> value.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void verifyEventMessageLimitsTtlToMaxValue(final TestContext ctx) {
+        // Given the maximum ttl as 10 seconds for the given tenant.
+        final TenantObject myTenantConfig = TenantObject.from("tenant", true)
+                .setResourceLimits(new JsonObject()
+                        .put(TenantConstants.FIELD_MAX_TTL, 10));
+        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
+        // Given an adapter
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
+                getMqttServer(false));
+        forceClientMocksToConnected();
+        final DownstreamSender sender = mock(DownstreamSender.class);
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
+                .thenReturn(Future.succeededFuture(sender));
+
+        // WHEN a device publishes an event message with a TTL value of 30 seconds.
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn("e/tenant/device/?hono-ttl=30&param2=value2");
+        when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
+        adapter.uploadEventMessage(
+                newMqttContext(msg, mockEndpoint()),
+                "tenant",
+                "device",
+                Buffer.buffer("test")).setHandler(ctx.asyncAssertFailure(t -> {
+                    final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+
+                    verify(sender).sendAndWaitForOutcome(messageCaptor.capture(), (SpanContext) any());
+
+                    // THEN the TTL value of the amqp message is 10 seconds.
+                    assertEquals(10 * 1000, messageCaptor.getValue().getTtl());
+                }));
+    }
+
     private String getCommandSubscriptionTopic(final String tenantId, final String deviceId) {
         return String.format("%s/%s/%s/req/#", getCommandEndpoint(), tenantId, deviceId);
     }

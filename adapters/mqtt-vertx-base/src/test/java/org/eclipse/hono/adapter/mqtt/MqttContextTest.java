@@ -14,8 +14,7 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -24,11 +23,10 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.Test;
 
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies behavior of {@link MqttContext}.
@@ -45,7 +43,7 @@ public class MqttContextTest {
         when(msg.topicName()).thenReturn("t");
         final Device device = new Device("tenant", "device");
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), device);
-        assertThat(context.tenant(), is("tenant"));
+        assertEquals("tenant", context.tenant());
     }
 
     /**
@@ -56,7 +54,23 @@ public class MqttContextTest {
     public void testTenantIsRetrievedFromTopic() {
         final MqttPublishMessage msg = newMessage(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, "tenant", "device");
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
-        assertThat(context.tenant(), is("tenant"));
+        assertEquals("tenant", context.tenant());
+    }
+
+    /**
+     * Verifies the values retrieved from the <em>property-bag</em> of a message's topic.
+     */
+    @Test
+    public void verifyPropertyBagRetrievedFromTopic() {
+        final Device device = new Device("tenant", "device");
+        final MqttPublishMessage msg = mock(MqttPublishMessage.class);
+        when(msg.topicName()).thenReturn("event/tenant/device/?param1=value1&param2=value2");
+        final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class), device);
+
+        assertNotNull(context.propertyBag());
+        assertEquals("value1", context.propertyBag().getProperty("param1"));
+        assertEquals("value2", context.propertyBag().getProperty("param2"));
+        assertEquals("event/tenant/device", context.topic().toString());
     }
 
     /**
@@ -78,7 +92,7 @@ public class MqttContextTest {
 
     private static void assertEndpoint(final MqttPublishMessage msg, final MetricsTags.EndpointType expectedEndpoint) {
         final MqttContext context = MqttContext.fromPublishPacket(msg, mock(MqttEndpoint.class));
-        assertThat(context.endpoint(), is(expectedEndpoint));
+        assertEquals(expectedEndpoint, context.endpoint());
     }
 
     private static MqttPublishMessage newMessage(final String endpoint, final String tenant, final String device) {

@@ -22,8 +22,9 @@ title = "Release Notes"
   (Gregorian) calendar month. Refer [resource limits] ({{% doclink "/concepts/resource-limits/" %}})
   for more information.
 * The devices can now indicate a *time-to-live* duration for event messages published using 
-  the HTTP adapter by setting the *hono-ttl* property in requests explicitly - please refer to the
-  [HTTP Adapter]({{% doclink "/user-guide/http-adapter/" %}}) for details.
+  the HTTP and MQTT adapters by setting the *hono-ttl* property in requests explicitly. Please refer to the
+  [HTTP Adapter]({{% doclink "/user-guide/http-adapter/#publish-an-event-authenticated-device" %}})
+  and [MQTT Adapter] ({{% doclink "/user-guide/mqtt-adapter/#publishing-events" %}}) for details.
 
 ### API Changes
 
