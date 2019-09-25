@@ -20,13 +20,13 @@ import io.vertx.core.AbstractVerticle;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -35,7 +35,6 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
-import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -520,7 +519,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         Optional.ofNullable(tenantObject.getResourceLimits())
                 .ifPresent(tenant::setResourceLimits);
 
-        Optional.ofNullable(tenantObject.getTrustedCAs())
+        Optional.ofNullable(tenantObject.getTrustedAuthorities())
                 .ifPresent(trustConfigs -> setTrustedAuthorities(tenant, trustConfigs));
 
         Optional.ofNullable(tenantObject.getMinimumMessageSize())
@@ -533,12 +532,18 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         return tenant;
     }
 
-    private static void setTrustedAuthorities(final Tenant tenant, final List<JsonObject> trustConfigs) {
-        final List<TrustedCertificateAuthority> authorities = 
-                trustConfigs.stream()
-                .map(trustConfig -> trustConfig.mapTo(TrustedCertificateAuthority.class))
-                .collect(Collectors.toList());
-        tenant.setTrustedAuthorities(authorities);
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static void setTrustedAuthorities(final Tenant tenant,
+            final List<org.eclipse.hono.util.TrustedCertificateAuthority> trustedCAs) {
+        final List<org.eclipse.hono.util.TrustedCertificateAuthority> authorities = new LinkedList<>();
+        trustedCAs.forEach(trustedCa -> {
+            if (trustedCa.isValid()) {
+                // clients should only see valid trust configurations
+                authorities.add(trustedCa);
+            }
+        });
+
+        tenant.setTrustedAuthorities(new LinkedList(authorities));
     }
 
     private List<TenantObject> getByCa(final Set<X500Principal> subjectDns) {

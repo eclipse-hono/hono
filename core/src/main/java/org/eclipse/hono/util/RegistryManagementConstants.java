@@ -237,6 +237,14 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
     /**
+     * The name of the property indicating the date in which the trusted root certificate will be valid.
+     */
+    public static final String FIELD_PAYLOAD_NOT_BEFORE = "not-before";
+    /**
+     * The name of the property indicating the date in which the trusted root certificate is invalid.
+     */
+    public static final String FIELD_PAYLOAD_NOT_AFTER = "not-after";
+    /**
      * The name of the property that contains the configuration options for the resource limits.
      */
     public static final String FIELD_RESOURCE_LIMITS = "resource-limits";

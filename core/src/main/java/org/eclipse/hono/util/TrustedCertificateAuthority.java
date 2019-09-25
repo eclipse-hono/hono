@@ -17,25 +17,23 @@ import java.time.Instant;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 /**
- * A trusted CA configuration.
+ * Encapsulates a trusted CA configuration stored in the device registry.
  *
  */
 @JsonInclude(value = Include.NON_NULL)
-public class TrustedCertificateAuthority {
+public final class TrustedCertificateAuthority {
 
     @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, required = true)
     private String subjectDn;
 
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY)
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, required = true)
     private byte[] publicKey;
-
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_CERT)
-    private byte[] certificate;
 
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE)
     @HonoTimestamp
@@ -76,21 +74,6 @@ public class TrustedCertificateAuthority {
 
     public byte[] getPublicKey() {
         return publicKey;
-    }
-
-    /**
-     * Sets the cert configuration property.
-     *
-     * @param certificate The cert property of the trusted root certificate.
-     * @return            a reference to this for fluent use.
-     */
-    public TrustedCertificateAuthority setCertificate(final byte[] certificate) {
-        this.certificate = certificate;
-        return this;
-    }
-
-    public byte[] getCertificate() {
-        return certificate;
     }
 
     /**
@@ -140,4 +123,18 @@ public class TrustedCertificateAuthority {
         return keyAlgorithm;
     }
 
+    /**
+     * Checks if this trusted certificate is valid.
+     * 
+     * @return {@code true} if the certificate is valid or {@code false} otherwise.
+     */
+    @JsonIgnore
+    public boolean isValid() {
+        if (notBefore == null || notAfter == null) {
+            return false;
+        } else {
+            final Instant now = Instant.now();
+            return !(now.isBefore(notBefore) || now.isAfter(notAfter));
+        }
+    }
 }

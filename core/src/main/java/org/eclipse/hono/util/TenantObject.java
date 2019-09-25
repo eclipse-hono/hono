@@ -136,12 +136,12 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(notBefore);
         Objects.requireNonNull(notAfter);
 
-        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
-                .setSubjectDn(subjectDn.getName())
-                .setPublicKey(publicKey.getEncoded())
-                .setKeyAlgorithm(publicKey.getAlgorithm())
-                .setNotBefore(notBefore)
-                .setNotAfter(notAfter);
+        final JsonObject trustedCa = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName())
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded())
+                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm())
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, notBefore)
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, notAfter);
 
         return addTrustedCA(trustedCa);
     }
@@ -590,15 +590,13 @@ public final class TenantObject extends JsonBackedValueObject {
         } else if (Map.class.isInstance(configuration)) {
             // for backwards compatibility with the older content model.
             final JsonObject config = new JsonObject((Map<String, Object>) configuration);
-            final TrustedCertificateAuthority trustedCa = config.mapTo(TrustedCertificateAuthority.class);
 
-            addTrustedCA(trustedCa);
+            addTrustedCA(config);
         } else if (List.class.isInstance(configuration)) {
 
             final List<Map<String, Object>> configurations = (List<Map<String, Object>>) configuration;
             configurations.forEach(config -> {
-                final TrustedCertificateAuthority trustedCa = new JsonObject(config).mapTo(TrustedCertificateAuthority.class);
-                addTrustedCA(trustedCa);
+                addTrustedCA(new JsonObject(config));
             });
         } else {
             throw new IllegalArgumentException("invalid trusted-ca configuration");
@@ -646,34 +644,24 @@ public final class TenantObject extends JsonBackedValueObject {
         final byte[] encodedKey = trustedCa.getPublicKey();
         final String type = Optional.ofNullable(trustedCa.getKeyAlgorithm()).orElse("RSA");
 
-        final Instant notBefore = trustedCa.getNotBefore();
-        final Instant notAfter = trustedCa.getNotAfter();
-        final Instant now = Instant.now();
+        final PublicKey pubKey = getPublicKey(encodedKey, type);
 
-        if (subjectDn == null || encodedKey == null || notBefore == null || notAfter == null) {
-            return null;
-        } else if (now.isBefore(notBefore) || now.isAfter(notAfter)) {
-            // trusted CA is either too early for use or expired
-            return null;
-        } else {
-            final PublicKey pubKey = getPublicKey(encodedKey, type);
-            return new TrustAnchor(subjectDn, pubKey, null);
-        }
+        return new TrustAnchor(subjectDn, pubKey, null);
     }
 
     /**
      * Add a trusted CA configuration for this tenant.
      * 
-     * @param trustedCa The trust configuration to add.
+     * @param config The trust configuration to add.
      * 
      * @return This tenant so the API can be used fluently.
      */
-    public TenantObject addTrustedCA(final TrustedCertificateAuthority trustedCa) {
+    public TenantObject addTrustedCA(final JsonObject config) {
 
-        if (!isValidTenantConfig(trustedCa)) {
-            throw new IllegalArgumentException("invalid tenant configuration");
+        if (!isValid(config)) {
+            throw new IllegalArgumentException("Invalid trusted-ca configuration");
         }
-
+        final TrustedCertificateAuthority trustedCa = config.mapTo(TrustedCertificateAuthority.class);
         if (trustedAuthorities == null) {
             trustedAuthorities = new ArrayList<>();
         }
@@ -683,32 +671,9 @@ public final class TenantObject extends JsonBackedValueObject {
         return this;
     }
 
-    private boolean isValidTenantConfig(final TrustedCertificateAuthority trustedCa) {
-
-        final byte[] cert = trustedCa.getCertificate();
-        final byte[] publicKey = trustedCa.getPublicKey();
-
-        // public key or the encoded certificate must be present
-        if (Strings.isNullOrEmpty(cert) && Strings.isNullOrEmpty(publicKey)) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * TODO.
-     * @return TODO.
-     */
-    @JsonIgnore
-    public List<JsonObject> getTrustedCAs() {
-        if (trustedAuthorities == null) {
-            return null;
-        } else {
-            final List<JsonObject> results = new ArrayList<>();
-            trustedAuthorities.forEach(trustedCa -> {
-                results.add(JsonObject.mapFrom(trustedCa));
-            });
-            return results;
-        }
+    private boolean isValid(final JsonObject config) {
+        final String subjectDn = config.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+        final String publicKey = config.getString(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
+        return !(subjectDn == null || publicKey == null);
     }
 }

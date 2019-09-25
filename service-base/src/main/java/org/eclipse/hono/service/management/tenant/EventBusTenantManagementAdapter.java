@@ -249,8 +249,8 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final Object encodedCert = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_CERT);
         final Object encodedKey = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY);
         final Object subjectDn = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN);
-        final Object notBefore = trustedCa.getValue(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
-        final Object notAfter = trustedCa.getValue(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+        final Object notBefore = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_NOT_BEFORE);
+        final Object notAfter = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_NOT_AFTER);
 
         if (!String.class.isInstance(subjectDn)) {
             return false;

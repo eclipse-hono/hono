@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
  *
  */
 @JsonInclude(value = Include.NON_NULL)
-public class TrustedCertificateAuthority {
+public final class TrustedCertificateAuthority {
 
     @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, required = true)
     private String subjectDn;
