@@ -11,12 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.management.tenant;
+package org.eclipse.hono.util;
 
 import java.time.Instant;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
-import org.eclipse.hono.util.TenantConstants;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -140,4 +139,5 @@ public class TrustedCertificateAuthority {
     public String getKeyAlgorithm() {
         return keyAlgorithm;
     }
+
 }

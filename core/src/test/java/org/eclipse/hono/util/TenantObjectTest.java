@@ -20,7 +20,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -32,7 +31,7 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.Period;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
@@ -108,6 +107,39 @@ public class TenantObjectTest {
     }
 
     /**
+     * Verifies that a trusted certificate authority can be deserialized and that
+     * the validity period can be property parse to an Instant.
+     */
+    @Test
+    public void testDeserializationOfTrustedCaConfiguration() {
+
+        final Instant notBefore = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .parse("2010-04-05T13:45:07-04:00", OffsetDateTime::from).toInstant();
+        final Instant notAfter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                .parse("2050-12-05T13:45:07+02:00", OffsetDateTime::from).toInstant();
+
+        final JsonObject config = new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "cn=test")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "PublicKey==".getBytes())
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, "2010-04-05T13:45:07-04:00")
+                .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, "2050-12-05T13:45:07+02:00")
+                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "RSA");
+
+        final TrustedCertificateAuthority trustedCa = config.mapTo(TrustedCertificateAuthority.class);
+
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .addTrustedCA(trustedCa);
+
+        assertThat(obj.getTrustedAuthorities().size(), is(1));
+        assertThat(trustedCa.getSubjectDn(), is("cn=test"));
+        assertThat(trustedCa.getPublicKey(), is("PublicKey==".getBytes()));
+        assertThat(trustedCa.getKeyAlgorithm(), is("RSA"));
+        assertThat(trustedCa.getNotBefore(), is(notBefore));
+        assertThat(trustedCa.getNotAfter(), is(notAfter));
+
+    }
+
+    /**
      * Verifies that a trust anchor can be deserialized from a Base64 encoded public key.
      * 
      * @throws GeneralSecurityException if the trust anchor cannot be deserialized.
@@ -115,24 +147,34 @@ public class TenantObjectTest {
     @Test
     public void testDeserializationOfPublicKeyTrustAnchor() throws GeneralSecurityException {
 
+        final String notBefore = toISOFormatString(trustedCaCert.getNotBefore().toInstant());
+        final String notAfter = toISOFormatString(trustedCaCert.getNotAfter().toInstant());
+
         final JsonObject config = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
                 .put(TenantConstants.FIELD_ENABLED, true)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
                         new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now()))
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().plus(Period.ofDays(360))))
-                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm()));
+                                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN,
+                                        trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,
+                                        Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
+                                .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, notBefore)
+                                .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, notAfter)
+                                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,
+                                        trustedCaCert.getPublicKey().getAlgorithm()));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
+        final List<TrustedCertificateAuthority> trustedAuths = tenant.getTrustedAuthorities();
+        assertThat(trustedAuths.size(), is(1));
+
         final Set<X500Principal> subjectNames = tenant.getTrustedCaSubjectDns();
         assertThat(subjectNames.size(), is(1));
         assertTrue(subjectNames.contains(trustedCaCert.getSubjectX500Principal()));
         final List<TrustAnchor> anchors = tenant.getTrustAnchors();
         assertThat(anchors.size(), is(1));
         assertThat(anchors.get(0).getCAPublicKey(), is(trustedCaCert.getPublicKey()));
+
     }
 
     /**
@@ -194,31 +236,6 @@ public class TenantObjectTest {
     }
 
     /**
-     * Verifies that the trust anchor cannot be read from an invalid Base64 encoding of
-     * a public key.
-     */
-    @Test
-    public void testGetTrustAnchorFailsForInvalidBase64EncodingOfPublicKey() {
-
-        final JsonObject tenantPayload = new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonObject()
-                        .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64")
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now()))
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().plus(Period.ofDays(3650)))));
-
-        final TenantObject obj = tenantPayload.mapTo(TenantObject.class);
-
-        try {
-            obj.getTrustAnchors();
-            fail("should not have been able to read trust anchor from malformed Base64");
-        } catch (final GeneralSecurityException e) {
-            // as expected
-        }
-    }
-
-    /**
      * Verify that a trust anchor is constructed only for valid trusted certificate authorities configured
      * for a tenant.
      */
@@ -231,15 +248,15 @@ public class TenantObjectTest {
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,  trustedCaCert.getPublicKey().getAlgorithm())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now().minus(Period.ofDays(365))))
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().minus(Period.ofDays(5)))))
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, "2010-05-01T13:00:00Z")
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, "2015-06-01T14:00:00Z"))
                 // valid certificate
                 .add(new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY,  trustedCaCert.getPublicKey().getEncoded())
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,  trustedCaCert.getPublicKey().getAlgorithm())
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, toIsoFormatString(Instant.now().minus(Period.ofDays(5))))
-                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, toIsoFormatString(Instant.now().plus(Period.ofDays(50)))));
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
+                        .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter()));
         final JsonObject tenantPayload = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, Constants.DEFAULT_TENANT)
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
@@ -385,7 +402,16 @@ public class TenantObjectTest {
         }
     }
 
-    private static String toIsoFormatString(final Instant instant) {
+    private String getNotBefore() {
+        final OffsetDateTime notBefore = OffsetDateTime.of(2018, 1, 1, 15, 40, 0, 0, ZoneOffset.ofHours(-4));
+        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(notBefore);
+    }
+
+    private String getNotAfter() {
+        return "2050-04-25T14:30:00Z";
+    }
+
+    private static String toISOFormatString(final Instant instant) {
         return DateTimeFormatter.ISO_INSTANT.format(instant);
     }
 }

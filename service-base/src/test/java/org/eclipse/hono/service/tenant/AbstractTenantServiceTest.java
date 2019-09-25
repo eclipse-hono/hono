@@ -17,7 +17,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
-import java.time.Period;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +36,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.util.TrustedCertificateAuthority;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
@@ -259,7 +263,7 @@ public abstract class AbstractTenantServiceTest {
 
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY".getBytes())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final TenantObject tenant = TenantObject.from("tenant", true)
@@ -377,7 +381,7 @@ public abstract class AbstractTenantServiceTest {
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final JsonObject tenant = buildTenantPayload("tenant")
@@ -388,10 +392,8 @@ public abstract class AbstractTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                 final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                 assertEquals("tenant", obj.getTenantId());
-                final List<JsonObject> trustConfigs = obj.getTrustedCAs();
+                final List<TrustedCertificateAuthority> trustConfigs = obj.getTrustedAuthorities();
                 assertEquals(1, trustConfigs.size());
-                final JsonObject ca = trustConfigs.get(0);
-                assertEquals(trustedCa, ca);
                 ctx.completeNow();
             })));
             return null;
@@ -408,10 +410,10 @@ public abstract class AbstractTenantServiceTest {
 
         final X500Principal unknownSubjectDn = new X500Principal("O=Eclipse, OU=NotHono, CN=ca");
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
-        final String publicKey = "NOTAPUBLICKEY";
+
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey)
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final JsonObject tenant = buildTenantPayload("tenant")
@@ -497,7 +499,7 @@ public abstract class AbstractTenantServiceTest {
         // GIVEN two tenants, one with a CA configured, the other with no CA
         final JsonObject trustedCa = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY".getBytes())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, getNotBefore())
                 .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, getNotAfter());
         final TenantObject tenantOne = TenantObject.from("tenantOne", true)
@@ -616,11 +618,13 @@ public abstract class AbstractTenantServiceTest {
         return tenantPayload;
     }
 
-    private Long getNotBefore() {
-        return Instant.now().toEpochMilli();
+    private String getNotBefore() {
+        final OffsetDateTime notBefore = OffsetDateTime.of(2018, 1, 1, 15, 40, 0, 0, ZoneOffset.ofHours(-4));
+        return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(notBefore);
     }
 
-    private Long getNotAfter() {
-        return Instant.now().plus(Period.ofDays(360)).toEpochMilli();
+    private String getNotAfter() {
+        final Instant notAfter = Instant.EPOCH.plusSeconds(1).truncatedTo(ChronoUnit.SECONDS);
+        return DateTimeFormatter.ISO_INSTANT.format(notAfter);
     }
 }

@@ -21,12 +21,8 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,7 +31,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -44,8 +39,6 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import com.fasterxml.jackson.annotation.JsonSetter;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -64,7 +57,7 @@ public final class TenantObject extends JsonBackedValueObject {
     private ResourceLimits resourceLimits;
 
     @JsonIgnore
-    private Map<String, List<JsonObject>> trustConfigurations;
+    private List<TrustedCertificateAuthority> trustedAuthorities;
 
     /**
      * Adds a property to this tenant.
@@ -130,7 +123,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param subjectDn The trusted CA's subject DN.
      * @param notBefore The start date in which the trustedCa becomes valid.
      * @param notAfter The end date in which the trustedCa becomes invalid.
-     * 
+     *
      * @return This tenant for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -143,12 +136,12 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(notBefore);
         Objects.requireNonNull(notAfter);
 
-        final JsonObject trustedCa = new JsonObject();
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, notBefore.toString());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, notAfter.toString());
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn(subjectDn.getName())
+                .setPublicKey(publicKey.getEncoded())
+                .setKeyAlgorithm(publicKey.getAlgorithm())
+                .setNotBefore(notBefore)
+                .setNotAfter(notAfter);
 
         return addTrustedCA(trustedCa);
     }
@@ -201,10 +194,9 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public List<TrustAnchor> getTrustAnchors() throws GeneralSecurityException {
-        final List<JsonObject> configs = Optional.ofNullable(getTrustedCAs()).orElse(Collections.emptyList());
         final List<TrustAnchor> trustAnchors = new ArrayList<>();
-        for (JsonObject config : configs) {
-            final TrustAnchor anchor = getTrustAnchor(config);
+        for (final TrustedCertificateAuthority trustedCa: trustedAuthorities) {
+            final TrustAnchor anchor = getTrustAnchor(trustedCa);
             if (anchor != null) {
                 trustAnchors.add(anchor);
             }
@@ -213,9 +205,9 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     @JsonIgnore
-    private PublicKey getPublicKey(final String encodedKey, final String keyType) throws GeneralSecurityException {
+    private PublicKey getPublicKey(final byte[] encodedKey, final String keyType) throws GeneralSecurityException {
         try {
-            final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+            final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
             final KeyFactory factory = KeyFactory.getInstance(keyType);
             return factory.generatePublic(keySpec);
         } catch (final IllegalArgumentException e) {
@@ -232,7 +224,7 @@ public final class TenantObject extends JsonBackedValueObject {
      *         {@code null} if no specific configuration has been
      *         set for any protocol adapter.
      */
-    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
+    @JsonGetter(TenantConstants.FIELD_ADAPTERS)
     public List<Map<String, Object>> getAdapterConfigurationsAsMaps() {
         if (adapterConfigurations == null) {
             return null;
@@ -292,7 +284,7 @@ public final class TenantObject extends JsonBackedValueObject {
      *                              of the list after this method has been invoked.
      * @return This tenant for command chaining.
      */
-    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
+    @JsonSetter(TenantConstants.FIELD_ADAPTERS)
     public TenantObject setAdapterConfigurations(final List<Map<String, Object>> configurations) {
         if (configurations == null) {
             this.adapterConfigurations = null;
@@ -590,24 +582,28 @@ public final class TenantObject extends JsonBackedValueObject {
      *         at least one trusted CA configuration is missing the required <em>subject-dn</em> property.
      */
     @SuppressWarnings("unchecked")
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)
-    public TenantObject setTrustedCa(final Object configuration) {
-        if (configuration == null) {
-            trustConfigurations = null;
+    @JsonSetter(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)
+    public TenantObject setTrustedAuthorities(final Object configuration) {
+
+       if (configuration == null) {
+            trustedAuthorities = null;
         } else if (Map.class.isInstance(configuration)) {
             // for backwards compatibility with the older content model.
-            final JsonObject trustedCa = new JsonObject((Map<String, Object>) configuration);
+            final JsonObject config = new JsonObject((Map<String, Object>) configuration);
+            final TrustedCertificateAuthority trustedCa = config.mapTo(TrustedCertificateAuthority.class);
+
             addTrustedCA(trustedCa);
         } else if (List.class.isInstance(configuration)) {
 
             final List<Map<String, Object>> configurations = (List<Map<String, Object>>) configuration;
-            configurations.forEach(json -> {
-                final JsonObject trustedCa = new JsonObject(json);
+            configurations.forEach(config -> {
+                final TrustedCertificateAuthority trustedCa = new JsonObject(config).mapTo(TrustedCertificateAuthority.class);
                 addTrustedCA(trustedCa);
             });
         } else {
             throw new IllegalArgumentException("invalid trusted-ca configuration");
         }
+
         return this;
     }
 
@@ -619,15 +615,9 @@ public final class TenantObject extends JsonBackedValueObject {
      *         {@code null} if no trust configuration has been
      *         set for this tenant.
      */
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)
-    public List<Map<String, Object>> getTrustedCa() {
-        if (trustConfigurations == null) {
-            return null;
-        } else {
-            final List<Map<String, Object>> result = new LinkedList<>();
-            trustConfigurations.values().stream().flatMap(Collection::stream).forEach(config -> result.add(config.getMap()));
-            return result;
-        }
+    @JsonGetter(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)
+    public List<TrustedCertificateAuthority> getTrustedAuthorities() {
+        return trustedAuthorities;
     }
 
     /**
@@ -638,44 +628,26 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     public Set<X500Principal> getTrustedCaSubjectDns() {
 
-        if (trustConfigurations == null) {
+        if (trustedAuthorities == null) {
             return Collections.emptySet();
         } else {
             final Set<X500Principal> subjectNames = new HashSet<>();
-            trustConfigurations.keySet().forEach(subjectDn -> {
-                subjectNames.add(new X500Principal(subjectDn));
+            trustedAuthorities.forEach(trustedCa -> {
+                subjectNames.add(new X500Principal(trustedCa.getSubjectDn()));
             });
             return subjectNames;
         }
     }
 
-    /**
-     * Get the list of configured trusted CAs for this tenant.
-     * 
-     * @return The list of configured trusted CAs or {@code null} if this tenant has no configured trusted CA.
-     *
-     */
     @JsonIgnore
-    public List<JsonObject> getTrustedCAs() {
+    private TrustAnchor getTrustAnchor(final TrustedCertificateAuthority trustedCa) throws GeneralSecurityException {
 
-        if (trustConfigurations == null) {
-            return null;
-        } else {
-            return trustConfigurations.values().stream().flatMap(Collection::stream).collect(Collectors.toList());
-        }
+        final String subjectDn = trustedCa.getSubjectDn();
+        final byte[] encodedKey = trustedCa.getPublicKey();
+        final String type = Optional.ofNullable(trustedCa.getKeyAlgorithm()).orElse("RSA");
 
-    }
-
-    @JsonIgnore
-    private TrustAnchor getTrustAnchor(final JsonObject trustedCa) throws GeneralSecurityException {
-
-        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
-        final String encodedKey = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
-        final String type = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, String.class,
-                "RSA");
-
-        final Instant notBefore = getNotBefore(trustedCa);
-        final Instant notAfter = getNotAfter(trustedCa);
+        final Instant notBefore = trustedCa.getNotBefore();
+        final Instant notAfter = trustedCa.getNotAfter();
         final Instant now = Instant.now();
 
         if (subjectDn == null || encodedKey == null || notBefore == null || notAfter == null) {
@@ -696,54 +668,47 @@ public final class TenantObject extends JsonBackedValueObject {
      * 
      * @return This tenant so the API can be used fluently.
      */
-    private TenantObject addTrustedCA(final JsonObject trustedCa) {
+    public TenantObject addTrustedCA(final TrustedCertificateAuthority trustedCa) {
 
         if (!isValidTenantConfig(trustedCa)) {
             throw new IllegalArgumentException("invalid tenant configuration");
         }
 
-        if (trustConfigurations == null) {
-            trustConfigurations = new HashMap<>();
+        if (trustedAuthorities == null) {
+            trustedAuthorities = new ArrayList<>();
         }
 
-        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+        trustedAuthorities.add(trustedCa);
 
-        final List<JsonObject> trustedCas = trustConfigurations.getOrDefault(subjectDn, new ArrayList<>());
-
-        trustedCas.add(trustedCa);
-        trustConfigurations.put(subjectDn, trustedCas);
         return this;
     }
 
-    private Instant getNotBefore(final JsonObject trustedCa) {
-        Instant instant = null;
-        final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, String.class);
-        if (strValue != null) {
-            instant = DateTimeFormatter.ISO_INSTANT.parse(strValue, Instant::from);
-        }
-        return instant;
-    }
+    private boolean isValidTenantConfig(final TrustedCertificateAuthority trustedCa) {
 
-    private Instant getNotAfter(final JsonObject trustedCa) {
-        Instant instant = null;
-        final String strValue = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_NOT_AFTER, String.class);
-        if (strValue != null) {
-            instant = DateTimeFormatter.ISO_INSTANT.parse(strValue, Instant::from);
-        }
-        return instant;
-    }
+        final byte[] cert = trustedCa.getCertificate();
+        final byte[] publicKey = trustedCa.getPublicKey();
 
-    private boolean isValidTenantConfig(final JsonObject trustedCa) {
-
-        final String subjectDn = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
-        final String cert = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_CERT, String.class);
-        final String publicKey = getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
-
-        if (Strings.isNullOrEmpty(subjectDn) ||
-                // public key or the encoded certificate must be present
-                Strings.isNullOrEmpty(cert) && Strings.isNullOrEmpty(publicKey)) {
+        // public key or the encoded certificate must be present
+        if (Strings.isNullOrEmpty(cert) && Strings.isNullOrEmpty(publicKey)) {
             return false;
         }
         return true;
+    }
+
+    /**
+     * TODO.
+     * @return TODO.
+     */
+    @JsonIgnore
+    public List<JsonObject> getTrustedCAs() {
+        if (trustedAuthorities == null) {
+            return null;
+        } else {
+            final List<JsonObject> results = new ArrayList<>();
+            trustedAuthorities.forEach(trustedCa -> {
+                results.add(JsonObject.mapFrom(trustedCa));
+            });
+            return results;
+        }
     }
 }
