@@ -12,52 +12,95 @@
  *******************************************************************************/
 package org.eclipse.hono.annotation;
 
-import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
-import static java.lang.annotation.ElementType.FIELD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-
+import java.io.IOException;
 import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 
 import com.fasterxml.jackson.annotation.JacksonAnnotationsInside;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.deser.InstantDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.InstantSerializer;
+import com.fasterxml.jackson.databind.deser.std.FromStringDeserializer;
+import com.fasterxml.jackson.databind.ser.std.StdScalarSerializer;
 
 /**
- * An annotation to indicate that a value should be serialized/de-serialized in the format expected by Hono.
+ * An annotation to indicate that an {@code Instant} valued field should be
+ * de-/serialized from/to a string in <em>ISO-8601 extended offset date-time format</em>.
+ * <p>
+ * During deserialization, the date-time is normalized to UTC. For example,
+ * the string <em>2019-09-15T15:23:10+02:00</em> will be deserialized
+ * into an {@code Instant} which will then be serialized to <em>2019-09-15T13:23:10Z</em>.
  */
-@Retention(RUNTIME)
+@Retention(RetentionPolicy.RUNTIME)
 @JacksonAnnotationsInside
-@JsonInclude(NON_NULL)
-@Target(FIELD)
+@JsonInclude(Include.NON_NULL)
+@Target(ElementType.FIELD)
 @Documented
-@JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss[XXX]", timezone = "UTC")
-@JsonSerialize(using = InstantSerializer.class)
-@JsonDeserialize(using = HonoInstantDeserializer.class)
+@JsonSerialize(using = Serializer.class)
+@JsonDeserialize(using = Deserializer.class)
 public @interface HonoTimestamp {
 }
 
 /**
- * A deserializer for Hono's format of {@link Instant}s.
+ * A Jackson deserializer for strings in ISO 8601 extended offset date-time format.
  */
-class HonoInstantDeserializer extends InstantDeserializer<Instant> {
+class Deserializer extends FromStringDeserializer<Instant> {
 
     private static final long serialVersionUID = 1L;
 
-    HonoInstantDeserializer() {
-        super(Instant.class, DateTimeFormatter.ISO_INSTANT,
-                Instant::from,
-                a -> Instant.ofEpochMilli(a.value),
-                a -> Instant.ofEpochSecond(a.integer, a.fraction),
-                null,
-                true);
+    /**
+     * Creates a new deserializer.
+     */
+    protected Deserializer() {
+        super(Instant.class);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Instant _deserialize(final String value, final DeserializationContext ctxt) throws IOException {
+
+        try {
+            final OffsetDateTime dateTime = DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse(value, OffsetDateTime::from);
+            return dateTime.toInstant();
+        } catch (final DateTimeParseException e) {
+            throw new IOException(e);
+        }
+    }
+}
+
+/**
+ * A Jackson serializer that writes {@code Instant}s to strings in ISO 8601 instant format.
+ */
+class Serializer extends StdScalarSerializer<Instant> {
+
+    private static final long serialVersionUID = 1L;
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssX");
+    /**
+     * Creates a new serializer.
+     */
+    protected Serializer() {
+        super(Instant.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void serialize(final Instant value, final JsonGenerator gen, final SerializerProvider provider) throws IOException {
+        gen.writeString(FORMATTER.format(OffsetDateTime.ofInstant(value, ZoneOffset.UTC)));
+    }
 }
