@@ -13,13 +13,19 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.io.ByteArrayInputStream;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 /**
@@ -34,9 +40,6 @@ public final class TrustedCertificateAuthority {
 
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY)
     private byte[] publicKey;
-
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_CERT)
-    private byte[] certificate;
 
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE)
     @HonoTimestamp
@@ -80,18 +83,36 @@ public final class TrustedCertificateAuthority {
     }
 
     /**
-     * Sets the cert configuration property.
-     *
+     * This method constructs an X509 certificate and uses it to set
+     * the <em>subject-dn</em>, <em>public-key</em>, <em>algorithm</em>,
+     * <em>not-before</em> and <em>not-after</em> properties of this
+     * trusted certificate authority.
+     *<p>
+     * The <em>cert</em> property is not included in the JSON payload sent to the 
+     * tenant service.
+     * 
      * @param certificate The cert property of the trusted root certificate.
      * @return            a reference to this for fluent use.
+     * @throws IllegalArgumentException if an X509 certificate cannot be created
+     *         from the given Base64 encoding.
      */
+    @JsonSetter(RegistryManagementConstants.FIELD_PAYLOAD_CERT)
     public TrustedCertificateAuthority setCertificate(final byte[] certificate) {
-        this.certificate = certificate;
-        return this;
-    }
+        final ByteArrayInputStream is = new ByteArrayInputStream(certificate);
+        try {
+            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            final X509Certificate x509Cert = (X509Certificate) factory.generateCertificate(is);
 
-    public byte[] getCertificate() {
-        return certificate;
+            setSubjectDn(x509Cert.getSubjectDN().getName());
+            setPublicKey(x509Cert.getPublicKey().getEncoded());
+            setKeyAlgorithm(x509Cert.getPublicKey().getAlgorithm());
+            setNotBefore(x509Cert.getNotBefore().toInstant());
+            setNotAfter(x509Cert.getNotAfter().toInstant());
+
+        } catch (final CertificateException e) {
+            throw new IllegalArgumentException("Invalid encoding of an X509 certificate authority");
+        }
+        return this;
     }
 
     /**

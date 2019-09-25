@@ -33,6 +33,7 @@ import java.util.Map;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
+import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
@@ -203,8 +204,7 @@ class TenantTest {
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "abc123".getBytes(StandardCharsets.UTF_8))
                         .put(TenantConstants.FIELD_PAYLOAD_NOT_BEFORE, "2015-06-05T20:00:05Z")
                         .put(TenantConstants.FIELD_PAYLOAD_NOT_AFTER, "2020-06-05T23:00:05Z")
-                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "def456")
-                        .put(TenantConstants.FIELD_PAYLOAD_CERT, "xyz789".getBytes(StandardCharsets.UTF_8)));
+                        .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "def456"));
 
         final var tenant = Json.decodeValue(
                 new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCaJson).toString(),
@@ -222,7 +222,6 @@ class TenantTest {
         assertEquals(notBefore.toInstant(), storedCa.getNotBefore());
         assertEquals(notAfter.toInstant(), storedCa.getNotAfter());
         assertEquals("def456", storedCa.getKeyAlgorithm());
-        assertArrayEquals("xyz789".getBytes(StandardCharsets.UTF_8), storedCa.getCertificate());
     }
 
     /**
@@ -388,4 +387,23 @@ class TenantTest {
 
     }
 
+    /**
+     * Verifies that a trusted certificate authority can be decoded from a trusted-ca
+     * JSON payload in which only the <em>cert</em> property is set.
+     * 
+     * @throws Exception if the test certificate cannot be created.
+     */
+    @Test
+    public void testDecodeTrustedCaWithCertProperty() throws Exception {
+        final SelfSignedCertificate cert = new SelfSignedCertificate("hono.eclipse.org");
+        final JsonObject config = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, cert.cert().getEncoded());
+        final TrustedCertificateAuthority trustedCa = config.mapTo(TrustedCertificateAuthority.class);
+        assertNotNull(trustedCa);
+        assertThat(trustedCa.getSubjectDn(), is(cert.cert().getSubjectDN().getName()));
+        assertThat(trustedCa.getPublicKey(), is(cert.cert().getPublicKey().getEncoded()));
+        assertThat(trustedCa.getKeyAlgorithm(), is(cert.cert().getPublicKey().getAlgorithm()));
+        assertThat(trustedCa.getNotBefore(), is(cert.cert().getNotBefore().toInstant()));
+        assertThat(trustedCa.getNotAfter(), is(cert.cert().getNotAfter().toInstant()));
+    }
 }
