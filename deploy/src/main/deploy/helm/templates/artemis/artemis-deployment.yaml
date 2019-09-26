@@ -1,4 +1,4 @@
-{{- if .Values.amqpMessagingNetworkDeployExample -}}
+{{- if and ( eq .Values.amqpMessagingNetworkExample.enabled true ) ( eq .Values.amqpMessagingNetworkExample.broker.type "artemis" ) }}
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -25,7 +25,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: {{ .Values.artemisImageName | quote }}
+        image: {{ .Values.amqpMessagingNetworkExample.broker.artemis.imageName | quote }}
         ports:
         - name: amqps
           containerPort: 5671

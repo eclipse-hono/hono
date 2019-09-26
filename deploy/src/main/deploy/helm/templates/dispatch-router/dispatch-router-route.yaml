@@ -1,4 +1,4 @@
-{{- if and .Values.amqpMessagingNetworkDeployExample (eq .Values.platform "openshift") }}
+{{- if and .Values.amqpMessagingNetworkExample.enabled (eq .Values.platform "openshift") }}
 apiVersion: v1
 kind: Route
 metadata:

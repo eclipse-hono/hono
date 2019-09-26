@@ -1,4 +1,4 @@
-{{- if .Values.amqpMessagingNetworkDeployExample -}}
+{{- if .Values.amqpMessagingNetworkExample.enabled -}}
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
@@ -17,13 +17,13 @@ spec:
       - command:
         - /sbin/qdrouterd
         - -c
-        - /etc/hono/qdrouterd-with-broker.json
+        - /etc/hono/qdrouterd-with-{{ .Values.amqpMessagingNetworkExample.broker.type }}.json
         env:
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        image: {{ .Values.dispatchRouterImageName | quote }}
+        image: {{ .Values.amqpMessagingNetworkExample.dispatchRouter.imageName | quote }}
         imagePullPolicy: IfNotPresent
         ports:
         - name: amqps

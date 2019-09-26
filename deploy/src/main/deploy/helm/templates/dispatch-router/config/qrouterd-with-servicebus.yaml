@@ -1,4 +1,4 @@
-{{- define "hono.qdrouterd-with-broker.json" -}}
+{{- define "hono.qdrouterd-with-servicebus.json" -}}
 [
   ["router", {
     "id": "Hono.Example.Router",
@@ -11,6 +11,11 @@
     "host": "{{ .Release.Name }}-service-auth",
     "port": 5671,
     "sslProfile": "internal"
+  }],
+
+  ["sslProfile", {
+    "name": "public",
+    "protocols": "TLSv1.2"
   }],
 
   ["sslProfile", {
@@ -64,30 +69,39 @@
   }],
 
   ["connector", {
-    "sslProfile": "external",
-    "name": "broker",
-    "host": "{{ .Release.Name }}-artemis",
+    "sslProfile": "public",
+    "name": "servicebus",
     "port": 5671,
     "role": "route-container",
-    "saslUsername": "artemis",
-    "saslPassword": "artemis",
-    "verifyHostname": false
+    "host": {{ .Values.amqpMessagingNetworkExample.broker.servicebus.host | quote }},
+    "idleTimeoutSeconds": 120,
+    "saslMechanisms": "PLAIN",
+    "saslUsername": {{ .Values.amqpMessagingNetworkExample.broker.servicebus.saslUsername | quote }},
+    "saslPassword": {{ .Values.amqpMessagingNetworkExample.broker.servicebus.saslPassword | quote }},
+    "verifyHostname": true
   }],
 
   ["linkRoute", {
     "prefix": "event/",
     "direction": "in",
-    "connection": "broker"
+    "delExternalPrefix": "event/",
+    "connection": "servicebus"
   }],
 
   ["linkRoute", {
     "prefix": "event/",
     "direction": "out",
-    "connection": "broker"
+    "delExternalPrefix": "event/",
+    "connection": "servicebus"
   }],
 
   ["address", {
     "prefix": "telemetry/",
+    "distribution": "balanced"
+  }],
+
+  ["address", {
+    "prefix": "event/",
     "distribution": "balanced"
   }],
 

@@ -128,7 +128,7 @@ PEM files by appending "-key.pem" and "-cert.pem" respectively.
 {{- define "hono.serviceClientConfig" -}}
 {{- $adapter := default "adapter" .component -}}
 messaging:
-{{- if .dot.Values.amqpMessagingNetworkDeployExample }}
+{{- if .dot.Values.amqpMessagingNetworkExample.enabled }}
   name: Hono {{ $adapter }}
   amqpHostname: hono-internal
   host: {{ .dot.Release.Name }}-dispatch-router
@@ -141,7 +141,7 @@ messaging:
   {{- required ".Values.adapters.amqpMessagingNetworkSpec MUST be set if example AQMP Messaging Network is disabled" .dot.Values.adapters.amqpMessagingNetworkSpec | toYaml | nindent 2 }}
 {{- end }}
 command:
-{{- if .dot.Values.amqpMessagingNetworkDeployExample }}
+{{- if .dot.Values.amqpMessagingNetworkExample.enabled }}
   name: Hono {{ $adapter }}
   amqpHostname: hono-internal
   host: {{ .dot.Release.Name }}-dispatch-router

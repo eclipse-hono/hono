@@ -261,6 +261,114 @@ The newly built images can then be deployed using Helm:
 helm install --dep-up --name hono --namespace hono target/deploy/helm/eclipse-hono/
 ~~~
 
+### Deploying to Azure Kubernetes Service (AKS)
+
+The following chapter describes how to use Azure Kubernetes Service (AKS) as a deployment target that has been set up as described in the [Setting up a Kubernetes Cluster guide](create-kubernetes-cluster).
+
+First we build the docker images and push them into the ACR. Note that if you define a custom image tag you have to provide the helm with the image tags as described in the chapters above.
+
+```bash
+# Resource group where the ACR is deployed.
+acr_resourcegroupname={YOUR_ACR_RG}
+# Name of your ACR.
+acr_registry_name={YOUR_ACR_NAME}
+# Full name of the ACR.
+acr_login_server=$acr_registry_name.azurecr.io
+# Authenticate your docker daemon with the ACR.
+az acr login --name $ACR_NAME
+# Build images.
+cd hono
+mvn install -Pbuild-docker-image -Ddocker.registry=$acr_login_server
+# Push images to ACR.
+./push_hono_images.sh 1.0.0-SNAPSHOT $acr_login_server
+```
+
+Now we can retrieve settings from the deployment for the following steps:
+
+```bash
+# Resource group of the AKS deployment
+resourcegroup_name=hono
+
+aks_cluster_name=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.aksClusterName.value -o tsv`
+http_ip_address=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.httpPublicIPAddress.value -o tsv`
+amqp_ip_address=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.amqpPublicIPAddress.value -o tsv`
+mqtt_ip_address=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.mqttPublicIPAddress.value -o tsv`
+registry_ip_address=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.registryPublicIPAddress.value -o tsv`
+network_ip_address=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.networkPublicIPAddress.value -o tsv`
+```
+
+Note: add the following lines in case you opted for the Azure Service Bus variant:
+
+```bash
+service_bus_namespace=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.serviceBusNamespaceName.value -o tsv`
+service_bus_key_name=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.serviceBusKeyName.value -o tsv`
+service_bus_key=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.serviceBusKey.value -o tsv`
+```
+
+Next we prepare the k8s environment:
+
+```bash
+k8s_namespace=honons
+kubectl create namespace $k8s_namespace
+```
+
+Finally install Eclipse Hono™. Leveraging the _managed-premium-retain_ storage in combination with _deviceRegistry.resetFiles=false_ parameter is optional but ensures that Device registry storage will retain future update deployments.
+
+```bash
+# in Hono working tree directory: hono/deploy
+helm install target/deploy/helm/eclipse-hono/ \
+    --dep-up \
+    --name hono \
+    --namespace $k8s_namespace \
+    --set adapters.mqtt.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
+    --set adapters.http.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
+    --set adapters.amqp.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
+    --set deviceRegistry.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
+    --set dispatchRouter.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
+    --set deviceRegistry.storageClass=managed-premium-retain \
+    --set deviceRegistry.resetFiles=false \
+    --set adapters.mqtt.svc.loadBalancerIP=$mqtt_ip_address \
+    --set adapters.http.svc.loadBalancerIP=$http_ip_address \
+    --set adapters.amqp.svc.loadBalancerIP=$amqp_ip_address \
+    --set deviceRegistry.svc.loadBalancerIP=$registry_ip_address \
+    --set dispatchRouter.svc.loadBalancerIP=$network_ip_address
+```
+
+Note: add the following lines in case you opted for the Azure Service Bus variant:
+
+```bash
+    # Router update required to work together with Azure Service Bus
+    --set amqpMessagingNetworkExample.dispatchRouter.imageName=quay.io/enmasse/qdrouterd-base:1.8.0 \
+    --set amqpMessagingNetworkExample.broker.type=servicebus \
+    --set amqpMessagingNetworkExample.broker.servicebus.saslUsername=$service_bus_key_name \
+    --set amqpMessagingNetworkExample.broker.servicebus.saslPassword=$service_bus_key \
+    --set amqpMessagingNetworkExample.broker.servicebus.host=$service_bus_namespace.servicebus.windows.net \
+```
+
+Have fun with the Eclipse Hono™ on Microsoft Azure!
+
+Next steps:
+
+You can follow the steps as described in the [getting started](https://www.eclipse.org/hono/getting-started/) tutorial with the following differences:
+
+Compared to a plain k8s deployment Azure provides us DNS names with static IPs for the Eclipse Hono™ endpoints. To retrieve them:
+
+```bash
+HTTP_ADAPTER_IP=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.httpPublicIPFQDN.value -o tsv`
+AMQP_ADAPTER_IP=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.amqpPublicIPFQDN.value -o tsv`
+MQTT_ADAPTER_IP=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.mqttPublicIPFQDN.value -o tsv`
+REGISTRY_IP=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.registryPublicIPFQDN.value -o tsv`
+AMQP_NETWORK_IP=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.networkPublicIPFQDN.value -o tsv`
+```
+
+As Azure Service Bus does not support auto creation of queues you have to create a queue per tenant (ID), e.g. after you have created your tenant run:
+
+```bash
+az servicebus queue create --resource-group $resourcegroup_name \
+    --namespace-name $service_bus_namespace \
+    --name $MY_TENANT
+```
+
 ### Using Jaeger Tracing
 
 Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages flowing through the system.
@@ -296,4 +404,3 @@ the Jaeger Agent that is deployed with each of Hono's components.
 # in Hono working tree directory: hono/deploy
 helm install --dep-up --name hono --namespace hono --set jaegerAgentConf.REPORTER_TYPE=tchannel --set jaegerAgentConf.REPORTER_TCHANNEL_HOST_PORT=my-jaeger-collector:14267 target/deploy/helm/eclipse-hono/
 ~~~
-

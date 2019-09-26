@@ -4,6 +4,7 @@ weight = 480
 +++
 
 This guide describes how to set up a Kubernetes cluster which can be used to run Eclipse Hono.
+
 <!--more-->
 
 Hono can be deployed to any Kubernetes cluster running version 1.11 or newer. This includes [OpenShift (Origin)](https://www.okd.io/) which is built on top of Kubernetes.
@@ -11,6 +12,7 @@ Hono can be deployed to any Kubernetes cluster running version 1.11 or newer. Th
 The [Kubernetes web site](https://kubernetes.io/docs/setup/) provides instructions for setting up a (local) cluster on bare metal and/or virtual infrastructure from scratch or for provisioning a managed Kubernetes cluster from one of the popular cloud providers.
 
 <a name="Local Development"></a>
+
 ## Setting up a local Development Environment
 
 The easiest option is to set up a single-node cluster running on a local VM using the [Minikube](https://github.com/kubernetes/minikube) project.
@@ -19,10 +21,11 @@ Please refer to Kubernetes' [Minikube setup guide](https://kubernetes.io/docs/se
 
 The recommended settings for a Minikube VM used for running Hono's example setup are as follows:
 
-* **cpus**: 2
-* **memory**: 8192 (MB)
+- **cpus**: 2
+- **memory**: 8192 (MB)
 
 The command to start the VM will look something like this:
+
 ```sh
 minikube start --cpus 2 --memory 8192
 ```
@@ -38,195 +41,95 @@ raising an issue. You can use Minikube's `--kubernetes-version` command line swi
 
 Setting up a multi-node Kubernetes cluster is a more advanced topic. Please follow the corresponding links provided in the [Kubernetes documentation](https://kubernetes.io/docs/setup/#production-environment).
 
-## Setting up a Cluster using Azure Kubernetes Service
+## Setting up an Environment on Microsoft Azure
 
-The following sections provide step-by-step instructions for setting up a Kubernetes cluster on Microsoft Azure that can be used to run Hono.
+This chapter describes how Eclipse Hono™ can be deployed on Microsoft Azure. It includes:
 
-### Prepare Environment
+- [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview) templates for an automated infrastructure deployment.
+- Eclipse Hono™ deployment into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
+- Push Eclipse Hono™ docker images to an [Azure Container Registry (ACR)](https://azure.microsoft.com/en-us/services/container-registry/).
+- Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as broker for the [Eclipse Hono™ AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of a self hosted ActiveMQ Artemis.
+- [Virtual Network (VNet) service endpoints](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview) ensure protected communication between AKS and Azure Service Bus.
 
-At this step we expect you have clean Ubuntu VM or PC (tested on Ubuntu 18.04.2 LTS (GNU/Linux 4.18.0-1013-azure x86_64))
+<!--more-->
 
-#### Install azure cli
+{{% warning title="Use for demos only" %}}
+This deployment model is not meant for productive use but rather for evaluation as well as demonstration purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Eclipse Hono™.
+{{% /warning %}}
 
-```sh
-sudo apt-get update
-sudo apt-get install curl apt-transport-https lsb-release gpg
+### Prerequisites
 
-curl -sL https://packages.microsoft.com/keys/microsoft.asc | \
-    gpg --dearmor | \
-    sudo tee /etc/apt/trusted.gpg.d/microsoft.asc.gpg > /dev/null
+- An [Azure subscription](https://azure.microsoft.com/en-us/get-started/).
+- [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed to setup the infrastructure.
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm](https://helm.sh/docs/using_helm/#installing-helm) installed to deploy Eclipse Hono™ into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
 
-AZ_REPO=$(lsb_release -cs)
-echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
-    sudo tee /etc/apt/sources.list.d/azure-cli.list
+### Setup
 
-sudo apt-get update
-sudo apt-get install azure-cli
+As described [here](https://docs.microsoft.com/en-gb/azure/aks/kubernetes-service-principal) we will create an explicit service principal. Later we add roles to this principal to access the [Azure Container Registry (ACR)](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-intro).
+
+```bash
+# Resource group where the ACR is deployed.
+acr_resourcegroupname={YOUR_ACR_RG}
+# Name of your ACR.
+acr_registry_name={YOUR_ACR_NAME}
+# Full name of the ACR.
+acr_login_server=$acr_registry_name.azurecr.io
+
+# Create service principal
+service_principal=`az ad sp create-for-rbac --name http://honoServicePrincipal --skip-assignment --output tsv`
+app_id_principal=`echo $service_principal|cut -f1 -d ' '`
+password_principal=`echo $service_principal|cut -f4 -d ' '`
+object_id_principal=`az ad sp show --id $app_id_principal --query objectId --output tsv`
+acr_id_access_registry=`az acr show --resource-group $acr_resourcegroupname --name $acr_registry_name --query "id" --output tsv`
 ```
 
-#### Install Kubectl
+Note: it might take a few seconds until the principal is available for the next steps.
 
-The kubectl tool is used to manage a Kubernetes cluster from the command line.
-Follow the [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/) in order to set up `kubectl` on your local machine.
+```bash
+az role assignment create --assignee $app_id_principal --scope $acr_id_access_registry --role Reader
 
-#### Log in to Azure
-
-Type
-
-```sh
-az login
-```
-and follow instructions on screen.
-
-A result of successful log in will be a JSON output with subscription details. Run the following command, using the subscription *id* from the JSON structure:
-
-```sh
-az account set -s "{YOUR SUBSCRIPTION ID}"
+resourcegroup_name=hono
+az group create --name $resourcegroup_name --location "westeurope"
 ```
 
-Before we continue, let's setup some variables, that will be used to create resources on Azure:
+With the next command we will use the provided [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview) templates to setup the AKS cluster. This might take a while.
 
-```sh
-# Name of your Resource Group, where all services will be deployed
-AKS_RESOURCE_GROUP={YOUR-RG-NAME}
-# Name of your AKS cluster
-AKS_CLUSTER_NAME={YOUR-AKS-NAME}
-# Name of your private container registry (should match ^[a-zA-Z0-9]*$)
-ACR_NAME={YOUR-ACR-NAME}
+```bash
+unique_solution_prefix=myprefix
+cd deploy/src/main/deploy/azure/
+az group deployment create --name HonoBasicInfrastructure --resource-group $resourcegroup_name --template-file arm/honoInfrastructureDeployment.json --parameters uniqueSolutionPrefix=$unique_solution_prefix servicePrincipalObjectId=$object_id_principal servicePrincipalClientId=$app_id_principal servicePrincipalClientSecret=$password_principal
 ```
 
-#### Create Resource Group for Hono Deployment
+Note: add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Eclipse Hono™ AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
 
-```sh
-az group create --name $AKS_RESOURCE_GROUP --location westeurope
+After the deployment is complete you can set your cluster in _kubectl_.
+
+```bash
+az aks get-credentials --resource-group $resourcegroup_name --name $aks_cluster_name
 ```
 
-#### Create private Container Registry on Azure
+Next deploy helm on to the AKS cluster as well create retain storage for the device registry. It will take a moment until tiller is booted up.
 
-```sh
-az acr create --resource-group $AKS_RESOURCE_GROUP --name $ACR_NAME  --sku Basic
-```
-
-The full name of the private container registry will be `$ACR_NAME.azurecr.io`. This name needs to be used with the `docker push` command when pushing container images to the registry.
-
-#### Log in to Container Registry
-
-```sh
-sudo az acr login --name $ACR_NAME
-```
-
-### Create Azure Kubernetes Service Cluster
-
-Now it's time to create the AKS cluster.
-
-#### Create Service Principal
-
-```sh
-az ad sp create-for-rbac --skip-assignment
-```
-
-If successful, *appId* and *password* will be displayed.
-
-#### Create Cluster
-
-```sh
-# It is recommended to use kubernetes 1.12.5 or higher
-# To list available versions run:
-# az aks get-versions --location westeurope --output table
-
-az aks create --name $AKS_CLUSTER_NAME --resource-group $AKS_RESOURCE_GROUP --node-count 3 --generate-ssh-keys --service-principal "{appId}" --client-secret "{password}" --enable-addons monitoring --kubernetes-version 1.13.5
-```
-
-#### Set Cluster as current Context for kubectl
-
-```sh
-az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_CLUSTER_NAME
-```
-
-#### Create ClusterRoleBinding for Kubernetes dashboard
-
-```sh
-# By default, AKS is deployed with RBAC enabled. Refer to this doc: https://docs.microsoft.com/en-us/azure/aks/kubernetes-dashboard
-
-kubectl create clusterrolebinding kubernetes-dashboard --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard
-```
-
-#### Deploy Helm's Tiller Service
-
-```sh
-kubectl create serviceaccount --namespace kube-system tiller
-kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
-
+```bash
+kubectl apply -f helm-rbac.yaml
 helm init --service-account tiller
-```
-
-#### Grant AKS Cluster access to Container Registry
-
-```sh
-# Get the id of the service principal configured for AKS
-CLIENT_ID=$(az aks show --resource-group $AKS_RESOURCE_GROUP --name $AKS_CLUSTER_NAME --query "servicePrincipalProfile.clientId" --output tsv)
-
-# Get the ACR registry resource id
-ACR_ID=$(az acr show --name $ACR_NAME --resource-group $AKS_RESOURCE_GROUP --query "id" --output tsv)
-
-# Create role assignment
-az role assignment create --assignee $CLIENT_ID --role acrpull --scope $ACR_ID
-```
-
-#### (Optional) Create retain StorageClass for the Device Registry
-
-With the [reclaim policy retain](https://docs.microsoft.com/en-us/azure/aks/concepts-storage) AKS ensures that your storage persists even through Hono redeployments.
-
-Create a file `managed-premium-retain.yaml` with the following content.
-
-```yaml
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: managed-premium-retain
-provisioner: kubernetes.io/azure-disk
-reclaimPolicy: Retain
-parameters:
-  storageaccounttype: Premium_LRS
-  kind: Managed
-```
-
-Now apply to your AKS cluster:
-
-```shell
 kubectl apply -f managed-premium-retain.yaml
 ```
 
-Note: in your helm deployment later you have to set the value `deviceRegistry.storageClass=managed-premium-retain`.
+Now wait until the Azure deployment is complete and then continue with the [Helm deployment](helm-based-deployment/) of Eclipse Hono™  itself.
 
 ### Monitoring
 
-You can monitor your cluster using Azure Monitor Insights.
+You can monitor your cluster using [Azure Monitor for containers](https://docs.microsoft.com/en-us/azure/azure-monitor/insights/container-insights-overview).
 
 Navigate to [https://portal.azure.com](https://portal.azure.com) -> your resource group -> your kubernetes cluster
 
 On an overview tab you fill find an information about your cluster (status, location, version, etc.). Also, here you will find a "Monitor Containers" link. Navigate to "Monitor Containers" and explore metrics and statuses of your Cluster, Nodes, Controllers and Containers.
 
-Another option is to use the kubernetes dashboard. To do this, run:
-
-```sh
-az aks browse --resource-group $AKS_RESOURCE_GROUP --name $AKS_CLUSTER_NAME
-```
-
-This will create a port forward for Kubernetes' dashboard on your local port 8001.
-Open [http://127.0.0.1:8001](http://127.0.0.1:8001) in your browser and select *Namespace* `hono`, check status of your services, pods, etc.
-
 ### Cleaning up
 
-Use the following command to delete all created resources (incl. the Kubernetes cluster and the private container registry)
-once they are no longer needed:
+Use the following command to delete all created resources once they are no longer needed:
 
 ```sh
-az group delete --name $AKS_RESOURCE_GROUP --yes --no-wait
+az group delete --name $resourcegroup_name --yes --no-wait
 ```
-
-### Links
-
-- [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/?view=azure-cli-latest)
-- [Azure Kubernetes Service](https://docs.microsoft.com/en-us/azure/aks/)
-- [Azure Container Registry](https://docs.microsoft.com/en-us/azure/container-registry/)

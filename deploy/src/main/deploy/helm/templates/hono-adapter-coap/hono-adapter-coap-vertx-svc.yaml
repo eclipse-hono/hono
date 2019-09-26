@@ -4,6 +4,11 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "adapter-coap-vertx" "name" "adapter-coap-vertx" }}
   {{- include "hono.metadata" $args | nindent 2 }}
+  {{- with .Values.adapters.coap.svc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
 spec:
   ports:
   - name: coap
@@ -22,5 +27,8 @@ spec:
   type: LoadBalancer
 {{ else }}
   type: NodePort
+{{- end }}
+{{ if .Values.adapters.coap.svc.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.adapters.coap.svc.loadBalancerIP }}
 {{- end }}
 {{ end }}

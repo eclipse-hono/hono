@@ -2,17 +2,31 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# amqpMessagingNetworkDeployExample indicates whether the example AMQP Messaging Network
-# consisting of a single Dispatch Router and Artemis broker should be
-# deployed and used.
-amqpMessagingNetworkDeployExample: true
-# dispatchRouterImageName contains the name (including tag)
-# of the container image to use for the example AQMP Messaging Network
-dispatchRouterImageName: ${dispatch-router.image.name}
-# artemisImageName contains the name (including tag) of the container
-# image to use for the example AMQP Messaging network
-artemisImageName: ${artemis.image.name}
-
+# amqpMessagingNetworkExample indicates whether the example AMQP Messaging Network
+# consisting of a single Dispatch Router and Broker should be
+# deployed and used. By default an internal Broker is deployed.
+# As alternative an external Broker can be configured as well.
+amqpMessagingNetworkExample:
+  enabled: true
+  # dispatchRouter.imageName contains the name (including tag)
+  # of the container image to use for the example AQMP Messaging Network Router.
+  dispatchRouter:
+    imageName: ${dispatch-router.image.name}
+    svc:
+      annotations: {}
+      loadBalancerIP:
+  # AMQP Messaging Network Broker configuration.
+  broker:
+    type: artemis
+    artemis:
+    # imageName contains the name (including tag) of the container
+    # image to use for the example AMQP Messaging Network Broker
+      imageName: ${artemis.image.name}
+   # Azure Service Bus as alternative to self-hosted Artemis ActiveMQ for event persistence
+    servicebus:
+      saslUsername:
+      saslPassword:
+      host:
 
 # deviceRegistryDeployExample indicates whether the example Device Registry
 # should be deployed and used.
@@ -23,6 +37,9 @@ deviceRegistry:
   # Set to false to not override registry files with example content
   resetFiles: true
   imageName: ${docker.repository}/hono-service-device-registry:${project.version}
+  svc:
+    annotations: {}
+    loadBalancerIP:
 
 
 # dataGridDeployExample indicates whether the example data grid
@@ -103,13 +120,15 @@ adapters:
   amqp:
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-amqp-vertx:${project.version}
+    svc:
+      annotations: {}
+      loadBalancerIP:
   #amqpMessagingNetworkSpec:
   #commandAndControlSpec:
   #credentialsSpec:
   #deviceConnectionSpec:
   #deviceRegistrationSpec:
   #tenantSpec:
-
   coap:
     # enabled indicates if Hono's (experimental) CoAP adapter should be deployed.
     # Note that this requires building the corresponding container image manually because
@@ -117,26 +136,43 @@ adapters:
     enabled: false
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-coap-vertx:${project.version}
+    svc:
+      annotations: {}
+      loadBalancerIP:
   http:
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-http-vertx:${project.version}
+    svc:
+      annotations: {}
+      loadBalancerIP:
   lora:
     # enabled indicates if Hono's Lora adapter should be deployed.
     enabled: false
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-lora-vertx:${project.version}
+    svc:
+      annotations: {}
+      loadBalancerIP:
   mqtt:
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-mqtt-vertx:${project.version}
+    svc:
+      annotations: {}
+      loadBalancerIP:
   kura:
     # enabled indicates if Hono's (deprecated) Kura adapter should be deployed.
     enabled: false
     # Docker image repository
     imageName: ${docker.repository}/hono-adapter-kura:${project.version}
+    svc:
+      annotations: {}
+      loadBalancerIP:
 
 deviceConnectionService:
   # Docker image repository
   imageName: ${docker.repository}/hono-service-device-connection:${project.version}
+  svc:
+    annotations: {}
 
   # enabled indicates if the data grid based Device Connection service implementation
   # should be deployed and used. If set to false (the default), the example implementation

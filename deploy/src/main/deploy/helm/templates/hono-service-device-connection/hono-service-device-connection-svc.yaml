@@ -4,6 +4,10 @@ kind: Service
 metadata:
   {{- $args := dict "dot" . "component" "service-device-connection" "name" "service-device-connection" }}
   {{- include "hono.metadata" $args | nindent 2 }}
+  {{- with .Values.deviceConnectionService.svc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   ports:
   - name: amqps
@@ -16,5 +20,8 @@ spec:
   type: LoadBalancer
 {{- else }}
   type: NodePort
+{{- end }}
+{{ if .Values.deviceConnectionService.svc.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.deviceConnectionService.svc.loadBalancerIP }}
 {{- end }}
 {{- end }}

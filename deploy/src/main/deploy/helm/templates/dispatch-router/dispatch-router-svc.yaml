@@ -1,4 +1,4 @@
-{{- if .Values.amqpMessagingNetworkDeployExample -}}
+{{- if .Values.amqpMessagingNetworkExample.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
