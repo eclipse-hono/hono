@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.cli.app;
 
+import java.net.HttpURLConnection;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
@@ -92,7 +93,7 @@ public class Commander extends AbstractApplicationClient {
                 })
                 .map(this::closeCommandClient)
                 .otherwise(error -> {
-                    if (ServerErrorException.extractStatusCode(error) == 503) {
+                    if (ServerErrorException.extractStatusCode(error) == HttpURLConnection.HTTP_UNAVAILABLE) {
                         LOG.error(
                                 "Error sending command (error code 503). Is the device really waiting for a command? (device [{}] in tenant [{}])",
                                 deviceId, tenantId);
