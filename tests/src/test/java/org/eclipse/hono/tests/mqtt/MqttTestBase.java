@@ -19,12 +19,11 @@ import java.util.function.Supplier;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,8 +32,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttClient;
 import io.vertx.mqtt.MqttClientOptions;
 import io.vertx.mqtt.MqttConnectionException;
@@ -57,12 +55,6 @@ public abstract class MqttTestBase {
     protected static IntegrationTestSupport helper;
 
     /**
-     * Provide test name to unit tests.
-     */
-    @Rule
-    public final TestName testName = new TestName();
-
-    /**
      * A logger to be used by subclasses.
      */
     protected final Logger LOGGER = LoggerFactory.getLogger(getClass());
@@ -81,20 +73,21 @@ public abstract class MqttTestBase {
      * 
      * @param ctx The vert.x test context.
      */
-    @BeforeClass
-    public static void init(final TestContext ctx) {
+    @BeforeAll
+    public static void init(final VertxTestContext ctx) {
 
         helper = new IntegrationTestSupport(VERTX);
-        helper.init(ctx);
-
+        helper.init().setHandler(ctx.completing());
     }
 
     /**
      * Sets up the fixture.
+     * 
+     * @param testInfo The JUnit test info.
      */
-    @Before
-    public void setUp() {
-        LOGGER.info("running {}", testName.getMethodName());
+    @BeforeEach
+    public void setUp(final TestInfo testInfo) {
+        LOGGER.info("running {}", testInfo.getDisplayName());
     }
 
     /**
@@ -103,10 +96,9 @@ public abstract class MqttTestBase {
      * 
      * @param ctx The vert.x context.
      */
-    @After
-    public void postTest(final TestContext ctx) {
+    @AfterEach
+    public void postTest(final VertxTestContext ctx) {
 
-        final Async clientDisconnect = ctx.async();
         final Future<Void> disconnectHandler = Future.future();
         if (context == null) {
             disconnectHandler.complete();
@@ -115,13 +107,12 @@ public abstract class MqttTestBase {
                 mqttClient.disconnect(disconnectHandler);
             });
         }
-        disconnectHandler.setHandler(tidyUp -> {
+        helper.deleteObjects(ctx);
+        disconnectHandler.setHandler(closeAttempt -> {
             LOGGER.info("connection to MQTT adapter closed");
             context = null;
-            clientDisconnect.complete();
+            ctx.completeNow();
         });
-        clientDisconnect.await(2000);
-        helper.deleteObjects(ctx);
     }
 
     /**
@@ -129,10 +120,10 @@ public abstract class MqttTestBase {
      * 
      * @param ctx The vert.x test context.
      */
-    @AfterClass
-    public static void disconnect(final TestContext ctx) {
+    @AfterAll
+    public static void disconnect(final VertxTestContext ctx) {
 
-        helper.disconnect(ctx);
+        helper.disconnect().setHandler(ctx.completing());
     }
 
     /**

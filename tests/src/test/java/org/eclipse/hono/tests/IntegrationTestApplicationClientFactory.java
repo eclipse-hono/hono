@@ -45,4 +45,13 @@ public interface IntegrationTestApplicationClientFactory extends ApplicationClie
      */
     Future<MessageSender> createGenericMessageSender(String targetAddress);
 
+    /**
+     * Creates a new client for sending commands via Hono's northbound
+     * Command &amp; Control API using the legacy <em>control</em> endpoint.
+     * 
+     * @param tenantId The tenant that the client should be scoped to.
+     * @param deviceId The device that the client should be scoped to.
+     * @return The client.
+     */
+    Future<LegacyCommandClient> createLegacyCommandClient(String tenantId, String deviceId);
 }

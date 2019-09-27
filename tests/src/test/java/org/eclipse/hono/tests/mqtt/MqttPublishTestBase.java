@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,15 +33,14 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.MessageHelper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 
 /**
@@ -115,10 +116,13 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @param sent The number of messages that have been sent.
      * @param ctx The test context that will be failed if the ratio is not acceptable.
      */
-    protected void assertMessageReceivedRatio(final long received, final long sent, final TestContext ctx) {
+    protected void assertMessageReceivedRatio(final long received, final long sent, final VertxTestContext ctx) {
         if (received < sent) {
-            ctx.fail(String.format("did not receive expected number of messages [expected: %d, received: %d]",
-                    sent, received));
+            final String msg = String.format("did not receive expected number of messages [expected: %d, received: %d]",
+                    sent, received);
+            ctx.failNow(new IllegalStateException(msg));
+        } else {
+            ctx.completeNow();
         }
     }
 
@@ -149,16 +153,21 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessages(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessages(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final Tenant tenant = new Tenant();
-        final Async setup = ctx.async();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+        }
+
         doTestUploadMessages(
                 ctx,
                 tenantId,
@@ -175,16 +184,20 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesUsingShortTopicNames(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesUsingShortTopicNames(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final Tenant tenant = new Tenant();
-        final Async setup = ctx.async();
+        final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+        }
+
         doTestUploadMessages(
                 ctx,
                 tenantId,
@@ -201,19 +214,24 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesUsingClientCertificate(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesUsingClientCertificate(final VertxTestContext ctx) throws InterruptedException {
 
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
-        final Async setup = ctx.async();
+        final VertxTestContext setup = new VertxTestContext();
 
         helper.getCertificate(deviceCert.certificatePath())
-                .compose(cert -> {
-                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                    return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-                }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        .compose(cert -> {
+            final var tenant = Tenants.createTenantForTrustAnchor(cert);
+            return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+        }).setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+        }
+
         doTestUploadMessages(
                 ctx,
                 tenantId,
@@ -223,7 +241,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     }
 
     private void doTestUploadMessages(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final String tenantId,
             final String deviceId,
             final Future<MqttConnAckMessage> connection,
@@ -234,7 +252,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final AtomicInteger messageCount = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong(0);
 
-        final Async setup = ctx.async();
+        final VertxTestContext setup = new VertxTestContext();
         connection.compose(ok -> createConsumer(tenantId, msg -> {
             LOGGER.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
@@ -244,14 +262,18 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             if (received.getCount() % 50 == 0) {
                 LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
             }
-        })).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        })).setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+        }
 
         customizeConnectedClient();
 
         final long start = System.currentTimeMillis();
         while (messageCount.get() < MESSAGES_TO_SEND) {
-            final Async messageSent = ctx.async();
+            final CountDownLatch messageSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
                 send(tenantId, deviceId, msg, useShortTopicName).setHandler(sendAttempt -> {
@@ -261,7 +283,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     if (messageCount.get() % 50 == 0) {
                         LOGGER.info("messages sent: " + messageCount.get());
                     }
-                    messageSent.complete();
+                    messageSent.countDown();
                 });
             });
 
@@ -291,11 +313,13 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         });
     }
 
-    private void assertMessageProperties(final TestContext ctx, final Message msg) {
-        ctx.assertNotNull(MessageHelper.getDeviceId(msg));
-        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
-        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
-        ctx.assertNull(MessageHelper.getRegistrationAssertion(msg));
+    private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
+        ctx.verify(() -> {
+            assertThat(MessageHelper.getDeviceId(msg)).isNotNull();
+            assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
+            assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
+            assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
+        });
     }
 
     /**
@@ -307,7 +331,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @param ctx The test context.
      * @param msg The message to perform checks on.
      */
-    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
         // empty
     }
 

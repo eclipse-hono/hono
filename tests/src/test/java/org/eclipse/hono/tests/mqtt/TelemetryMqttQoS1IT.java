@@ -18,12 +18,12 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
 
 
 /**
@@ -31,7 +31,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * using QoS 1.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";

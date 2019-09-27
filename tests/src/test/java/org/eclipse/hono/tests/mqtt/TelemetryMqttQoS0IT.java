@@ -18,20 +18,20 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Integration tests for uploading telemetry data to the MQTT adapter
  * using QoS 0.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
@@ -73,7 +73,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
     }
 
     @Override
-    protected void assertMessageReceivedRatio(final long received, final long sent, final TestContext ctx) {
+    protected void assertMessageReceivedRatio(final long received, final long sent, final VertxTestContext ctx) {
 
         final int expectedPercentage;
         if (isTestEnvironment()) {
@@ -86,8 +86,11 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
         final int expected = Math.round(sent * expectedPercentage / 100);
         if (received < expected) {
             // fail if less than 90% of sent messages have been received
-            ctx.fail(String.format("did not receive expected number of messages [expected: %d, received: %d]",
-                    expected, received));
+            final String msg = String.format("did not receive expected number of messages [expected: %d, received: %d]",
+                    expected, received);
+            ctx.failNow(new IllegalStateException(msg));
+        } else {
+            ctx.completeNow();
         }
     }
 
