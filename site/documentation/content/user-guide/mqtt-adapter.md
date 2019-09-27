@@ -127,6 +127,12 @@ This requires that
 
 The protocol adapter checks the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) before accepting any event messages. If the message limit is exceeded or the incoming event message cannot be processed, the connection to the client is closed.
 
+The devices can optionally indicate a *time-to-live* duration for event messages by setting the *hono-ttl* property explicitly in the `property-bag`. The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `/?` character, followed by pairs of URL encoded property names and values that are separated by `&`. The following example shows a property bag that contains two properties *seqNo* and *importance*:
+
+    /topic/name/?seqNo=10034&importance=high
+
+The MQTT adapter currently does not use any properties except *hono-ttl*.
+
 ## Publish an Event (authenticated Device)
 
 * Topic: `event` or `e`
@@ -141,6 +147,10 @@ This is the preferred way for devices to publish events. It is available only if
 Upload a JSON string for device `4711`:
 
     mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event -q 1 -m '{"alarm": 1}'
+
+Upload a JSON string for device `4711` with `time-to-live` as 10 seconds:
+
+    mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event/?hono-ttl=10 -q 1 -m '{"alarm": 1}'
 
 ## Publish an Event (unauthenticated Device)
 
@@ -157,6 +167,10 @@ This topic can be used by devices that have not authenticated to the protocol ad
 Publish some JSON data for device `4711`:
 
     mosquitto_pub -t event/DEFAULT_TENANT/4711 -q 1 -m '{"alarm": 1}'
+
+Publish some JSON data for device `4711` with `time-to-live` as 15 seconds:
+
+    mosquitto_pub -t event/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
 
 ## Publish an Event (authenticated Gateway)
 
@@ -204,12 +218,6 @@ The following variables are used:
 * `${command}` : is an arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
 * `${req-id}` (only for *Request/Response* commands) : denotes the unique identifier of the command execution request and is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
 * `${status}` : is the HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* header.
-
-The `property-bag` is an optional collection of properties intended for the receiver of the message. A property bag is only allowed at the very end of a topic. It always starts with a `?` character, followed by pairs of URL encoded property names and values that are separated by `&`. The following example shows a property bag that contains two properties *seqNo* and *importance*:
-
-    /topic/name/?seqNo=10034&importance="high"
-
-The MQTT adapter currently does not require nor use any properties.
 
 ### Receiving Commands (authenticated Device)
 
@@ -344,8 +352,9 @@ Events published by devices will usually be persisted by the AMQP Messaging Netw
 In most cases the AMQP Messaging Network can be configured with a maximum *time-to-live* to apply to the events so that the events will be removed
 from the persistent store if no consumer has attached to receive the event before the message expires.
 
-In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the protocol adapter supports setting a
-downstream event message's *ttl* property based on the default *ttl* and *max-ttl* values configured for a tenant/device as described in the [Tenant API]
+In order to support environments where the AMQP Messaging Network cannot be configured accordingly, the MQTT protocol adapter supports setting a
+downstream event message's *ttl* property based on the *hono-ttl* property set as *property-bag* at the end of the event topic.
+Also the default *ttl* and *max-ttl* values can be configured for a tenant/device as described in the [Tenant API]
 ({{< relref "/api/tenant#resource-limits-configuration-format" >}}).
 
 

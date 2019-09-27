@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -39,6 +40,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     private String contentType;
     private Sample timer;
     private MetricsTags.EndpointType endpoint;
+    private PropertyBag propertyBag;
 
     private MqttContext() {
     }
@@ -83,7 +85,11 @@ public final class MqttContext extends MapBasedExecutionContext {
         result.authenticatedDevice = authenticatedDevice;
         if (publishedMessage.topicName() != null) {
             try {
-                result.topic = ResourceIdentifier.fromString(publishedMessage.topicName());
+                Optional.ofNullable(PropertyBag.fromTopic(publishedMessage.topicName()))
+                        .ifPresentOrElse(propertyBag -> {
+                            result.topic = ResourceIdentifier.fromString(propertyBag.topicWithoutPropertyBag());
+                            result.propertyBag = propertyBag;
+                        }, () -> result.topic = ResourceIdentifier.fromString(publishedMessage.topicName()));
                 result.endpoint = MetricsTags.EndpointType.fromString(result.topic.getEndpoint());
             } catch (final IllegalArgumentException e) {
                 // malformed topic
@@ -180,6 +186,17 @@ public final class MqttContext extends MapBasedExecutionContext {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Gets the property bag object from the <em>property-bag</em>
+     * set in the message's topic.
+     * 
+     * @return The property bag object or {@code null} if
+     *         there is no property bag set in the topic.
+     */
+    public PropertyBag propertyBag(){
+        return this.propertyBag;
     }
 
     /**

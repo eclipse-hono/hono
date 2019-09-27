@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -1130,7 +1131,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     payload,
                     tenantObject,
                     tokenTracker.result(),
-                    null);
+                    null,
+                    EndpointType.EVENT.equals(endpoint) ? getTimeToLive(ctx.propertyBag()) : null);
 
             addRetainAnnotation(ctx, downstreamMessage, currentSpan);
             customizeDownstreamMessage(downstreamMessage, ctx);
@@ -1405,6 +1407,30 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 commandContext.release(1);
             }
         });
+    }
+
+    /**
+     * Gets the <em>time-to-live</em> duration from the given property bag object.
+     *
+     * @param propertyBag The property bag object.
+     * @return The <em>time-to-live</em> duration or {@code null} if
+     * <ul>
+     *     <li>the given property bag object is {@code null.}</li>
+     *     <li>no property with id {@link org.eclipse.hono.util.Constants#HEADER_TIME_TO_LIVE} exists.</li>
+     *     <li>the contained value cannot be parsed as a Long.</li>
+     *     <li>the contained value is negative.</li>
+     * </ul>
+     */
+    protected final Duration getTimeToLive(final PropertyBag propertyBag) {
+        try {
+            return Optional.ofNullable(propertyBag)
+                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
+                    .map(Long::parseLong)
+                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
+                    .orElse(null);
+        } catch (final NumberFormatException e) {
+            return null;
+        }
     }
 
     private void afterCommandPublished(
