@@ -448,15 +448,15 @@ helm install target/deploy/helm/eclipse-hono/ \
     --set adapters.mqtt.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
     --set adapters.http.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
     --set adapters.amqp.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
-    --set deviceRegistry.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
-    --set dispatchRouter.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
-    --set deviceRegistry.storageClass=managed-premium-retain \
-    --set deviceRegistry.resetFiles=false \
+    --set deviceRegistryExample.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
+    --set amqpMessagingNetworkExample.dispatchRouter.svc.annotations."service\.beta\.kubernetes\.io/azure-load-balancer-resource-group"=$resourcegroup_name \
+    --set deviceRegistryExample.storageClass=managed-premium-retain \
+    --set deviceRegistryExample.resetFiles=false \
     --set adapters.mqtt.svc.loadBalancerIP=$mqtt_ip_address \
     --set adapters.http.svc.loadBalancerIP=$http_ip_address \
     --set adapters.amqp.svc.loadBalancerIP=$amqp_ip_address \
-    --set deviceRegistry.svc.loadBalancerIP=$registry_ip_address \
-    --set dispatchRouter.svc.loadBalancerIP=$network_ip_address
+    --set deviceRegistryExample.svc.loadBalancerIP=$registry_ip_address \
+    --set amqpMessagingNetworkExample.dispatchRouter.svc.loadBalancerIP=$network_ip_address
 ```
 
 Note: add the following lines in case you opted for the Azure Service Bus variant:
