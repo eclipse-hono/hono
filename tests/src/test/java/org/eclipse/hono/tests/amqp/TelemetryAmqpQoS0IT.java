@@ -16,16 +16,16 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.proton.ProtonQoS;
 
 /**
  * A Telemetry based integration test for the AMQP adapter.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class TelemetryAmqpQoS0IT extends AmqpUploadTestBase {
 
     private static final String TELEMETRY_ENDPOINT = "telemetry";

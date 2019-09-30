@@ -13,9 +13,12 @@
 
 package org.eclipse.hono.tests.amqp;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.sasl.SaslException;
 
@@ -24,43 +27,40 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Integration tests for checking connection to the AMQP adapter.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
 public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
     /**
-     * Time out all tests after 5 seconds.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(5);
-
-    /**
      * Logs the currently executing test method name.
+     * 
+     * @param testInfo Meta info about the test being run.
      */
-    @Before
-    public void setup() {
+    @BeforeEach
+    public void setup(final TestInfo testInfo) {
 
-        log.info("running {}", testName.getMethodName());
+        log.info("running {}", testInfo.getDisplayName());
     }
 
     /**
      * Closes the connection to the adapter.
      */
-    @After
+    @AfterEach
     public void disconnnect() {
         if (connection != null) {
             connection.closeHandler(null);
@@ -75,7 +75,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testConnectSucceedsForRegisteredDevice(final TestContext ctx) {
+    public void testConnectSucceedsForRegisteredDevice(final VertxTestContext ctx) {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
@@ -84,7 +84,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-        .setHandler(ctx.asyncAssertSuccess());
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -94,7 +94,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testConnectFailsForNonExistingDevice(final TestContext ctx) {
+    public void testConnectFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         // GIVEN an existing tenant
         final String tenantId = helper.getRandomTenantId();
@@ -105,9 +105,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok ->
             // WHEN an unknown device tries to connect
             connectToAdapter(IntegrationTestSupport.getUsername("non-existing", tenantId), "secret"))
-        .setHandler(ctx.asyncAssertFailure(t -> {
+        .setHandler(ctx.failing(t -> {
             // THEN the connection is refused
-            ctx.assertTrue(t instanceof SaslException);
+            ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+            ctx.completeNow();
         }));
     }
 
@@ -118,7 +119,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testConnectFailsForWrongCredentials(final TestContext ctx) {
+    public void testConnectFailsForWrongCredentials(final VertxTestContext ctx) {
 
         // GIVEN a registered device
         final String tenantId = helper.getRandomTenantId();
@@ -130,9 +131,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN the device tries to connect using a wrong password
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "wrong password"))
-        .setHandler(ctx.asyncAssertFailure(t -> {
+        .setHandler(ctx.failing(t -> {
             // THEN the connection is refused
-            ctx.assertTrue(t instanceof SaslException);
+            ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+            ctx.completeNow();
         }));
     }
 
@@ -143,7 +145,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testConnectFailsForDisabledAdapter(final TestContext ctx) {
+    public void testConnectFailsForDisabledAdapter(final VertxTestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -156,9 +158,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN a device that belongs to the tenant tries to connect to the adapter
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-        .setHandler(ctx.asyncAssertFailure(t -> {
-                // THEN the connection is refused
-            ctx.assertTrue(t instanceof SaslException);
+        .setHandler(ctx.failing(t -> {
+            // THEN the connection is refused
+            ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+            ctx.completeNow();
          }));
     }
 
@@ -169,7 +172,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testConnectFailsForDeletedDevices(final TestContext ctx) {
+    public void testConnectFailsForDeletedDevices(final VertxTestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -180,8 +183,9 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
             .compose(device -> helper.registry.deregisterDevice(tenantId, deviceId))
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-            .setHandler(ctx.asyncAssertFailure(t -> {
+            .setHandler(ctx.failing(t -> {
                 // THEN the connection is refused
+                ctx.completeNow();
             }));
     }
 
@@ -189,10 +193,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * Verifies that the AMQP Adapter will fail to authenticate a device whose username does not match the expected pattern
      * {@code [<authId>@<tenantId>]}.
      * 
-     * @param context The Vert.x test context.
+     * @param ctx The Vert.x test context.
      */
     @Test
-    public void testConnectFailsForInvalidUsernamePattern(final TestContext context) {
+    public void testConnectFailsForInvalidUsernamePattern(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a registered device
         final String tenantId = helper.getRandomTenantId();
@@ -202,10 +206,11 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN the device tries to connect using a malformed username
-        .compose(ok -> connectToAdapter(deviceId, "secret"))
-        .setHandler(context.asyncAssertFailure(t -> {
+        .compose(ok -> connectToAdapter(deviceId, password))
+        .setHandler(ctx.failing(t -> {
             // THEN the SASL handshake fails
-            context.assertTrue(t instanceof SaslException);
+            ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+            ctx.completeNow();
         }));
     }
 
@@ -217,7 +222,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
      */
     @Test
-    public void testConnectFailsForNonMatchingTrustAnchor(final TestContext ctx) throws GeneralSecurityException {
+    public void testConnectFailsForNonMatchingTrustAnchor(final VertxTestContext ctx) throws GeneralSecurityException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -237,9 +242,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     // using the trust anchor registered for the device's tenant
                     return connectToAdapter(deviceCert);
                 })
-                .setHandler(ctx.asyncAssertFailure(t -> {
+                .setHandler(ctx.failing(t -> {
                     // THEN the connection is not established
-                    ctx.assertTrue(t instanceof SaslException);
+                    ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+                    ctx.completeNow();
                 }));
     }
 

@@ -11,11 +11,10 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
+
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +23,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
@@ -53,12 +52,6 @@ public abstract class AmqpAdapterTestBase {
     protected static ProtonClientOptions defaultOptions;
 
     /**
-     * Support outputting current test's name.
-     */
-    @Rule
-    public TestName testName = new TestName();
-
-    /**
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
@@ -77,16 +70,19 @@ public abstract class AmqpAdapterTestBase {
      * 
      * @param ctx The Vert.x test context.
      */
-    @BeforeClass
-    public static void setup(final TestContext ctx) {
+    @BeforeAll
+    public static void setup(final VertxTestContext ctx) {
+
         VERTX = Vertx.vertx();
-        helper = new IntegrationTestSupport(VERTX);
-        helper.init(ctx);
 
         defaultOptions = new ProtonClientOptions()
                 .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
                 .setHostnameVerificationAlgorithm("")
                 .setSsl(true);
+
+        helper = new IntegrationTestSupport(VERTX);
+        helper.init().setHandler(ctx.completing());
+
     }
 
     /**
@@ -94,10 +90,14 @@ public abstract class AmqpAdapterTestBase {
      * 
      * @param ctx The Vert.x test context.
      */
-    @AfterClass
-    public static void disconnect(final TestContext ctx) {
-        helper.disconnect(ctx);
-        VERTX.close(ctx.asyncAssertSuccess());
+    @AfterAll
+    public static void disconnect(final VertxTestContext ctx) {
+        helper.disconnect()
+        .compose(ok -> {
+            final Future<Void> closeAttempt = Future.future();
+            VERTX.close(closeAttempt);
+            return closeAttempt;
+        }).setHandler(ctx.completing());
     }
 
     /**

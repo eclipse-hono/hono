@@ -11,8 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.HttpURLConnection;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -29,16 +34,17 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonQoS;
@@ -64,7 +70,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param ctx The test context.
      * @param msg The message to perform checks on.
      */
-    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
         // empty
     }
 
@@ -86,10 +92,12 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
     /**
      * Logs a message before running a test case.
+     * 
+     * @param testInfo Meta information about the test being run.
      */
-    @Before
-    public void before() {
-        log.info("running {}", testName.getMethodName());
+    @BeforeEach
+    public void before(final TestInfo testInfo) {
+        log.info("running {}", testInfo.getDisplayName());
     }
 
     /**
@@ -98,8 +106,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * 
      * @param context The Vert.x test context.
      */
-    @After
-    public void after(final TestContext context) {
+    @AfterEach
+    public void after(final VertxTestContext context) {
         helper.deleteObjects(context);
         close(context);
     }
@@ -109,34 +117,43 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * content type is rejected by the adapter.
      * 
      * @param context The Vert.x context for running asynchronous tests.
+     * @throws InterruptedException if test is interrupted while running.
      */
     @Test
-    public void testAdapterRejectsBadInboundMessage(final TestContext context) {
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    public void testAdapterRejectsBadInboundMessage(final VertxTestContext context) throws InterruptedException {
+
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
-        final Async setup = context.async();
-        setupProtocolAdapter(tenantId, deviceId, false).map(s -> {
+        final VertxTestContext setup = new VertxTestContext();
+
+        setupProtocolAdapter(tenantId, deviceId, false)
+        .map(s -> {
             sender = s;
             return s;
-        }).setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        })
+        .setHandler(setup.completing());
 
-        final Async completionTracker = context.async();
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            context.failNow(setup.causeOfFailure());
+        }
+
         final Message msg = ProtonHelper.message("some payload");
         msg.setContentType(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
         msg.setAddress(getEndpointName());
         sender.send(msg, delivery -> {
 
-            context.assertTrue(Rejected.class.isInstance(delivery.getRemoteState()));
-
-            final Rejected rejected = (Rejected) delivery.getRemoteState();
-            final ErrorCondition error = rejected.getError();
-            context.assertEquals(Constants.AMQP_BAD_REQUEST, error.getCondition());
-
-            completionTracker.complete();
+            context.verify(() -> {
+                assertThat(delivery.getRemoteState()).isInstanceOf(Rejected.class);
+                final Rejected rejected = (Rejected) delivery.getRemoteState();
+                final ErrorCondition error = rejected.getError();
+                assertThat((Object) error.getCondition()).isEqualTo(Constants.AMQP_BAD_REQUEST);
+            });
+            context.completeNow();
         });
-        completionTracker.await();
+
     }
 
     /**
@@ -145,27 +162,26 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param context The Vert.x test context.
      */
     @Test
-    public void testAnonymousRelayRequired(final TestContext context) {
+    public void testAnonymousRelayRequired(final VertxTestContext context) {
+
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
         final String targetAddress = String.format("%s/%s/%s", getEndpointName(), tenantId, deviceId);
 
         final Tenant tenant = new Tenant();
-        final Async setup = context.async();
         helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
-                .setHandler(context.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
-
-        final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
-
+        .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
         // connect and create sender (with a valid target address)
-        connectToAdapter(username, DEVICE_PASSWORD)
+        .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
         .compose(con -> {
             this.connection = con;
             return createProducer(targetAddress);
         })
-        .setHandler(context.asyncAssertFailure());
+        .setHandler(context.failing(t -> {
+            log.info("failed to open sender", t);
+            context.completeNow();
+        }));
     }
 
     /**
@@ -173,20 +189,26 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * applications connected to the AMQP messaging network.
      *
      * @param ctx The Vert.x test context.
-     * @throws InterruptedException Exception.
+     * @throws InterruptedException if test is interrupted while running.
      */
     @Test
-    public void testUploadMessagesUsingSaslPlain(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesUsingSaslPlain(final VertxTestContext ctx) throws InterruptedException {
+
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
-        final Async setup = ctx.async();
+        final VertxTestContext setup = new VertxTestContext();
         setupProtocolAdapter(tenantId, deviceId, false)
         .map(s -> {
             sender = s;
             return s;
-        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        })
+        .setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+        }
 
         testUploadMessages(tenantId, ctx);
     }
@@ -199,30 +221,39 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @throws InterruptedException if test execution is interrupted.
      */
     @Test
-    public void testUploadMessagesUsingSaslExternal(final TestContext ctx) throws InterruptedException {
-        final Async setup = ctx.async();
+    public void testUploadMessagesUsingSaslExternal(final VertxTestContext ctx) throws InterruptedException {
+
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
 
-        helper.getCertificate(deviceCert.certificatePath()).compose(cert -> {
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.getCertificate(deviceCert.certificatePath())
+        .compose(cert -> {
             final var tenant = Tenants.createTenantForTrustAnchor(cert);
             return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-        }).compose(ok -> connectToAdapter(deviceCert))
+        })
+        .compose(ok -> connectToAdapter(deviceCert))
         .compose(con -> createProducer(null))
         .map(s -> {
             sender = s;
             return s;
-        }).setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        })
+        .setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+        }
 
         testUploadMessages(tenantId, ctx);
     }
 
     //------------------------------------------< private methods >---
 
-    private void testUploadMessages(final String tenantId, final TestContext ctx) throws InterruptedException {
+    private void testUploadMessages(final String tenantId, final VertxTestContext ctx) throws InterruptedException {
 
         final Function<Handler<Void>, Future<Void>> receiver = callback -> {
             return createConsumer(tenantId, msg -> {
@@ -269,28 +300,34 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @throws InterruptedException if test execution is interrupted.
      */
     protected void doUploadMessages(
-            final TestContext context,
+            final VertxTestContext context,
             final Function<Handler<Void>, Future<Void>> receiverFactory,
             final Function<String, Future<?>> sender) throws InterruptedException {
 
-        final Async remainingMessages = context.async(IntegrationTestSupport.MSG_COUNT);
+        final CountDownLatch remainingMessages = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
         final AtomicInteger messagesSent = new AtomicInteger(0);
-        final Async receiverCreation = context.async();
+
+        final VertxTestContext receiverCreation = new VertxTestContext();
 
         receiverFactory.apply(msgReceived -> {
             remainingMessages.countDown();
-            if (remainingMessages.count() % 200 == 0) {
-                log.info("messages received: {}", IntegrationTestSupport.MSG_COUNT - remainingMessages.count());
+            if (remainingMessages.getCount() % 200 == 0) {
+                log.info("messages received: {}", IntegrationTestSupport.MSG_COUNT - remainingMessages.getCount());
             }
-        }).setHandler(context.asyncAssertSuccess(ok -> receiverCreation.complete()));
-        receiverCreation.await();
+        })
+        .setHandler(receiverCreation.completing());
+
+        assertThat(receiverCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (receiverCreation.failed()) {
+            context.failNow(receiverCreation.causeOfFailure());
+        }
 
         while (messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
 
             final int msgNo = messagesSent.getAndIncrement();
             final String payload = "temp: " + msgNo;
 
-            final Async msgSent = context.async();
+            final CountDownLatch msgSent = new CountDownLatch(1);
 
             sender.apply(payload).setHandler(sendAttempt -> {
                 if (sendAttempt.failed()) {
@@ -304,7 +341,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                         log.info("error sending message no {}", msgNo, sendAttempt.cause());
                     }
                 }
-                msgSent.complete();
+                msgSent.countDown();
             });
             msgSent.await();
             if (messagesSent.get() % 200 == 0) {
@@ -313,7 +350,11 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         }
 
         final long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
-        remainingMessages.await(timeToWait);
+        if (remainingMessages.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            context.completeNow();
+        } else {
+            context.failNow(new IllegalStateException("did not receive all uploaded messages"));
+        }
     }
 
 
@@ -356,8 +397,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 });
     }
 
-    private void close(final TestContext ctx) {
-        final Async shutdown = ctx.async();
+    private void close(final VertxTestContext ctx) {
+
         final Future<ProtonConnection> connectionTracker = Future.future();
         final Future<ProtonSender> senderTracker = Future.future();
         final Future<Void> receiverTracker = Future.future();
@@ -388,8 +429,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         CompositeFuture.join(connectionTracker, senderTracker, receiverTracker).setHandler(c -> {
            context = null;
-           shutdown.complete();
+           ctx.completeNow();
         });
-        shutdown.await();
     }
 }

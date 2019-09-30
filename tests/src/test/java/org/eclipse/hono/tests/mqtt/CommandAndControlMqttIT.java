@@ -71,16 +71,16 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     private final String password = "secret";
     private Tenant tenant;
 
-    static Stream<CommandEndpointConfiguration> allCombinations() {
+    static Stream<MqttCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
-                new CommandEndpointConfiguration(false, true, true),
-                new CommandEndpointConfiguration(false, true, false),
-                new CommandEndpointConfiguration(false, false, true),
-                new CommandEndpointConfiguration(false, false, false),
+                new MqttCommandEndpointConfiguration(false, true, true),
+                new MqttCommandEndpointConfiguration(false, true, false),
+                new MqttCommandEndpointConfiguration(false, false, true),
+                new MqttCommandEndpointConfiguration(false, false, false),
 
                 // gateway devices are supported with north bound "command" endpoint only
-                new CommandEndpointConfiguration(true, false, false),
-                new CommandEndpointConfiguration(true, true, false)
+                new MqttCommandEndpointConfiguration(true, false, false),
+                new MqttCommandEndpointConfiguration(true, true, false)
                 );
     }
 
@@ -122,7 +122,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     private Future<Void> subscribeToCommands(
             final Handler<MqttPublishMessage> msgHandler,
-            final CommandEndpointConfiguration endpointConfig,
+            final MqttCommandEndpointConfiguration endpointConfig,
             final MqttQoS qos) {
 
         final Future<Void> result = Future.future();
@@ -152,7 +152,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     public void testSendOneWayCommandSucceeds(
-            final CommandEndpointConfiguration endpointConfig,
+            final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
         final String commandTarget;
@@ -198,7 +198,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @ParameterizedTest
     @MethodSource("allCombinations")
     public void testSendCommandSucceedsWithQos0(
-            final CommandEndpointConfiguration endpointConfig,
+            final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
         testSendCommandSucceeds(ctx, endpointConfig, MqttQoS.AT_MOST_ONCE);
@@ -215,7 +215,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @ParameterizedTest
     @MethodSource("allCombinations")
     public void testSendCommandSucceedsWithQos1(
-            final CommandEndpointConfiguration endpointConfig,
+            final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
         testSendCommandSucceeds(ctx, endpointConfig, MqttQoS.AT_LEAST_ONCE);
@@ -223,7 +223,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     private void testSendCommandSucceeds(
             final VertxTestContext ctx,
-            final CommandEndpointConfiguration endpointConfig,
+            final MqttCommandEndpointConfiguration endpointConfig,
             final MqttQoS qos) throws InterruptedException {
 
         final String commandTarget;
@@ -276,7 +276,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final VertxTestContext ctx,
             final Handler<MqttPublishMessage> commandConsumer,
             final Function<Buffer, Future<?>> commandSender,
-            final CommandEndpointConfiguration endpointConfig,
+            final MqttCommandEndpointConfiguration endpointConfig,
             final int totalNoOfCommandsToSend,
             final MqttQoS qos) throws InterruptedException {
 
@@ -362,7 +362,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
     public void testSendCommandFailsForMalformedMessage(
-            final CommandEndpointConfiguration endpointConfig,
+            final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
         final VertxTestContext setup = new VertxTestContext();
