@@ -106,6 +106,7 @@ public abstract class AmqpAdapterTestBase {
      * @param target The target address to create the sender for or {@code null}
      *               if an anonymous sender should be created.
      * @return A future succeeding with the created sender.
+     * @throws NullPointerException if qos is {@code null}.
      */
     protected Future<ProtonSender> createProducer(final String target) {
 
@@ -115,6 +116,7 @@ public abstract class AmqpAdapterTestBase {
         } else {
             context.runOnContext(go -> {
                 final ProtonSender sender = connection.createSender(target);
+                // vertx-proton doesn't support MIXED yet
                 sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
                 sender.closeHandler(remoteClose -> {
                     if (remoteClose.failed()) {
@@ -124,7 +126,7 @@ public abstract class AmqpAdapterTestBase {
                 });
                 sender.openHandler(remoteAttach -> {
                     if (remoteAttach.failed()) {
-                        log.info("peer rejects opening of sender link [exception: {}]", remoteAttach.cause().getClass().getName());
+                        log.info("peer rejects opening of sender link", remoteAttach.cause());
                         result.fail(remoteAttach.cause());
                     } else if (sender.getRemoteTarget() == null) {
                         log.info("peer wants to immediately close sender link");
