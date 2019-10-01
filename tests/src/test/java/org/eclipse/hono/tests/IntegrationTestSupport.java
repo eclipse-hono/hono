@@ -592,11 +592,12 @@ public final class IntegrationTestSupport {
     public void deleteObjects(final VertxTestContext ctx) {
 
         if (!devicesToDelete.isEmpty()) {
-            final Checkpoint deviceDeletion = ctx.checkpoint(devicesToDelete.size());
             devicesToDelete.forEach((tenantId, devices) -> {
+                final Checkpoint deviceDeletion = ctx.checkpoint(devices.size());
                 devices.forEach(deviceId -> {
                     registry.deregisterDevice(tenantId, deviceId).setHandler(ok -> deviceDeletion.flag());
                 });
+                LOGGER.debug("deleted {} devices from tenant {}", devicesToDelete.size(), tenantId);
             });
             devicesToDelete.clear();
         }
@@ -606,6 +607,7 @@ public final class IntegrationTestSupport {
             tenantsToDelete.forEach(tenantId -> {
                 registry.removeTenant(tenantId).setHandler(ok -> tenantDeletion.flag());
             });
+            LOGGER.debug("deleted {} tenants", tenantsToDelete.size());
             tenantsToDelete.clear();
         }
     }
