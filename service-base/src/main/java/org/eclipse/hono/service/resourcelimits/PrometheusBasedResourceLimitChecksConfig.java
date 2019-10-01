@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.plan;
+package org.eclipse.hono.service.resourcelimits;
 
 import java.util.Objects;
 
