@@ -14,6 +14,7 @@
 package org.eclipse.hono.config;
 
 import org.eclipse.hono.util.Constants;
+import java.util.Objects;
 
 /**
  * A POJO for configuring common properties of server components.
@@ -30,6 +31,7 @@ public class ServiceConfigProperties extends ServerConfig {
     private boolean waitForDownstreamConnection = false;
     private int maxPayloadSize = 2048;
     private int receiverLinkCredit = DEFAULT_RECEIVER_LINK_CREDITS;
+    private String corsAllowedOrigin = "*";
 
     /**
      * Sets the maximum size of a message payload this server accepts from clients.
@@ -162,5 +164,34 @@ public class ServiceConfigProperties extends ServerConfig {
             throw new IllegalArgumentException("receiver link credit must be at least 1");
         }
         this.receiverLinkCredit = receiverLinkCredit;
+    }
+
+    /**
+     * Gets the allowed origin pattern for CORS handler.
+     * <p>
+     * The allowed origin pattern for CORS is returned to clients via the <em>Access-Control-Allow-Origin</em> header.
+     * It can be used by Web Applications to make sure that requests go only to trusted backend entities.
+     * <p>
+     * The default value is '*'.
+     *
+     * @return The allowed origin pattern for CORS handler.
+     */
+    public final String getCorsAllowedOrigin() {
+        return corsAllowedOrigin;
+    }
+
+    /**
+     * Sets the allowed origin pattern for CORS handler.
+     * <p>
+     * The allowed origin pattern for CORS is returned to clients via the <em>Access-Control-Allow-Origin</em> header.
+     * It can be used by Web Applications to make sure that requests go only to trusted backend entities.
+     * <p>
+     * The default value is '*'.
+     *
+     * @param corsAllowedOrigin The allowed origin pattern for CORS handler.
+     * @throws NullPointerException if the allowed origin pattern is {@code null}.
+     */
+    public final void setCorsAllowedOrigin(final String corsAllowedOrigin) {
+        this.corsAllowedOrigin = Objects.requireNonNull(corsAllowedOrigin);
     }
 }

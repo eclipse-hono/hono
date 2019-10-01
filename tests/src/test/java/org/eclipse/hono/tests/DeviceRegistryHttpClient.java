@@ -54,22 +54,22 @@ import static org.eclipse.hono.service.http.HttpUtils.CONTENT_TYPE_JSON;
  */
 public final class DeviceRegistryHttpClient {
 
+    public static final String URI_ADD_TENANT = String.format("/%s/%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
+    public static final String TEMPLATE_URI_TENANT_INSTANCE = String.format("/%s/%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
+
+    public static final String TEMPLATE_URI_REGISTRATION_INSTANCE = String.format("/%s/%s/%%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT);
+
+    public static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
+    public static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%s/%%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
+
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryHttpClient.class);
 
     private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
-    private static final String URI_ADD_TENANT = String.format("/%s/%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
-    private static final String TEMPLATE_URI_TENANT_INSTANCE = String.format("/%s/%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
-
-    private static final String TEMPLATE_URI_REGISTRATION_INSTANCE = String.format("/%s/%s/%%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT);
-
-    private static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
-    private static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%s/%%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
-
     private final CrudHttpClient httpClient;
 
     /**
@@ -134,7 +134,7 @@ public final class DeviceRegistryHttpClient {
         final String uri = String.format("%s/%s", URI_ADD_TENANT, tenantId);
         final JsonObject payload = JsonObject.mapFrom(requestPayload);
         return httpClient.create(uri, payload, contentType,
-                response -> response.statusCode() == expectedStatusCode);
+                response -> response.statusCode() == expectedStatusCode, true);
     }
 
     /**
@@ -300,7 +300,7 @@ public final class DeviceRegistryHttpClient {
             uri = String.format(TEMPLATE_URI_REGISTRATION_INSTANCE, tenantId, deviceId);
         }
         return httpClient.create(uri, JsonObject.mapFrom(device), contentType,
-                response -> response.statusCode() == expectedStatus);
+                response -> response.statusCode() == expectedStatus, true);
     }
 
     /**
@@ -454,7 +454,7 @@ public final class DeviceRegistryHttpClient {
                     // encode array, not list - workaround for vert.x json issue
                     final var payload = Json.encodeToBuffer(currentSecrets.toArray(CommonCredential[]::new));
                     return httpClient.update(uri, payload, contentType,
-                            response -> response == expectedStatusCode);
+                            response -> response == expectedStatusCode, true);
                 });
 
     }
@@ -545,7 +545,7 @@ public final class DeviceRegistryHttpClient {
         final var payload = Json.encodeToBuffer(credentialsSpec.toArray(CommonCredential[]::new));
 
         return httpClient
-                .update(uri, payload, headers, status -> status == expectedStatusCode)
+                .update(uri, payload, headers, status -> status == expectedStatusCode, true)
                 .compose(ok -> Future.succeededFuture());
     }
 
@@ -620,7 +620,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, tenantId, deviceId);
 
-        return httpClient.update(uri, payload, contentType, status -> status == expectedStatusCode);
+        return httpClient.update(uri, payload, contentType, status -> status == expectedStatusCode, true);
     }
 
     // convenience methods

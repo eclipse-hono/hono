@@ -13,8 +13,10 @@
 
 package org.eclipse.hono.service.management.credentials;
 
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import java.net.HttpURLConnection;
+import java.util.EnumSet;
 import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
@@ -70,6 +72,10 @@ public final class CredentialsManagementHttpEndpoint extends AbstractHttpEndpoin
 
         final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s",
                 getName(), PARAM_TENANT_ID, PARAM_DEVICE_ID);
+
+
+        // Add CORS handler
+        router.route(pathWithTenantAndDeviceId).handler(createCorsHandler(config.getCorsAllowedOrigin(), EnumSet.of(HttpMethod.GET, HttpMethod.PUT)));
 
         final BodyHandler bodyHandler = BodyHandler.create();
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
