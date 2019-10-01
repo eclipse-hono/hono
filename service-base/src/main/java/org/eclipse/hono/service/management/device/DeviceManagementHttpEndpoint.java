@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.management.device;
 
 import java.net.HttpURLConnection;
+import java.util.EnumSet;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -23,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -66,6 +68,11 @@ public final class DeviceManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
         final String pathWithTenant = String.format("/%s/:%s", getName(), PARAM_TENANT_ID);
         final String pathWithTenantAndDeviceId = String.format("/%s/:%s/:%s", getName(), PARAM_TENANT_ID,
                 PARAM_DEVICE_ID);
+
+        // Add CORS handler
+        router.route(pathWithTenant).handler(createCorsHandler(config.getCorsAllowedOrigin(), EnumSet.of(HttpMethod.POST)));
+        router.route(pathWithTenantAndDeviceId).handler(createDefaultCorsHandler(config.getCorsAllowedOrigin()));
+
 
         // CREATE device with auto-generated deviceID
         router.post(pathWithTenant)

@@ -14,7 +14,9 @@
 package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -34,11 +36,13 @@ import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.CorsHandler;
 
 
 /**
@@ -359,5 +363,36 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
                 ctx.put(KEY_RESOURCE_VERSION, ifMatchHeader);
         }
         ctx.next();
+    }
+
+    /**
+     * Creates default CORS handler that allows 'POST', 'GET', 'PUT' and 'DELETE' methods for the specified origin.
+     *
+     * @param allowedOrigin The allowed origin pattern.
+     * @return The handler.
+     */
+    protected final CorsHandler createDefaultCorsHandler(final String allowedOrigin) {
+        return createCorsHandler(allowedOrigin, EnumSet.of(
+                HttpMethod.POST,
+                HttpMethod.GET,
+                HttpMethod.PUT,
+                HttpMethod.DELETE)
+        );
+    }
+
+    /**
+     * Creates CORS Handler that allows HTTP methods for the specified origin.
+     *
+     * @param allowedOrigin The allowed origin pattern.
+     * @param methods Set of allowed HTTP methods
+     * @return The handler.
+     */
+    protected final CorsHandler createCorsHandler(final String allowedOrigin, final Set<HttpMethod> methods) {
+        return CorsHandler.create(allowedOrigin)
+                .allowedMethods(methods)
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                .allowedHeader(HttpHeaders.IF_MATCH.toString())
+                .exposedHeader(HttpHeaders.ETAG.toString());
     }
 }

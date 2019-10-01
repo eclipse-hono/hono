@@ -51,7 +51,6 @@ public class CorsIT {
     protected static CrudHttpClient httpClient;
 
     private static final Vertx VERTX = Vertx.vertx();
-    private static final String CORS_ORIGIN = "http://hono.eclipse.org";
 
     /**
      * Sets up clients.
@@ -77,7 +76,7 @@ public class CorsIT {
         httpClient.options(
                 "/" + TelemetryConstants.TELEMETRY_ENDPOINT,
                 MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.succeeding(headers -> {
@@ -102,7 +101,7 @@ public class CorsIT {
         httpClient.options(
                 String.format("/%s/%s/%s", TelemetryConstants.TELEMETRY_ENDPOINT, "my-tenant", "my-device"),
                 MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.succeeding(headers -> {
@@ -127,7 +126,7 @@ public class CorsIT {
         httpClient.options(
                 "/" + EventConstants.EVENT_ENDPOINT,
                 MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.succeeding(headers -> {
@@ -151,7 +150,7 @@ public class CorsIT {
         httpClient.options(
                 String.format("/%s/%s/%s", EventConstants.EVENT_ENDPOINT, "my-tenant", "my-device"),
                 MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.succeeding(headers -> {
@@ -176,7 +175,7 @@ public class CorsIT {
         httpClient.options(
                 String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, "cmd-request-id"),
                 MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.succeeding(headers -> {
@@ -200,7 +199,7 @@ public class CorsIT {
         httpClient.options(
                 String.format("/%s/res/%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, "my-tenant", "my-device", "cmd-request-id"),
                 MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
+                    .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
         .setHandler(ctx.succeeding(headers -> {
