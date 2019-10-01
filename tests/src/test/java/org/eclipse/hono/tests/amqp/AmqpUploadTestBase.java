@@ -143,6 +143,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             context.failNow(setup.causeOfFailure());
+            return;
         }
 
         final Message msg = ProtonHelper.message("some payload");
