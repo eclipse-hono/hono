@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,23 +13,24 @@
 
 package org.eclipse.hono.tests.http;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.EventConstants;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
 
 
 /**
  * Integration tests for uploading events to the HTTP adapter.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class EventHttpIT extends HttpTestBase {
 
     private static final String URI = String.format("/%s", EventConstants.EVENT_ENDPOINT);
@@ -46,8 +47,9 @@ public class EventHttpIT extends HttpTestBase {
     }
 
     @Override
-    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+    protected void assertAdditionalMessageProperties(final Message msg) {
         // assert that events are marked as "durable"
-        ctx.assertTrue(msg.isDurable());
+
+        assertThat(msg.isDurable()).isTrue();
     }
 }

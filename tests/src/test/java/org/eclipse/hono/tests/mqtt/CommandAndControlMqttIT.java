@@ -16,7 +16,6 @@ package org.eclipse.hono.tests.mqtt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +31,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
@@ -96,25 +94,6 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         tenant = new Tenant();
     }
 
-    private void registerDeviceViaGateway(
-            final VertxTestContext ctx,
-            final String tenantId,
-            final String gatewayId,
-            final String deviceId) throws InterruptedException {
-
-        final VertxTestContext setup = new VertxTestContext();
-
-        final Device device = new Device().setVia(List.of(gatewayId));
-        helper.registry.addDeviceToTenant(tenantId, deviceId, device, "pwd")
-        .setHandler(setup.completing());
-
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-        }
-
-    }
-
     private Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
 
         return helper.applicationClientFactory.createEventConsumer(tenantId, messageConsumer, remoteClose -> {});
@@ -155,15 +134,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
-        final String commandTarget;
-
-        if (endpointConfig.isGatewayDevice()) {
-            commandTarget = helper.getRandomDeviceId(tenantId);
-            registerDeviceViaGateway(ctx, tenantId, deviceId, commandTarget);
-        } else {
-            commandTarget = deviceId;
-        }
-
+        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
         final Checkpoint commandsReceived = ctx.checkpoint(COMMANDS_TO_SEND);
 
         testSendCommandSucceeds(ctx, msg -> {
@@ -226,14 +197,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final MqttCommandEndpointConfiguration endpointConfig,
             final MqttQoS qos) throws InterruptedException {
 
-        final String commandTarget;
-
-        if (endpointConfig.isGatewayDevice()) {
-            commandTarget = helper.getRandomDeviceId(tenantId);
-            registerDeviceViaGateway(ctx, tenantId, deviceId, commandTarget);
-        } else {
-            commandTarget = deviceId;
-        }
+        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
 
         testSendCommandSucceeds(ctx, msg -> {
             LOGGER.trace("received command [{}]", msg.topicName());

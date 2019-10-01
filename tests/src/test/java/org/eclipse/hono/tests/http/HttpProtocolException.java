@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.tests.http;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import io.vertx.core.Future;
@@ -115,8 +113,8 @@ public class HttpProtocolException extends ServiceInvocationException {
      * @param actualError The error to test.
      */
     public static void assertProtocolError(final int expectedStatusCode, final Throwable actualError) {
-        assertThat(actualError, instanceOf(HttpProtocolException.class));
-        assertThat(((HttpProtocolException) actualError).getErrorCode(), is(expectedStatusCode));
+        assertThat(actualError).isInstanceOf(HttpProtocolException.class);
+        assertThat(((HttpProtocolException) actualError).getErrorCode()).isEqualTo(expectedStatusCode);
     }
 
 }

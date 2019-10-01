@@ -27,11 +27,16 @@ import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.HonoConnection;
@@ -39,6 +44,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.BufferResult;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -668,6 +674,72 @@ public final class IntegrationTestSupport {
         final Set<String> devices = devicesToDelete.computeIfAbsent(tenantId, t -> new HashSet<>());
         devices.add(deviceId);
         return deviceId;
+    }
+
+    /**
+     * Registers a new device for a tenant that is connected via a gateway.
+     * 
+     * @param tenantId The tenant that the gateway and device belong to.
+     * @param deviceId The device identifier.
+     * @param isGatewayDevice {@code true} if the given device is a gateway.
+     * @param timeoutSeconds The number of seconds to wait for the setup to succeed.
+     * @return The device identifier to use for sending commands.
+     *         The identifier will be that of the given device if it is not a gateway,
+     *         otherwise it will be the identifier of the newly registered device.
+     * @throws IllegalStateException if setup failed.
+     */
+    public String setupGatewayDeviceBlocking(
+            final String tenantId,
+            final String deviceId,
+            final boolean isGatewayDevice,
+            final int timeoutSeconds) {
+
+        final CompletableFuture<String> result = new CompletableFuture<>();
+
+        setupGatewayDevice(tenantId, deviceId, isGatewayDevice)
+        .setHandler(attempt -> {
+            if (attempt.succeeded()) {
+                result.complete(attempt.result());
+            } else {
+                result.completeExceptionally(attempt.cause());
+            }
+        });
+
+        try {
+            return result.get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            throw new IllegalStateException("could not set up gateway device", e);
+        }
+    }
+
+    /**
+     * Registers a new device for a tenant that is connected via a gateway.
+     * 
+     * @param tenantId The tenant that the gateway and device belong to.
+     * @param deviceId The device identifier.
+     * @param isGatewayDevice {@code true} if the given device is a gateway.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be completed with the device identifier to use for
+     *         sending commands or will be failed with a {@link ServiceInvocationException}.
+     *         The identifier will be that of the given device if it is not a gateway,
+     *         otherwise it will be the identifier of the newly registered device.
+     */
+    public Future<String> setupGatewayDevice(
+            final String tenantId,
+            final String deviceId,
+            final boolean isGatewayDevice) {
+
+        final Future<String> result = Future.future();
+        if (isGatewayDevice) {
+            final String newDeviceId = getRandomDeviceId(tenantId);
+            final Device newDevice = new Device().setVia(List.of(deviceId));
+            registry.addDeviceToTenant(tenantId, newDeviceId, newDevice, "pwd")
+            .map(ok -> newDeviceId)
+            .setHandler(result);
+        } else {
+            result.complete(deviceId);
+        }
+        return result;
     }
 
     /**

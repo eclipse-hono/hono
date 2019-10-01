@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.tests.http;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -21,25 +24,25 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Tests verifying CORS compliance of the HTTP adapter.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
 public class CorsIT {
 
     /**
@@ -51,18 +54,10 @@ public class CorsIT {
     private static final String CORS_ORIGIN = "http://hono.eclipse.org";
 
     /**
-     * Time out each test after five seconds.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.seconds(5);
-
-    /**
      * Sets up clients.
-     * 
-     * @param ctx The vert.x test context.
      */
-    @BeforeClass
-    public static void init(final TestContext ctx) {
+    @BeforeAll
+    public static void init() {
 
         httpClient = new CrudHttpClient(
                 VERTX,
@@ -77,7 +72,7 @@ public class CorsIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCorsPreflightRequestForPostingTelemetry(final TestContext ctx) {
+    public void testCorsPreflightRequestForPostingTelemetry(final VertxTestContext ctx) {
 
         httpClient.options(
                 "/" + TelemetryConstants.TELEMETRY_ENDPOINT,
@@ -85,11 +80,13 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.asyncAssertSuccess(headers -> {
-            assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_QOS_LEVEL));
-                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
-                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
+        .setHandler(ctx.succeeding(headers -> {
+            ctx.verify(() -> {
+                assertAccessControlHeaders(headers, HttpMethod.POST);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_QOS_LEVEL);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+            });
+            ctx.completeNow();
         }));
     }
 
@@ -100,7 +97,7 @@ public class CorsIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCorsPreflightRequestForPuttingTelemetry(final TestContext ctx) {
+    public void testCorsPreflightRequestForPuttingTelemetry(final VertxTestContext ctx) {
 
         httpClient.options(
                 String.format("/%s/%s/%s", TelemetryConstants.TELEMETRY_ENDPOINT, "my-tenant", "my-device"),
@@ -108,11 +105,13 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.asyncAssertSuccess(headers -> {
-            assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_QOS_LEVEL));
-                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
-                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
+        .setHandler(ctx.succeeding(headers -> {
+            ctx.verify(() -> {
+                assertAccessControlHeaders(headers, HttpMethod.PUT);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_QOS_LEVEL);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+            });
+            ctx.completeNow();
         }));
     }
 
@@ -123,7 +122,7 @@ public class CorsIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCorsPreflightRequestForPostingEvents(final TestContext ctx) {
+    public void testCorsPreflightRequestForPostingEvents(final VertxTestContext ctx) {
 
         httpClient.options(
                 "/" + EventConstants.EVENT_ENDPOINT,
@@ -131,10 +130,12 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.asyncAssertSuccess(headers -> {
-            assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
-                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
-                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
+        .setHandler(ctx.succeeding(headers -> {
+            ctx.verify(() -> {
+                assertAccessControlHeaders(headers, HttpMethod.POST);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+            });
+            ctx.completeNow();
         }));
     }
 
@@ -145,7 +146,7 @@ public class CorsIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCorsPreflightRequestForPuttingEvents(final TestContext ctx) {
+    public void testCorsPreflightRequestForPuttingEvents(final VertxTestContext ctx) {
 
         httpClient.options(
                 String.format("/%s/%s/%s", EventConstants.EVENT_ENDPOINT, "my-tenant", "my-device"),
@@ -153,10 +154,13 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.asyncAssertSuccess(headers -> {
-            assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
-                    ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)
-                            .contains(Constants.HEADER_TIME_TILL_DISCONNECT));
+        .setHandler(ctx.succeeding(headers -> {
+            ctx.verify(() -> {
+                assertAccessControlHeaders(headers, HttpMethod.PUT);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS))
+                        .contains(Constants.HEADER_TIME_TILL_DISCONNECT);
+            });
+            ctx.completeNow();
         }));
     }
 
@@ -167,7 +171,7 @@ public class CorsIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCorsPreflightRequestForPostingCommandResponse(final TestContext ctx) {
+    public void testCorsPreflightRequestForPostingCommandResponse(final VertxTestContext ctx) {
 
         httpClient.options(
                 String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, "cmd-request-id"),
@@ -175,9 +179,12 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.asyncAssertSuccess(headers -> {
-            assertAccessControlHeaders(ctx, headers, HttpMethod.POST);
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS));
+        .setHandler(ctx.succeeding(headers -> {
+            ctx.verify(() -> {
+                assertAccessControlHeaders(headers, HttpMethod.POST);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS);
+            });
+            ctx.completeNow();
         }));
     }
 
@@ -188,7 +195,7 @@ public class CorsIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCorsPreflightRequestForPuttingCommandResponse(final TestContext ctx) {
+    public void testCorsPreflightRequestForPuttingCommandResponse(final VertxTestContext ctx) {
 
         httpClient.options(
                 String.format("/%s/res/%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, "my-tenant", "my-device", "cmd-request-id"),
@@ -196,17 +203,20 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CORS_ORIGIN)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.asyncAssertSuccess(headers -> {
-            assertAccessControlHeaders(ctx, headers, HttpMethod.PUT);
-            ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS));
+        .setHandler(ctx.succeeding(headers -> {
+            ctx.verify(() -> {
+                assertAccessControlHeaders(headers, HttpMethod.PUT);
+                assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS);
+            });
+            ctx.completeNow();
         }));
     }
 
-    private static void assertAccessControlHeaders(final TestContext ctx, final MultiMap headers, final HttpMethod expectedAllowedMethod) {
+    private static void assertAccessControlHeaders(final MultiMap headers, final HttpMethod expectedAllowedMethod) {
 
-        ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS).contains(expectedAllowedMethod.name()));
-        ctx.assertEquals("*", headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN));
-        ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(HttpHeaders.AUTHORIZATION));
-        ctx.assertTrue(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS).contains(HttpHeaders.CONTENT_TYPE));
+        assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS)).contains(expectedAllowedMethod.name());
+        assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo("*");
+        assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(HttpHeaders.AUTHORIZATION);
+        assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(HttpHeaders.CONTENT_TYPE);
     }
 }

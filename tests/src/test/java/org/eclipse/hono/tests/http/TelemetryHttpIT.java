@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,10 @@
 
 package org.eclipse.hono.tests.http;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -21,23 +24,22 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Integration tests for uploading telemetry data to the HTTP adapter.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class TelemetryHttpIT extends HttpTestBase {
 
     private static final String URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;
@@ -61,9 +63,9 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadUsingQoS1(final TestContext ctx) throws InterruptedException {
+    public void testUploadUsingQoS1(final VertxTestContext ctx) throws InterruptedException {
 
-        final Async setup = ctx.async();
+        final VertxTestContext setup = new VertxTestContext();
         final Tenant tenant = new Tenant();
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "binary/octet-stream")
@@ -72,8 +74,13 @@ public class TelemetryHttpIT extends HttpTestBase {
                 .add(Constants.HEADER_QOS_LEVEL, "1");
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-                .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+                .setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
 
         testUploadMessages(ctx, tenantId, count -> {
             return httpClient.create(

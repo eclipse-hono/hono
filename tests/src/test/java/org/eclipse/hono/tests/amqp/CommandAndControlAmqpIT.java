@@ -16,7 +16,6 @@ package org.eclipse.hono.tests.amqp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +36,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
-import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.BufferResult;
@@ -103,25 +101,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         tenant = new Tenant();
-    }
-
-    private void registerDeviceViaGateway(
-            final VertxTestContext ctx,
-            final String tenantId,
-            final String gatewayId,
-            final String deviceId) throws InterruptedException {
-
-        final VertxTestContext setup = new VertxTestContext();
-
-        final Device device = new Device().setVia(List.of(gatewayId));
-        helper.registry.addDeviceToTenant(tenantId, deviceId, device, "pwd")
-        .setHandler(setup.completing());
-
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-        }
-
     }
 
     private Future<MessageConsumer> createEventConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
@@ -235,13 +214,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
-        final String commandTarget;
-        if (endpointConfig.isGatewayDevice()) {
-            commandTarget = helper.getRandomDeviceId(tenantId);
-            registerDeviceViaGateway(ctx, tenantId, deviceId, commandTarget);
-        } else {
-            commandTarget = deviceId;
-        }
+        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
 
         final int commandsToSend = 60;
         final Checkpoint commandsReceived = ctx.checkpoint(commandsToSend);
@@ -294,13 +267,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
-        final String commandTarget;
-        if (endpointConfig.isGatewayDevice()) {
-            commandTarget = helper.getRandomDeviceId(tenantId);
-            registerDeviceViaGateway(ctx, tenantId, deviceId, commandTarget);
-        } else {
-            commandTarget = deviceId;
-        }
+        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
 
         connectAndSubscribe(ctx, endpointConfig, sender -> createCommandConsumer(ctx, sender));
 
@@ -389,13 +356,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
-        final String commandTarget;
-        if (endpointConfig.isGatewayDevice()) {
-            commandTarget = helper.getRandomDeviceId(tenantId);
-            registerDeviceViaGateway(ctx, tenantId, deviceId, commandTarget);
-        } else {
-            commandTarget = deviceId;
-        }
+        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
 
         testSendCommandSucceeds(
                 ctx,
