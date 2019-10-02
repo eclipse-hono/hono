@@ -64,7 +64,17 @@ public final class ResourceIdentifier {
     }
 
     private ResourceIdentifier(final String endpoint, final String tenantId, final String resourceId) {
-        setResourcePath(new String[]{endpoint, tenantId, resourceId});
+        if (tenantId == null) {
+            if (resourceId == null) {
+                setResourcePath(new String[] {endpoint});
+            } else {
+                setResourcePath(new String[] {endpoint, null, resourceId});
+            }
+        } else if (resourceId == null) {
+            setResourcePath(new String[] {endpoint, tenantId});
+        } else {
+            setResourcePath(new String[]{endpoint, tenantId, resourceId});
+        }
     }
 
     private ResourceIdentifier(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
@@ -79,27 +89,17 @@ public final class ResourceIdentifier {
     }
 
     private ResourceIdentifier(final String[] path) {
+        if (path[0] == null) {
+            throw new IllegalArgumentException("path must not start with a null segment");
+        }
         setResourcePath(path);
     }
 
     private void setResourcePath(final String[] path) {
-        final List<String> pathSegments = new ArrayList<>();
-        boolean pathContainsNullSegment = false;
-        for (final String segment : path) {
-            if (segment == null) {
-                pathContainsNullSegment = true;
-            } else if (pathContainsNullSegment) {
-                throw new IllegalArgumentException("path may contain trailing null segments only");
-            } else {
-                pathSegments.add(segment);
-            }
-        }
-        this.resourcePath = pathSegments.toArray(new String[pathSegments.size()]);
-        if (resourcePath.length > IDX_TENANT_ID && resourcePath[IDX_TENANT_ID].length() == 0) {
-            resourcePath[IDX_TENANT_ID] = null;
-        }
-        if (resourcePath.length > IDX_RESOURCE_ID && resourcePath[IDX_RESOURCE_ID].length() == 0) {
-            resourcePath[IDX_RESOURCE_ID] = null;
+        resourcePath = new String[path.length];
+        for (int i = 0; i < path.length; i++) {
+            final String segment = path[i];
+            resourcePath[i] = "".equals(segment) ? null : segment;
         }
         createStringRepresentation();
     }
@@ -111,6 +111,26 @@ public final class ResourceIdentifier {
      */
     public String[] toPath() {
         return Arrays.copyOf(resourcePath, resourcePath.length);
+    }
+
+    /**
+     * Gets the element at a given index of the resource path.
+     * 
+     * @param index The index (starting from zero).
+     * @return The element at the index.
+     * @throws ArrayIndexOutOfBoundsException if the resource path's length is shorter than the index.
+     */
+    public String elementAt(final int index) {
+        return resourcePath[index];
+    }
+
+    /**
+     * Gets the number of elements in the resource path.
+     * 
+     * @return The resource path length.
+     */
+    public int length() {
+        return resourcePath.length;
     }
 
     private String createStringRepresentation(final int startIdx) {
@@ -204,16 +224,12 @@ public final class ResourceIdentifier {
 
     /**
      * Creates a resource identifier from path segments.
-     * <p>
-     * The given path will be stripped of any trailing {@code null}
-     * segments.
-     * </p>
      *
      * @param path the segments of the resource path.
      * @return the resource identifier.
      * @throws NullPointerException if path is {@code null}.
-     * @throws IllegalArgumentException if the path contains no segments or contains non-trailing
-     *                                  {@code null} segments.
+     * @throws IllegalArgumentException if the path contains no segments or starts with a
+     *                                  {@code null} segment.
      */
     public static ResourceIdentifier fromPath(final String[] path) {
         Objects.requireNonNull(path);

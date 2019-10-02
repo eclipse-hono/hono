@@ -14,7 +14,10 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.eclipse.hono.tests.CommandEndpointConfiguration;
+import org.eclipse.hono.util.ResourceIdentifier;
 
 /**
  * Configuration properties for defining variants of Command &amp; Control
@@ -55,5 +58,61 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
     public final String getCommandTopicFilter() {
         return String.format(
                 "%s/%s/req/#", getSouthboundEndpoint(), "+/+");
+    }
+
+    /**
+     * Gets the name of the topic that a device uses for publishing the response to a command.
+     * 
+     * @param deviceId The identifier of the device.
+     * @param requestId The request identifier from the command.
+     * @param status The status code indicating the outcome of processing the command.
+     * @return The topic name.
+     */
+    public final String getResponseTopic(final String deviceId, final String requestId, final int status) {
+        return String.format(
+                "%s///res/%s/%d",
+                getSouthboundEndpoint(), requestId, status);
+    }
+
+    void assertCommandPublishTopicStructure(
+            final ResourceIdentifier topic,
+            final String expectedCommandTarget,
+            final boolean isOneWayCommand,
+            final String expectedCommandName) {
+
+        assertThat(topic).isNotNull();
+
+        assertThat(topic.getEndpoint())
+        .as("command topic contains correct endpoint")
+        .isEqualTo(getSouthboundEndpoint());
+
+        assertThat(topic.getTenantId())
+        .as("command topic does not contain tenant ID")
+        .isNull();
+
+        if (isGatewayDevice()) {
+            assertThat(topic.getResourceId())
+            .as("command topic contains device ID")
+            .isEqualTo(expectedCommandTarget);
+        } else {
+            assertThat(topic.getResourceId())
+            .as("command topic does not contain device ID")
+            .isNull();
+        }
+
+        if (isOneWayCommand) {
+            assertThat(topic.elementAt(4))
+            .as("one-way command topic does not contain request ID")
+            .isNull();
+        } else {
+            assertThat(topic.elementAt(4))
+            .as("command topic contains request ID")
+            .isNotNull();
+        }
+
+        assertThat(topic.elementAt(5))
+        .as("command topic contains command name")
+        .isEqualTo(expectedCommandName);
+
     }
 }

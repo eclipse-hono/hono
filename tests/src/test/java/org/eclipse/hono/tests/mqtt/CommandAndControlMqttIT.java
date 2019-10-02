@@ -138,12 +138,11 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final Checkpoint commandsReceived = ctx.checkpoint(COMMANDS_TO_SEND);
 
         testSendCommandSucceeds(ctx, msg -> {
+            LOGGER.trace("received one-way command [topic: {}]", msg.topicName());
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
-            ctx.verify(() -> assertThat(topic.getEndpoint()).isEqualTo(endpointConfig.getSouthboundEndpoint()));
-            // extract command
-            final String command = topic.getResourcePath()[5];
-            LOGGER.trace("received one-way command [device-id: {}, name: {}]", topic.getEndpoint(), command);
-            ctx.verify(() -> assertThat(command).isEqualTo("setValue"));
+            ctx.verify(() -> {
+                endpointConfig.assertCommandPublishTopicStructure(topic, commandTarget, true, "setValue");
+            });
             commandsReceived.flag();
         }, payload -> {
             return helper.sendOneWayCommand(
@@ -202,16 +201,17 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         testSendCommandSucceeds(ctx, msg -> {
             LOGGER.trace("received command [{}]", msg.topicName());
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
-            ctx.verify(() -> assertThat(topic.getEndpoint()).isEqualTo(endpointConfig.getSouthboundEndpoint()));
-            // extract command and request ID
-            final String commandRequestId = topic.getResourcePath()[4];
-            final String command = topic.getResourcePath()[5];
+
+            ctx.verify(() -> {
+                endpointConfig.assertCommandPublishTopicStructure(topic, commandTarget, false, "setValue");
+            });
+
+            final String commandRequestId = topic.elementAt(4);
+            final String command = topic.elementAt(5);
+
             // send response
-            final String responseTopic = String.format(
-                    "%s///res/%s/%d",
-                    endpointConfig.getSouthboundEndpoint(), commandRequestId, HttpURLConnection.HTTP_OK);
             mqttClient.publish(
-                    responseTopic,
+                    endpointConfig.getResponseTopic(commandTarget, commandRequestId, HttpURLConnection.HTTP_OK),
                     Buffer.buffer(command + ": ok"),
                     qos,
                     false,
@@ -242,7 +242,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final Function<Buffer, Future<?>> commandSender,
             final MqttCommandEndpointConfiguration endpointConfig,
             final int totalNoOfCommandsToSend,
-            final MqttQoS qos) throws InterruptedException {
+            final MqttQoS subscribeQos) throws InterruptedException {
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint ready = setup.checkpoint(2);
@@ -260,7 +260,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 ready.flag();
             }
         }))
-        .compose(conAck -> subscribeToCommands(commandConsumer, endpointConfig, qos))
+        .compose(conAck -> subscribeToCommands(commandConsumer, endpointConfig, subscribeQos))
         .setHandler(setup.succeeding(ok -> ready.flag()));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();

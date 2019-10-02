@@ -195,20 +195,27 @@ public class ResourceIdentifierTest {
      * a path that contains trailing {@code null} segments.
      */
     @Test
-    public void testFromPathIgnoresTrailingNulls() {
+    public void testFromPathAllowsTrailingNulls() {
         final ResourceIdentifier id = ResourceIdentifier.fromPath(new String[]{"first", "second", null, null});
-        assertThat(id.toPath().length, is(2));
-        assertThat(id.toPath()[0], is("first"));
-        assertThat(id.toPath()[1], is("second"));
+        assertThat(id.length(), is(4));
+        assertThat(id.elementAt(0), is("first"));
+        assertThat(id.elementAt(1), is("second"));
+        assertNull(id.elementAt(2));
+        assertNull(id.elementAt(3));
     }
 
     /**
      * Verifies that a resource identifier cannot be created from
      * a path that contains non-trailing {@code null} segments.
      */
-    @Test(expected = IllegalArgumentException.class)
-    public void testFromPathFailsForNonTrailingNulls() {
-        ResourceIdentifier.fromPath(new String[]{"first", "second", null, "last"});
+    @Test
+    public void testFromPathAllowsNullSegments() {
+        final ResourceIdentifier id = ResourceIdentifier.fromPath(new String[]{"first", "second", null, "last"});
+        assertThat(id.length(), is(4));
+        assertThat(id.elementAt(0), is("first"));
+        assertThat(id.elementAt(1), is("second"));
+        assertNull(id.elementAt(2));
+        assertThat(id.elementAt(3), is("last"));
     }
 
     /**
