@@ -410,6 +410,11 @@
             </signature>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>properties-maven-plugin</artifactId>
+          <version>1.0.0</version>
+        </plugin>
       </plugins>
     </pluginManagement>
 

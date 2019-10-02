@@ -243,6 +243,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>+auth.ip:auth.amqp.port:5672</port>
                       <port>+auth.ip:auth.health.port:${vertx.health.port}</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/auth.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -319,6 +320,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
                       <port>+deviceregistry.ip:deviceregistry.health.port:${vertx.health.port}</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/deviceregistry.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -389,6 +391,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+broker.ip:broker.amqp.port:5671</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/broker.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -459,6 +462,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/qpid.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -525,6 +529,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>https.port:8443</port>
                       <port>+http.ip:http.health.port:${vertx.health.port}</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/adapter.http.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -598,6 +603,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>mqtts.port:8883</port>
                       <port>+mqtt.ip:mqtt.health.port:${vertx.health.port}</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/adapter.mqtt.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -663,6 +669,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>+adapter.amqps.ip:adapter.amqps.port:5671</port>
                       <port>+adapter.amqp.ip:adapter.amqp.health.port:${vertx.health.port}</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/adapter.amqp.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -729,6 +736,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>coaps.port:5684/udp</port>
                       <port>+coap.ip:coap.health.port:${vertx.health.port}</port>
                     </ports>
+                    <portPropertyFile>${project.build.directory}/docker/adapter.coap.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
@@ -760,6 +768,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
             </configuration>
             <executions>
               <execution>
+                <id>build_images</id>
                 <phase>package</phase>
                 <goals>
                   <goal>build</goal>
@@ -841,6 +850,94 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <goal>integration-test</goal>
                   <goal>verify</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>useRunningContainers</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>properties-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>initialize</phase>
+                <goals>
+                  <goal>read-project-properties</goal>
+                </goals>
+                <configuration>
+                  <files>
+                    <file>${project.build.directory}/docker/auth.port.properties</file>
+                    <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
+                    <file>${project.build.directory}/docker/broker.port.properties</file>
+                    <file>${project.build.directory}/docker/qpid.port.properties</file>
+                    <file>${project.build.directory}/docker/adapter.http.port.properties</file>
+                    <file>${project.build.directory}/docker/adapter.mqtt.port.properties</file>
+                    <file>${project.build.directory}/docker/adapter.amqp.port.properties</file>
+                    <file>${project.build.directory}/docker/adapter.coap.port.properties</file>
+                  </files>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <executions>
+              <!-- disable 'build', 'start' and 'stop-and-remove' executions -->
+              <execution>
+                <id>build_images</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>start-docker</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>stop-and-remove-docker</id>
+                <phase>none</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>stopContainers</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <configuration>
+              <verbose>true</verbose>
+            </configuration>
+            <executions>
+              <!-- disable 'build' and 'start' executions -->
+              <execution>
+                <id>build_images</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>start-docker</id>
+                <phase>none</phase>
+              </execution>
+              <execution>
+                <id>stop-and-remove-docker</id>
+                <phase>post-integration-test</phase>
+                <goals>
+                  <goal>stop</goal>
+                  <goal>remove</goal>
+                </goals>
+                <configuration>
+                  <removeVolumes>true</removeVolumes>
+                  <removeMode>all</removeMode>
+                  <stopNamePattern>hono-*-test*</stopNamePattern>
+                </configuration>
               </execution>
             </executions>
           </plugin>

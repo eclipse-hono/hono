@@ -34,3 +34,19 @@ To run a single test, set the `it.test` property:
 The `logging.profile` property with a value of either `prod`, `dev` or `trace` can be used to set the log level in the Hono Docker containers:
 
     $ mvn verify -Prun-tests -Dlogging.profile=trace
+
+### Running the Tests without starting/stopping the containers
+
+When running the tests with the `docker.keepRunning` property, the Docker containers will not be stopped and removed once the tests are complete:
+
+    $ mvn verify -Prun-tests -Ddocker.keepRunning
+
+Subsequent test runs can use the running containers and will thereby finish much faster by adding the `useRunningContainers` profile to the maven command:
+
+    $ mvn verify -Prun-tests,useRunningContainers
+
+With that profile, the Docker containers will be kept running as well.
+
+In order to stop and remove the Docker containers started by a test run, use:
+
+    $ mvn verify -PstopContainers
