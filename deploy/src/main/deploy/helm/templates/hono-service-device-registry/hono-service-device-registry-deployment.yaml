@@ -5,6 +5,7 @@ kind: StatefulSet
 metadata:
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
+  serviceName: {{ printf "%s-headless" $args.name }}
   replicas: 1
   selector:
     matchLabels:

@@ -1,4 +1,2 @@
-{{- if and .Values.prometheus.createInstance .Values.deviceRegistryExample.enabled }}
 {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry" }}
 {{- include "hono.headless.service" $args }}
-{{ end }}

@@ -5,8 +5,10 @@ metadata:
   {{- $args := dict "dot" . "component" "metrics" "name" "prometheus-config" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 data:
-  rules:
-  alerts:
+  rules: |
+    {{ "" }}
+  alerts: |
+    {{ "" }}
   prometheus.yml: |
     global:
       {{- .Values.prometheus.server.global | toYaml | nindent 6 }}
