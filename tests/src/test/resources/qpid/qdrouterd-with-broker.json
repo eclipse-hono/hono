@@ -124,6 +124,10 @@
 
   ["log", {
     "module": "DEFAULT",
+    "enable": "warning+"
+  }],
+  ["log", {
+    "module": "SERVER",
     "enable": "info+"
   }]
 ]
