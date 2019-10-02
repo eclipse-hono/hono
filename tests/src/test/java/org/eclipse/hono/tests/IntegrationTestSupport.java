@@ -249,7 +249,7 @@ public final class IntegrationTestSupport {
      * The name of the system property to use for setting the maximum number of BCrypt iterations supported
      * by Hono.
      */
-    public static final String PROPTERY_MAX_BCRYPT_ITERATIONS = "max.bcrypt.iterations";
+    public static final String PROPERTY_MAX_BCRYPT_ITERATIONS = "max.bcrypt.iterations";
 
 
     /**
@@ -376,12 +376,17 @@ public final class IntegrationTestSupport {
     /**
      * The maximum number of BCrypt iterations supported by Hono.
      */
-    public static final int    MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPTERY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
+    public static final int    MAX_BCRYPT_ITERATIONS = Integer.getInteger(PROPERTY_MAX_BCRYPT_ITERATIONS, DEFAULT_MAX_BCRYPT_ITERATIONS);
 
     /**
      * The absolute path to the trust store to use for establishing secure connections with Hono.
      */
     public static final String TRUST_STORE_PATH = System.getProperty("trust-store.path");
+
+    /**
+     * Pattern used for the <em>name</em> field of the {@code @ParameterizedTest} annotation.
+     */
+    public static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {arguments}";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);

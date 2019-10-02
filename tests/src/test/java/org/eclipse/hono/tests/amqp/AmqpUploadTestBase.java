@@ -199,7 +199,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param ctx The Vert.x test context.
      * @throws InterruptedException if test is interrupted while running.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("senderQoSTypes")
     public void testUploadMessagesUsingSaslPlain(final ProtonQoS senderQos, final VertxTestContext ctx) throws InterruptedException {
 
@@ -229,7 +229,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param ctx The test context.
      * @throws InterruptedException if test execution is interrupted.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("senderQoSTypes")
     public void testUploadMessagesUsingSaslExternal(final ProtonQoS senderQos, final VertxTestContext ctx) throws InterruptedException {
 

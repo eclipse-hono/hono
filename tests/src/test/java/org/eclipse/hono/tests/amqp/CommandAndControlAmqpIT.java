@@ -208,7 +208,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     public void testSendOneWayCommandSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
@@ -261,7 +261,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource
     public void testSendAsyncCommandsSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
@@ -272,8 +272,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectAndSubscribe(ctx, endpointConfig, sender -> createCommandConsumer(ctx, sender));
 
         final String replyId = "reply-id";
-        final int totalNoOfcommandsToSend = 60;
-        final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfcommandsToSend);
+        final int totalNoOfCommandsToSend = 60;
+        final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
 
@@ -286,7 +286,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     lastReceivedTimestamp.set(System.currentTimeMillis());
                     commandsSucceeded.countDown();
                     if (commandsSucceeded.getCount() % 20 == 0) {
-                        log.info("command responses received: {}", totalNoOfcommandsToSend - commandsSucceeded.getCount());
+                        log.info("command responses received: {}", totalNoOfCommandsToSend - commandsSucceeded.getCount());
                     }
                 },
                 null);
@@ -301,7 +301,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final long start = System.currentTimeMillis();
 
-        while (commandsSent.get() < totalNoOfcommandsToSend) {
+        while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final String correlationId = String.valueOf(commandsSent.getAndIncrement());
@@ -328,11 +328,11 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             commandSent.await();
         }
 
-        final long timeToWait = totalNoOfcommandsToSend * 200;
+        final long timeToWait = totalNoOfCommandsToSend * 200;
         if (!commandsSucceeded.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for command responses", timeToWait);
         }
-        final long commandsCompleted = totalNoOfcommandsToSend - commandsSucceeded.getCount();
+        final long commandsCompleted = totalNoOfCommandsToSend - commandsSucceeded.getCount();
         log.info("commands sent: {}, responses received: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
         if (commandsCompleted == commandsSent.get()) {
@@ -350,7 +350,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     public void testSendCommandSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
@@ -388,16 +388,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final AmqpCommandEndpointConfiguration endpointConfig,
             final Function<ProtonSender, ProtonMessageHandler> commandConsumerFactory,
             final Function<Buffer, Future<?>> commandSender,
-            final int totalNoOfcommandsToSend) throws InterruptedException {
+            final int totalNoOfCommandsToSend) throws InterruptedException {
 
         connectAndSubscribe(ctx, endpointConfig, commandConsumerFactory);
 
-        final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfcommandsToSend);
+        final CountDownLatch commandsSucceeded = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
         final long start = System.currentTimeMillis();
 
-        while (commandsSent.get() < totalNoOfcommandsToSend) {
+        while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer payload = Buffer.buffer("value: " + commandsSent.getAndIncrement());
@@ -408,7 +408,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         lastReceivedTimestamp.set(System.currentTimeMillis());
                         commandsSucceeded.countDown();
                         if (commandsSucceeded.getCount() % 20 == 0) {
-                            log.info("commands succeeded: {}", totalNoOfcommandsToSend - commandsSucceeded.getCount());
+                            log.info("commands succeeded: {}", totalNoOfCommandsToSend - commandsSucceeded.getCount());
                         }
                     }
                     if (commandsSent.get() % 20 == 0) {
@@ -421,11 +421,11 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             commandSent.await();
         }
 
-        final long timeToWait = totalNoOfcommandsToSend * 200;
+        final long timeToWait = totalNoOfCommandsToSend * 200;
         if (!commandsSucceeded.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for commands to succeed", timeToWait);
         }
-        final long commandsCompleted = totalNoOfcommandsToSend - commandsSucceeded.getCount();
+        final long commandsCompleted = totalNoOfCommandsToSend - commandsSucceeded.getCount();
         log.info("commands sent: {}, commands succeeded: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
         if (commandsCompleted == commandsSent.get()) {
@@ -442,7 +442,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     public void testSendCommandFailsForMalformedMessage(
@@ -513,7 +513,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     public void testSendCommandFailsForCommandRejectedByDevice(

@@ -887,7 +887,7 @@ public abstract class HttpTestBase {
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
     public void testUploadMessagesWithTtdThatReplyWithCommand(
             final HttpCommandEndpointConfiguration endpointConfig,
@@ -992,7 +992,7 @@ public abstract class HttpTestBase {
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("commandAndControlVariants")
     public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(
             final HttpCommandEndpointConfiguration endpointConfig,
@@ -1133,8 +1133,7 @@ public abstract class HttpTestBase {
 
         final StringBuilder result = new StringBuilder("Basic ");
         final String username = IntegrationTestSupport.getUsername(deviceId, tenant);
-        result.append(Base64.getEncoder().encodeToString(new StringBuilder(username).append(":").append(password)
-                .toString().getBytes(StandardCharsets.UTF_8)));
+        result.append(Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8)));
         return result.toString();
     }
 
