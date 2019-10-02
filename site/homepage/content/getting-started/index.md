@@ -201,7 +201,7 @@ Content-Length: 0
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
 In this guide we will use the Hono command line client to simulate such an application.
-The client will connect to Hono's north bound [Telemetry]({{% doclink "/api/telemetry-api/" %}}) and [Event API]({{% doclink "/api/event-api/" %}})s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event messages and log the messages to the console.
+The client will connect to Hono's north bound [Telemetry]({{% doclink "/api/telemetry/" %}}) and [Event API]({{% doclink "/api/event/" %}})s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event messages and log the messages to the console.
 
 Open a new terminal window and set the `AMQP_NETWORK_IP` environment variable.
 If you are using the Sandbox server:
@@ -317,7 +317,7 @@ The application used the AMQP 1.0 protocol to receive messages regardless of the
 
 **What to try next?**
 
-* Continue with the next sections to learn how applications can send commands to devices by means of the [Command & Control API]({{% doclink "/api/command-and-control-api/" %}}).
+* Continue with the next sections to learn how applications can send commands to devices by means of the [Command & Control API]({{% doclink "/api/command-and-control/" %}}).
 * Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipse.org:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard]({{% doclink "/deployment/helm-based-deployment/#dashboard" %}}) for instructions.
 * Check out the [User Guides]({{% doclink "/user-guide/" %}}) to explore more options for devices to connect to Hono using different transport protocols.
 * Learn more about the managing tenants, devices and credentials using the [Device Registry's HTTP API]({{% doclink "/user-guide/device-registry/" %}}).
