@@ -17,7 +17,7 @@ Here is a (non-exclusive, non-prioritized) list of things you might be able to h
 * documentation (Getting Started guide, Examples, Deployment instructions for cloud environments)
 * features (both ideas and code are welcome)
 
-You might also want to take a look at our GitHub Issues page (see drawer on the left) and see if you can help out with any of the issues listed. We have put a `help wanted` label on those issues that we are particularly keen on receiving contributions for.
+You might also want to take a look at our [GitHub Issues](https://github.com/eclipse/hono/issues) page and see if you can help out with any of the issues listed. We have put a [help wanted](https://github.com/eclipse/hono/labels/help%20wanted) label on those issues that we are particularly keen on receiving contributions for.
 
 ## Legal Requirements
 
@@ -88,5 +88,5 @@ Submit a pull request via the normal GitHub UI.
 
 ## After Submitting
 
-* Do not use your *feature branch* for any other development, otherwise further changes that you make will be visible in the PR.
+Do not use your *feature branch* for any other development, otherwise further changes that you make will be visible in the PR.
 
