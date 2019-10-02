@@ -3,7 +3,7 @@ title = "Setting up a Kubernetes Cluster"
 weight = 480
 +++
 
-This guide describes how to set up a Kubernetes cluster which can be used to run Eclipse Hono.
+This guide describes how to set up a Kubernetes cluster which can be used to run Eclipse Hono&trade;.
 
 <!--more-->
 
@@ -43,25 +43,25 @@ Setting up a multi-node Kubernetes cluster is a more advanced topic. Please foll
 
 ## Setting up an Environment on Microsoft Azure
 
-This chapter describes how Eclipse Hono™ can be deployed on Microsoft Azure. It includes:
+This chapter describes how Hono can be deployed on Microsoft Azure. It includes:
 
 - [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview) templates for an automated infrastructure deployment.
-- Eclipse Hono™ deployment into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
-- Push Eclipse Hono™ docker images to an [Azure Container Registry (ACR)](https://azure.microsoft.com/en-us/services/container-registry/).
-- Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as broker for the [Eclipse Hono™ AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of a self hosted ActiveMQ Artemis.
+- Hono deployment into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
+- Push Hono docker images to an [Azure Container Registry (ACR)](https://azure.microsoft.com/en-us/services/container-registry/).
+- Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as broker for the [Hono AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of a self hosted ActiveMQ Artemis.
 - [Virtual Network (VNet) service endpoints](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview) ensure protected communication between AKS and Azure Service Bus.
 
 <!--more-->
 
 {{% warning title="Use for demos only" %}}
-This deployment model is not meant for productive use but rather for evaluation as well as demonstration purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Eclipse Hono™.
+This deployment model is not meant for productive use but rather for evaluation as well as demonstration purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Hono.
 {{% /warning %}}
 
 ### Prerequisites
 
 - An [Azure subscription](https://azure.microsoft.com/en-us/get-started/).
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed to setup the infrastructure.
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm](https://helm.sh/docs/using_helm/#installing-helm) installed to deploy Eclipse Hono™ into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm](https://helm.sh/docs/using_helm/#installing-helm) installed to deploy Hono into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
 
 ### Setup
 
@@ -100,7 +100,7 @@ cd deploy/src/main/deploy/azure/
 az group deployment create --name HonoBasicInfrastructure --resource-group $resourcegroup_name --template-file arm/honoInfrastructureDeployment.json --parameters uniqueSolutionPrefix=$unique_solution_prefix servicePrincipalObjectId=$object_id_principal servicePrincipalClientId=$app_id_principal servicePrincipalClientSecret=$password_principal
 ```
 
-Note: add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Eclipse Hono™ AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
+Note: add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Hono AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
 
 After the deployment is complete you can set your cluster in _kubectl_.
 
@@ -116,7 +116,7 @@ helm init --service-account tiller
 kubectl apply -f managed-premium-retain.yaml
 ```
 
-Now wait until the Azure deployment is complete and then continue with the [Helm deployment](helm-based-deployment/) of Eclipse Hono™  itself.
+Now wait until the Azure deployment is complete and then continue with the [Helm deployment](helm-based-deployment/) of Hono itself.
 
 ### Monitoring
 
