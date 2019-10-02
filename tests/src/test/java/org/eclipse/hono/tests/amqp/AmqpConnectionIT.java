@@ -61,7 +61,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * Closes the connection to the adapter.
      */
     @AfterEach
-    public void disconnnect() {
+    public void disconnect() {
         if (connection != null) {
             connection.closeHandler(null);
             connection.close();

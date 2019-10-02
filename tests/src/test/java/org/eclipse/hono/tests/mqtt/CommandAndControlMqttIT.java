@@ -136,7 +136,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     public void testSendOneWayCommandSucceeds(
@@ -174,7 +174,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     public void testSendCommandSucceedsWithQos0(
             final MqttCommandEndpointConfiguration endpointConfig,
@@ -191,7 +191,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     public void testSendCommandSucceedsWithQos1(
             final MqttCommandEndpointConfiguration endpointConfig,
@@ -331,7 +331,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
     public void testSendCommandFailsForMalformedMessage(
