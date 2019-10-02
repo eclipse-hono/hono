@@ -15,9 +15,9 @@ The [Kubernetes web site](https://kubernetes.io/docs/setup/) provides instructio
 
 ## Setting up a local Development Environment
 
-The easiest option is to set up a single-node cluster running on a local VM using the [Minikube](https://github.com/kubernetes/minikube) project.
+The easiest option is to set up a single-node cluster running on a local VM using the [Minikube](https://minikube.sigs.k8s.io/) project.
 This kind of setup is sufficient for evaluation and development purposes.
-Please refer to Kubernetes' [Minikube setup guide](https://kubernetes.io/docs/setup/minikube/) for instructions on how to set up a cluster locally.
+Please refer to Minikube's [getting started guide](https://minikube.sigs.k8s.io/docs/start/) for instructions on how to set up a cluster locally.
 
 The recommended settings for a Minikube VM used for running Hono's example setup are as follows:
 
@@ -30,7 +30,7 @@ The command to start the VM will look something like this:
 minikube start --cpus 2 --memory 8192
 ```
 
-After the Minikube VM has started successfully, the `minikube tunnel` command should be run in order to support Hono's services being deployed using the *LoadBalancer* type. Please refer to the [Minikube Networking docs](https://github.com/kubernetes/minikube/blob/master/docs/networking.md#access-to-loadbalancer-services-using-minikube-tunnel) for details.
+After the Minikube VM has started successfully, the `minikube tunnel` command should be run in order to support Hono's services being deployed using the *LoadBalancer* type. Please refer to the [Minikube Loadbalancer docs](https://minikube.sigs.k8s.io/docs/tasks/loadbalancer/) for details.
 
 {{% note title="Supported Kubernetes Versions" %}}
 Minikube will use the most recent Kubernetes version that was available when it has been compiled by default. Hono *should* run on any version of Kubernetes starting with 1.13.6. However, it has been tested with several specific versions only so if you experience any issues with running Hono on a more recent version, please try to deploy to 1.13.6 before
