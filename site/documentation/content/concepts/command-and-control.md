@@ -63,15 +63,15 @@ In the above topics, `${tenant}` and `${device-id}` are kept empty for authentic
 
 Authenticated devices typically subscribe to
 
-* `command/+/+/req/#`
+* `command///req/#`
 
 while unauthenticated devices have to fully specify their `${tenant}` and `${device-id}` in the subscription topic:
 
 * `command/${tenant-id}/${device-id}/req/#`
 
-Authenticated gateways subscribe to
+Authenticated gateways subscribe to commands for all devices they act on behalf of using topic filter
 
-* `command/+/+/req/#`
+* `command//+/req/#`
 
 and will receive commands on a topic that contains the target device id.
 
