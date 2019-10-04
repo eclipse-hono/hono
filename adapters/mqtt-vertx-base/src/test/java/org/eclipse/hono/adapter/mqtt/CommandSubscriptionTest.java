@@ -13,14 +13,11 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.mqtt.MqttTopicSubscription;
@@ -39,13 +36,13 @@ public class CommandSubscriptionTest {
      */
     @Test
     public void testSubscriptionUnauth() {
-        final CommandSubscription subscription = CommandSubscription
-                .fromTopic(getCommandSubscriptionTopic("tenant", "device"), null);
-        assertNotNull(subscription);
-        assertThat(subscription.getDeviceId(), is("device"));
-        assertThat(subscription.getTenant(), is("tenant"));
-        assertThat(subscription.getEndpoint(), is(getCommandEndpoint()));
-        assertThat(subscription.getRequestPart(), is("req"));
+
+        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandEndpoint() + "/tenant1/deviceA/req/#", null);
+        assertThat(subscription).isNotNull();
+        assertThat(subscription.getTenant()).isEqualTo("tenant1");
+        assertThat(subscription.getDeviceId()).isEqualTo("deviceA");
+        assertThat(subscription.getEndpoint()).isEqualTo(getCommandEndpoint());
+        assertThat(subscription.getRequestPart()).isEqualTo("req");
     }
 
     /**
@@ -53,12 +50,12 @@ public class CommandSubscriptionTest {
      */
     @Test
     public void testSubscriptionUnauthShort() {
-        final CommandSubscription subscription = CommandSubscription.fromTopic("c/tenant/device/q/#", null);
-        assertNotNull(subscription);
-        assertThat(subscription.getDeviceId(), is("device"));
-        assertThat(subscription.getTenant(), is("tenant"));
-        assertThat(subscription.getEndpoint(), is("c"));
-        assertThat(subscription.getRequestPart(), is("q"));
+        final CommandSubscription subscription = CommandSubscription.fromTopic("c/tenant1/deviceA/q/#", null);
+        assertThat(subscription).isNotNull();
+        assertThat(subscription.getTenant()).isEqualTo("tenant1");
+        assertThat(subscription.getDeviceId()).isEqualTo("deviceA");
+        assertThat(subscription.getEndpoint()).isEqualTo(CommandConstants.COMMAND_ENDPOINT_SHORT);
+        assertThat(subscription.getRequestPart()).isEqualTo(CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT);
     }
 
     /**
@@ -66,9 +63,10 @@ public class CommandSubscriptionTest {
      */
     @Test
     public void testSubscriptionAuth() {
-        final CommandSubscription subscription = CommandSubscription
-                .fromTopic(getCommandSubscriptionTopic("tenant", "device"), device);
-        assertNotNull(subscription);
+        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandEndpoint() + "/tenant/device/req/#", device);
+        assertThat(subscription).isNotNull();
+        assertThat(subscription.getTenant()).isEqualTo("tenant");
+        assertThat(subscription.getDeviceId()).isEqualTo("device");
     }
 
     /**
@@ -77,15 +75,15 @@ public class CommandSubscriptionTest {
     @Test
     public void testSubscriptionAuthWithQoS() {
         final MqttTopicSubscription mqttTopicSubscription = new MqttTopicSubscriptionImpl(
-                getCommandSubscriptionTopic("tenant", "device"), MqttQoS.AT_LEAST_ONCE);
+                getCommandEndpoint() + "/+/+/req/#", MqttQoS.AT_LEAST_ONCE);
         final CommandSubscription subscription = CommandSubscription.fromTopic(mqttTopicSubscription, device,
                 "testMqttClient");
-        assertNotNull(subscription);
-        assertThat(subscription.getDeviceId(), is("device"));
-        assertThat(subscription.getTenant(), is("tenant"));
-        assertThat(subscription.getTopic(), is(getCommandSubscriptionTopic("tenant", "device")));
-        assertThat(subscription.getQos(), is(MqttQoS.AT_LEAST_ONCE));
-        assertThat(subscription.getClientId(), is("testMqttClient"));
+        assertThat(subscription).isNotNull();
+        assertThat(subscription.getTenant()).isEqualTo(device.getTenantId());
+        assertThat(subscription.getDeviceId()).isEqualTo(device.getDeviceId());
+        assertThat(subscription.getTopic()).isEqualTo(getCommandEndpoint() + "/+/+/req/#");
+        assertThat(subscription.getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
+        assertThat(subscription.getClientId()).isEqualTo("testMqttClient");
     }
 
     /**
@@ -94,7 +92,7 @@ public class CommandSubscriptionTest {
     @Test
     public void testSubscriptionAuthShort() {
         final CommandSubscription subscription = CommandSubscription.fromTopic("c/tenant/device/q/#", device);
-        assertNotNull(subscription);
+        assertThat(subscription).isNotNull();
     }
 
     /**
@@ -103,9 +101,8 @@ public class CommandSubscriptionTest {
      */
     @Test
     public void testSubscriptionAuthDeviceDifferent() {
-        final CommandSubscription subscription = CommandSubscription
-                .fromTopic(getCommandSubscriptionTopic("tenantA", "deviceB"), device);
-        assertNull(subscription);
+        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandEndpoint() + "/tenantA/deviceB/req/#", device);
+        assertThat(subscription).isNull();
     }
 
     /**
@@ -113,11 +110,25 @@ public class CommandSubscriptionTest {
      */
     @Test
     public void testSubscriptionAuthWithPattern() {
-        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandSubscriptionTopic("+", "+"),
-                device);
-        assertNotNull(subscription);
-        assertThat(subscription.getDeviceId(), is("device"));
-        assertThat(subscription.getTenant(), is("tenant"));
+        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandEndpoint() + "/+/+/req/#", device);
+        assertThat(subscription).isNotNull();
+        assertThat(subscription.getTenant()).isEqualTo(device.getTenantId());
+        assertThat(subscription.getDeviceId()).isEqualTo(device.getDeviceId());
+        assertThat(subscription.getEndpoint()).isEqualTo(getCommandEndpoint());
+        assertThat(subscription.getRequestPart()).isEqualTo(CommandConstants.COMMAND_RESPONSE_REQUEST_PART);
+    }
+
+    /**
+     * Verifies subscription pattern with authenticated device omitting tenant and device IDs.
+     */
+    @Test
+    public void testSubscriptionAuthWithoutTenantDevice() {
+        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandEndpoint() + "///req/#", device);
+        assertThat(subscription).isNotNull();
+        assertThat(subscription.getTenant()).isEqualTo(device.getTenantId());
+        assertThat(subscription.getDeviceId()).isEqualTo(device.getDeviceId());
+        assertThat(subscription.getEndpoint()).isEqualTo(getCommandEndpoint());
+        assertThat(subscription.getRequestPart()).isEqualTo(CommandConstants.COMMAND_RESPONSE_REQUEST_PART);
     }
 
     /**
@@ -125,9 +136,8 @@ public class CommandSubscriptionTest {
      */
     @Test
     public void testSubscriptionUnauthWithPattern() {
-        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandSubscriptionTopic("+", "+"),
-                null);
-        assertNull(subscription);
+        final CommandSubscription subscription = CommandSubscription.fromTopic(getCommandEndpoint() + "/+/+/req/#", null);
+        assertThat(subscription).isNull();
     }
 
     /**
@@ -136,7 +146,7 @@ public class CommandSubscriptionTest {
     @Test
     public void testSubscriptionEndpoint() {
         final CommandSubscription subscription = CommandSubscription.fromTopic("cx/tenant/device/q/#", null);
-        assertNull(subscription);
+        assertThat(subscription).isNull();
     }
 
     /**
@@ -145,7 +155,7 @@ public class CommandSubscriptionTest {
     @Test
     public void testSubscriptionReq() {
         final CommandSubscription subscription = CommandSubscription.fromTopic("c/tenant/device/qx/#", null);
-        assertNull(subscription);
+        assertThat(subscription).isNull();
     }
 
     /**
@@ -154,7 +164,7 @@ public class CommandSubscriptionTest {
     @Test
     public void testSubscriptionEnd() {
         final CommandSubscription subscription = CommandSubscription.fromTopic("c/tenant/device/q/a", null);
-        assertNull(subscription);
+        assertThat(subscription).isNull();
     }
 
     /**
@@ -163,13 +173,9 @@ public class CommandSubscriptionTest {
     @Test
     public void testSubscriptionParts() {
         final CommandSubscription subscription = CommandSubscription.fromTopic("c/tenant/device/q/#/x", null);
-        assertNull(subscription);
+        assertThat(subscription).isNull();
         final CommandSubscription subscription2 = CommandSubscription.fromTopic("c/tenant/device/q", null);
-        assertNull(subscription2);
-    }
-
-    private String getCommandSubscriptionTopic(final String tenantId, final String deviceId) {
-        return String.format("%s/%s/%s/req/#", getCommandEndpoint(), tenantId, deviceId);
+        assertThat(subscription2).isNull();
     }
 
     private String getCommandEndpoint() {

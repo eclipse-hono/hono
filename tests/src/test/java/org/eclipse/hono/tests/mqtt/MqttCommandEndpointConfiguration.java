@@ -26,19 +26,24 @@ import org.eclipse.hono.util.ResourceIdentifier;
  */
 public class MqttCommandEndpointConfiguration extends CommandEndpointConfiguration {
 
+    private final boolean legacyTopicFilter;
+
     /**
      * Creates a new configuration.
      * 
      * @param useGatewayDevice {@code true} if the device connecting to the adapter is a gateway.
      * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
      * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
+     * @param useLegacyTopicFilter {@code true} if the device uses the legacy topic filter for subscribing to commands.
      */
     public MqttCommandEndpointConfiguration(
             final boolean useGatewayDevice,
             final boolean useLegacySouthboundEndpoint,
-            final boolean useLegacyNorthboundEndpoint) {
+            final boolean useLegacyNorthboundEndpoint,
+            final boolean useLegacyTopicFilter) {
 
         super(useGatewayDevice, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
+        this.legacyTopicFilter = useLegacyTopicFilter;
     }
 
     /**
@@ -51,13 +56,18 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
     }
 
     /**
-     * Gets the topic filter that devices use for subsrcibing to commands.
+     * Gets the topic filter that devices use for subscribing to commands.
      * 
      * @return The filter.
      */
     public final String getCommandTopicFilter() {
-        return String.format(
-                "%s/%s/req/#", getSouthboundEndpoint(), "+/+");
+        if (isGatewayDevice()) {
+            return String.format(
+                    "%s/%s/req/#", getSouthboundEndpoint(), legacyTopicFilter ? "+/+" : "/+");
+        } else {
+            return String.format(
+                    "%s/%s/req/#", getSouthboundEndpoint(), legacyTopicFilter ? "+/+" : "/");
+        }
     }
 
     /**
