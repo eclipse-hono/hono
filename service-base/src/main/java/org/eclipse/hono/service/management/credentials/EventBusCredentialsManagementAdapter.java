@@ -12,8 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.service.management.Util.newChildSpan;
-
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +22,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.EventBusMessage;
 
@@ -106,7 +105,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         try {
             final Future<List<CommonCredential>> secretsFuture = credentialsFromPayload(request);
 
-            final Span span = newChildSpan(SPAN_NAME_UPDATE_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+            final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
             final Future<OperationResult<Void>> result = Future.future();
 
             return secretsFuture.compose(secrets -> {
@@ -206,7 +205,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final String deviceId = request.getDeviceId();
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = Util.newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
         final Future<OperationResult<List<CommonCredential>>> result = Future.future();
 
         getService().get(tenantId, deviceId, span, result);

@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.management.device;
 
-import static org.eclipse.hono.service.management.Util.newChildSpan;
-
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,6 +22,7 @@ import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.EventBusMessage;
 
@@ -126,7 +125,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final SpanContext spanContext = request.getSpanContext();
 
         final Future<Device> deviceFuture = deviceFromPayload(request);
-        final Span span = newChildSpan(SPAN_NAME_CREATE_DEVICE, spanContext, tracer, tenantId, deviceId.orElse("unspecified"), getClass().getSimpleName());
+        final Span span = Util.newChildSpan(SPAN_NAME_CREATE_DEVICE, spanContext, tracer, tenantId, deviceId.orElse("unspecified"), getClass().getSimpleName());
 
         return deviceFuture.compose(device -> {
             log.debug("registering device [{}] for tenant [{}]", deviceId.orElse("<auto>"), tenantId);
@@ -146,7 +145,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final String deviceId = request.getDeviceId();
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_GET_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = Util.newChildSpan(SPAN_NAME_GET_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         if (tenantId == null || deviceId == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -168,7 +167,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_UPDATE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         if (tenantId == null || deviceId == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -195,7 +194,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_REMOVE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         if (tenantId == null || deviceId == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));

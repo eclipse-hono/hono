@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -121,7 +120,7 @@ public class RegistrationClientImplTest {
         }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
         final Message response = ProtonHelper.message(registrationAssertion.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
@@ -157,7 +156,7 @@ public class RegistrationClientImplTest {
         }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
@@ -183,7 +182,7 @@ public class RegistrationClientImplTest {
             // THEN the registration information is read from the cache
             assertEquals(registrationAssertion, result);
             // and no request message is sent to the service
-            verify(sender, never()).send(any(Message.class), anyHandler());
+            verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
             // and the span is finished
             verify(span).finish();
             ctx.completeNow();
@@ -205,7 +204,7 @@ public class RegistrationClientImplTest {
 
         // THEN the message being sent contains the device ID and the gateway ID
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(sentMessage), is("device"));
         assertThat(

@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
-import static io.netty.handler.codec.mqtt.MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -320,7 +317,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is not established
-        verify(endpoint).reject(CONNECTION_REFUSED_NOT_AUTHORIZED);
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
     }
 
     /**
@@ -400,7 +397,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.handleEndpointConnection(endpoint);
 
         // THEN the connection is not established
-        verify(endpoint).reject(CONNECTION_REFUSED_SERVER_UNAVAILABLE);
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_SERVER_UNAVAILABLE);
     }
 
     /**
@@ -444,7 +441,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // but for which no registration information is available
         when(regClient.assertRegistration(eq("9999"), (String) any(), (SpanContext) any()))
                 .thenReturn(Future.failedFuture(new ClientErrorException(
-                        HTTP_NOT_FOUND, "device unknown or disabled")));
+                        HttpURLConnection.HTTP_NOT_FOUND, "device unknown or disabled")));
 
         // WHEN a device tries to connect with valid credentials
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
@@ -580,7 +577,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN an unknown device publishes a telemetry message
         when(regClient.assertRegistration(eq("unknown"), any(), any())).thenReturn(
-                Future.failedFuture(new ClientErrorException(HTTP_NOT_FOUND)));
+                Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
         final DownstreamSender sender = givenAQoS0TelemetrySender();
 
         final MqttEndpoint endpoint = mockEndpoint();

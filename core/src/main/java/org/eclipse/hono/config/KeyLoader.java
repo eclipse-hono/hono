@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.config;
 
-import static java.lang.String.format;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -186,7 +184,7 @@ public final class KeyLoader {
         final Path path = Paths.get(pathName);
 
         if (!vertx.fileSystem().existsBlocking(pathName)) {
-            throw new IllegalArgumentException(format("%s: PEM file does not exist", path));
+            throw new IllegalArgumentException(String.format("%s: PEM file does not exist", path));
         }
 
         try {
@@ -194,7 +192,7 @@ public final class KeyLoader {
             final List<Entry> pems = PemReader.readAllBlocking(vertx, path);
 
             if (pems.isEmpty()) {
-                throw new IllegalArgumentException(format("%s: File is empty", path));
+                throw new IllegalArgumentException(String.format("%s: File is empty", path));
             }
 
             return processor.process(pems);
@@ -285,6 +283,6 @@ public final class KeyLoader {
             LOG.error("cannot load keys", e);
         }
 
-        throw new IllegalArgumentException(format("%s: Key store doesn't contain private key", path));
+        throw new IllegalArgumentException(String.format("%s: Key store doesn't contain private key", path));
     }
 }

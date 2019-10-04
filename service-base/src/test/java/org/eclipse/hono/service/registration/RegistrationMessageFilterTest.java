@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
-import static org.eclipse.hono.util.RegistrationConstants.ACTION_GET;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,7 +38,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifyDetectsDeviceIdMismatch() {
         // GIVEN a registration message with device id not matching the link target
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE + "_1", ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE + "_1", RegistrationConstants.ACTION_GET);
 
         // WHEN receiving the message via a link
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);
@@ -55,7 +54,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifyDetectsMissingDeviceId() {
         // GIVEN a registration message lacking the device id
-        final Message msg = givenAMessageHavingProperties(null, ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(null, RegistrationConstants.ACTION_GET);
 
         // WHEN receiving the message via a link
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
@@ -87,7 +86,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifySucceedsForTenantOnlyLinkTarget() {
         // GIVEN a valid registration message for myDevice
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, RegistrationConstants.ACTION_GET);
 
         // WHEN receiving the message via a link with matching tenant-level target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT);
@@ -103,7 +102,7 @@ public class RegistrationMessageFilterTest {
     @Test
     public void testVerifySucceedsForMatchingDevice() {
         // GIVEN a registration message for myDevice
-        final Message msg = givenAMessageHavingProperties(MY_DEVICE, ACTION_GET);
+        final Message msg = givenAMessageHavingProperties(MY_DEVICE, RegistrationConstants.ACTION_GET);
 
         // WHEN receiving the message via a link with matching device-level address
         final ResourceIdentifier linkTarget = getResourceIdentifier(MY_TENANT, MY_DEVICE);

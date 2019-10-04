@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -84,7 +83,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         when(connection.getConfig()).thenReturn(new ClientConfigProperties());
         final Vertx vertx = mock(Vertx.class);
         when(connection.getVertx()).thenReturn(vertx);
-        when(vertx.setTimer(anyLong(), anyHandler())).thenReturn(1L);
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenReturn(1L);
         protonSender = HonoClientUnitTestHelper.mockProtonSender();
     }
 

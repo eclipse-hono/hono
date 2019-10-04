@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_KEY;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -24,7 +24,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PskSecret extends CommonSecret {
 
-    @JsonProperty(FIELD_SECRETS_KEY)
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_KEY)
     private byte[] key;
 
     public byte[] getKey() {
@@ -52,7 +52,7 @@ public class PskSecret extends CommonSecret {
     public void checkValidity() {
         super.checkValidity();
         if (this.key == null || this.key.length <= 0) {
-            throw new IllegalStateException(String.format("'%s' must be set", FIELD_SECRETS_KEY));
+            throw new IllegalStateException(String.format("'%s' must be set", RegistryManagementConstants.FIELD_SECRETS_KEY));
         }
     }
 

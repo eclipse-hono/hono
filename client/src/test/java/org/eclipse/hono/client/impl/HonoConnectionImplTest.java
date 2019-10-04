@@ -13,12 +13,9 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
-import static org.eclipse.hono.client.impl.VertxMockSupport.mockHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.AdditionalAnswers.answerVoid;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -52,6 +49,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
+import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
@@ -167,7 +165,7 @@ public class HonoConnectionImplTest {
         // and the client has indeed tried 6 times in total before giving up
         assertTrue(connectionFactory.awaitFailure());
         final ArgumentCaptor<Long> delayValueCaptor = ArgumentCaptor.forClass(Long.class);
-        verify(vertx, times(reconnectAttempts)).setTimer(delayValueCaptor.capture(), anyHandler());
+        verify(vertx, times(reconnectAttempts)).setTimer(delayValueCaptor.capture(), VertxMockSupport.anyHandler());
         // and the first delay period is the minDelay value
         ctx.assertEquals(10L, delayValueCaptor.getAllValues().get(0));
     }
@@ -357,7 +355,7 @@ public class HonoConnectionImplTest {
             }
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
             return null;
-        }).when(factory).connect(any(), anyHandler(), anyHandler(), anyHandler());
+        }).when(factory).connect(any(), VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
         honoConnection = new HonoConnectionImpl(vertx, factory, props);
         honoConnection.connect().setHandler(
                 ctx.asyncAssertFailure(cause -> {
@@ -475,7 +473,7 @@ public class HonoConnectionImplTest {
         when(con.createReceiver(anyString())).thenReturn(receiver);
         @SuppressWarnings("unchecked")
         final Handler<String> remoteCloseHook = mock(Handler.class);
-        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             // do not run timers immediately
             return 0L;
         });
@@ -490,7 +488,7 @@ public class HonoConnectionImplTest {
                 "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
 
         // THEN link establishment is failed after the configured amount of time
-        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), anyHandler());
+        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), VertxMockSupport.anyHandler());
         // and when the peer rejects to open the link
         @SuppressWarnings("unchecked")
         final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandler = ArgumentCaptor.forClass(Handler.class);
@@ -516,7 +514,7 @@ public class HonoConnectionImplTest {
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
         when(con.createReceiver(anyString())).thenReturn(receiver);
-        final Handler<String> remoteCloseHook = mockHandler();
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         final Async connectAttempt = ctx.async();
@@ -649,7 +647,7 @@ public class HonoConnectionImplTest {
         when(sender.getRemoteTarget()).thenReturn(target);
         when(sender.getCredit()).thenReturn(0);
         // just invoke openHandler with succeeded future
-        doAnswer(answerVoid(
+        doAnswer(AdditionalAnswers.answerVoid(
                 (final Handler<AsyncResult<ProtonSender>> handler) -> handler.handle(Future.succeededFuture(sender))))
                         .when(sender).openHandler(any(Handler.class));
         final Handler<String> remoteCloseHook = mock(Handler.class);
@@ -696,10 +694,10 @@ public class HonoConnectionImplTest {
         when(sender.getRemoteTarget()).thenReturn(target);
         when(sender.getCredit()).thenReturn(0);
         // mock handlers
-        doAnswer(answerVoid(
+        doAnswer(AdditionalAnswers.answerVoid(
                 (final Handler<AsyncResult<ProtonSender>> handler) -> handler.handle(Future.succeededFuture(sender))))
                         .when(sender).openHandler(any(Handler.class));
-        doAnswer(answerVoid(
+        doAnswer(AdditionalAnswers.answerVoid(
                 (final Handler<ProtonSender> handler) -> handler.handle(sender)))
                         .when(sender).sendQueueDrainHandler(any(Handler.class));
         final Handler<String> remoteCloseHook = mock(Handler.class);

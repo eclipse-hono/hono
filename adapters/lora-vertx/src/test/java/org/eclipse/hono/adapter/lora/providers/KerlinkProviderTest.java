@@ -14,8 +14,6 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static org.eclipse.hono.adapter.lora.providers.LoraTestUtil.verifyAsync;
 
 import java.time.Instant;
 import java.util.Base64;
@@ -35,6 +33,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.google.common.base.Charsets;
@@ -60,7 +59,7 @@ public class KerlinkProviderTest {
     private static final String KERLINK_URL_DOWNLINK = "/oss/application/customers/.*/clusters/.*/endpoints/.*/txMessages";
 
     @Rule
-    public WireMockRule wireMockRule = new WireMockRule(wireMockConfig().dynamicPort().dynamicPort());
+    public WireMockRule wireMockRule = new WireMockRule(WireMockConfiguration.wireMockConfig().dynamicPort().dynamicPort());
 
     private KerlinkProvider provider;
 
@@ -239,7 +238,7 @@ public class KerlinkProviderTest {
                                     .sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
                                     .setHandler(secondResponse -> {
                                         context.assertTrue(secondResponse.succeeded());
-                                        verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
+                                        LoraTestUtil.verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
                                         async.complete();
                                     }));
                 });
@@ -271,7 +270,7 @@ public class KerlinkProviderTest {
                                     .sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
                                     .setHandler(secondResponse -> {
                                         context.assertTrue(secondResponse.succeeded());
-                                        verifyAsync(context, 1, postRequestedFor(urlEqualTo("/oss/application/login")));
+                                        LoraTestUtil.verifyAsync(context, 1, postRequestedFor(urlEqualTo("/oss/application/login")));
                                         async.complete();
                                     }));
                 });
@@ -300,7 +299,7 @@ public class KerlinkProviderTest {
 
                     provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
                             .setHandler(secondResponse -> {
-                                verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
+                                LoraTestUtil.verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
                                 async.complete();
                             });
                 });

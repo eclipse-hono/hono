@@ -12,10 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -146,12 +142,12 @@ public abstract class AbstractCredentialsServiceTest {
 
                         assertGet(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                     assertNotNull(r.getPayload());
                                     assertTrue(r.getPayload().isEmpty());
                                 },
                                 r -> {
-                                    assertEquals(HTTP_NOT_FOUND, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
                                 },
                                 ctx::completeNow);
 
@@ -272,10 +268,10 @@ public abstract class AbstractCredentialsServiceTest {
 
         assertGet(ctx, tenantId, deviceId, authId, type,
                 r -> {
-                    assertEquals(HTTP_NOT_FOUND, r.getStatus());
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
                 },
                 r -> {
-                    assertEquals(HTTP_NOT_FOUND, r.getStatus());
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
                 },
                 whenComplete);
     }
@@ -296,11 +292,11 @@ public abstract class AbstractCredentialsServiceTest {
 
         assertGet(ctx, tenantId, deviceId, authId, type,
                 r -> {
-                    assertEquals(HTTP_OK, r.getStatus());
+                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                     assertTrue(r.getPayload().isEmpty());
                 },
                 r -> {
-                    assertEquals(HTTP_NOT_FOUND, r.getStatus());
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
                 },
                 whenComplete);
     }
@@ -367,16 +363,16 @@ public abstract class AbstractCredentialsServiceTest {
                     Collections.singletonList(secret), NoopSpan.INSTANCE,
                     ctx.succeeding(s2 -> ctx.verify(() -> {
 
-                        assertEquals(HTTP_NO_CONTENT, s2.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
                         assertResourceVersion(s2);
 
                         assertGet(ctx, tenantId, deviceId, authId,
                                 CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 ctx::completeNow);
 
@@ -406,7 +402,7 @@ public abstract class AbstractCredentialsServiceTest {
                     Collections.singletonList(secret), NoopSpan.INSTANCE,
                     ctx.succeeding(s2 -> ctx.verify(() -> {
 
-                        assertEquals(HTTP_NO_CONTENT, s2.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
                         assertResourceVersion(s2);
 
                         assertGet(ctx, tenantId, deviceId, authId,
@@ -418,10 +414,10 @@ public abstract class AbstractCredentialsServiceTest {
                                     assertEquals(1, secrets.size());
                                     assertEquals(true, verifyPasswordSecret(secrets.get(0), password, OptionalInt.empty()));
                                     assertNull(secrets.get(0).getPasswordPlain());
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 ctx::completeNow);
 
@@ -474,15 +470,15 @@ public abstract class AbstractCredentialsServiceTest {
                     ctx.succeeding(s2 -> ctx.verify(() -> {
 
                         assertResourceVersion(s2);
-                        assertEquals(HTTP_NO_CONTENT, s2.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
 
                         assertGet(ctx, tenantId, deviceId, authId,
                                 CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 phase1::complete);
 
@@ -500,14 +496,14 @@ public abstract class AbstractCredentialsServiceTest {
                     Collections.singletonList(newSecret), NoopSpan.INSTANCE,
                     ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HTTP_NO_CONTENT, s.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
 
                         assertGet(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 r -> {
-                                    assertEquals(HTTP_OK, r.getStatus());
+                                    assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
                                 ctx::completeNow);
                     })));
@@ -554,7 +550,7 @@ public abstract class AbstractCredentialsServiceTest {
 
                             ctx.verify(() -> {
 
-                                assertEquals(HTTP_NO_CONTENT, s2.getStatus());
+                                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
                                 phase2.complete();
                             });
                         }));
@@ -569,7 +565,7 @@ public abstract class AbstractCredentialsServiceTest {
                     Collections.singletonList(secret), NoopSpan.INSTANCE,
                     ctx.succeeding( s -> ctx.verify(() -> {
 
-                        assertEquals(HTTP_PRECON_FAILED, s.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus());
                         checkpoint.flag();
 
                     })));
@@ -629,15 +625,15 @@ public abstract class AbstractCredentialsServiceTest {
 
                             ctx.verify(() -> {
 
-                                assertEquals(HTTP_NO_CONTENT, s2.getStatus());
+                                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
 
                                 assertGet(ctx, tenantId, deviceId, authId,
                                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                         r -> {
-                                            assertEquals(HTTP_OK, r.getStatus());
+                                            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                         },
                                         r -> {
-                                            assertEquals(HTTP_OK, r.getStatus());
+                                            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                         },
                                         () -> {
                                             checkpoint.flag();

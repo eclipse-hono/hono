@@ -12,8 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth;
 
-import static org.eclipse.hono.util.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
-
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -48,8 +46,8 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
 
     @Override
     public final void start(final Future<Void> startFuture) {
-        authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHENTICATION_IN, this::processMessage);
-        LOG.info("listening on event bus [address: {}] for authentication requests", EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
+        authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, this::processMessage);
+        LOG.info("listening on event bus [address: {}] for authentication requests", AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
         doStart(startFuture);
     }
 
@@ -68,7 +66,7 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
 
     @Override
     public final void stop(final Future<Void> stopFuture) {
-        LOG.info("unregistering event bus listener [address: {}]", EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
+        LOG.info("unregistering event bus listener [address: {}]", AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
         authRequestConsumer.unregister();
         doStop(stopFuture);
     }

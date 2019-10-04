@@ -14,7 +14,6 @@
 package org.eclipse.hono.tests.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.eclipse.hono.tests.http.HttpProtocolException.assertProtocolError;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -568,7 +567,7 @@ public abstract class HttpTestBase {
 
             // THEN the message gets rejected by the HTTP adapter with a 403
             logger.info("could not publish message for disabled tenant [{}]", tenantId);
-            ctx.verify(() -> assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
+            ctx.verify(() -> HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
             ctx.completeNow();
         }));
     }
@@ -608,7 +607,7 @@ public abstract class HttpTestBase {
             // THEN the message gets rejected by the HTTP adapter with a 404
             logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]",
                     tenantId, deviceId);
-            ctx.verify(() ->  assertProtocolError(HttpURLConnection.HTTP_NOT_FOUND, t));
+            ctx.verify(() ->  HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_NOT_FOUND, t));
             ctx.completeNow();
         }));
     }
@@ -653,7 +652,7 @@ public abstract class HttpTestBase {
             // THEN the message gets rejected by the HTTP adapter with a 403
             logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]",
                     tenantId, gatewayId);
-            ctx.verify(() -> assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
+            ctx.verify(() -> HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
             ctx.completeNow();
         }));
     }
@@ -697,7 +696,7 @@ public abstract class HttpTestBase {
             // THEN the message gets rejected by the HTTP adapter with a 403
             logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
                     tenantId, gatewayId);
-            ctx.verify(() -> assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
+            ctx.verify(() -> HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
             ctx.completeNow();
         }));
     }

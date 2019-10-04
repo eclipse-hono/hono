@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,24 +13,22 @@
 
 package org.eclipse.hono.config;
 
-import static io.vertx.core.Future.failedFuture;
-import static io.vertx.core.Future.succeededFuture;
-import static java.nio.file.Files.newBufferedReader;
-import static java.util.Objects.requireNonNull;
-
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -88,9 +86,9 @@ public final class PemReader {
      * @throws IOException I case of any error.
      */
     public static List<Entry> readAll(final Path path) throws IOException {
-        requireNonNull(path);
+        Objects.requireNonNull(path);
 
-        try (Reader reader = newBufferedReader(path, StandardCharsets.US_ASCII)) {
+        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.US_ASCII)) {
             return readAll(reader);
         }
     }
@@ -105,8 +103,8 @@ public final class PemReader {
      * @throws IOException I case of any error.
      */
     public static List<Entry> readAllBlocking(final Vertx vertx, final Path path) throws IOException {
-        requireNonNull(vertx);
-        requireNonNull(path);
+        Objects.requireNonNull(vertx);
+        Objects.requireNonNull(path);
 
         return readAllFromBuffer(
                 vertx
@@ -133,16 +131,16 @@ public final class PemReader {
      */
     public static void readAll(final Vertx vertx, final Path path, final Handler<AsyncResult<List<Entry>>> handler) {
 
-        requireNonNull(vertx);
-        requireNonNull(path);
-        requireNonNull(handler);
+        Objects.requireNonNull(vertx);
+        Objects.requireNonNull(path);
+        Objects.requireNonNull(handler);
 
         vertx.fileSystem().readFile(path.toString(), reader -> {
 
             if (reader.failed()) {
 
                 // reading failed ... pass on failure
-                handler.handle(failedFuture(reader.cause()));
+                handler.handle(Future.failedFuture(reader.cause()));
 
             } else {
 
@@ -150,13 +148,13 @@ public final class PemReader {
 
                     // pass on success
 
-                    handler.handle(succeededFuture(readAllFromBuffer(reader.result())));
+                    handler.handle(Future.succeededFuture(readAllFromBuffer(reader.result())));
 
                 } catch (final Exception e) {
 
                     // parsing the payload as PEM failed
 
-                    handler.handle(failedFuture(e));
+                    handler.handle(Future.failedFuture(e));
                 }
 
             }

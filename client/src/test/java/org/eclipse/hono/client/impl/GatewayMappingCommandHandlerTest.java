@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.mockHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -86,7 +85,7 @@ public class GatewayMappingCommandHandlerTest {
                 .thenReturn(Future.succeededFuture(devConClient));
         final GatewayMapperImpl gatewayMapper = new GatewayMapperImpl(registrationClientFactory, deviceConnectionClientFactory, tracer);
 
-        nextCommandHandler = mockHandler();
+        nextCommandHandler = VertxMockSupport.mockHandler();
         gatewayMappingCommandHandler = new GatewayMappingCommandHandler(gatewayMapper, nextCommandHandler);
 
         commandMessage = mock(Message.class);

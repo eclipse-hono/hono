@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.jmeter;
 
-import static org.eclipse.hono.jmeter.HonoSamplerUtils.getIntValueOrDefault;
-
 import java.util.concurrent.CompletionException;
 
 import org.apache.jmeter.samplers.Entry;
@@ -60,7 +58,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * if the value cannot be parsed as integer.
      */
     public int getWaitForReceiversAsInt() {
-        return getIntValueOrDefault(getPropertyAsString(WAIT_FOR_RECEIVERS), 0);
+        return HonoSamplerUtils.getIntValueOrDefault(getPropertyAsString(WAIT_FOR_RECEIVERS), 0);
     }
 
     public String getWaitForReceivers() {
@@ -83,7 +81,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * if the value cannot be parsed as integer.
      */
     public int getWaitForReceiversTimeoutAsInt() {
-        return getIntValueOrDefault(getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT), 0);
+        return HonoSamplerUtils.getIntValueOrDefault(getPropertyAsString(WAIT_FOR_RECEIVERS_TIMEOUT), 0);
     }
 
     public String getWaitForReceiversTimeout() {
@@ -106,7 +104,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * if the value is empty or cannot be parsed as integer.
      */
     public int getSendTimeoutOrDefaultAsInt() {
-        return getIntValueOrDefault(getPropertyAsString(SEND_TIMEOUT), DEFAULT_SEND_TIMEOUT);
+        return HonoSamplerUtils.getIntValueOrDefault(getPropertyAsString(SEND_TIMEOUT), DEFAULT_SEND_TIMEOUT);
     }
 
     /**
@@ -192,7 +190,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * @return number of messages as integer.
      */
     public int getMessageCountPerSamplerRunAsInt() {
-        final int messageCount = getIntValueOrDefault(getPropertyAsString(MESSAGE_COUNT_PER_SAMPLER_RUN), 1);
+        final int messageCount = HonoSamplerUtils.getIntValueOrDefault(getPropertyAsString(MESSAGE_COUNT_PER_SAMPLER_RUN), 1);
         return messageCount > 0 ? messageCount : 1;
     }
 
@@ -202,7 +200,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * @param messageCountPerSamplerRun number of messages.
      */
     public void setMessageCountPerSamplerRun(final String messageCountPerSamplerRun) {
-        final int parsedMessageCount = getIntValueOrDefault(messageCountPerSamplerRun, 1);
+        final int parsedMessageCount = HonoSamplerUtils.getIntValueOrDefault(messageCountPerSamplerRun, 1);
         setProperty(MESSAGE_COUNT_PER_SAMPLER_RUN, parsedMessageCount > 0 ? Integer.toString(parsedMessageCount) : "1");
     }
 

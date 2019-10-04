@@ -12,10 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
-import io.opentracing.noop.NoopSpan;
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -23,13 +19,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.Checkpoint;
-import io.vertx.junit5.VertxTestContext;
+import java.net.HttpURLConnection;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.Id;
@@ -41,15 +39,14 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.junit.jupiter.api.Test;
 
-import java.net.HttpURLConnection;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import io.opentracing.noop.NoopSpan;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Abstract class used as a base for verifying behavior of {@link RegistrationService} and the
@@ -602,10 +599,10 @@ public abstract class AbstractRegistrationServiceTest {
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {
             current = current.compose(ok -> assertDevice(TENANT, entry.getKey(), Optional.empty(),
                     r -> {
-                        assertEquals(HTTP_NOT_FOUND, r.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
                     },
                     r -> {
-                        assertEquals(HTTP_NOT_FOUND, r.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
                     }));
         }
 
@@ -629,7 +626,7 @@ public abstract class AbstractRegistrationServiceTest {
             final var device = entry.getValue();
             current = current.compose(ok -> assertDevice(TENANT, entry.getKey(), Optional.empty(),
                     r -> {
-                        assertEquals(HTTP_OK, r.getStatus());
+                        assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                         assertNotNull(r.getPayload());
                         assertNotNull(r.getResourceVersion()); // may be empty, but not null
                         assertNotNull(r.getCacheDirective()); // may be empty, but not null
@@ -638,10 +635,10 @@ public abstract class AbstractRegistrationServiceTest {
                     },
                     r -> {
                         if (Boolean.FALSE.equals(device.getEnabled())) {
-                            assertEquals(HTTP_NOT_FOUND, r.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, r.getStatus());
                             assertNull(r.getPayload());
                         } else {
-                            assertEquals(HTTP_OK, r.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             final var actualVias = r.getPayload().getJsonArray("via", new JsonArray());
                             assertIterableEquals(device.getVia(), actualVias);
@@ -671,7 +668,7 @@ public abstract class AbstractRegistrationServiceTest {
                 final Future<OperationResult<Id>> f = Future.future();
                 getDeviceManagementService().createDevice(TENANT, Optional.of(entry.getKey()), entry.getValue(), NoopSpan.INSTANCE, f);
                 return f.map(r -> {
-                    assertEquals(HTTP_CREATED, r.getStatus());
+                    assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
                     return null;
                 });
             });

@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
@@ -50,7 +49,7 @@ public class CachingClientFactoryTest {
     public void setup() {
         vertx = mock(Vertx.class);
         // run timers immediately
-        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> task = invocation.getArgument(1);
             task.handle(null);
             return 1L;
@@ -134,7 +133,7 @@ public class CachingClientFactoryTest {
 
         // WHEN an additional, concurrent attempt is made to create a client for the same key
         // and the first 'setTimer' invocation finishes the first creation attempt.
-        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             clientInstanceFuture.tryComplete(new Object());
             final Handler<Void> task = invocation.getArgument(1);
             task.handle(null);

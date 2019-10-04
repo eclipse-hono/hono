@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -115,7 +114,7 @@ public class CredentialsClientImplTest {
         final Future<CredentialsObject> getFuture = client.get(credentialsType, authId);
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final Message sentMessage = messageCaptor.getValue();
@@ -169,7 +168,7 @@ public class CredentialsClientImplTest {
                 }));
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        verify(client.sender).send(messageCaptor.capture(), anyHandler());
+        verify(client.sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
 
         final Message response = ProtonHelper.message(credentialsObject.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
@@ -202,7 +201,7 @@ public class CredentialsClientImplTest {
                 .setHandler(ctx.succeeding(result -> {
                     // THEN the credentials is read from the cache
                     assertEquals(credentialsResult.getPayload(), result);
-                    verify(sender, never()).send(any(Message.class), anyHandler());
+                    verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
                     // and the span is finished
                     verify(span).finish();
                     ctx.completeNow();
@@ -244,7 +243,7 @@ public class CredentialsClientImplTest {
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
-        when(sender.send(any(Message.class), anyHandler())).thenAnswer(invocation -> {
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
             dispositionHandler.handle(update);
             return mock(ProtonDelivery.class);

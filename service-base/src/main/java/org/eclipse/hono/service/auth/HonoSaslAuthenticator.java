@@ -12,9 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth;
 
-import static org.eclipse.hono.util.AuthenticationConstants.MECHANISM_EXTERNAL;
-import static org.eclipse.hono.util.AuthenticationConstants.MECHANISM_PLAIN;
-
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -84,7 +81,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         // TODO determine supported mechanisms dynamically based on registered AuthenticationService implementations
         sasl.server();
         sasl.allowSkip(false);
-        sasl.setMechanisms(MECHANISM_EXTERNAL, MECHANISM_PLAIN);
+        sasl.setMechanisms(AuthenticationConstants.MECHANISM_EXTERNAL, AuthenticationConstants.MECHANISM_PLAIN);
         if (socket.isSsl()) {
             LOG.debug("client connected using TLS, extracting client certificate chain");
             try {

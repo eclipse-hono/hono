@@ -11,6 +11,8 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
+package org.eclipse.hono.adapter.mqtt;
+
 import org.eclipse.hono.adapter.mqtt.PropertyBag;
 import org.junit.jupiter.api.Test;
 

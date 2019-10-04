@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -63,7 +62,7 @@ public class DownstreamSenderFactoryImplTest {
     public void setUp() {
         vertx = mock(Vertx.class);
         // run timers immediately
-        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> task = invocation.getArgument(1);
             task.handle(null);
             return 1L;
@@ -84,7 +83,7 @@ public class DownstreamSenderFactoryImplTest {
 
         // GIVEN a factory that already tries to create a telemetry sender for "tenant" (and never completes doing so)
         final Future<ProtonSender> sender = Future.future();
-        when(connection.createSender(anyString(), any(ProtonQoS.class), anyHandler())).thenReturn(sender);
+        when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler())).thenReturn(sender);
         final Future<DownstreamSender> result = factory.getOrCreateTelemetrySender("telemetry/tenant");
         assertFalse(result.isComplete());
 
@@ -107,7 +106,7 @@ public class DownstreamSenderFactoryImplTest {
 
         // GIVEN a factory that tries to create a telemetry sender for "tenant"
         final Future<ProtonSender> sender = Future.future();
-        when(connection.createSender(anyString(), any(ProtonQoS.class), anyHandler())).thenReturn(sender);
+        when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler())).thenReturn(sender);
         @SuppressWarnings("unchecked")
         final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandler = ArgumentCaptor.forClass(DisconnectListener.class);
         verify(connection).addDisconnectListener(disconnectHandler.capture());

@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -104,7 +103,7 @@ public class EventConsumerImplTest {
                 anyString(),
                 any(ProtonQoS.class),
                 any(ProtonMessageHandler.class),
-                anyHandler())).thenReturn(Future.succeededFuture(receiver));
+                VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(receiver));
 
         final Async consumerCreation = ctx.async();
         EventConsumerImpl.create(
@@ -115,7 +114,7 @@ public class EventConsumerImplTest {
 
         final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
         verify(connection).createReceiver(eq("event/tenant"), eq(ProtonQoS.AT_LEAST_ONCE),
-                messageHandler.capture(), anyHandler());
+                messageHandler.capture(), VertxMockSupport.anyHandler());
         consumerCreation.await();
 
         // WHEN an event is received

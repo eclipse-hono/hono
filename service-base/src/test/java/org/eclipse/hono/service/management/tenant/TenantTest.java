@@ -13,14 +13,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS;
-import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED;
-import static org.eclipse.hono.util.TenantConstants.FIELD_ADAPTERS_TYPE;
-import static org.eclipse.hono.util.TenantConstants.FIELD_ENABLED;
-import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING;
-import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING_SAMPLING_MODE;
-import static org.eclipse.hono.util.TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID;
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -289,10 +282,10 @@ class TenantTest {
         tenant.setTracing(tracingConfig);
         final var json = JsonObject.mapFrom(tenant);
         assertNotNull(json);
-        final JsonObject tracingConfigJson = json.getJsonObject(FIELD_TRACING);
+        final JsonObject tracingConfigJson = json.getJsonObject(TenantConstants.FIELD_TRACING);
         assertNotNull(tracingConfigJson);
-        assertEquals(TracingSamplingMode.ALL.getFieldValue(), tracingConfigJson.getString(FIELD_TRACING_SAMPLING_MODE));
-        final JsonObject traceSamplingModePerAuthIdJson = tracingConfigJson.getJsonObject(FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID);
+        assertEquals(TracingSamplingMode.ALL.getFieldValue(), tracingConfigJson.getString(TenantConstants.FIELD_TRACING_SAMPLING_MODE));
+        final JsonObject traceSamplingModePerAuthIdJson = tracingConfigJson.getJsonObject(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID);
         assertNotNull(traceSamplingModePerAuthIdJson);
         assertEquals(TracingSamplingMode.ALL.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId1"));
         assertEquals(TracingSamplingMode.DEFAULT.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId2"));
@@ -314,11 +307,11 @@ class TenantTest {
                     .setEnabled(true)
                     .setDeviceAuthenticationRequired(true));
 
-        final JsonArray result = JsonObject.mapFrom(tenant).getJsonArray(FIELD_ADAPTERS);
+        final JsonArray result = JsonObject.mapFrom(tenant).getJsonArray(TenantConstants.FIELD_ADAPTERS);
         assertNotNull(result);
-        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, result.getJsonObject(0).getString(FIELD_ADAPTERS_TYPE));
-        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, result.getJsonObject(1).getString(FIELD_ADAPTERS_TYPE));
-        assertEquals(false, result.getJsonObject(0).getBoolean(FIELD_ENABLED));
-        assertEquals(true, result.getJsonObject(0).getBoolean(FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
+        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, result.getJsonObject(0).getString(TenantConstants.FIELD_ADAPTERS_TYPE));
+        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, result.getJsonObject(1).getString(TenantConstants.FIELD_ADAPTERS_TYPE));
+        assertEquals(false, result.getJsonObject(0).getBoolean(TenantConstants.FIELD_ENABLED));
+        assertEquals(true, result.getJsonObject(0).getBoolean(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
     }
 }

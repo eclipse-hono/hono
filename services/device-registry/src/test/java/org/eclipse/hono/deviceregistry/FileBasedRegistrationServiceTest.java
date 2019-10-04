@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry;
 
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -253,21 +252,21 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
                 .compose(ok -> assertCanReadDevice(TENANT, GW))
                 .compose(ok -> assertDevice(TENANT, "4712", Optional.of(GW),
                         r -> {
-                            assertEquals(HTTP_OK, r.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
                         },
                         r -> {
-                            assertEquals(HTTP_OK, r.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                         }))
                 .compose(ok -> assertDevice(TENANT, "4713", Optional.of(GW),
                         r -> {
-                            assertEquals(HTTP_OK, r.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
                         },
                         r -> {
-                            assertEquals(HTTP_OK, r.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                         })
                 .setHandler(ctx.succeeding(s -> ctx.completeNow())));
 

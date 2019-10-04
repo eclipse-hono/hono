@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceconnection.infinispan;
 
-import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,6 +26,7 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionResult;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.commons.api.BasicCache;
@@ -111,7 +111,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
         givenAStartedService()
         .compose(ok -> {
             final Future<DeviceConnectionResult> setLastGwResult = Future.future();
-            svc.setLastKnownGatewayForDevice(DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
+            svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
             return setLastGwResult;
         })
         .setHandler(ctx.succeeding(result -> {
@@ -139,7 +139,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
         givenAStartedService()
         .compose(ok -> {
             final Future<DeviceConnectionResult> getLastGwResult = Future.future();
-            svc.getLastKnownGatewayForDevice(DEFAULT_TENANT, deviceId, span, getLastGwResult);
+            svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span, getLastGwResult);
             return getLastGwResult;
         })
         .setHandler(ctx.succeeding(deviceConnectionResult -> {

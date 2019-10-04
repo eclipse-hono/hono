@@ -12,17 +12,15 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry;
 
-import io.opentracing.Span;
-import io.opentracing.noop.NoopSpan;
-import org.eclipse.hono.tracing.TracingHelper;
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -31,7 +29,9 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
@@ -41,24 +41,16 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
-import static org.eclipse.hono.util.RegistrationConstants.FIELD_DATA;
-import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import io.opentracing.Span;
+import io.opentracing.noop.NoopSpan;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A device backend that keeps all data in memory but is backed by a file.
@@ -221,10 +213,10 @@ public class FileBasedRegistrationService extends AbstractVerticle
         for (final Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
             if (deviceObj instanceof JsonObject) {
                 final JsonObject entry = (JsonObject) deviceObj;
-                final String deviceId = entry.getString(FIELD_PAYLOAD_DEVICE_ID);
+                final String deviceId = entry.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID);
                 if (deviceId != null) {
                     log.trace("loading device [{}]", deviceId);
-                    final Device device = mapFromStoredJson(entry.getJsonObject(FIELD_DATA));
+                    final Device device = mapFromStoredJson(entry.getJsonObject(RegistrationConstants.FIELD_DATA));
                     deviceMap.put(deviceId, new Versioned<>(device));
                     count++;
                 }
@@ -282,8 +274,8 @@ public class FileBasedRegistrationService extends AbstractVerticle
                 for (final Entry<String, Versioned<Device>> deviceEntry : entry.getValue().entrySet()) {
                     devices.add(
                             new JsonObject()
-                                    .put(FIELD_PAYLOAD_DEVICE_ID, deviceEntry.getKey())
-                                    .put(FIELD_DATA, mapToStoredJson(deviceEntry.getValue().getValue())));
+                                    .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceEntry.getKey())
+                                    .put(RegistrationConstants.FIELD_DATA, mapToStoredJson(deviceEntry.getValue().getValue())));
                     idCount.incrementAndGet();
                 }
                 tenants.add(
@@ -368,10 +360,10 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
         if (device == null) {
             TracingHelper.logError(span, "Device not found.");
-            return OperationResult.empty(HTTP_NOT_FOUND);
+            return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
         }
 
-        return OperationResult.ok(HTTP_OK,
+        return OperationResult.ok(HttpURLConnection.HTTP_OK,
                 new Device(device.getValue()),
                 Optional.ofNullable(getCacheDirective(deviceId, tenantId)),
                 Optional.ofNullable(device.getVersion()));
@@ -409,28 +401,28 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
         if (!getConfig().isModificationEnabled()) {
             TracingHelper.logError(span, "Modification is disabled for Registration Service");
-            return Result.from(HTTP_FORBIDDEN);
+            return Result.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
 
         final Map<String, Versioned<Device>> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
-            return Result.from(HTTP_NOT_FOUND);
+            return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
         }
         final Versioned<Device> device = devices.get(deviceId);
         if (device == null) {
             TracingHelper.logError(span, "Device not found");
-            return Result.from(HTTP_NOT_FOUND);
+            return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
         }
 
         if (resourceVersion.isPresent() && !resourceVersion.get().equals(device.getVersion())) {
             TracingHelper.logError(span, "Resource Version mismatch");
-            return Result.from(HTTP_PRECON_FAILED);
+            return Result.from(HttpURLConnection.HTTP_PRECON_FAILED);
         }
 
         devices.remove(deviceId);
         dirty = true;
-        return Result.from(HTTP_NO_CONTENT);
+        return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
 
     }
 
@@ -463,17 +455,17 @@ public class FileBasedRegistrationService extends AbstractVerticle
         final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
         if (devices.size() >= getConfig().getMaxDevicesPerTenant()) {
             TracingHelper.logError(span, "Maximum devices number limit reached for tenant");
-            return Result.from(HTTP_FORBIDDEN, OperationResult::empty);
+            return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
         }
 
         final Versioned<Device> newDevice = new Versioned<>(device);
         if (devices.putIfAbsent(deviceIdValue, newDevice) == null) {
             dirty = true;
-            return OperationResult.ok(HTTP_CREATED,
+            return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
                     Id.of(deviceIdValue), Optional.empty(), Optional.of(newDevice.getVersion()));
         } else {
             TracingHelper.logError(span, "Device already exist for tenant");
-            return Result.from(HTTP_CONFLICT, OperationResult::empty);
+            return Result.from(HttpURLConnection.HTTP_CONFLICT, OperationResult::empty);
         }
 
     }
@@ -501,7 +493,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
             return doUpdateDevice(tenantId, deviceId, device, resourceVersion, span);
         } else {
             TracingHelper.logError(span, "Modification is disabled for Registration Service");
-            return Result.from(HTTP_FORBIDDEN, OperationResult::empty);
+            return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
         }
     }
 
@@ -511,25 +503,25 @@ public class FileBasedRegistrationService extends AbstractVerticle
         final Map<String, Versioned<Device>> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
-            return Result.from(HTTP_NOT_FOUND, OperationResult::empty);
+            return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
         }
 
         final Versioned<Device> currentDevice = devices.get(deviceId);
         if (currentDevice == null) {
             TracingHelper.logError(span, "Device not found");
-            return Result.from(HTTP_NOT_FOUND, OperationResult::empty);
+            return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
         }
 
         final Versioned<Device> newDevice = currentDevice.update(resourceVersion, () -> device);
         if (newDevice == null) {
             TracingHelper.logError(span, "Resource Version mismatch");
-            return Result.from(HTTP_PRECON_FAILED, OperationResult::empty);
+            return Result.from(HttpURLConnection.HTTP_PRECON_FAILED, OperationResult::empty);
         }
 
         devices.put(deviceId, newDevice);
         dirty = true;
 
-        return OperationResult.ok(HTTP_NO_CONTENT, Id.of(deviceId), Optional.empty(),
+        return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, Id.of(deviceId), Optional.empty(),
                 Optional.ofNullable(newDevice.getVersion()));
     }
 

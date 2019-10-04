@@ -12,13 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth.impl;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -123,7 +122,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
         final char[] buffer = new char[4096];
         int bytesRead = 0;
-        try (Reader reader = new InputStreamReader(source.getInputStream(), UTF_8)) {
+        try (Reader reader = new InputStreamReader(source.getInputStream(), StandardCharsets.UTF_8)) {
             while ((bytesRead = reader.read(buffer)) > 0) {
                 target.append(buffer, 0, bytesRead);
             }

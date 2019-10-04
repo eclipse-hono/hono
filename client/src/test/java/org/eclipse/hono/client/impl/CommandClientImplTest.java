@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -91,7 +90,7 @@ public class CommandClientImplTest {
 
         client.sendCommand(DEVICE_ID, "doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
         assertNotNull(messageCaptor.getValue().getMessageId());
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
@@ -119,7 +118,7 @@ public class CommandClientImplTest {
 
         client.sendOneWayCommand(DEVICE_ID, "doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
         assertNotNull(messageCaptor.getValue().getMessageId());
         assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));

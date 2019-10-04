@@ -13,13 +13,13 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,13 +75,13 @@ public class MapBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final String gatewayId = "testGateway";
         final Future<DeviceConnectionResult> setLastGwResult = Future.future();
-        svc.setLastKnownGatewayForDevice(DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
+        svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
         setLastGwResult.compose(deviceConnectionResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
             });
             final Future<DeviceConnectionResult> getLastGwResult = Future.future();
-            svc.getLastKnownGatewayForDevice(DEFAULT_TENANT, deviceId, span, getLastGwResult);
+            svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span, getLastGwResult);
             return getLastGwResult;
         }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
@@ -102,7 +102,7 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testGetLastKnownGatewayForDeviceNotFound(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final Future<DeviceConnectionResult> getLastGwResult = Future.future();
-        svc.getLastKnownGatewayForDevice(DEFAULT_TENANT, deviceId, span, getLastGwResult);
+        svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span, getLastGwResult);
         getLastGwResult.setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_NOT_FOUND, deviceConnectionResult.getStatus());
             assertNull(deviceConnectionResult.getPayload());
@@ -122,14 +122,14 @@ public class MapBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final String gatewayId = "testGateway";
         final Future<DeviceConnectionResult> setLastGwResult = Future.future();
-        svc.setLastKnownGatewayForDevice(DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
+        svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
         setLastGwResult.compose(deviceConnectionResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
             });
             // set another entry
             final Future<DeviceConnectionResult> setLastGwResult2 = Future.future();
-            svc.setLastKnownGatewayForDevice(DEFAULT_TENANT, "testDevice2", gatewayId, span, setLastGwResult2);
+            svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "testDevice2", gatewayId, span, setLastGwResult2);
             return setLastGwResult2;
         }).setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_FORBIDDEN, deviceConnectionResult.getStatus());
