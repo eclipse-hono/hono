@@ -27,13 +27,18 @@ import org.slf4j.LoggerFactory;
  * The MQTT subscription of devices, to get commands.
  *
  * <p>
- * Format of subscription need to be: {@code command|c/[TENANT]/[+|DEVICE_ID]/req|q/#} - e.g.:
- * </p>
+ * Format of subscription needs to be: {@code command|control|c/[TENANT]/[+|DEVICE_ID]/req|q/#}
+ * <p>
+ * Examples:
  * <ol>
  * <li>{@code command///req/#} - authenticated device and verbose format</li>
+ * <li>{@code control///req/#} - authenticated device and verbose format using deprecated endpoint name</li>
  * <li>{@code c///q/#} - authenticated device with short format</li>
  * <li>{@code command/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format</li>
+ * <li>{@code control/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format using deprecated endpoint name</li>
  * </ol>
+ * Note that the <em>control</em> endpoint name is deprecated in Hono but is still supported by
+ * this class for backwards compatibility.
  */
 public class CommandSubscription {
 
