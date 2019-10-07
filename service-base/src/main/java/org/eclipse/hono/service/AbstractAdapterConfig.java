@@ -30,9 +30,9 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
-import org.eclipse.hono.service.plan.PrometheusBasedResourceLimitChecks;
-import org.eclipse.hono.service.plan.PrometheusBasedResourceLimitChecksConfig;
-import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecks;
+import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -519,8 +519,8 @@ public abstract class AbstractAdapterConfig {
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.plan.prometheus-based")
-    @ConditionalOnProperty(name = "hono.plan.prometheus-based.host")
+    @ConfigurationProperties(prefix = "hono.resource-limits.prometheus-based")
+    @ConditionalOnProperty(name = "hono.resource-limits.prometheus-based.host")
     public PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig() {
         return new PrometheusBasedResourceLimitChecksConfig();
     }
@@ -531,7 +531,7 @@ public abstract class AbstractAdapterConfig {
      * @return A ResourceLimitChecks instance.
      */
     @Bean
-    @ConditionalOnProperty(name = "hono.plan.prometheus-based.host")
+    @ConditionalOnProperty(name = "hono.resource-limits.prometheus-based.host")
     public ResourceLimitChecks resourceLimitChecks() {
         final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
         return new PrometheusBasedResourceLimitChecks(WebClient.create(vertx()), config,

@@ -36,6 +36,11 @@ title = "Release Notes"
   The existing topic filters have been deprecated but are still supported.
   Please refer to the [MQTT adapter user guide]({{% doclink "/user-guide/mqtt-adapter/#command-control" %}})
   for details.
+* The interface `ResourceLimitChecks` and its implementation classes have been moved to
+  package `org.eclipse.hono.service.resourcelimits` from `org.eclipse.hono.service.plan`.
+  Also the configuration parameters for the resource limits were renamed from `hono.plan`
+  to `hono.resourceLimits`. Please refer to the protocol adapter [configuration guides]
+  ({{% doclink "/admin-guide/" %}}) for more information.
 
 ### Deprecations
 

@@ -56,7 +56,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.AfterClass;

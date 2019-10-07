@@ -46,7 +46,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;

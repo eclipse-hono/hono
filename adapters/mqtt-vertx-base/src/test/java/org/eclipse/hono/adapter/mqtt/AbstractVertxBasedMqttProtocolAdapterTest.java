@@ -60,7 +60,7 @@ import org.eclipse.hono.service.auth.device.AuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
-import org.eclipse.hono.service.plan.ResourceLimitChecks;
+import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
