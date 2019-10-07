@@ -31,10 +31,15 @@ title = "Release Notes"
 * The already deprecated *legacy metrics* support has been removed.
 * The already deprecated *legacy device registry* and the corresponding base classes, which had been deprecated 
  as well, have been removed.
+* The topic filters used by MQTT devices to subscribe to commands has been changed slightly
+  to better fit the addressing scheme used by the other protocol adapters.
+  The existing topic filters have been deprecated but are still supported.
+  Please refer to the [MQTT adapter user guide]({{% doclink "/user-guide/mqtt-adapter/#command-control" %}})
+  for details.
 
 ### Deprecations
 
-* The OpenShift specific source-to-image deployoment model has been removed in
+* The OpenShift specific source-to-image deployment model has been removed in
   favor of the Helm charts and the Eclipse IoT Packages project. You can still
   deploy Hono on OpenShift using the Helm charts. 
 
