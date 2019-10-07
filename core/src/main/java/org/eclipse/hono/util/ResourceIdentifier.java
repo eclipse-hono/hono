@@ -324,6 +324,17 @@ public final class ResourceIdentifier {
         return createStringRepresentation(IDX_RESOURCE_ID);
     }
 
+    /**
+     * Checks if this resource identifier contains the event endpoint.
+     * 
+     * @return {@code true} if this resource's endpoint is either
+     *         {@link EventConstants#EVENT_ENDPOINT} or {@link EventConstants#EVENT_ENDPOINT_SHORT}.
+     */
+    public boolean hasEventEndpoint() {
+        return EventConstants.EVENT_ENDPOINT.equals(getEndpoint()) ||
+                EventConstants.EVENT_ENDPOINT_SHORT.equals(getEndpoint());
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {

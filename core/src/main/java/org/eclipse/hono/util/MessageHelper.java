@@ -199,6 +199,10 @@ public final class MessageHelper {
      */
     public static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
     /**
+     * The MIME type representing an opaque array of bytes.
+     */
+    public static final String CONTENT_TYPE_OCTET_STREAM = "application/octet-stream";
+    /**
      * The MIME type representing plain text.
      */
     public static final String CONTENT_TYPE_TEXT_PLAIN = "text/plain";
@@ -854,4 +858,321 @@ public final class MessageHelper {
     public static Object getCorrelationId(final Message message) {
         return Optional.ofNullable(message.getCorrelationId()).orElse(message.getMessageId());
     }
+
+    /**
+     * Creates a new AMQP 1.0 message.
+     * <p>
+     * This method creates a new {@code Message} and sets
+     * <ul>
+     * <li>its <em>creation-time</em> to the current system time,</li>
+     * <li>its <em>content-type</em> to the given value,</li>
+     * <li>its payload as an AMQP <em>Data</em> section</li>
+     * </ul>
+     * The message is then passed to {@link #addProperties(Message, ResourceIdentifier, String, TenantObject,
+     * JsonObject, Integer, Duration, String, boolean, boolean)}.
+     *
+     * @param target The target address of the message or {@code null} if the message's
+     *               <em>to</em> property contains the target address. The target
+     *               address is used to determine if the message represents an event or not.
+     *               Determining this information from the <em>to</em> property
+     *               requires additional parsing which can be prevented by passing in the
+     *               target address as a {@code ResourceIdentifier} instead.
+     * @param publishAddress The address that the message has been published to originally by the device or
+     *            {@code null} if unknown.
+     *            <p>
+     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
+     *            here whereas an MQTT based adapter might use the MQTT message's topic.
+     * @param contentType The content type describing the message's payload or {@code null} if no content type
+     *                    should be set.
+     * @param payload The message payload or {@code null} if the message has no payload.
+     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
+     *               if no information about the tenant is available.
+     * @param deviceDefaultProperties The device's default properties registered at the device level or {@code null}
+     *                                if no default properties are registered for the device.
+     * @param timeUntilDisconnect The number of seconds until the device that has published the message will disconnect
+     *            from the protocol adapter or {@code null} if unknown.
+     * @param timeToLive The message's <em>time-to-live</em> as provided by the device or {@code null} if the
+     *                   device did not provide any TTL.
+     * @param adapterTypeName The type name of the protocol adapter that the message has been published to.
+     * @param addDefaults {@code true} if the default properties registered for the device should be added
+     *                    to the message. The properties to add are determined by merging the properties returned
+     *                    by {@link TenantObject#getDefaults()} with the given device level default properties.
+     * @param addJmsVendorProps {@code true} if
+     *                          <a href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
+     *                          JMS Vendor Properties</a> should be added to the message.
+
+     * @return The newly created message.
+     * @throws NullPointerException if adapterTypeName is {@code null}.
+     */
+    public static Message newMessage(
+            final ResourceIdentifier target,
+            final String publishAddress,
+            final String contentType,
+            final Buffer payload,
+            final TenantObject tenant,
+            final JsonObject deviceDefaultProperties,
+            final Integer timeUntilDisconnect,
+            final Duration timeToLive,
+            final String adapterTypeName,
+            final boolean addDefaults,
+            final boolean addJmsVendorProps) {
+
+        Objects.requireNonNull(adapterTypeName);
+
+        final Message msg = ProtonHelper.message();
+        msg.setCreationTime(Instant.now().toEpochMilli());
+        msg.setContentType(contentType);
+        setPayload(msg, contentType, payload);
+
+        return addProperties(
+                msg,
+                target,
+                publishAddress,
+                tenant,
+                deviceDefaultProperties,
+                timeUntilDisconnect,
+                timeToLive,
+                adapterTypeName,
+                addDefaults,
+                addJmsVendorProps);
+    }
+
+    /**
+     * Sets Hono specific properties on an AMQP 1.0 message.
+     * <p>
+     * The following properties are set:
+     * <ul>
+     * <li><em>to</em> will be set to the address consisting of the target's endpoint and tenant</li>
+     * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z</li>
+     * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
+     * <li>application property <em>orig_address</em> will be set to the given publish address</li>
+     * <li>application property <em>orig_adapter</em> will be set to the given adapter type name}</li>
+     * <li>application property <em>ttd</em> will be set to the given time-til-disconnect</li>
+     * </ul>
+     *
+     * In addition, this method
+     * <ul>
+     * <li>optionally augments the message with missing (application) properties corresponding to the default properties
+     * registered at the tenant and device level. Default properties defined at
+     * the device level take precedence over properties with the same name defined at the tenant level.</li>
+     * <li>optionally adds JMS vendor properties.</li>
+     * <li>sets the message's <em>content-type</em> to the {@linkplain #CONTENT_TYPE_OCTET_STREAM fall back content
+     * type}, if the default properties do not contain a content type and the message has no content type set yet.</li>
+     * <li>sets the message's <em>ttl</em> header field based on the (device provided) <em>time-to-live</em> duration
+     * as specified by the <a href="https://www.eclipse.org/hono/docs/api/tenant/#resource-limits-configuration-format">
+     * Tenant API</a>.</li>
+     * </ul>
+     * 
+     * @param msg The message to add the properties to.
+     * @param target The target address of the message or {@code null} if the message's
+     *               <em>to</em> property contains the target address. The target
+     *               address is used to determine if the message represents an event or not.
+     *               Determining this information from the <em>to</em> property
+     *               requires additional parsing which can be prevented by passing in the
+     *               target address as a {@code ResourceIdentifier} instead.
+     * @param publishAddress The address that the message has been published to originally by the device or
+     *            {@code null} if unknown.
+     *            <p>
+     *            This address will be transport protocol specific, e.g. an HTTP based adapter will probably use URIs
+     *            here whereas an MQTT based adapter might use the MQTT message's topic.
+     * @param tenant The information registered for the tenant that the device belongs to or {@code null}
+     *               if no information about the tenant is available.
+     * @param deviceDefaultProperties The device's default properties registered at the device level or {@code null}
+     *                                if no default properties are registered for the device.
+     * @param timeUntilDisconnect The number of seconds until the device that has published the message will disconnect
+     *            from the protocol adapter or {@code null} if unknown.
+     * @param timeToLive The message's <em>time-to-live</em> as provided by the device or {@code null} if the
+     *                   device did not provide any TTL.
+     * @param adapterTypeName The type name of the protocol adapter that the message has been published to.
+     * @param addDefaults {@code true} if the default properties registered for the device should be added
+     *                    to the message. The properties to add are determined by merging the properties returned
+     *                    by {@link TenantObject#getDefaults()} with the given device level default properties.
+     * @param addJmsVendorProps {@code true} if
+     *                          <a href="https://www.oasis-open.org/committees/download.php/60574/amqp-bindmap-jms-v1.0-wd09.pdf">
+     *                          JMS Vendor Properties</a> should be added to the message.
+     * @return The message with its properties set.
+     * @throws NullPointerException if message or adapterTypeName are {@code null}.
+     */
+    public static Message addProperties(
+            final Message msg,
+            final ResourceIdentifier target,
+            final String publishAddress,
+            final TenantObject tenant,
+            final JsonObject deviceDefaultProperties,
+            final Integer timeUntilDisconnect,
+            final Duration timeToLive,
+            final String adapterTypeName,
+            final boolean addDefaults,
+            final boolean addJmsVendorProps) {
+
+        Objects.requireNonNull(msg);
+        Objects.requireNonNull(adapterTypeName);
+
+        final ResourceIdentifier ri = Optional.ofNullable(target)
+                .orElseGet(() -> ResourceIdentifier.fromString(msg.getAddress()));
+
+        setCreationTime(msg);
+        msg.setAddress(ri.getBasePath());
+        addDeviceId(msg, ri.getResourceId());
+        addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADAPTER, adapterTypeName);
+        annotate(msg, ri);
+        if (publishAddress != null) {
+            addProperty(msg, MessageHelper.APP_PROPERTY_ORIG_ADDRESS, publishAddress);
+        }
+        if (timeUntilDisconnect != null) {
+            addTimeUntilDisconnect(msg, timeUntilDisconnect);
+        }
+        if (timeToLive != null) {
+            setTimeToLive(msg, timeToLive);
+        }
+
+        addProperties(
+                msg,
+                ri,
+                tenant,
+                deviceDefaultProperties,
+                addDefaults,
+                addJmsVendorProps);
+        return msg;
+    }
+
+    private static Message addProperties(
+            final Message message,
+            final ResourceIdentifier target,
+            final TenantObject tenant,
+            final JsonObject deviceDefaultProperties,
+            final boolean useDefaults,
+            final boolean useJmsVendorProps) {
+
+        final long maxTtl = Optional.ofNullable(tenant)
+                .map(t -> Optional.ofNullable(t.getResourceLimits())
+                    .map(limits -> limits.getMaxTtl())
+                    .orElse(TenantConstants.UNLIMITED_TTL))
+                .orElse(TenantConstants.UNLIMITED_TTL);
+
+        if (useDefaults) {
+            final JsonObject defaults = Optional.ofNullable(tenant)
+                    .map(t -> t.getDefaults().copy())
+                    .orElseGet(() -> new JsonObject());
+            if (deviceDefaultProperties != null) {
+                defaults.mergeIn(deviceDefaultProperties);
+            }
+
+            if (!defaults.isEmpty()) {
+                addDefaults(message, target, defaults, maxTtl);
+            }
+        }
+        if (Strings.isNullOrEmpty(message.getContentType())) {
+            // set default content type if none has been specified when creating the
+            // message nor a default content type is available
+            message.setContentType(CONTENT_TYPE_OCTET_STREAM);
+        }
+        if (useJmsVendorProps) {
+            addJmsVendorProperties(message);
+        }
+
+        // make sure that device provided TLL is capped at max TTL (if set)
+        // AMQP spec defines TTL as milliseconds
+        final long maxTtlMillis = maxTtl * 1000L;
+        if (target.hasEventEndpoint() && maxTtl != TenantConstants.UNLIMITED_TTL) {
+            if (message.getTtl() == 0) {
+                LOG.debug("setting event's TTL to tenant's max TTL [{}ms]", maxTtlMillis);
+                setTimeToLive(message, Duration.ofSeconds(maxTtl));
+            } else if (message.getTtl() > maxTtlMillis) {
+                LOG.debug("limiting device provided TTL [{}ms] to max TTL [{}ms]", message.getTtl(), maxTtlMillis);
+                setTimeToLive(message, Duration.ofSeconds(maxTtl));
+            } else {
+                LOG.trace("keeping event's TTL [0 < {}ms <= max TTL ({}ms)]", message.getTtl(), maxTtlMillis);
+            }
+        }
+        return message;
+    }
+
+
+    /**
+     * Adds default properties to an AMQP message.
+     * <p>
+     * This method also sets the message's <em>time-to-live</em> (TTL) property
+     * as described in 
+     * 
+     * @param message The message to add the properties to.
+     * @param target The target address of the message or {@code null} if the message's
+     *               <em>to</em> property contains the target address. The target
+     *               address is used to determine if the message represents an event or not.
+     *               Determining this information from the <em>to</em> property
+     *               requires additional parsing which can be prevented by passing in the
+     *               target address as a {@code ResoruceIdentifier} instead.
+     * @param defaults The default properties (device and tenant level) to set or {@code null}
+     *                 if no default properties are defined for the device that the message originates from.
+     * @param maxTtl The maximum time-to-live (in seconds) that should be used for limiting a default TTL.
+     * @return The message with the default properties set.
+     * @throws NullPointerException if message is {@code null} or if target is {@code null}
+     *                              and the message does not contain an address.
+     */
+    public static Message addDefaults(
+            final Message message,
+            final ResourceIdentifier target,
+            final JsonObject defaults,
+            final long maxTtl) {
+
+        Objects.requireNonNull(message);
+
+        if (defaults == null) {
+            return message;
+        }
+
+        final ResourceIdentifier ri = Optional.ofNullable(target)
+                .orElseGet(() -> ResourceIdentifier.fromString(message.getAddress()));
+
+        defaults.forEach(prop -> {
+
+            switch (prop.getKey()) {
+            case MessageHelper.SYS_HEADER_PROPERTY_TTL:
+                if (ri.hasEventEndpoint() && message.getTtl() == 0 && Number.class.isInstance(prop.getValue())) {
+                    final long defaultTtl = ((Number) prop.getValue()).longValue();
+                    if (maxTtl != TenantConstants.UNLIMITED_TTL && defaultTtl > maxTtl) {
+                        MessageHelper.setTimeToLive(message, Duration.ofSeconds(maxTtl));
+                    } else {
+                        MessageHelper.setTimeToLive(message, Duration.ofSeconds(defaultTtl));
+                    }
+                }
+                break;
+            case SYS_PROPERTY_CONTENT_TYPE:
+                if (Strings.isNullOrEmpty(message.getContentType()) && String.class.isInstance(prop.getValue())) {
+                    // set to default type registered for device or fall back to default content type
+                    message.setContentType((String) prop.getValue());
+                }
+                break;
+            case SYS_PROPERTY_CONTENT_ENCODING:
+                if (Strings.isNullOrEmpty(message.getContentEncoding()) && String.class.isInstance(prop.getValue())) {
+                    message.setContentEncoding((String) prop.getValue());
+                }
+                break;
+            case SYS_HEADER_PROPERTY_DELIVERY_COUNT:
+            case SYS_HEADER_PROPERTY_DURABLE:
+            case SYS_HEADER_PROPERTY_FIRST_ACQUIRER:
+            case SYS_HEADER_PROPERTY_PRIORITY:
+            case SYS_PROPERTY_ABSOLUTE_EXPIRY_TIME:
+            case SYS_PROPERTY_CORRELATION_ID:
+            case SYS_PROPERTY_CREATION_TIME:
+            case SYS_PROPERTY_GROUP_ID:
+            case SYS_PROPERTY_GROUP_SEQUENCE:
+            case SYS_PROPERTY_MESSAGE_ID:
+            case SYS_PROPERTY_REPLY_TO:
+            case SYS_PROPERTY_REPLY_TO_GROUP_ID:
+            case SYS_PROPERTY_SUBJECT:
+            case SYS_PROPERTY_TO:
+            case SYS_PROPERTY_USER_ID:
+                // these standard properties cannot be set using defaults
+                LOG.debug("ignoring default property [{}] registered for device", prop.getKey());
+                break;
+            default:
+                // add all other defaults as application properties
+                addProperty(message, prop.getKey(), prop.getValue());
+            }
+        });
+
+        return message;
+    }
+
 }
