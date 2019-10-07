@@ -25,6 +25,8 @@ title = "Release Notes"
   the HTTP and MQTT adapters by setting the *hono-ttl* property in requests explicitly. Please refer to the
   [HTTP Adapter]({{% doclink "/user-guide/http-adapter/#publish-an-event-authenticated-device" %}})
   and [MQTT Adapter] ({{% doclink "/user-guide/mqtt-adapter/#publishing-events" %}}) for details.
+* The device registry HTTP management API now properly implements *cross-origin resource sharing (CORS)* support,
+  by allowing the service to be exposed to configured domains (by default, it's exposed to all domains).
 
 ### API Changes
 
