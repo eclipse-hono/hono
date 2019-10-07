@@ -300,7 +300,7 @@ The Helm chart supports deployment of a simple data grid which can be used for e
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
-helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true --set dataGridDeployExample=true eclipse-hono/
+helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true --set dataGridExample.enabled=true eclipse-hono/
 ~~~
 
 This will deploy the data grid and configure the Device Connection service to use it for storing the connection data.
