@@ -61,12 +61,10 @@ tags:
         url: https://www.eclipse.org/hono/docs/concepts/device-identity/
 
 servers:
-   - url: '{corsProxy}{server}/v1'
+   - url: '{server}/v1'
      variables:
         server:
            default: http://hono.eclipse.org:28080
-        corsProxy:
-           default: https://cors-anywhere.herokuapp.com/
 
 security:
    - BearerAuth: []
