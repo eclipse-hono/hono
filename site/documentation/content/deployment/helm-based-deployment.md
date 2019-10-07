@@ -437,7 +437,7 @@ k8s_namespace=honons
 kubectl create namespace $k8s_namespace
 ```
 
-Finally install Eclipse Hono™. Leveraging the _managed-premium-retain_ storage in combination with _deviceRegistry.resetFiles=false_ parameter is optional but ensures that Device registry storage will retain future update deployments.
+Finally install Hono. Leveraging the _managed-premium-retain_ storage in combination with _deviceRegistry.resetFiles=false_ parameter is optional but ensures that Device registry storage will retain future update deployments.
 
 ```bash
 # in Hono working tree directory: hono/deploy
@@ -470,13 +470,13 @@ Note: add the following lines in case you opted for the Azure Service Bus varian
     --set amqpMessagingNetworkExample.broker.servicebus.host=$service_bus_namespace.servicebus.windows.net \
 ```
 
-Have fun with the Eclipse Hono™ on Microsoft Azure!
+Have fun with Hono on Microsoft Azure!
 
 Next steps:
 
 You can follow the steps as described in the [getting started](https://www.eclipse.org/hono/getting-started/) tutorial with the following differences:
 
-Compared to a plain k8s deployment Azure provides us DNS names with static IPs for the Eclipse Hono™ endpoints. To retrieve them:
+Compared to a plain k8s deployment Azure provides us DNS names with static IPs for the Hono endpoints. To retrieve them:
 
 ```bash
 HTTP_ADAPTER_IP=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.httpPublicIPFQDN.value -o tsv`
