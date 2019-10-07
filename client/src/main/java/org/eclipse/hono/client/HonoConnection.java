@@ -245,13 +245,15 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a sender link.
-     * 
-     * @param targetAddress The target address of the link.
+     *
+     * @param targetAddress The target address of the link. If the address is {@code null}, the
+     *                      sender link will be established to the 'anonymous relay' and each
+     *                      message must specify its destination address.
      * @param qos The quality of service to use for the link.
      * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
      *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
-     * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
+     * @throws NullPointerException if qos is {@code null}.
      */
     Future<ProtonSender> createSender(
             String targetAddress,
