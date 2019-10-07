@@ -27,6 +27,10 @@ title = "Release Notes"
   and [MQTT Adapter] ({{% doclink "/user-guide/mqtt-adapter/#publishing-events" %}}) for details.
 * The device registry HTTP management API now properly implements *cross-origin resource sharing (CORS)* support,
   by allowing the service to be exposed to configured domains (by default, it's exposed to all domains).
+* The `org.eclipse.hono.util.MessageHelper` now provides convenience factory methods for creating
+  new downstream messages from basic properties.
+  `org.eclipse.hono.service.AbstractProtocolAdapterbase` has been adapted to delegate to these
+  new factory methods.
 
 ### API Changes
 

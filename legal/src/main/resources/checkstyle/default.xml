@@ -46,6 +46,7 @@
         name="excludes"
         value="com.github.tomakehurst.wiremock.client.WireMock.*,
                org.assertj.core.api.Assertions.assertThat,
+               org.assertj.core.api.Assertions.assertThatThrownBy,
                org.hamcrest.CoreMatchers.*,
                org.hamcrest.Matchers.*,
                org.hamcrest.MatcherAssert.*,

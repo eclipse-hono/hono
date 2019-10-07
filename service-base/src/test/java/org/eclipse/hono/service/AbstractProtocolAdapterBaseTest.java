@@ -13,8 +13,9 @@
 
 package org.eclipse.hono.service;
 
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +30,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.time.Duration;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -52,8 +52,8 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -283,101 +283,27 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     /**
-     * Verifies that the registered default content type is set on a downstream message.
+     * Verifies that the adapter does not add default properties to downstream messages
+     * if disabled for the adapter.
      */
     @Test
-    public void testAddPropertiesAddsDefaultContentType() {
+    public void testAddPropertiesIgnoresDefaultsIfDisabled() {
 
-        final Message message = ProtonHelper.message();
-        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-
-        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("application/hono"), null);
-
-        assertThat(message.getContentType(), is("application/hono"));
-    }
-
-    /**
-     * Verifies that the registered default content type is not set on a downstream message
-     * that already contains a content type.
-     */
-    @Test
-    public void testAddPropertiesDoesNotAddDefaultContentType() {
-
-        final Message message = ProtonHelper.message();
-        message.setContentType("application/existing");
-        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-
-        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult("application/hono"), null);
-
-        assertThat(message.getContentType(), is("application/existing"));
-    }
-
-    /**
-     * Verifies that the fall back content type is set on a downstream message
-     * if no default has been configured for the device.
-     */
-    @Test
-    public void testAddPropertiesAddsFallbackContentType() {
-
-        final Message message = ProtonHelper.message();
-        final ResourceIdentifier target = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-
-        adapter.addProperties(message, target, null, tenant, newRegistrationAssertionResult(), null);
-
-        assertThat(message.getContentType(), is(AbstractProtocolAdapterBase.CONTENT_TYPE_OCTET_STREAM));
-    }
-
-    /**
-     * Verifies that default properties configured at the tenant and/or device level
-     * are set on a downstream message.
-     */
-    @Test
-    public void testAddPropertiesAddsCustomProperties() {
+        properties.setDefaultsEnabled(false);
 
         final Message message = ProtonHelper.message();
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 60).put("custom-tenant", "foo"));
-        final JsonObject assertion = newRegistrationAssertionResult();
-        assertion.put(
-                RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
-                new JsonObject()
-                .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30)
-                .put("custom-device", true));
+        final JsonObject assertion = newRegistrationAssertionResult()
+                .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
+                    .put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30)
+                    .put("custom-device", true));
 
-        adapter.addProperties(message, target, null, tenant, assertion, null);
+        adapter.addProperties(message, target, null, null, assertion, null);
 
-        assertThat(
-                MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-tenant", String.class),
-                is("foo"));
         assertThat(
                 MessageHelper.getApplicationProperty(message.getApplicationProperties(), "custom-device", Boolean.class),
-                is(Boolean.TRUE));
-        assertThat(message.getTtl(), is(30000L));
-    }
-
-    /**
-     * Verifies that the TTL for a downstream event is limited by the <em>max-ttl</em> specified for
-     * a tenant.
-     */
-    @Test
-    public void testAddPropertiesLimitsTtlToMaxValue() {
-
-        final Message message = ProtonHelper.message();
-        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 15));
-        final JsonObject assertion = newRegistrationAssertionResult();
-        assertion.put(
-                RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
-                new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30));
-
-        adapter.addProperties(message, target, null, tenant, assertion, null);
-
-        assertThat(message.getTtl(), is(15000L));
+                is(nullValue()));
+        assertThat(message.getTtl(), is(0L));
     }
 
     /**
@@ -389,52 +315,13 @@ public class AbstractProtocolAdapterBaseTest {
 
         final Message message = ProtonHelper.message();
         final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 15));
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
+                .setResourceLimits(new ResourceLimits().setMaxTtl(15L));
         final JsonObject assertion = newRegistrationAssertionResult();
 
         adapter.addProperties(message, target, null, tenant, assertion, null);
 
         assertThat(message.getTtl(), is(15000L));
-    }
-
-    /**
-     * Verifies that the TTL for a downstream event is set to the given <em>time-to-live</em> duration.
-     */
-    @Test
-    public void testNewMessageUsesGivenTtlValue() {
-        final Duration timeToLive = Duration.ofSeconds(10);
-        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
-                Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 30));
-        final JsonObject assertion = newRegistrationAssertionResult();
-        assertion.put(
-                RegistrationConstants.FIELD_PAYLOAD_DEFAULTS,
-                new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15));
-
-        final Message message = adapter.newMessage(target, null, "application/text", Buffer.buffer("test"), tenant,
-                assertion, null, timeToLive);
-
-        assertEquals(timeToLive.toMillis(), message.getTtl());
-    }
-
-    /**
-     * Verifies that the TTL for a downstream event is limited by the <em>max-ttl</em> specified for
-     * a tenant, if the given <em>time-to-live</em> duration exceeds the <em>max-ttl</em> value.
-     */
-    @Test
-    public void testNewMessageLimitsTtlToMaxValue() {
-        final Duration timeToLive = Duration.ofSeconds(50);
-        final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT,
-                Constants.DEFAULT_TENANT, "4711");
-        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenant.setResourceLimits(new JsonObject().put(TenantConstants.FIELD_MAX_TTL, 15));
-
-        final Message message = adapter.newMessage(target, null, "application/text", Buffer.buffer("test"), tenant,
-                new JsonObject(), null, timeToLive);
-
-        assertEquals(15000L, message.getTtl());
     }
 
     /**
