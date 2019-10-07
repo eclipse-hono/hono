@@ -22,17 +22,6 @@
   <name>Legal Documents</name>
   <description>The set of documents required to fulfill the attributions of Hono's dependencies.</description>
 
-  <build>
-    <resources>
-      <resource>
-        <directory>legal</directory>
-        <filtering>true</filtering>
-      </resource>
-      <resource>
-        <directory>src/main/resources</directory>
-      </resource>
-    </resources>
-  </build>
   <properties>
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>

@@ -327,7 +327,7 @@
               <configuration>
                 <includeArtifactIds>hono-legal</includeArtifactIds>
                 <outputDirectory>${project.build.outputDirectory}/META-INF</outputDirectory>
-                <excludes>META-INF/**,checkstyle/**</excludes>
+                <includes>legal/**</includes>
               </configuration>
             </execution>
           </executions>
