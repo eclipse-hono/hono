@@ -16,11 +16,12 @@ Hono supports the logical partitioning of devices into groups called *tenants*. 
 
 ## Device Registration
 
-Hono components use the [Device Registration API]({{< relref "/api/device-registration" >}}) to access device registration information. The API defines the mandatory to implement *assert Registration* operation for verifying a device's registration status. In addition to that, it defines optional CRUD operations to register, update and remove device registration information. These operations are optional because Hono components do not require them during runtime. From a Hono perspective, it is not important how devices have been registered or how they are managed.
+Hono components use the [Device Registration API]({{< relref "/api/device-registration" >}}) to access device registration information. The API defines the *assert Registration* operation for verifying a device's registration status.
+In many real world scenarios there will already be a component in place which keeps track of devices and which supports the particular *provisioning process* being used to bring devices into life. In such cases it makes sense to simply implement the Device Registration API as a *facade* on top of the existing component.
 
-In many real world scenarios there will already be a component in place which keeps track of devices and which supports the particular *provisioning process* being used to bring devices into life. In such cases it makes sense to simply implement the mandatory operation of Hono's Device Registration API as a *facade* on top of the existing component.
+In addition to that, Hono defines a [Device Registry Management API]({{< relref "/api/management" >}}), which can be implemented to take advantage of standardized  operations for managing devices and credentials. This API is optional because Hono components do not require it during runtime. 
 
-For demonstration purposes, Hono comes with a [simple default implementation]({{< relref "/admin-guide/device-registry-config.md" >}}) of the Device Registration API which keeps all data in memory only. This component implements all mandatory and optional operations but is not supposed to be used in production scenarios.
+For demonstration purposes, Hono comes with a [simple default implementation]({{< relref "/admin-guide/device-registry-config.md" >}}) of both APIs which keeps all data in memory only. Therefore it is not supposed to be used in production scenarios. For the future, it is planned that a production-ready Device Registry will be released as part of Hono that implements both APIs.
 
 ## Device Authentication
 
