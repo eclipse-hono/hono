@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -156,7 +155,7 @@ public class AbstractRequestResponseClientTest  {
 
         // THEN the message is sent and the message being sent contains the headers as application properties
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         assertThat(messageCaptor.getValue(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getBody(), instanceOf(Data.class));
@@ -165,7 +164,7 @@ public class AbstractRequestResponseClientTest  {
         assertThat(messageCaptor.getValue().getApplicationProperties(), is(notNullValue()));
         assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
         // and a timer has been set to time out the request after 200 ms
-        verify(vertx).setTimer(eq(200L), anyHandler());
+        verify(vertx).setTimer(eq(200L), VertxMockSupport.anyHandler());
     }
 
     /**
@@ -220,7 +219,7 @@ public class AbstractRequestResponseClientTest  {
                     assertEquals(200, s.getStatus());
                     assertEquals("payload", s.getPayload().toString());
                     // and no response time-out handler has been set
-                    verify(vertx, never()).setTimer(anyLong(), anyHandler());
+                    verify(vertx, never()).setTimer(anyLong(), VertxMockSupport.anyHandler());
                     ctx.completeNow();
                 }),
                 span);
@@ -253,7 +252,7 @@ public class AbstractRequestResponseClientTest  {
             final Handler<Long> task = invocation.getArgument(1);
             task.handle(1L);
             return null;
-        }).when(vertx).setTimer(anyLong(), anyHandler());
+        }).when(vertx).setTimer(anyLong(), VertxMockSupport.anyHandler());
 
         client.createAndSendRequest(
                 "request",
@@ -287,7 +286,7 @@ public class AbstractRequestResponseClientTest  {
                 Buffer.buffer("hello"),
                 ctx.failing(t -> {
                     // THEN the request fails immediately with a 503
-                    verify(sender, never()).send(any(Message.class), anyHandler());
+                    verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
                     assertFailureCause(ctx, span, t, HttpURLConnection.HTTP_UNAVAILABLE);
                     ctx.completeNow();
                 }),
@@ -336,7 +335,7 @@ public class AbstractRequestResponseClientTest  {
             ctx.completeNow();
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message response = ProtonHelper.message("result");
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
@@ -364,7 +363,7 @@ public class AbstractRequestResponseClientTest  {
             ctx.completeNow();
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message response = ProtonHelper.message("result");
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(35));
@@ -393,7 +392,7 @@ public class AbstractRequestResponseClientTest  {
             ctx.completeNow();
         }), "cacheKey");
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message response = ProtonHelper.message("result");
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.noCacheDirective());
@@ -423,7 +422,7 @@ public class AbstractRequestResponseClientTest  {
         }), "cacheKey");
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message response = ProtonHelper.message();
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NOT_FOUND);

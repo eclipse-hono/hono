@@ -22,9 +22,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
@@ -41,12 +43,9 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
-
 import io.vertx.core.json.JsonObject;
-import static org.eclipse.hono.service.http.HttpUtils.CONTENT_TYPE_JSON;
 
 /**
  * A client for accessing the Device Registry's HTTP resources for the Device Registration, Credentials and Tenant API.
@@ -539,7 +538,7 @@ public final class DeviceRegistryHttpClient {
 
         final MultiMap headers = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.IF_MATCH, version)
-                .add(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_JSON);
+                .add(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON);
 
         // encode array not list, workaround for vert.x issue
         final var payload = Json.encodeToBuffer(credentialsSpec.toArray(CommonCredential[]::new));

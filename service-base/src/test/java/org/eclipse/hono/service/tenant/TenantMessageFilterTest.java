@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.tenant;
 
-import static org.eclipse.hono.util.MessageHelper.APP_PROPERTY_TENANT_ID;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -56,7 +55,7 @@ public class TenantMessageFilterTest {
     public void testVerifySucceedsForValidGetAction() {
         // GIVEN a tenant GET message for tenant DEFAULT_TENANT
         final Message msg = givenAMessageHavingProperties(TenantConstants.TenantAction.get);
-        MessageHelper.addProperty(msg, APP_PROPERTY_TENANT_ID, DEFAULT_TENANT);
+        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_TENANT_ID, DEFAULT_TENANT);
         // WHEN receiving the message via a link with matching target address
         final ResourceIdentifier linkTarget = getResourceIdentifier(DEFAULT_TENANT);
 

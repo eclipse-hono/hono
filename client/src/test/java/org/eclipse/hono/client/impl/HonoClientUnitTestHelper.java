@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,19 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import io.opentracing.Span;
-import io.opentracing.Tracer;
-import io.opentracing.Tracer.SpanBuilder;
-import io.opentracing.noop.NoopTracerFactory;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.proton.ProtonQoS;
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
-
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -37,6 +24,18 @@ import org.apache.qpid.proton.amqp.transport.Target;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.mockito.Mockito;
+
+import io.opentracing.Span;
+import io.opentracing.Tracer;
+import io.opentracing.Tracer.SpanBuilder;
+import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Context;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * Helper class that provides mocks for objects that are needed by unit tests using a Hono client.
@@ -61,7 +60,7 @@ public final class HonoClientUnitTestHelper {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
-        }).when(context).runOnContext(anyHandler());
+        }).when(context).runOnContext(VertxMockSupport.anyHandler());
         return context;
     }
 
@@ -142,7 +141,7 @@ public final class HonoClientUnitTestHelper {
         when(connection.getVertx()).thenReturn(vertx);
         when(connection.getConfig()).thenReturn(props);
         when(connection.getTracer()).thenReturn(tracer);
-        when(connection.executeOrRunOnContext(anyHandler())).then(invocation -> {
+        when(connection.executeOrRunOnContext(VertxMockSupport.anyHandler())).then(invocation -> {
             final Future<?> result = Future.future();
             final Handler<Future<?>> handler = invocation.getArgument(0);
             handler.handle(result);

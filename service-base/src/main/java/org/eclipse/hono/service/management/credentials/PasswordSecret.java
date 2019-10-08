@@ -12,15 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_PWD_HASH;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN;
-import static org.eclipse.hono.util.RegistryManagementConstants.FIELD_SECRETS_SALT;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
 import io.vertx.core.json.JsonObject;
 
@@ -30,13 +26,13 @@ import io.vertx.core.json.JsonObject;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PasswordSecret extends CommonSecret {
 
-    @JsonProperty(FIELD_SECRETS_HASH_FUNCTION)
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION)
     private String hashFunction;
-    @JsonProperty(FIELD_SECRETS_PWD_HASH)
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH)
     private String passwordHash;
-    @JsonProperty(FIELD_SECRETS_PWD_PLAIN)
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN)
     private String passwordPlain;
-    @JsonProperty(FIELD_SECRETS_SALT)
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_SALT)
     private String salt;
 
     public String getHashFunction() {
@@ -117,13 +113,13 @@ public class PasswordSecret extends CommonSecret {
     public void checkValidity() {
         super.checkValidity();
         if (!Strings.isNullOrEmpty(passwordPlain)) {
-            throw new IllegalStateException(String.format("'%s' must be empty", FIELD_SECRETS_PWD_PLAIN));
+            throw new IllegalStateException(String.format("'%s' must be empty", RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN));
         }
         if (Strings.isNullOrEmpty(hashFunction)) {
-            throw new IllegalStateException(String.format("'%s' must not be empty", FIELD_SECRETS_HASH_FUNCTION));
+            throw new IllegalStateException(String.format("'%s' must not be empty", RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION));
         }
         if (Strings.isNullOrEmpty(passwordHash)) {
-            throw new IllegalStateException(String.format("'%s' must not be empty", FIELD_SECRETS_PWD_HASH));
+            throw new IllegalStateException(String.format("'%s' must not be empty", RegistryManagementConstants.FIELD_SECRETS_PWD_HASH));
         }
     }
 
@@ -136,9 +132,9 @@ public class PasswordSecret extends CommonSecret {
     public PasswordSecret encode(final HonoPasswordEncoder encoder) {
         if (!Strings.isNullOrEmpty(passwordPlain)) {
             final JsonObject hashedPassword = encoder.encode(passwordPlain);
-            hashFunction = hashedPassword.getString(FIELD_SECRETS_HASH_FUNCTION);
-            passwordHash = hashedPassword.getString(FIELD_SECRETS_PWD_HASH);
-            salt = hashedPassword.getString(FIELD_SECRETS_SALT);
+            hashFunction = hashedPassword.getString(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION);
+            passwordHash = hashedPassword.getString(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH);
+            salt = hashedPassword.getString(RegistryManagementConstants.FIELD_SECRETS_SALT);
             passwordPlain = null;
         }
         return this;

@@ -41,6 +41,22 @@
 
     <module name="UnusedImports" />
 
+    <module name="AvoidStaticImport">
+      <property
+        name="excludes"
+        value="com.github.tomakehurst.wiremock.client.WireMock.*,
+               org.assertj.core.api.Assertions.assertThat,
+               org.hamcrest.CoreMatchers.*,
+               org.hamcrest.Matchers.*,
+               org.hamcrest.MatcherAssert.*,
+               org.hamcrest.collection.IsCollectionWithSize.hasSize,
+               org.junit.Assert.*,
+               org.junit.jupiter.api.Assertions.*,
+               org.junit.jupiter.api.Assumptions.*,
+               org.mockito.Mockito.*,
+               org.mockito.ArgumentMatchers.*,
+               org.mockito.hamcrest.MockitoHamcrest.booleanThat"/>
+    </module>
     <!-- style -->
 
     <module name="DeclarationOrder"/>

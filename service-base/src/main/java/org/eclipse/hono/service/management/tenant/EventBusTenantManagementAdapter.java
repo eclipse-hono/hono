@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import static org.eclipse.hono.service.management.Util.newChildSpan;
-
 import java.io.ByteArrayInputStream;
 import java.net.HttpURLConnection;
 import java.security.GeneralSecurityException;
@@ -31,6 +29,7 @@ import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -107,7 +106,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         if (isValidRequestPayload(payload)) {
             log.debug("creating tenant [{}]", tenantId.orElse("<auto>"));
 
-            final Span span = newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
+            final Span span = Util.newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
             final Future<OperationResult<Id>> addResult = Future.future();
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
@@ -137,7 +136,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             log.debug("updating tenant [{}]", tenantId);
 
             final Future<OperationResult<Void>> updateResult = Future.future();
-            final Span span = newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+            final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
             getService().update(tenantId, payload, resourceVersion, span, updateResult);
@@ -164,7 +163,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         } else {
             log.debug("deleting tenant [{}]", tenantId);
             final Future<Result<Void>> removeResult = Future.future();
-            final Span span = newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+            final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
             getService().remove(tenantId, resourceVersion, span, removeResult);
             return removeResult.map(res -> {
@@ -186,7 +185,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
 
             log.debug("retrieving tenant [id: {}]", tenantId);
             final Future<OperationResult<Tenant>> getResult = Future.future();
-            final Span span = newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+            final Span span = Util.newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
             getService().read(tenantId, span, getResult);
             return getResult.map(res -> {

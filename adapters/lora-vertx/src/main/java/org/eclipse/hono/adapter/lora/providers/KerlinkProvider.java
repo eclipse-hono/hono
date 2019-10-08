@@ -13,12 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import static java.net.HttpURLConnection.HTTP_UNAUTHORIZED;
-import static org.eclipse.hono.adapter.lora.LoraConstants.*;
-import static org.eclipse.hono.util.Constants.JSON_FIELD_DEVICE_ID;
-import static org.eclipse.hono.util.Constants.JSON_FIELD_TENANT_ID;
-import static org.eclipse.hono.util.RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID;
-
+import java.net.HttpURLConnection;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.util.Base64;
@@ -29,7 +24,9 @@ import org.eclipse.hono.adapter.lora.impl.LoraProtocolAdapter;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.service.cache.SpringBasedExpiringValueCache;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,12 +135,12 @@ public class KerlinkProvider implements LoraProvider {
     public Future<Void> sendDownlinkCommand(final JsonObject gatewayDevice, final CredentialsObject gatewayCredential,
             final String targetDeviceId, final Command loraCommand) {
         LOG.info("Send downlink command for device '{}' using gateway '{}'", targetDeviceId,
-                gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID));
+                gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID));
 
         if (!isValidDownlinkKerlinkGateway(gatewayDevice)) {
             LOG.info(
                     "Can't send downlink command for device '{}' using gateway '{}' because of invalid gateway configuration.",
-                    targetDeviceId, gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID));
+                    targetDeviceId, gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID));
             return Future.failedFuture(new LoraProviderDownlinkException("LoRa configuration is not valid."));
         }
 
@@ -152,7 +149,7 @@ public class KerlinkProvider implements LoraProvider {
 
         return apiToken.compose(token -> {
             LOG.info("Sending downlink command via rest api for device '{}' using gateway '{}' and resolved token",
-                    targetDeviceId, gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID));
+                    targetDeviceId, gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID));
 
             final JsonObject loraPayload = loraCommand.getPayload().toJsonObject();
 
@@ -172,7 +169,7 @@ public class KerlinkProvider implements LoraProvider {
         final String targetUri = getDownlinkRequestUri(gatewayDevice, targetDevice);
 
         final JsonObject loraProperties = LoraUtils.getLoraConfigFromLoraGatewayDevice(gatewayDevice);
-        final int port = loraProperties.getInteger(FIELD_LORA_DEVICE_PORT);
+        final int port = loraProperties.getInteger(LoraConstants.FIELD_LORA_DEVICE_PORT);
 
         final JsonObject txMessage = new JsonObject();
         txMessage.put(FIELD_DOWNLINK_PORT, port);
@@ -186,7 +183,7 @@ public class KerlinkProvider implements LoraProvider {
                     if (response.succeeded() && LoraUtils.isHttpSuccessStatusCode(response.result().statusCode())) {
                         LOG.debug("downlink rest api call for device '{}' was successful.", targetDevice);
                         result.complete();
-                    } else if (response.succeeded() && response.result().statusCode() == HTTP_UNAUTHORIZED) {
+                    } else if (response.succeeded() && response.result().statusCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
                         LOG.debug(
                                 "downlink rest api call for device '{}' failed because it was unauthorized. Response Body: '{}'",
                                 targetDevice, response.result().bodyAsString());
@@ -213,7 +210,7 @@ public class KerlinkProvider implements LoraProvider {
     private String getDownlinkRequestUri(final JsonObject gatewayDevice, final String targetDevice) {
         final String hostName = LoraUtils.getNormalizedProviderUrlFromGatewayDevice(gatewayDevice);
         final JsonObject vendorProperties = LoraUtils.getLoraConfigFromLoraGatewayDevice(gatewayDevice)
-                .getJsonObject(FIELD_LORA_VENDOR_PROPERTIES);
+                .getJsonObject(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES);
         final int customerId = vendorProperties.getInteger(FIELD_KERLINK_CUSTOMER_ID);
         final int clusterId = vendorProperties.getInteger(FIELD_KERLINK_CLUSTER_ID);
 
@@ -228,17 +225,17 @@ public class KerlinkProvider implements LoraProvider {
     private Future<String> getApiTokenFromCacheOrIssueNewFromLoraProvider(final JsonObject gatewayDevice,
             final CredentialsObject gatewayCredentials) {
         LOG.debug("A bearer token for gateway device '{}' with auth-id '{}' was requested",
-                gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
+                gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
 
         final String bearerToken = getCachedTokenForGatewayDevice(gatewayDevice);
 
         if (StringUtils.isEmpty(bearerToken)) {
             LOG.debug("No bearer token for gateway device '{}' and auth-id '{}' in cache. Will request a new one",
-                    gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
+                    gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
 
             return getApiTokenFromLoraProvider(gatewayDevice, gatewayCredentials).compose(apiResponse -> {
                 LOG.debug("Got bearer token for gateway device '{}' and auth-id '{}'.",
-                        gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
+                        gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
 
                 final String token = apiResponse.getString(FIELD_KERLINK_TOKEN);
                 final Long tokenExpiryString = apiResponse.getLong(FIELD_KERLINK_EXPIRY_DATE);
@@ -253,7 +250,7 @@ public class KerlinkProvider implements LoraProvider {
             });
         } else {
             LOG.debug("Bearer token for gateway device '{}' and auth-id '{}' is in cache.",
-                    gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
+                    gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID), gatewayCredentials.getAuthId());
             return Future.succeededFuture(bearerToken);
         }
     }
@@ -263,7 +260,7 @@ public class KerlinkProvider implements LoraProvider {
         final List<JsonObject> currentlyValidSecrets = gatewayCredentials.getCandidateSecrets();
 
         LOG.debug("Got a total of {} valid secrets for gateway device '{}' and auth-id '{}'",
-                currentlyValidSecrets.size(), gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID),
+                currentlyValidSecrets.size(), gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID),
                 gatewayCredentials.getAuthId());
 
         // For now we didn't implement support for multiple valid secrets at the same time.
@@ -277,15 +274,15 @@ public class KerlinkProvider implements LoraProvider {
 
         final String loginUri = LoraUtils.getNormalizedProviderUrlFromGatewayDevice(gatewayDevice) + API_PATH_GET_TOKEN;
 
-        final String passwordBase64 = secret.getString(FIELD_LORA_CREDENTIAL_KEY);
+        final String passwordBase64 = secret.getString(LoraConstants.FIELD_LORA_CREDENTIAL_KEY);
         final String password = new String(Base64.getDecoder().decode(passwordBase64));
 
         final JsonObject loginRequestPayload = new JsonObject();
-        loginRequestPayload.put(FIELD_KERLINK_AUTH_LOGIN, secret.getString(FIELD_LORA_CREDENTIAL_IDENTITY));
+        loginRequestPayload.put(FIELD_KERLINK_AUTH_LOGIN, secret.getString(LoraConstants.FIELD_LORA_CREDENTIAL_IDENTITY));
         loginRequestPayload.put(FIELD_KERLINK_AUTH_PASSWORD, password);
 
         LOG.debug("Going to obtain token for gateway device '{}' using url: '{}'",
-                gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID), loginUri);
+                gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID), loginUri);
 
         webClient.postAbs(loginUri).putHeader("content-type", HEADER_CONTENT_TYPE_KERLINK_JSON)
                 .sendJsonObject(loginRequestPayload, response -> {
@@ -293,7 +290,7 @@ public class KerlinkProvider implements LoraProvider {
                         result.complete(response.result().bodyAsJsonObject());
                     } else {
                         LOG.debug("Error obtaining token for gateway device '{}' using url: '{}'",
-                                gatewayDevice.getString(FIELD_PAYLOAD_DEVICE_ID), loginUri);
+                                gatewayDevice.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID), loginUri);
                         result.fail(new LoraProviderDownlinkException("Could not get authentication token for provider",
                                 response.cause()));
                     }
@@ -321,8 +318,10 @@ public class KerlinkProvider implements LoraProvider {
     }
 
     private String getCacheIdForGatewayDevice(final JsonObject gatewayDevice) {
-        return gatewayDevice.getString(JSON_FIELD_TENANT_ID) + "_" + gatewayDevice.getString(JSON_FIELD_DEVICE_ID) + "_"
-                + LoraUtils.getLoraConfigFromLoraGatewayDevice(gatewayDevice).getString(FIELD_AUTH_ID);
+        return String.format("%s_%s_%s",
+                gatewayDevice.getString(Constants.JSON_FIELD_TENANT_ID),
+                gatewayDevice.getString(Constants.JSON_FIELD_DEVICE_ID),
+                LoraUtils.getLoraConfigFromLoraGatewayDevice(gatewayDevice).getString(LoraConstants.FIELD_AUTH_ID));
     }
 
     private boolean isValidDownlinkKerlinkGateway(final JsonObject gatewayDevice) {
@@ -331,7 +330,7 @@ public class KerlinkProvider implements LoraProvider {
             return false;
         }
 
-        final JsonObject vendorProperties = loraConfig.getJsonObject(FIELD_LORA_VENDOR_PROPERTIES);
+        final JsonObject vendorProperties = loraConfig.getJsonObject(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES);
         if (vendorProperties == null) {
             return false;
         }

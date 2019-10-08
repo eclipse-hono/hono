@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.tests.coap;
 
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertThat;
 
 import java.net.HttpURLConnection;

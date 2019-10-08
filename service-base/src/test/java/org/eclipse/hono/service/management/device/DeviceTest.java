@@ -15,10 +15,10 @@ package org.eclipse.hono.service.management.device;
 
 import static org.junit.Assert.assertThat;
 
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import org.hamcrest.collection.IsEmptyIterable;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.core.IsNull.notNullValue;
-import static org.hamcrest.core.IsNull.nullValue;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.Json;

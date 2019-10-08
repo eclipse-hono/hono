@@ -61,8 +61,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_OK;
 
 
 /**
@@ -309,10 +307,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
         final JsonObject data = getSingleCredentials(tenantId, authId, type, clientContext, span);
         if (data == null) {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HTTP_NOT_FOUND)));
+            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
         } else {
             resultHandler.handle(Future.succeededFuture(
-                    CredentialsResult.from(HTTP_OK, data.copy(), getCacheDirective(type))));
+                    CredentialsResult.from(HttpURLConnection.HTTP_OK, data.copy(), getCacheDirective(type))));
         }
     }
 
@@ -633,7 +631,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
         if (credentialsForTenant == null) {
             TracingHelper.logError(span, "No credentials found for tenant");
-            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HTTP_NOT_FOUND, null, Optional.empty(),
+            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_NOT_FOUND, null, Optional.empty(),
                     Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
             return;
         }
@@ -645,7 +643,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         }
         if (matchingCredentials.isEmpty()) {
             TracingHelper.logError(span, "No credentials found for device");
-            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HTTP_NOT_FOUND, null, Optional.empty(),
+            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_NOT_FOUND, null, Optional.empty(),
                     Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
             return;
         }
@@ -661,7 +659,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         }
 
         resultHandler.handle(Future.succeededFuture(
-                OperationResult.ok(HTTP_OK,
+                OperationResult.ok(HttpURLConnection.HTTP_OK,
                         credentials,
                         // TODO check cache directive
                         Optional.empty(),

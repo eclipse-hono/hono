@@ -12,6 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
+import static org.hamcrest.Matchers.arrayWithSize;
+import static org.junit.Assert.assertNotNull;
+
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -29,6 +32,7 @@ import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -52,9 +56,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import static org.eclipse.hono.util.Constants.DEFAULT_TENANT;
-import static org.hamcrest.collection.IsArrayWithSize.arrayWithSize;
-import static org.junit.Assert.assertNotNull;
 
 /**
  * Tests verifying the Device Registry component by making HTTP requests to its
@@ -65,7 +66,7 @@ public class CredentialsHttpIT {
 
     private static final String HTTP_HEADER_ETAG = HttpHeaders.ETAG.toString();
 
-    private static final String TENANT = DEFAULT_TENANT;
+    private static final String TENANT = Constants.DEFAULT_TENANT;
     private static final String TEST_AUTH_ID = "sensor20";
     private static final Vertx vertx = Vertx.vertx();
 
@@ -116,7 +117,7 @@ public class CredentialsHttpIT {
         pskCredentials = newPskCredentials(authId);
         final Async creation = ctx.async();
         registry
-                .registerDevice(DEFAULT_TENANT, deviceId)
+                .registerDevice(Constants.DEFAULT_TENANT, deviceId)
                 .otherwise(t -> {
                     ctx.fail(t);
                     return null;

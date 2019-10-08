@@ -12,9 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.collection.IsIterableWithSize.iterableWithSize;
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -221,7 +221,7 @@ public class CredentialsTest {
 
         assertThat(decodeCredential, instanceOf(PasswordCredential.class));
         assertEquals(authId, decodeCredential.getAuthId());
-        assertThat(decodeCredential.getSecrets(), iterableWithSize(1));
+        assertThat(decodeCredential.getSecrets(), hasSize(1));
         final PasswordSecret decodeSecret = decodeCredential.getSecrets().get(0);
         assertEquals(decodeSecret.getNotAfter(), Instant.parse("1992-09-11T11:38:00Z"));
 

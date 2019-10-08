@@ -12,13 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.resourcelimits;
 
-import static java.time.temporal.ChronoUnit.DAYS;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Objects;
 import java.util.Optional;
@@ -379,7 +378,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 && YearMonth.from(targetDateTime).equals(YearMonth.from(effectiveSince))
                 && effectiveSince.getDayOfMonth() != 1) {
             final OffsetDateTime lastDayOfMonth = effectiveSince.with(TemporalAdjusters.lastDayOfMonth());
-            final long daysBetween = DAYS
+            final long daysBetween = ChronoUnit.DAYS
                     .between(effectiveSince, lastDayOfMonth) + 1;
             return Double.valueOf(Math.ceil(daysBetween * maxBytes / lastDayOfMonth.getDayOfMonth())).longValue();
         }
@@ -406,7 +405,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             final OffsetDateTime targetDateTime,
             final PeriodMode mode,
             final long periodInDays) {
-        final long inclusiveDaysBetween = DAYS.between(effectiveSince, targetDateTime) + 1;
+        final long inclusiveDaysBetween = ChronoUnit.DAYS.between(effectiveSince, targetDateTime) + 1;
         switch (mode) {
         case DAYS:
             if (inclusiveDaysBetween > 0 && periodInDays > 0) {

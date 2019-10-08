@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,6 @@
  *******************************************************************************/
 
 package org.eclipse.hono.jmeter;
-
-import static java.lang.String.format;
-import static org.eclipse.hono.jmeter.HonoSamplerUtils.getIntValueOrDefault;
 
 import java.util.concurrent.CompletionException;
 
@@ -61,7 +58,7 @@ public class HonoCommanderSampler extends HonoSampler implements ThreadListener 
             honoCommander = new HonoCommander(this);
             honoCommander.start().join();
         } catch (final CompletionException e) {
-            throw new RuntimeException(format("Error starting commander sampler for tenant %s", getTenant()),
+            throw new RuntimeException(String.format("Error starting commander sampler for tenant %s", getTenant()),
                     e.getCause());
         }
     }
@@ -80,7 +77,7 @@ public class HonoCommanderSampler extends HonoSampler implements ThreadListener 
     }
 
     public int getReconnectAttemptsAsInt() {
-        return getIntValueOrDefault(getPropertyAsString(RECONNECT_ATTEMPTS), 0);
+        return HonoSamplerUtils.getIntValueOrDefault(getPropertyAsString(RECONNECT_ATTEMPTS), 0);
     }
 
     public String getReconnectAttempts() {
@@ -124,7 +121,7 @@ public class HonoCommanderSampler extends HonoSampler implements ThreadListener 
     }
 
     public int getCommandTimeoutAsInt() {
-        return getIntValueOrDefault(getPropertyAsString(COMMAND_TIMEOUT), DEFAULT_COMMAND_REQUEST_TIMEOUT);
+        return HonoSamplerUtils.getIntValueOrDefault(getPropertyAsString(COMMAND_TIMEOUT), DEFAULT_COMMAND_REQUEST_TIMEOUT);
     }
 
     public String getCommandTimeout() {

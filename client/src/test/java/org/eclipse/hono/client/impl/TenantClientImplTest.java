@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -167,7 +166,7 @@ public class TenantClientImplTest {
         }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message response = ProtonHelper.message(tenantResult.encode());
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
@@ -199,7 +198,7 @@ public class TenantClientImplTest {
             // THEN the tenant information is read from the cache
             assertEquals(tenantResult.getPayload(), result);
             // and no request message is sent to the service
-            verify(sender, never()).send(any(Message.class), anyHandler());
+            verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
             // and the span is finished
             verify(span).finish();
             ctx.completeNow();
@@ -239,7 +238,7 @@ public class TenantClientImplTest {
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
-        when(sender.send(any(Message.class), anyHandler())).thenAnswer(invocation -> {
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<ProtonDelivery> dispositionHandler = invocation.getArgument(1);
             dispositionHandler.handle(update);
             return mock(ProtonDelivery.class);
@@ -272,7 +271,7 @@ public class TenantClientImplTest {
         // THEN the message being sent contains the subject DN in RFC 2253 format in the
         // payload
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         final JsonObject payload = MessageHelper.getJsonPayload(sentMessage);
         assertThat(payload.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN), is("CN=ca,OU=Hono,O=Eclipse"));
@@ -292,7 +291,7 @@ public class TenantClientImplTest {
 
         // THEN the message being sent contains the tenant ID as search criteria
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), anyHandler());
+        verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertNull(MessageHelper.getTenantId(sentMessage));
         assertThat(sentMessage.getMessageId(), is(notNullValue()));

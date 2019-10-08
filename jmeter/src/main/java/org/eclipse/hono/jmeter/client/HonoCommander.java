@@ -1,22 +1,17 @@
-/*
- * ******************************************************************************
- *  * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
- *  *
- *  * See the NOTICE file(s) distributed with this work for additional
- *  * information regarding copyright ownership.
- *  *
- *  * This program and the accompanying materials are made available under the
- *  * terms of the Eclipse Public License 2.0 which is available at
- *  * http://www.eclipse.org/legal/epl-2.0
- *  *
- *  * SPDX-License-Identifier: EPL-2.0
- *  ******************************************************************************
+/*******************************************************************************
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
- */
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 
 package org.eclipse.hono.jmeter.client;
-
-import static org.eclipse.hono.util.MessageTap.getConsumer;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +30,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.jmeter.HonoCommanderSampler;
 import org.eclipse.hono.jmeter.sampleresult.HonoCommanderSampleResult;
+import org.eclipse.hono.util.MessageTap;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.LoggerFactory;
 
@@ -167,11 +163,11 @@ public class HonoCommander extends AbstractClient {
     private Future<MessageConsumer> createMessageConsumers() {
         return applicationClientFactory
                 .createEventConsumer(tenant,
-                        getConsumer(message -> handleMessage("Event", message),
+                        MessageTap.getConsumer(message -> handleMessage("Event", message),
                                 this::handleCommandReadinessNotification),
                         closeHook -> LOG.error("remotely detached consumer link"))
                 .compose(consumer -> applicationClientFactory.createTelemetryConsumer(tenant,
-                        getConsumer(message -> handleMessage("Telemetry", message),
+                        MessageTap.getConsumer(message -> handleMessage("Telemetry", message),
                                 this::handleCommandReadinessNotification),
                         closeHook -> LOG.error("remotely detached consumer link")))
                 .map(consumer -> {

@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.timeout;
@@ -74,7 +73,7 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
             connection.getVertx().eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
 
             // THEN the link is closed
-            verify(connection, timeout(TIMEOUT)).closeAndFree(any(ProtonSender.class), anyHandler());
+            verify(connection, timeout(TIMEOUT)).closeAndFree(any(ProtonSender.class), VertxMockSupport.anyHandler());
             async.complete();
         });
         async.await();
@@ -103,7 +102,7 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
             connection.getVertx().eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, otherTenant);
 
             // THEN the link is not closed
-            verify(connection, timeout(TIMEOUT).times(0)).closeAndFree(any(ProtonSender.class), anyHandler());
+            verify(connection, timeout(TIMEOUT).times(0)).closeAndFree(any(ProtonSender.class), VertxMockSupport.anyHandler());
             async.complete();
         });
         async.await();

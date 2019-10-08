@@ -13,15 +13,7 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
-import static java.net.HttpURLConnection.HTTP_CREATED;
-import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_NO_CONTENT;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
-
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -277,10 +269,10 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         if (tenant == null) {
             TracingHelper.logError(span, "Tenant not found");
-            return OperationResult.empty(HTTP_NOT_FOUND);
+            return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
         } else {
             return OperationResult.ok(
-                    HTTP_OK,
+                    HttpURLConnection.HTTP_OK,
                     convertTenantObject(tenant.getValue()),
                     Optional.ofNullable(getCacheDirective()),
                     Optional.ofNullable(tenant.getVersion()));
@@ -293,9 +285,9 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         if (tenant == null) {
             TracingHelper.logError(span, "tenant not found");
-            return TenantResult.from(HTTP_NOT_FOUND);
+            return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
         } else {
-            return TenantResult.from(HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
+            return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
         }
     }
 
@@ -313,15 +305,15 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         if (subjectDn == null) {
             TracingHelper.logError(span, "missing subject DN");
-            return TenantResult.from(HTTP_BAD_REQUEST);
+            return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
         } else {
             final Versioned<TenantObject> tenant = getByCa(subjectDn);
 
             if (tenant == null) {
                 TracingHelper.logError(span, "no tenant found for subject DN");
-                return TenantResult.from(HTTP_NOT_FOUND);
+                return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             } else {
-                return TenantResult.from(HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
+                return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
             }
         }
     }
@@ -347,18 +339,18 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 if (checkResourceVersion(resourceVersion, actualVersion)) {
                     tenants.remove(tenantId);
                     dirty = true;
-                    return Result.from(HTTP_NO_CONTENT);
+                    return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
                 } else {
                     TracingHelper.logError(span, "Resource Version mismatch.");
-                    return Result.from(HTTP_PRECON_FAILED);
+                    return Result.from(HttpURLConnection.HTTP_PRECON_FAILED);
                 }
             } else {
                 TracingHelper.logError(span, "Tenant not found.");
-                return Result.from(HTTP_NOT_FOUND);
+                return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
             }
         } else {
             TracingHelper.logError(span, "Modification is disabled for Tenant Service");
-            return Result.from(HTTP_FORBIDDEN);
+            return Result.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
     }
 
@@ -389,7 +381,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
         if (tenants.containsKey(tenantId)) {
             TracingHelper.logError(span, "Conflict : tenantId already exists.");
-            return OperationResult.empty(HTTP_CONFLICT);
+            return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
         }
         try {
             if (log.isTraceEnabled()) {
@@ -402,17 +394,17 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             if (conflictingTenant != null) {
                 // we are trying to use the same CA as an already existing tenant
                 TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
-                return OperationResult.empty(HTTP_CONFLICT);
+                return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
             } else {
                 tenants.put(tenantId, tenant);
                 dirty = true;
-                return OperationResult.ok(HTTP_CREATED,
+                return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
                         Id.of(tenantId), Optional.empty(), Optional.of(tenant.getVersion()));
             }
         } catch (final IllegalArgumentException e) {
             log.debug("error parsing payload of add tenant request", e);
             TracingHelper.logError(span, e);
-            return OperationResult.empty(HTTP_BAD_REQUEST);
+            return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
         }
     }
 
@@ -461,32 +453,32 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                     if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getValue().getTenantId())) {
                         // we are trying to use the same CA as another tenant
                         TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
-                        return OperationResult.empty(HTTP_CONFLICT);
+                        return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
                     } else {
                         final Versioned<TenantObject> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> newTenantData);
                         if ( updatedTenant != null ) {
 
                             tenants.put(tenantId, updatedTenant);
                             dirty = true;
-                            return OperationResult.ok(HTTP_NO_CONTENT,
+                            return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT,
                                     null, Optional.empty(),
                                     Optional.of(updatedTenant.getVersion()));
                         } else {
                             TracingHelper.logError(span, "Resource Version mismatch.");
-                            return OperationResult.empty(HTTP_PRECON_FAILED);
+                            return OperationResult.empty(HttpURLConnection.HTTP_PRECON_FAILED);
                         }
                     }
                 } catch (final IllegalArgumentException e) {
                     TracingHelper.logError(span, e);
-                    return OperationResult.empty(HTTP_BAD_REQUEST);
+                    return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
                 }
             } else {
                 TracingHelper.logError(span, "Tenant not found.");
-                return OperationResult.empty(HTTP_NOT_FOUND);
+                return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
             }
         } else {
             TracingHelper.logError(span, "Modification disabled for Tenant Service.");
-            return OperationResult.empty(HTTP_FORBIDDEN);
+            return OperationResult.empty(HttpURLConnection.HTTP_FORBIDDEN);
         }
     }
 

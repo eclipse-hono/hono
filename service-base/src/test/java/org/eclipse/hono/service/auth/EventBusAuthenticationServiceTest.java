@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.auth;
 
-import static org.eclipse.hono.util.AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN;
-
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.auth.AuthoritiesImpl;
@@ -82,7 +80,7 @@ public class EventBusAuthenticationServiceTest {
     public void testAuthenticateSuccess(final TestContext ctx) {
         final String token = createTestToken();
 
-        authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
+        authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
             message.reply(AuthenticationConstants.getAuthenticationReply(token));
         });
 
@@ -125,7 +123,7 @@ public class EventBusAuthenticationServiceTest {
     public void testAuthenticateFailureValidStatusCode(final TestContext ctx) {
         final String failureMessage = "failureMessage";
 
-        authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
+        authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
             message.fail(HttpURLConnection.HTTP_UNAUTHORIZED, failureMessage);
         });
 
@@ -152,7 +150,7 @@ public class EventBusAuthenticationServiceTest {
     public void testAuthenticateFailureInvalidStatusCode(final TestContext ctx) {
         final String failureMessage = "failureMessage";
 
-        authRequestConsumer = vertx.eventBus().consumer(EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
+        authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
             message.fail(200, failureMessage);
         });
 

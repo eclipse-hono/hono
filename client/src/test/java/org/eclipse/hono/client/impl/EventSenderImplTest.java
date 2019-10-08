@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,7 +83,7 @@ public class EventSenderImplTest {
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
             return mock(ProtonDelivery.class);
-        }).when(sender).send(any(Message.class), anyHandler());
+        }).when(sender).send(any(Message.class), VertxMockSupport.anyHandler());
 
         // WHEN trying to send a message
         final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text");
@@ -118,7 +117,7 @@ public class EventSenderImplTest {
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
             return mock(ProtonDelivery.class);
-        }).when(sender).send(any(Message.class), anyHandler());
+        }).when(sender).send(any(Message.class), VertxMockSupport.anyHandler());
 
         // WHEN trying to send a message
         final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text");
@@ -153,7 +152,7 @@ public class EventSenderImplTest {
 
         // THEN the message is not sent
         assertFalse(result.succeeded());
-        verify(sender, never()).send(any(Message.class), anyHandler());
+        verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
     }
 
     /**
@@ -167,14 +166,14 @@ public class EventSenderImplTest {
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
         final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "telemetry/tenant");
-        when(sender.send(any(Message.class), anyHandler())).thenReturn(mock(ProtonDelivery.class));
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
 
         // WHEN trying to send a message
         final Message msg = ProtonHelper.message("telemetry/tenant/deviceId", "some payload");
         messageSender.send(msg);
 
         // THEN the message has been sent
-        verify(sender).send(any(Message.class), anyHandler());
+        verify(sender).send(any(Message.class), VertxMockSupport.anyHandler());
         // and the message has been marked as durable
         assertTrue(msg.isDurable());
     }
@@ -190,14 +189,14 @@ public class EventSenderImplTest {
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);
         final DownstreamSender messageSender = new EventSenderImpl(connection, sender, "tenant", "telemetry/tenant");
-        when(sender.send(any(Message.class), anyHandler())).thenReturn(mock(ProtonDelivery.class));
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
 
         // WHEN trying to send a message
         final Message msg = ProtonHelper.message("telemetry/tenant/deviceId", "some payload");
         messageSender.sendAndWaitForOutcome(msg);
 
         // THEN the message has been sent
-        verify(sender).send(any(Message.class), anyHandler());
+        verify(sender).send(any(Message.class), VertxMockSupport.anyHandler());
         // and the message has been marked as durable
         assertTrue(msg.isDurable());
     }

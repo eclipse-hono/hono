@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
-import static org.eclipse.hono.client.impl.VertxMockSupport.argumentCaptorHandler;
-import static org.eclipse.hono.client.impl.VertxMockSupport.mockHandler;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -99,7 +96,7 @@ public class CommandConsumerFactoryImplTest {
             final Handler<Void> handler = invocation.getArgument(1);
             handler.handle(null);
             return null;
-        }).when(vertx).setTimer(anyLong(), anyHandler());
+        }).when(vertx).setTimer(anyLong(), VertxMockSupport.anyHandler());
 
         deviceId = "theDevice";
         tenantId = "theTenant";
@@ -115,7 +112,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 anyInt(),
                 anyBoolean(),
-                anyHandler())).thenReturn(Future.succeededFuture(deviceSpecificCommandReceiver));
+                VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(deviceSpecificCommandReceiver));
         tenantScopedCommandReceiver = mock(ProtonReceiver.class);
         tenantCommandAddress = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null).toString();
         when(connection.createReceiver(
@@ -124,7 +121,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 anyInt(),
                 anyBoolean(),
-                anyHandler())).thenReturn(Future.succeededFuture(tenantScopedCommandReceiver));
+                VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(tenantScopedCommandReceiver));
         gatewayMapper = mock(GatewayMapper.class);
         commandConsumerFactory = new CommandConsumerFactoryImpl(connection, gatewayMapper);
     }
@@ -138,8 +135,8 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testCreateCommandConsumerFailsIfPeerRejectsLink(final TestContext ctx) {
 
-        final Handler<CommandContext> commandHandler = mockHandler();
-        final Handler<Void> closeHandler = mockHandler();
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
         final ServerErrorException ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
         when(connection.createReceiver(
                 anyString(),
@@ -147,7 +144,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 anyInt(),
                 anyBoolean(),
-                anyHandler()))
+                VertxMockSupport.anyHandler()))
         .thenReturn(Future.failedFuture(ex));
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler)
@@ -165,8 +162,8 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testCreateCommandConsumerSucceeds(final TestContext ctx) {
 
-        final Handler<CommandContext> commandHandler = mockHandler();
-        final Handler<Void> closeHandler = mockHandler();
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler)
         .setHandler(ctx.asyncAssertSuccess());
@@ -181,11 +178,11 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testCreateCommandConsumerSetsRemoteCloseHandler(final TestContext ctx) {
 
-        final Handler<CommandContext> commandHandler = mockHandler();
-        final Handler<Void> closeHandler = mockHandler();
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler);
-        final ArgumentCaptor<Handler<String>> captor = argumentCaptorHandler();
+        final ArgumentCaptor<Handler<String>> captor = VertxMockSupport.argumentCaptorHandler();
         verify(connection).createReceiver(
                 eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
@@ -211,22 +208,22 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testLocalCloseRemovesCommandConsumerFromCache(final TestContext ctx) {
 
-        final Handler<CommandContext> commandHandler = mockHandler();
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Source source = mock(Source.class);
         when(source.getAddress()).thenReturn(deviceSpecificCommandAddress);
         when(deviceSpecificCommandReceiver.getSource()).thenReturn(source);
         when(deviceSpecificCommandReceiver.getRemoteSource()).thenReturn(source);
         when(deviceSpecificCommandReceiver.isOpen()).thenReturn(Boolean.TRUE);
-        when(vertx.setPeriodic(anyLong(), anyHandler())).thenReturn(10L);
+        when(vertx.setPeriodic(anyLong(), VertxMockSupport.anyHandler())).thenReturn(10L);
 
         // GIVEN a command consumer
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, 5000L)
         .map(consumer -> {
-                    verify(vertx).setPeriodic(eq(5000L), anyHandler());
+                    verify(vertx).setPeriodic(eq(5000L), VertxMockSupport.anyHandler());
             // WHEN closing the link locally
             final Future<Void> localCloseHandler = Future.future();
             consumer.close(localCloseHandler);
-                    final ArgumentCaptor<Handler<Void>> closeHandler = argumentCaptorHandler();
+                    final ArgumentCaptor<Handler<Void>> closeHandler = VertxMockSupport.argumentCaptorHandler();
             verify(connection).closeAndFree(eq(deviceSpecificCommandReceiver), closeHandler.capture());
             // and the peer sends its detach frame
             closeHandler.getValue().handle(null);
@@ -243,7 +240,7 @@ public class CommandConsumerFactoryImplTest {
                     any(ProtonMessageHandler.class),
                     eq(0),
                     eq(false),
-                    anyHandler());
+                    VertxMockSupport.anyHandler());
             return newConsumer;
         }).setHandler(ctx.asyncAssertSuccess());
     }
@@ -257,18 +254,18 @@ public class CommandConsumerFactoryImplTest {
     @Test
     public void testConsumerIsRecreatedOnConnectionFailure(final TestContext ctx) {
 
-        final Handler<CommandContext> commandHandler = mockHandler();
-        final Handler<Void> closeHandler = mockHandler();
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
         final Source source = mock(Source.class);
         when(source.getAddress()).thenReturn(deviceSpecificCommandAddress);
         when(deviceSpecificCommandReceiver.getSource()).thenReturn(source);
         when(deviceSpecificCommandReceiver.getRemoteSource()).thenReturn(source);
-        when(vertx.setPeriodic(anyLong(), anyHandler())).thenReturn(10L);
+        when(vertx.setPeriodic(anyLong(), VertxMockSupport.anyHandler())).thenReturn(10L);
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);
             handler.handle(null);
             return null;
-        }).when(connection).closeAndFree(any(), anyHandler());
+        }).when(connection).closeAndFree(any(), VertxMockSupport.anyHandler());
 
         // GIVEN a command connection with an established command consumer
         // which is checked periodically for liveness
@@ -278,7 +275,7 @@ public class CommandConsumerFactoryImplTest {
         final Future<MessageConsumer> commandConsumer = commandConsumerFactory.createCommandConsumer(
                 tenantId, deviceId, commandHandler, closeHandler, livenessCheckInterval);
         assertTrue(commandConsumer.isComplete());
-        final ArgumentCaptor<Handler<Long>> livenessCheck = argumentCaptorHandler();
+        final ArgumentCaptor<Handler<Long>> livenessCheck = VertxMockSupport.argumentCaptorHandler();
         // the liveness check is registered with the minimum interval length
         verify(vertx).setPeriodic(eq(CommandConsumerFactoryImpl.MIN_LIVENESS_CHECK_INTERVAL_MILLIS), livenessCheck.capture());
 
@@ -298,7 +295,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 eq(0),
                 eq(false),
-                anyHandler());
+                VertxMockSupport.anyHandler());
 
         // and when the consumer is finally closed locally
         commandConsumer.result().close(null);
@@ -317,8 +314,8 @@ public class CommandConsumerFactoryImplTest {
     public void testLivenessCheckLocksRecreationAttempt(final TestContext ctx) {
 
         // GIVEN a liveness check for a command consumer
-        final Handler<CommandContext> commandHandler = mockHandler();
-        final Handler<Void> remoteCloseHandler = mockHandler();
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Handler<Void> remoteCloseHandler = VertxMockSupport.mockHandler();
         final Handler<Long> livenessCheck = commandConsumerFactory.newLivenessCheck(tenantId, deviceId, "key", commandHandler, remoteCloseHandler);
         final Future<ProtonReceiver> createdReceiver = Future.future();
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
@@ -328,7 +325,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 anyInt(),
                 anyBoolean(),
-                anyHandler())).thenReturn(createdReceiver);
+                VertxMockSupport.anyHandler())).thenReturn(createdReceiver);
 
         // WHEN the liveness check fires
         livenessCheck.handle(10L);
@@ -342,7 +339,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 eq(0),
                 eq(false),
-                anyHandler());
+                VertxMockSupport.anyHandler());
 
         // and when the first attempt has finally timed out
         createdReceiver.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
@@ -356,6 +353,6 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 eq(0),
                 eq(false),
-                anyHandler());
+                VertxMockSupport.anyHandler());
     }
 }

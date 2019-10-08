@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
-import static org.eclipse.hono.client.impl.VertxMockSupport.anyHandler;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -85,7 +84,7 @@ public class TelemetrySenderImplTest {
         doAnswer(invocation -> {
             handlerRef.set(invocation.getArgument(1));
             return mock(ProtonDelivery.class);
-        }).when(sender).send(any(Message.class), anyHandler());
+        }).when(sender).send(any(Message.class), VertxMockSupport.anyHandler());
 
         // WHEN trying to send a message
         final Future<ProtonDelivery> result = messageSender.send("device", "some payload", "application/text");
@@ -117,7 +116,7 @@ public class TelemetrySenderImplTest {
 
         // THEN the message is not sent
         assertFalse(result.succeeded());
-        verify(sender, never()).send(any(Message.class), anyHandler());
+        verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
     }
 
     /**
@@ -129,8 +128,8 @@ public class TelemetrySenderImplTest {
 
         // GIVEN a sender that won't receive a delivery update on sending a message 
         // and directly triggers the timeout handler
-        when(sender.send(any(Message.class), anyHandler())).thenReturn(mock(ProtonDelivery.class));
-        when(vertx.setTimer(anyLong(), anyHandler())).thenAnswer(invocation -> {
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Long> handler = invocation.getArgument(1);
             final long timerId = 1;
             handler.handle(timerId);
