@@ -44,6 +44,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -628,6 +629,43 @@ public class HonoConnectionImplTest {
         verify(sender).open();
         verify(sender).close();
         verify(sender).free();
+        verify(remoteCloseHook, never()).handle(anyString());
+    }
+
+    /**
+     * Verifies that the attempt to create a sender fails with a
+     * {@code ServerErrorException} if the remote peer sends a
+     * {@code null} target in its attach frame.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateSenderFailsIfPeerDoesNotCreateTerminus(final TestContext ctx) {
+
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.getRemoteTarget()).thenReturn(null);
+        when(con.createSender(anyString())).thenReturn(sender);
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        // WHEN the client tries to open a sender link
+        final Future<ProtonSender> result = honoConnection.createSender(
+                TelemetryConstants.TELEMETRY_ENDPOINT, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(sender).open();
+        verify(sender).openHandler(openHandler.capture());
+        // and the peer does not allocate a local terminus for the link
+        openHandler.getValue().handle(Future.succeededFuture(sender));
+
+        // THEN the link does not get established
+        assertTrue(result.failed());
+        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
+        // and the remote close hook does not get invoked
         verify(remoteCloseHook, never()).handle(anyString());
     }
 
