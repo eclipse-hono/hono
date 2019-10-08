@@ -39,6 +39,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -617,6 +618,15 @@ public class HonoConnectionImpl implements HonoConnection {
 
         return executeOrRunOnContext(result -> {
             checkConnected().compose(v -> {
+
+                if (targetAddress == null && !supportsCapability(Constants.CAP_ANONYMOUS_RELAY)) {
+                    // AnonTerm spec requires peer to offer ANONYMOUS-RELAY capability
+                    // before a client can use anonymous terminus
+                    return Future.failedFuture(new ServerErrorException(
+                            HttpURLConnection.HTTP_NOT_IMPLEMENTED,
+                            "server does not support anonymous terminus"));
+                }
+
                 final Future<ProtonSender> senderFuture = Future.future();
                 final ProtonSender sender = connection.createSender(targetAddress);
                 sender.setQoS(qos);

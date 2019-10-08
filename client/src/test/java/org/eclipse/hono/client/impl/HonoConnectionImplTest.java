@@ -33,6 +33,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -631,6 +632,37 @@ public class HonoConnectionImplTest {
         verify(sender).free();
         verify(remoteCloseHook, never()).handle(anyString());
     }
+
+    /**
+     * Verifies that the attempt to create a sender for a {@code null} target address
+     * fails with a {@code ServerErrorException} if the remote peer doesn't
+     * support the anonymous terminus.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCreateSenderFailsForUnsupportedAnonTerminus(final TestContext ctx) {
+
+        when(con.getRemoteOfferedCapabilities()).thenReturn(new Symbol[] {Symbol.valueOf("some-feature")});
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        final Async connectAttempt = ctx.async();
+        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
+        connectAttempt.await();
+
+        // WHEN a client tries to open a sender for the anonymous terminus
+        final Future<ProtonSender> result = honoConnection.createSender(
+                null, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
+
+        // THEN the attempt fails
+        assertTrue(result.failed());
+        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+        // and the remote close hook is not invoked
+        verify(remoteCloseHook, never()).handle(anyString());
+    }
+
 
     /**
      * Verifies that the attempt to create a sender fails with a
