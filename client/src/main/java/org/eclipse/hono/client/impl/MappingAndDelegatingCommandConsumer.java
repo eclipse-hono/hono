@@ -33,13 +33,14 @@ import io.vertx.proton.ProtonReceiver;
  * A wrapper around an AMQP receiver link for consuming commands on a tenant-scoped address.
  * <p>
  * This class is used by the default {@link CommandConsumerFactory} implementation to receive commands from northbound
- * applications.
+ * applications. The received commands will be mapped to a matching gateway and delegated to the
+ * {@link DestinationCommandConsumer} if applicable.
  */
-public class TenantScopedCommandConsumer extends CommandConsumer {
+public class MappingAndDelegatingCommandConsumer extends CommandConsumer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TenantScopedCommandConsumer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MappingAndDelegatingCommandConsumer.class);
 
-    private TenantScopedCommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
+    private MappingAndDelegatingCommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
 
         super(connection, receiver);
     }
@@ -62,7 +63,7 @@ public class TenantScopedCommandConsumer extends CommandConsumer {
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
-    public static Future<TenantScopedCommandConsumer> create(
+    public static Future<MappingAndDelegatingCommandConsumer> create(
             final HonoConnection con,
             final String tenantId,
             final ProtonMessageHandler messageHandler,
@@ -76,7 +77,7 @@ public class TenantScopedCommandConsumer extends CommandConsumer {
         Objects.requireNonNull(remoteCloseHandler);
         Objects.requireNonNull(receiverRefHolder);
 
-        LOG.trace("creating new tenant scoped command consumer [tenant-id: {}]", tenantId);
+        LOG.trace("creating new MappingAndDelegatingCommandConsumer [tenant-id: {}]", tenantId);
 
         final String address = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null).toString();
 
@@ -87,19 +88,19 @@ public class TenantScopedCommandConsumer extends CommandConsumer {
                 con.getConfig().getInitialCredits(),
                 false, // no auto-accept
                 sourceAddress -> {
-                    LOG.debug("command receiver link [tenant-id: {}] closed remotely", tenantId);
+                    LOG.debug("MappingAndDelegatingCommandConsumer receiver link [tenant-id: {}] closed remotely", tenantId);
                     remoteCloseHandler.handle(sourceAddress);
                 }).map(receiver -> {
-                    LOG.debug("successfully created tenant scoped command consumer [{}]", address);
+                    LOG.debug("successfully created MappingAndDelegatingCommandConsumer [{}]", address);
                     receiverRefHolder.set(receiver);
-                    final TenantScopedCommandConsumer consumer = new TenantScopedCommandConsumer(con, receiver);
+                    final MappingAndDelegatingCommandConsumer consumer = new MappingAndDelegatingCommandConsumer(con, receiver);
                     consumer.setLocalCloseHandler(sourceAddress -> {
-                        LOG.debug("command receiver link [tenant-id: {}] closed locally", tenantId);
+                        LOG.debug("MappingAndDelegatingCommandConsumer receiver link [tenant-id: {}] closed locally", tenantId);
                         localCloseHandler.handle(sourceAddress);
                     });
                     return consumer;
                 }).recover(t -> {
-                    LOG.debug("failed to create tenant scoped command consumer [tenant-id: {}]", tenantId, t);
+                    LOG.debug("failed to create MappingAndDelegatingCommandConsumer [tenant-id: {}]", tenantId, t);
                     return Future.failedFuture(t);
                 });
     }
