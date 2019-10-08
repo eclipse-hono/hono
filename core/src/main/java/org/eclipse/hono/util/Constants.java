@@ -103,6 +103,12 @@ public final class Constants {
      * issued by a Device Registration service.
      */
     public static final Symbol CAP_REG_ASSERTION_VALIDATION = Symbol.valueOf("hono-reg-assertion");
+    /**
+     * The AMQP capability indicating support for routing messages as defined by
+     * <a href="http://docs.oasis-open.org/amqp/anonterm/v1.0/anonterm-v1.0.html">
+     * Anonymous Terminus for Message Routing</a>.
+     */
+    public static final Symbol CAP_ANONYMOUS_RELAY = Symbol.valueOf("ANONYMOUS-RELAY");
 
     /**
      * The key that an authenticated client's principal is stored under in a {@code ProtonConnection}'s

@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
@@ -376,6 +377,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 authenticatedDevice))
         .map(ok -> {
             con.setContainer(getTypeName());
+            con.setOfferedCapabilities(new Symbol[] {Constants.CAP_ANONYMOUS_RELAY});
             con.open();
             LOG.debug("connection with device [container: {}] established", con.getRemoteContainer());
             span.log("connection established");

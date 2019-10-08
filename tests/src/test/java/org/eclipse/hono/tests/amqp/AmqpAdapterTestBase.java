@@ -12,7 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
@@ -192,12 +195,15 @@ public abstract class AmqpAdapterTestBase {
     private Future<ProtonConnection> handleConnectAttempt(final ProtonConnection unopenedConnection) {
 
         final Future<ProtonConnection> result = Future.future();
+
         unopenedConnection.openHandler(result);
         unopenedConnection.closeHandler(remoteClose -> {
             unopenedConnection.close();
         });
         unopenedConnection.open();
+
         return result.map(con -> {
+            assertThat(unopenedConnection.getRemoteOfferedCapabilities()).contains(Constants.CAP_ANONYMOUS_RELAY);
             this.context = Vertx.currentContext();
             this.connection = unopenedConnection;
             return con;

@@ -12,19 +12,21 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp.impl;
 
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.hamcrest.CoreMatchers.is;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -210,6 +212,37 @@ public class VertxBasedAmqpProtocolAdapterTest {
         verify(server).connectHandler(any(Handler.class));
         verify(server).listen(any(Handler.class));
     }
+
+    /**
+     * Verifies that the adapter offers the ANONYMOUS-RELAY capability
+     * in its open frame when a device connects.
+     */
+    @Test
+    public void testAdapterSupportsAnonymousRelay() {
+
+        // GIVEN an AMQP adapter with a configured server.
+        final ProtonServer server = getAmqpServer();
+        final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
+
+        // WHEN a device connects
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        when(deviceConnection.getRemoteContainer()).thenReturn("deviceContainer");
+
+        adapter.onConnectRequest(deviceConnection);
+
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+
+        // THEN the adapter's open frame contains the ANONYMOUS-RELAY capability
+        verify(deviceConnection).setOfferedCapabilities(argThat(caps -> Arrays.stream(caps).anyMatch(cap -> Constants.CAP_ANONYMOUS_RELAY.equals(cap))));
+    }
+
 
     /**
      * Verifies that the AMQP Adapter rejects (closes) AMQP links that contains a target address.
