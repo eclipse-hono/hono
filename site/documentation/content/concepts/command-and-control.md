@@ -11,7 +11,10 @@ Commands can be sent following a *request/response* or a *one-way* pattern. For 
 
 ## Command & Control over HTTP Adapter
 
-The following sequence diagrams give an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagrams. 
+The following sequence diagrams give an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. 
+[Device Notifications]({{< relref "/concepts/device-notifications" >}}) are used to indicate to the application the period in which the device is ready to receive a command.
+
+The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagrams. 
 
 {{< figure src="../command_control_concept_one_way_http.svg" title="One-way Command over HTTP Adapter" >}} 
 
