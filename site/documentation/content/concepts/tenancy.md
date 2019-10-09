@@ -49,7 +49,7 @@ only a subset of Hono's functionality. This feature is foreseen to be especially
 
 
 Please refer to the [Tenant API]({{< relref "/api/tenant" >}}) to find out which protocol adapter properties are
-configurable on a tenant level. The number of such properties may grow during further development of Hono.
+configurable on a tenant level. 
 
 ## AMQP 1.0 Endpoints
 
@@ -72,9 +72,7 @@ is addressing the tenants themselves.
 All devices of Hono belong to exactly one tenant, so any data is sent in the context of the
 tenant a device belongs to.
 
-It is important here to focus on Hono's view of a device: it is on a logical level, meaning a device is created in the 
-context of a tenant purely by using Hono's Credentials and Device Registration API. 
-
+"Device" means here a logical entity consisting of a set of registry data.
 Usually a physical device will be created in Hono as exactly one logical device, and thus belongs to exactly one tenant.
 
 The following diagram shows the relation between tenants, devices and their credentials:
@@ -91,6 +89,8 @@ Each tenant has its own pair of AMQP 1.0 links and is treated
 independently from other tenants regarding the back pressure mechanism that AMQP 1.0 offers.
 
 This enables a *Business application* to limit the rate at which it consumes AMQP 1.0 messages per tenant.
+
+For the other direction, when commands are sent from the application to the device, the rate is also limited per tenant.
  
 ## Authorization at Tenant Level
 
@@ -125,6 +125,7 @@ Here is a summary of how this is implemented:
 - the credentials of devices are strictly scoped to a tenant
 - protocol adapters can be enabled/disabled for a tenant 
 - the downstream data flow is isolated for every tenant
+- the upstream data flow ([Command &amp; Control]({{< ref "/concepts/command-and-control" >}})) is isolated for every tenant
 - *Business applications* need to authenticate to the AMQP 1.0 network and are by that mechanism scoped to their tenant
  
 ## Hints for Production
