@@ -15,6 +15,7 @@ package org.eclipse.hono.tests.mqtt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -104,7 +105,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final Tenant tenant = new Tenant();
-        tenant.getDefaults().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 3); // seconds
+        tenant.setDefaults(Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, 3)); // seconds
         final VertxTestContext setup = new VertxTestContext();
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret").setHandler(setup.completing());

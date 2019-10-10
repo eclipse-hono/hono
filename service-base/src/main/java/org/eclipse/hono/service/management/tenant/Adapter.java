@@ -16,6 +16,7 @@ package org.eclipse.hono.service.management.tenant;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -23,7 +24,10 @@ import java.util.Objects;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**
- * Adapters Information.
+ * Protocol Adapter configuration properties.
+ * <p>
+ * Represents the <em>Adapter</em> schema object defined in the
+ * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class Adapter {
@@ -38,7 +42,7 @@ public class Adapter {
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, Object> extensions;
+    private Map<String, Object> extensions = new HashMap<>();
 
     /**
      * Creates a new adapter instance for the given type.
@@ -53,63 +57,82 @@ public class Adapter {
     }
 
     /**
-     * Set the enabled property.
-     *
-     * @param enabled the value to assign
-     * @return a reference to this for fluent use.
+     * Sets whether devices should be able to connect to Hono
+     * using this protocol adapter.
+     * 
+     * @param enabled {@code true} if devices should be able to connect.
+     * @return This instance, to allow chained invocations.
      */
-    public Adapter setEnabled(final Boolean enabled) {
+    public final Adapter setEnabled(final Boolean enabled) {
         this.enabled = enabled;
         return this;
     }
 
-    public Boolean getEnabled() {
+    /**
+     * Checks whether devices are able to connect to Hono
+     * using this protocol adapter.
+     * 
+     * @return {@code true} if devices are able to connect.
+     */
+    public final Boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Set the type property.
+     * Gets the type name of the protocol adapter this is the
+     * configuration for.
      *
-     * @param type the value to assign
-     * @return a reference to this for fluent use.
+     * @return The type name.
      */
-    public Adapter setType(final String type) {
-        this.type = type;
-        return this;
-    }
-
-    public String getType() {
+    public final String getType() {
         return type;
     }
 
     /**
-     * Set the device-authentication-required property.
+     * Sets whether devices are required to authenticate when connecting to
+     * this protocol adapter.
      *
-     * @param enabled the value to assign
-     * @return a reference to this for fluent use.
+     * @param required {@code true} if devices should be required to authenticate.
+     * @return A reference to this for fluent use.
      */
-    public Adapter setDeviceAuthenticationRequired(final Boolean enabled) {
-        this.deviceAuthenticationRequired = enabled;
+    public final Adapter setDeviceAuthenticationRequired(final Boolean required) {
+        this.deviceAuthenticationRequired = required;
         return this;
     }
 
-    public Boolean getDeviceAuthenticationRequired() {
+    /**
+     * Checks whether devices are required to authenticate when connecting to
+     * this protocol adapter.
+     *
+     * @return {@code true} if devices are required to authenticate.
+     */
+    public final Boolean isDeviceAuthenticationRequired() {
         return deviceAuthenticationRequired;
     }
 
     /**
-     * Set the extension field.
-     *
-     * @param extensions the value to assign
-     * @return a reference to this for fluent use.
+     * Sets the extension properties for this adapter.
+     * <p>
+     * Existing extension properties are completely replaced by the new properties.
+     * 
+     * @param extensions The extension properties.
+     * @return This instance, to allow chained invocations.
      */
-    public Adapter setExtensions(final Map<String, Object> extensions) {
-        this.extensions = extensions;
+    public final Adapter setExtensions(final Map<String, Object> extensions) {
+        this.extensions.clear();
+        if (extensions != null) {
+            this.extensions.putAll(extensions);
+        }
         return this;
     }
 
-    public Map<String, Object> getExtensions() {
-        return this.extensions;
+    /**
+     * Gets the extension properties of this tenant.
+     * 
+     * @return An unmodifiable view on the extension properties.
+     */
+    public final Map<String, Object> getExtensions() {
+        return Collections.unmodifiableMap(this.extensions);
     }
 
     /**
@@ -120,14 +143,12 @@ public class Adapter {
      * @param key The key of the entry.
      * @param value The value of the entry.
      * @return This instance, to allow chained invocations.
-     * @throws NullPointerException if any of the arguments is {@code null}.
+     * @throws NullPointerException if any of the arguments are {@code null}.
      */
-    public Adapter putExtension(final String key, final Object value) {
+    public final Adapter putExtension(final String key, final Object value) {
+
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
-        if (this.extensions == null) {
-            this.extensions = new HashMap<>();
-        }
         this.extensions.put(key, value);
         return this;
     }

@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,9 +34,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import org.eclipse.hono.util.TenantTracingConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +66,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     private static final Logger log = LoggerFactory.getLogger(FileBasedTenantService.class);
 
     // <ID, tenant>
-    private final Map<String, Versioned<TenantObject>> tenants = new HashMap<>();
+    private final Map<String, Versioned<Tenant>> tenants = new HashMap<>();
     private boolean running = false;
     private boolean dirty = false;
     private FileBasedTenantsConfigProperties config;
@@ -107,9 +106,11 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 running = true;
                 startFuture.complete();
             } else {
-                checkFileExists(getConfig().isSaveToFile()).compose(ok -> {
+                checkFileExists(getConfig().isSaveToFile())
+                .compose(ok -> {
                     return loadTenantData();
-                }).compose(s -> {
+                })
+                .compose(s -> {
                     if (getConfig().isSaveToFile()) {
                         log.info("saving tenants to file every 3 seconds");
                         vertx.setPeriodic(3000, tid -> {
@@ -181,13 +182,14 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         return result;
     }
 
-    private void addTenant(final JsonObject tenant) {
+    private void addTenant(final JsonObject tenantToAdd) {
 
         try {
-            final Versioned<TenantObject> tenantObject = new Versioned<>(tenant.mapTo(TenantObject.class));
-            log.debug("loading tenant [{}]", tenantObject.getValue().getTenantId());
-            tenants.put(tenantObject.getValue().getTenantId(), tenantObject);
-        } catch (final IllegalArgumentException e) {
+            final String tenantId = tenantToAdd.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+            final Versioned<Tenant> tenant = new Versioned<>(tenantToAdd.mapTo(Tenant.class));
+            log.debug("loading tenant [{}]", tenantId);
+            tenants.put(tenantId, tenant);
+        } catch (final IllegalArgumentException | ClassCastException e) {
             log.warn("cannot deserialize tenant", e);
         }
     }
@@ -213,8 +215,10 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             return checkFileExists(true).compose(s -> {
 
                 final JsonArray tenantsJson = new JsonArray();
-                tenants.values().stream().forEach(tenant -> {
-                    tenantsJson.add(JsonObject.mapFrom(tenant.getValue()));
+                tenants.forEach((tenantId, versionedTenant) -> {
+                    final JsonObject json = JsonObject.mapFrom(versionedTenant.getValue());
+                    json.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+                    tenantsJson.add(json);
                 });
 
                 final Future<Void> writeHandler = Future.future();
@@ -243,7 +247,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
     @Override
     public void get(final String tenantId, final Span span, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, span)));
+        resultHandler.handle(Future.succeededFuture(getTenantObjectResult(tenantId, span)));
     }
 
     @Override
@@ -257,15 +261,16 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
     @Override
     public void read(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(getTenantObjectResult(tenantId, span)));
+        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, span)));
     }
 
-    OperationResult<Tenant> getTenantObjectResult(final String tenantId, final Span span){
+    OperationResult<Tenant> getTenantResult(final String tenantId, final Span span){
 
-        final Versioned<TenantObject> tenant = tenants.get(tenantId);
+        final Versioned<Tenant> tenant = tenants.get(tenantId);
 
         if (tenant == null) {
             TracingHelper.logError(span, "Tenant not found");
@@ -273,21 +278,24 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         } else {
             return OperationResult.ok(
                     HttpURLConnection.HTTP_OK,
-                    convertTenantObject(tenant.getValue()),
+                    tenant.getValue(),
                     Optional.ofNullable(getCacheDirective()),
                     Optional.ofNullable(tenant.getVersion()));
         }
     }
 
-    TenantResult<JsonObject> getTenantResult(final String tenantId, final Span span) {
+    TenantResult<JsonObject> getTenantObjectResult(final String tenantId, final Span span) {
 
-        final Versioned<TenantObject> tenant = tenants.get(tenantId);
+        final Versioned<Tenant> tenant = tenants.get(tenantId);
 
         if (tenant == null) {
             TracingHelper.logError(span, "tenant not found");
             return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
         } else {
-            return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
+            return TenantResult.from(
+                    HttpURLConnection.HTTP_OK,
+                    convertTenant(tenantId, tenant.getValue()),
+                    getCacheDirective());
         }
     }
 
@@ -307,13 +315,16 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             TracingHelper.logError(span, "missing subject DN");
             return TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST);
         } else {
-            final Versioned<TenantObject> tenant = getByCa(subjectDn);
+            final Entry<String, Versioned<Tenant>> tenant = getByCa(subjectDn);
 
             if (tenant == null) {
                 TracingHelper.logError(span, "no tenant found for subject DN");
                 return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
             } else {
-                return TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant.getValue()), getCacheDirective());
+                return TenantResult.from(
+                        HttpURLConnection.HTTP_OK,
+                        convertTenant(tenant.getKey(), tenant.getValue().getValue()),
+                        getCacheDirective());
             }
         }
     }
@@ -385,17 +396,19 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         }
         try {
             if (log.isTraceEnabled()) {
-                log.trace("tenant to add: {}", tenantSpec.encodePrettily());
+                log.trace("adding tenant [id: {}]: {}", tenantId, tenantSpec.encodePrettily());
             }
-            final Versioned<TenantObject> tenant = new Versioned<>(tenantSpec.mapTo(TenantObject.class));
-            tenant.getValue().setTenantId(tenantId);
-            final Versioned<TenantObject> conflictingTenant = getByCa(tenant.getValue().getTrustedCaSubjectDn());
+            final Tenant tenantToAdd = tenantSpec.mapTo(Tenant.class);
+            final boolean existsConflictingTenant = Optional.ofNullable(tenantToAdd.getTrustedCertificateAuthority())
+                    .map(ca -> getByCa(ca.getSubjectDn()) != null)
+                    .orElse(false);
 
-            if (conflictingTenant != null) {
+            if (existsConflictingTenant) {
                 // we are trying to use the same CA as an already existing tenant
                 TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
                 return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
             } else {
+                final Versioned<Tenant> tenant = new Versioned<>(tenantToAdd);
                 tenants.put(tenantId, tenant);
                 dirty = true;
                 return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
@@ -438,8 +451,11 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
      * @return The outcome of the operation indicating success or failure.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public OperationResult<Void> update(final String tenantId, final JsonObject tenantSpec,
-            final Optional<String> expectedResourceVersion, final Span span) {
+    public OperationResult<Void> update(
+            final String tenantId,
+            final JsonObject tenantSpec,
+            final Optional<String> expectedResourceVersion,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
@@ -447,15 +463,17 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         if (getConfig().isModificationEnabled()) {
             if (tenants.containsKey(tenantId)) {
                 try {
-                    final TenantObject newTenantData = tenantSpec.mapTo(TenantObject.class);
-                    newTenantData.setTenantId(tenantId);
-                    final Versioned<TenantObject> conflictingTenant = getByCa(newTenantData.getTrustedCaSubjectDn());
-                    if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getValue().getTenantId())) {
+                    final Tenant newTenantData = tenantSpec.mapTo(Tenant.class);
+                    final Entry<String, Versioned<Tenant>> conflictingTenant = Optional.ofNullable(newTenantData.getTrustedCertificateAuthority())
+                            .map(ca -> getByCa(ca.getSubjectDn()))
+                            .orElse(null);
+
+                    if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getKey())) {
                         // we are trying to use the same CA as another tenant
                         TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
                         return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
                     } else {
-                        final Versioned<TenantObject> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> newTenantData);
+                        final Versioned<Tenant> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> newTenantData);
                         if ( updatedTenant != null ) {
 
                             tenants.put(tenantId, updatedTenant);
@@ -482,49 +500,61 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         }
     }
 
-    static Tenant convertTenantObject(final TenantObject tenantObject) {
+    static JsonObject convertTenant(final String tenantId, final Tenant tenant) {
 
-        if (tenantObject == null) {
-            return null;
-        }
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(tenant);
 
-        final var tenant = new Tenant();
+        final JsonObject result = new JsonObject();
+        result.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+        result.put(TenantConstants.FIELD_ENABLED, Optional.ofNullable(tenant.isEnabled()).orElse(true));
 
-        tenant.setEnabled(tenantObject.isEnabled());
+        Optional.ofNullable(tenant.getDefaults())
+        .map(JsonObject::new)
+        .ifPresent(defaults -> result.put(TenantConstants.FIELD_PAYLOAD_DEFAULTS, defaults));
 
-        Optional.ofNullable(tenantObject.getProperty(RegistryManagementConstants.FIELD_EXT, JsonObject.class))
-                .map(JsonObject::getMap)
-                .ifPresent(tenant::setExtensions);
+        Optional.ofNullable(tenant.getExtensions())
+        .map(JsonObject::new)
+        .ifPresent(extensions -> result.put(RegistryManagementConstants.FIELD_EXT, extensions));
 
-        Optional.ofNullable(tenantObject.getAdapterConfigurations())
-                .map(JsonArray::getList)
-                .ifPresent(tenant::setAdapters);
+        Optional.ofNullable(tenant.getAdapters())
+        .filter(list -> !list.isEmpty())
+        .map(list -> list.stream()
+                .map(adapterConfig -> JsonObject.mapFrom(adapterConfig))
+                .collect(JsonArray::new, JsonArray::add, JsonArray::add))
+        .ifPresent(configurations -> result.put(TenantConstants.FIELD_ADAPTERS, configurations));
 
-        Optional.ofNullable(tenantObject.getResourceLimits())
-                .ifPresent(tenant::setResourceLimits);
+        Optional.ofNullable(tenant.getResourceLimits())
+        .map(JsonObject::mapFrom)
+        .ifPresent(limits -> result.put(TenantConstants.FIELD_RESOURCE_LIMITS, limits));
 
-        Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class))
-                .map(json -> json.mapTo(TrustedCertificateAuthority.class))
-                .ifPresent(tenant::setTrustedCertificateAuthority);
+        Optional.ofNullable(tenant.getTrustedCertificateAuthority())
+        .map(JsonObject::mapFrom)
+        .ifPresent(authority -> result.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authority));
 
-        Optional.ofNullable(tenantObject.getMinimumMessageSize())
-                .ifPresent(tenant::setMinimumMessageSize);
 
-        Optional.ofNullable(tenantObject.getProperty(TenantConstants.FIELD_TRACING, JsonObject.class))
-                .map(json -> json.mapTo(TenantTracingConfig.class))
-                .ifPresent(tenant::setTracing);
+        Optional.ofNullable(tenant.getMinimumMessageSize())
+        .ifPresent(size -> result.put(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE, size));
 
-        return tenant;
+        Optional.ofNullable(tenant.getTracing())
+        .map(JsonObject::mapFrom)
+        .ifPresent(tracing -> result.put(TenantConstants.FIELD_TRACING, tracing));
+
+        return result;
     }
 
-    private Versioned<TenantObject> getByCa(final X500Principal subjectDn) {
+    private Map.Entry<String, Versioned<Tenant>> getByCa(final X500Principal subjectDn) {
 
         if (subjectDn == null) {
             return null;
         } else {
-            return tenants.values().stream()
-                    .filter(t -> subjectDn.equals(t.getValue().getTrustedCaSubjectDn()))
-                    .findFirst().orElse(null);
+            return tenants.entrySet().stream()
+                    .filter(entry -> {
+                        final TrustedCertificateAuthority ca = entry.getValue().getValue().getTrustedCertificateAuthority();
+                        return ca != null && subjectDn.equals(ca.getSubjectDn());
+                    })
+                    .findFirst()
+                    .orElse(null);
         }
     }
 

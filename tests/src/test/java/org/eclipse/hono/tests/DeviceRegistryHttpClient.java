@@ -53,17 +53,32 @@ import io.vertx.core.json.JsonObject;
  */
 public final class DeviceRegistryHttpClient {
 
+    /**
+     * The URI pattern for adding a tenant.
+     */
     public static final String URI_ADD_TENANT = String.format("/%s/%s",
             RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
+    /**
+     * The URI pattern for addressing a tenant instance.
+     */
     public static final String TEMPLATE_URI_TENANT_INSTANCE = String.format("/%s/%s/%%s",
             RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
 
+    /**
+     * The URI pattern for addressing a device instance.
+     */
     public static final String TEMPLATE_URI_REGISTRATION_INSTANCE = String.format("/%s/%s/%%s/%%s",
             RegistryManagementConstants.API_VERSION, RegistryManagementConstants.REGISTRATION_HTTP_ENDPOINT);
 
-    public static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
+    /**
+     * The URI pattern for addressing the credentials of a device.
+     */
     public static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%s/%%s/%%s",
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
+    /**
+     * The URI pattern for addressing a device's credentials of a specific type.
+     */
+    public static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s/%%s",
             RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryHttpClient.class);

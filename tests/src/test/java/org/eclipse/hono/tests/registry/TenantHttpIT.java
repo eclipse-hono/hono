@@ -268,9 +268,14 @@ public class TenantHttpIT {
     @Test
     public void testAddTenantFailsForMalformedTrustConfiguration(final VertxTestContext context) {
 
-        final Tenant requestBody = Tenants.createTenantForTrustAnchor("test-dn", "NotBased64Encoded".getBytes(), "RSA");
+        final Tenant requestBody = Tenants.createTenantForTrustAnchor("CN=test-dn", "NotBased64Encoded".getBytes(), "RSA");
 
-        registry.addTenant(tenantId, requestBody, "application/json", HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
+        registry.addTenant(
+                tenantId,
+                requestBody,
+                "application/json",
+                HttpURLConnection.HTTP_BAD_REQUEST)
+        .setHandler(context.completing());
     }
 
     /**

@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,15 +25,17 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.tenant.AbstractTenantServiceTest;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +53,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -61,6 +62,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(timeUnit = TimeUnit.SECONDS, value = 3)
 public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
 
     private static final String FILE_NAME = "/tenants.json";
@@ -312,11 +314,17 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to add a new tenant
-        svc.add(Optional.of("fancy-new-tenant"), new JsonObject(), NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
-            // THEN the request succeeds
-            assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
-            ctx.completeNow();
-        })));
+        svc.add(
+                Optional.of("fancy-new-tenant"),
+                new JsonObject(),
+                NoopSpan.INSTANCE,
+                ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        // THEN the request succeeds
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -332,11 +340,17 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.remove("tenant", Optional.empty(), NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
-            // THEN the update fails
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            ctx.completeNow();
-        })));
+        svc.remove(
+                "tenant",
+                Optional.empty(),
+                NoopSpan.INSTANCE,
+                ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        // THEN the update fails
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -352,19 +366,18 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.update("tenant", new JsonObject(), null, NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
-            // THEN the update fails
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
-            ctx.completeNow();
-        })));
-    }
-
-    /**
-     * Test that a conversion of {@code null} doesn't throw an exception.
-     */
-    @Test
-    public void testNullConversion() {
-        assertNull(FileBasedTenantService.convertTenantObject(null));
+        svc.update(
+                "tenant",
+                new JsonObject(),
+                null,
+                NoopSpan.INSTANCE,
+                ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        // THEN the update fails
+                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -372,23 +385,37 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
      */
     @Test
     public void testConversion() {
-        final TenantObject tenantObject = new TenantObject();
-        tenantObject.setEnabled(true);
+
+        final TenantTracingConfig tracingConfig = new TenantTracingConfig();
+        tracingConfig.setSamplingMode(TracingSamplingMode.ALL);
+        tracingConfig.setSamplingModePerAuthId(Map.of(
+                "authId1", TracingSamplingMode.ALL,
+                "authId2", TracingSamplingMode.DEFAULT));
+
+        final Tenant source = new Tenant();
+        source.setEnabled(true);
+        source.setTracing(tracingConfig);
+        source.setDefaults(Map.of("ttl", 30));
+        source.setExtensions(Map.of("custom", "value"));
+
         final JsonObject tracingConfigJsonObject = new JsonObject();
         tracingConfigJsonObject.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE, "all");
         final JsonObject tracingSamplingModeJsonObject = new JsonObject()
                 .put("authId1", "all")
                 .put("authId2", "default");
         tracingConfigJsonObject.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, tracingSamplingModeJsonObject);
-        tenantObject.setProperty(TenantConstants.FIELD_TRACING, tracingConfigJsonObject);
 
-        final Tenant tenant = FileBasedTenantService.convertTenantObject(tenantObject);
-        assertEquals(Boolean.TRUE, tenant.getEnabled());
-        final TenantTracingConfig tracingConfig = tenant.getTracing();
-        assertNotNull(tracingConfig);
-        assertEquals(TracingSamplingMode.ALL, tracingConfig.getSamplingMode());
-        assertEquals(TracingSamplingMode.ALL, tracingConfig.getSamplingModePerAuthId().get("authId1"));
-        assertEquals(TracingSamplingMode.DEFAULT, tracingConfig.getSamplingModePerAuthId().get("authId2"));
+        final JsonObject target = FileBasedTenantService.convertTenant("4711", source);
+        assertThat(target.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("4711");
+        assertThat(target.getBoolean(TenantConstants.FIELD_ENABLED)).isTrue();
+        assertThat(target.getJsonObject(TenantConstants.FIELD_TRACING)).isEqualTo(tracingConfigJsonObject);
+        assertThat(target.getJsonArray(TenantConstants.FIELD_ADAPTERS)).isNull();
+        final JsonObject defaults = target.getJsonObject(TenantConstants.FIELD_PAYLOAD_DEFAULTS);
+        assertThat(defaults).isNotNull();
+        assertThat(defaults.getInteger("ttl")).isEqualTo(30);
+        final JsonObject extensions = target.getJsonObject(RegistryManagementConstants.FIELD_EXT);
+        assertThat(extensions).isNotNull();
+        assertThat(extensions.getString("custom")).isEqualTo("value");
     }
 
 }

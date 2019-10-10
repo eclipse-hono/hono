@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,16 +24,22 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantTracingConfig;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Tenant Information.
+ * Information about a Hono Tenant.
+ * <p>
+ * Represents the <em>Tenant</em> schema object defined in the
+ * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(value = Include.NON_NULL)
 public class Tenant {
 
+    @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
@@ -63,62 +70,133 @@ public class Tenant {
     private TrustedCertificateAuthority trustedCertificateAuthority;
 
     /**
-     * Sets the enabled property.
+     * Sets whether devices of this tenant should be able to connect
+     * to Hono.
      * 
-     * @param enabled The enabled property.
+     * @param enabled {@code true} if devices should be able to connect.
      * @return This instance, to allow chained invocations.
      */
-    public Tenant setEnabled(final Boolean enabled) {
+    public final Tenant setEnabled(final Boolean enabled) {
         this.enabled = enabled;
         return this;
     }
 
-    public Boolean getEnabled() {
+    /**
+     * Checks whether devices of this tenant are able to connect
+     * to Hono.
+     * 
+     * @return {@code true} if devices are able to connect.
+     */
+    public final Boolean isEnabled() {
         return enabled;
     }
 
     /**
      * Sets the extension properties for this tenant.
+     * <p>
+     * Existing extension properties are completely replaced by the new properties.
      * 
      * @param extensions The extension properties.
-     * @return   This instance, to allow chained invocations.
+     * @return This instance, to allow chained invocations.
      */
-    public Tenant setExtensions(final Map<String, Object> extensions) {
-        this.extensions = extensions;
+    public final Tenant setExtensions(final Map<String, Object> extensions) {
+        this.extensions.clear();
+        if (extensions != null) {
+            this.extensions.putAll(extensions);
+        }
         return this;
     }
 
-    public Map<String, Object> getExtensions() {
-        return this.extensions;
-    }
-
     /**
-     * Sets the defaults properties for this tenant.
-     * 
-     * @param defaults  The defaults properties.
-     * @return          This instance, to allow chained invocations.
-     */
-    public Tenant setDefaults(final Map<String, Object> defaults) {
-        this.defaults = defaults;
-        return this;
-    }
-
-    public Map<String, Object> getDefaults() {
-        return defaults;
-    }
-
-    public List<Adapter> getAdapters() {
-        return adapters;
-    }
-
-    /**
-     * Sets the list of adapters for this tenant.
+     * Adds an extension property to this tenant.
+     * <p>
+     * If an extension property already exists for the specified key, the old value is replaced by the new value.
      *
-     * @param adapters The adapters to set for the tenant.
-     * @return   This instance, to allow chained invocations.
+     * @param key The key of the entry.
+     * @param value The value of the entry.
+     * @return This instance, to allow chained invocations.
+     * @throws NullPointerException if any of the arguments are {@code null}.
      */
-    public Tenant setAdapters(final List<Adapter> adapters) {
-        this.adapters = adapters;
+    public final Tenant putExtension(final String key, final Object value) {
+
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        this.extensions.put(key, value);
+        return this;
+    }
+
+    /**
+     * Gets the extension properties of this tenant.
+     * 
+     * @return An unmodifiable view on the extension properties.
+     */
+    public final Map<String, Object> getExtensions() {
+        return Collections.unmodifiableMap(this.extensions);
+    }
+
+    /**
+     * Sets the default properties to use for devices belonging to this tenant.
+     * <p>
+     * Existing default properties are completely replaced by the new properties.
+     * 
+     * @param defaults The default properties.
+     * @return This instance, to allow chained invocations.
+     */
+    public final Tenant setDefaults(final Map<String, Object> defaults) {
+        this.defaults.clear();
+        if (defaults != null) {
+            this.defaults.putAll(defaults);
+        }
+        return this;
+    }
+
+    /**
+     * Gets the default properties used for devices belonging to this tenant.
+     * 
+     * @return An unmodifiable view on the default properties.
+     */
+    public final Map<String, Object> getDefaults() {
+        return Collections.unmodifiableMap(defaults);
+    }
+
+    /**
+     * Sets protocol adapter configuration specific to this tenant.
+     * <p>
+     * Existing configuration properties are completely replaced by the new properties.
+     *
+     * @param adapters The configuration properties.
+     * @return This instance, to allow chained invocations.
+     */
+    public final Tenant setAdapters(final List<Adapter> adapters) {
+        this.adapters.clear();
+        if (adapters != null) {
+            this.adapters.addAll(adapters);
+        }
+        return this;
+    }
+
+    /**
+     * Gets protocol adapter configuration specific to this tenant.
+     *
+     * @return An unmodifiable view on the adapter configuration properties.
+     */
+    public final List<Adapter> getAdapters() {
+        return Collections.unmodifiableList(adapters);
+    }
+
+    /**
+     * Adds protocol adapter configuration properties specific to this Tenant.
+     * 
+     * @param configuration The configuration properties to add.
+     * @return This instance, to allow chained invocations.
+     */
+    public final Tenant addAdapterConfig(final Adapter configuration) {
+
+        if (configuration == null) {
+            return this;
+        }
+
+        adapters.add(configuration);
         return this;
     }
 
@@ -128,7 +206,7 @@ public class Tenant {
      * @return The minimum message size in bytes or 
      *         {@link RegistryManagementConstants#DEFAULT_MINIMUM_MESSAGE_SIZE} if not set.
      */
-    public Integer getMinimumMessageSize() {
+    public final Integer getMinimumMessageSize() {
         return minimumMessageSize;
     }
 
@@ -140,7 +218,8 @@ public class Tenant {
      * @return This instance, to allow chained invocations.
      * @throws IllegalArgumentException if the minimum message size is negative.
      */
-    public Tenant setMinimumMessageSize(final Integer minimumMessageSize) {
+    public final Tenant setMinimumMessageSize(final Integer minimumMessageSize) {
+
         if (minimumMessageSize == null || minimumMessageSize < 0) {
             throw new IllegalArgumentException("minimum message size must be >= 0");
         }
@@ -148,7 +227,12 @@ public class Tenant {
         return this;
     }
 
-    public ResourceLimits getResourceLimits() {
+    /**
+     * Gets resource limits defined for this tenant.
+     * 
+     * @return The resource limits or {@code null} if not set.
+     */
+    public final ResourceLimits getResourceLimits() {
         return resourceLimits;
     }
 
@@ -156,82 +240,48 @@ public class Tenant {
      * Sets the resource limits for this tenant.
      * 
      * @param resourceLimits The resource limits to set.
-     * @return  This instance, to allow chained invocations.
+     * @return This instance, to allow chained invocations.
      */
-    public Tenant setResourceLimits(final ResourceLimits resourceLimits) {
+    public final Tenant setResourceLimits(final ResourceLimits resourceLimits) {
         this.resourceLimits = resourceLimits;
         return this;
     }
 
     /**
-     * Gets the tenant-specific tracing configuration.
+     * Gets this tenant's tracing configuration.
      *
      * @return The tracing configuration or {@code null} if not set.
      */
-    public TenantTracingConfig getTracing() {
+    public final TenantTracingConfig getTracing() {
         return tracing;
     }
 
     /**
-     * Sets the tenant-specific tracing configuration.
+     * Sets this tenant's tracing configuration.
      *
      * @param tracing The tracing configuration.
      */
-    public void setTracing(final TenantTracingConfig tracing) {
+    public final void setTracing(final TenantTracingConfig tracing) {
         this.tracing = tracing;
     }
 
-    public TrustedCertificateAuthority getTrustedCertificateAuthority() {
+    /**
+     * Gets the trusted certificate authority used for authenticating devices of this tenant.
+     * 
+     * @return The certificate authority or {@code null} if not set.
+     */
+    public final TrustedCertificateAuthority getTrustedCertificateAuthority() {
         return trustedCertificateAuthority;
     }
 
     /**
-     * Sets the trust configurations for this tenant.
+     * Sets the trusted certificate authority to use for authenticating devices of this tenant.
      * 
-     * @param trustedCertificateAuthority  The trust configurations to set.
-     * @return  This instance, to allow chained invocations.
+     * @param trustedCertificateAuthority The certificate authority.
+     * @return This instance, to allow chained invocations.
      */
-    public Tenant setTrustedCertificateAuthority(final TrustedCertificateAuthority trustedCertificateAuthority) {
+    public final Tenant setTrustedCertificateAuthority(final TrustedCertificateAuthority trustedCertificateAuthority) {
         this.trustedCertificateAuthority = trustedCertificateAuthority;
         return this;
     }
-
-    /**
-     * Adds an extension property to this tenant.
-     * <p>
-     * If an extension property already exist for the specified key, the old value is replaced by the specified value.
-     *
-     * @param key The key of the entry.
-     * @param value The value of the entry.
-     * @return This instance, to allow chained invocations.
-     * @throws NullPointerException if any of the arguments is {@code null}.
-     */
-    public Tenant putExtension(final String key, final Object value) {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(value);
-        if (this.extensions == null) {
-            this.extensions = new HashMap<>();
-        }
-        this.extensions.put(key, value);
-        return this;
-    }
-
-    /**
-     * Adds the specified adapter to the list of adapters for this Tenant.
-     * 
-     * @param adapter The adapter to add for the tenant.
-     * @return        This instance, to allow chained invocations.
-     * @throws        NullPointerException if the specified adapter is {@code null}.
-     */
-    public Tenant addAdapterConfig(final Adapter adapter) {
-
-        Objects.requireNonNull(adapter);
-
-        if (adapters == null) {
-            adapters = new LinkedList<>();
-        }
-        adapters.add(adapter);
-        return this;
-    }
-
 }

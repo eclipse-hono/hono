@@ -13,42 +13,51 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.Matchers.emptyIterable;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
+import java.util.Map;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
-import org.eclipse.hono.util.TenantConstants;
-import org.hamcrest.collection.IsEmptyIterable;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 
 /**
- * Verifies {@link Tenant}.
+ * Verifies behavior of {@link Tenant}.
  */
 class TenantTest {
 
     /**
-     * Decode Tenant with absent "enabled" flag.
+     * Decode empty Tenant without any properties set.
      */
     @Test
     public void testDecodeDefault() {
-        final var tenant = Json.decodeValue("{}", Tenant.class);
+
+        final var tenant = new JsonObject().mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.getEnabled());
+        assertNull(tenant.isEnabled());
     }
 
 
@@ -57,9 +66,9 @@ class TenantTest {
      */
     @Test
     public void testDecodeDisabled() {
-        final var tenant = Json.decodeValue("{\"enabled\": false}", Tenant.class);
+        final var tenant = new JsonObject().put(RegistryManagementConstants.FIELD_ENABLED, false).mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertFalse(tenant.getEnabled());
+        assertFalse(tenant.isEnabled());
     }
 
     /**
@@ -67,9 +76,9 @@ class TenantTest {
      */
     @Test
     public void testDecodeEnabled() {
-        final var tenant = Json.decodeValue("{\"enabled\": true}", Tenant.class);
+        final var tenant = new JsonObject().put(RegistryManagementConstants.FIELD_ENABLED, true).mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertTrue(tenant.getEnabled());
+        assertTrue(tenant.isEnabled());
     }
 
     /**
@@ -77,9 +86,11 @@ class TenantTest {
      */
     @Test
     public void testDecodeExt() {
-        final var tenant = Json.decodeValue("{\"ext\": {\"foo\": \"bar\"}}", Tenant.class);
+        final var tenant = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("foo", "bar"))
+                .mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.getEnabled());
+        assertNull(tenant.isEnabled());
 
         final var ext = tenant.getExtensions();
         assertNotNull(ext);
@@ -93,13 +104,15 @@ class TenantTest {
     public void testDecodeAdapters() {
         final JsonArray adapterJson = new JsonArray().add(
                     new JsonObject()
-                            .put("type", "http")
-                            .put("enabled", false)
-                            .put("device-authentication-required", true));
+                            .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
+                            .put(RegistryManagementConstants.FIELD_ENABLED, false)
+                            .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
 
-        final var tenant = Json.decodeValue( new JsonObject().put("adapters", adapterJson).toString(), Tenant.class);
+        final var tenant = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_ADAPTERS, adapterJson)
+                .mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.getEnabled());
+        assertNull(tenant.isEnabled());
 
         final var adapters = tenant.getAdapters();
         assertNotNull(adapters);
@@ -111,7 +124,8 @@ class TenantTest {
      */
     @Test
     public void testDecodeMinimumMessageSize() {
-        final var tenant = Json.decodeValue("{\"minimum-message-size\": 4096}", Tenant.class);
+        final JsonObject json = new JsonObject().put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 4096);
+        final var tenant = json.mapTo(Tenant.class);
         assertNotNull(tenant);
         assertEquals(4096, tenant.getMinimumMessageSize());
     }
@@ -121,7 +135,7 @@ class TenantTest {
      */
     @Test
     public void testDecodeWithoutMinimumMessageSize() {
-        final var tenant = Json.decodeValue("{}", Tenant.class);
+        final var tenant = new JsonObject().mapTo(Tenant.class);
         assertNotNull(tenant);
         assertEquals(RegistryManagementConstants.DEFAULT_MINIMUM_MESSAGE_SIZE, tenant.getMinimumMessageSize());
     }
@@ -138,14 +152,14 @@ class TenantTest {
                         .put(TenantConstants.FIELD_MAX_TTL, 30)
                         .put(TenantConstants.FIELD_DATA_VOLUME, new JsonObject()
                                 .put(TenantConstants.FIELD_MAX_BYTES, 20_000_000)
-                                .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00Z")
+                                .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
                                 .put(TenantConstants.FIELD_PERIOD, new JsonObject()
                                         .put(TenantConstants.FIELD_PERIOD_MODE, "days")
                                         .put(TenantConstants.FIELD_PERIOD_NO_OF_DAYS, 90))));
 
         final Tenant tenant = tenantSpec.mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.getEnabled());
+        assertNull(tenant.isEnabled());
 
         final ResourceLimits limits = tenant.getResourceLimits();
         assertNotNull(limits);
@@ -153,7 +167,7 @@ class TenantTest {
         assertEquals(30, limits.getMaxTtl());
         assertNotNull(limits.getDataVolume());
         assertEquals(
-                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00Z", OffsetDateTime::from).toInstant(),
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00+02:00", OffsetDateTime::from).toInstant(),
                 limits.getDataVolume().getEffectiveSince());
         assertEquals(20_000_000, limits.getDataVolume().getMaxBytes());
         assertNotNull(limits.getDataVolume().getPeriod());
@@ -175,26 +189,51 @@ class TenantTest {
     }
 
     /**
-     * Decode "trusted-ca" section.
+     * Decode "trusted-ca" section for a public key.
      */
     @Test
-    public void testDecodeTrustedCA() {
-        final JsonObject ca = new JsonObject()
-                .put("subject-dn", "org.eclipse")
-                .put("public-key", "abc123".getBytes(StandardCharsets.UTF_8))
-                .put("algorithm", "def456")
-                .put("cert", "xyz789".getBytes(StandardCharsets.UTF_8));
+    public void testDecodeTrustedCAUsingPublicKey() {
 
-        final var tenant = Json.decodeValue( new JsonObject().put("trusted-ca", ca).toString(), Tenant.class);
+        final JsonObject ca = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=org.eclipse")
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, "abc123".getBytes(StandardCharsets.UTF_8))
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC");
+        final JsonObject tenantJson = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, ca);
+
+        final Tenant tenant = tenantJson.mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.getEnabled());
+        assertNull(tenant.isEnabled());
 
         final var storedCa = tenant.getTrustedCertificateAuthority();
-        assertNotNull(storedCa);
-        assertEquals("org.eclipse", storedCa.getSubjectDn());
-        assertArrayEquals("abc123".getBytes(StandardCharsets.UTF_8), storedCa.getPublicKey());
-        assertArrayEquals("xyz789".getBytes(StandardCharsets.UTF_8), storedCa.getCertificate());
-        assertEquals("def456", storedCa.getKeyAlgorithm());
+        assertThat(storedCa.getSubjectDnAsString(), is("CN=org.eclipse"));
+        assertThat(storedCa.getPublicKey(), is("abc123".getBytes(StandardCharsets.UTF_8)));
+        assertThat(storedCa.getKeyAlgorithm(), is("EC"));
+    }
+
+    /**
+     * Decode "trusted-ca" section for a public key.
+     * 
+     * @throws CertificateException if the self signed certificate cannot be created.
+     * @throws IOException if the self signed certificate cannot be read.
+     */
+    @Test
+    public void testDecodeTrustedCAUsingCert() throws CertificateException, IOException {
+
+        final SelfSignedCertificate cert = SelfSignedCertificate.create("eclipse.org");
+        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        final X509Certificate certificate = (X509Certificate) factory.generateCertificate(new FileInputStream(cert.certificatePath()));
+
+        final JsonObject ca = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
+        final JsonObject tenantJson = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, ca);
+
+        final Tenant tenant = tenantJson.mapTo(Tenant.class);
+        final var storedCa = tenant.getTrustedCertificateAuthority();
+        assertThat(storedCa.getSubjectDn(), is(certificate.getSubjectX500Principal()));
+        assertThat(storedCa.getPublicKey(), is(certificate.getPublicKey().getEncoded()));
+        assertThat(storedCa.getKeyAlgorithm(), is(certificate.getPublicKey().getAlgorithm()));
     }
 
     /**
@@ -202,15 +241,18 @@ class TenantTest {
      */
     @Test
     public void testDecodeTraceSampling() {
+
+
+        final JsonObject tracingConfigJson = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TRACING_SAMPLING_MODE, TracingSamplingMode.ALL.getFieldValue())
+                .put(RegistryManagementConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, new JsonObject()
+                        .put("authId1", TracingSamplingMode.ALL.getFieldValue())
+                        .put("authId2", TracingSamplingMode.DEFAULT.getFieldValue()));
+
         final JsonObject tenantJson = new JsonObject();
-        final JsonObject tracingConfigJson = new JsonObject();
-        tracingConfigJson.put("sampling-mode", "all");
-        final JsonObject samplingModePerAuthIdMap = new JsonObject()
-                .put("authId1", "all")
-                .put("authId2", "default");
-        tracingConfigJson.put("sampling-mode-per-auth-id", samplingModePerAuthIdMap);
-        tenantJson.put("tracing", tracingConfigJson);
-        final var tenant = Json.decodeValue(tenantJson.toString(), Tenant.class);
+        tenantJson.put(RegistryManagementConstants.FIELD_TRACING, tracingConfigJson);
+
+        final var tenant = tenantJson.mapTo(Tenant.class);
         assertNotNull(tenant);
         final TenantTracingConfig tracingConfig = tenant.getTracing();
         assertNotNull(tracingConfig);
@@ -225,10 +267,7 @@ class TenantTest {
     @Test
     public void testEncodeDefault() {
         final var json = JsonObject.mapFrom(new Tenant());
-        assertNotNull(json);
-        assertNull(json.getBoolean("enabled"));
-        assertNull(json.getJsonObject("ext"));
-        assertThat(json, IsEmptyIterable.emptyIterable());
+        assertThat(json, is(emptyIterable()));
     }
 
     /**
@@ -240,8 +279,8 @@ class TenantTest {
         tenant.setEnabled(true);
         final var json = JsonObject.mapFrom(tenant);
         assertNotNull(json);
-        assertTrue(json.getBoolean("enabled"));
-        assertNull(json.getJsonObject("ext"));
+        assertTrue(json.getBoolean(RegistryManagementConstants.FIELD_ENABLED));
+        assertNull(json.getJsonObject(RegistryManagementConstants.FIELD_EXT));
     }
 
     /**
@@ -253,8 +292,8 @@ class TenantTest {
         tenant.setEnabled(false);
         final var json = JsonObject.mapFrom(tenant);
         assertNotNull(json);
-        assertFalse(json.getBoolean("enabled"));
-        assertNull(json.getJsonObject("ext"));
+        assertFalse(json.getBoolean(RegistryManagementConstants.FIELD_ENABLED));
+        assertNull(json.getJsonObject(RegistryManagementConstants.FIELD_EXT));
     }
 
     /**
@@ -266,7 +305,7 @@ class TenantTest {
         tenant.setMinimumMessageSize(4096);
         final var json = JsonObject.mapFrom(tenant);
         assertNotNull(json);
-        assertEquals(4096, json.getInteger("minimum-message-size"));
+        assertEquals(4096, json.getInteger(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE));
     }
 
     /**
