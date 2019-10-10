@@ -23,6 +23,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantTracingConfig;
@@ -71,7 +73,7 @@ public class Tenant {
     private TenantTracingConfig tracing;
 
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
-    private TrustedCertificateAuthority trustedCertificateAuthority;
+    private List<TrustedCertificateAuthority> trustedCertificateAuthorities;
 
     /**
      * Checks if this object contains all required data.
@@ -81,8 +83,8 @@ public class Tenant {
     @JsonIgnore
     public final boolean isValid() {
 
-        return Optional.ofNullable(trustedCertificateAuthority)
-                .map(ca -> ca.isValid())
+        return Optional.ofNullable(trustedCertificateAuthorities)
+                .map(list -> list.stream().allMatch(ca -> ca.isValid()))
                 .orElse(true);
     }
 
@@ -306,22 +308,54 @@ public class Tenant {
     }
 
     /**
-     * Gets the trusted certificate authority used for authenticating devices of this tenant.
+     * Gets the trusted certificate authorities of this tenant.
      * 
-     * @return The certificate authority or {@code null} if not set.
+     * @return  The authorities or {@code null} if not set.
      */
-    public final TrustedCertificateAuthority getTrustedCertificateAuthority() {
-        return trustedCertificateAuthority;
+    public List<TrustedCertificateAuthority> getTrustedCertificateAuthorities() {
+        return trustedCertificateAuthorities;
     }
 
     /**
      * Sets the trusted certificate authority to use for authenticating devices of this tenant.
      * 
-     * @param trustedCertificateAuthority The certificate authority.
+     * @param trustedCertificateAuthorities The trust configurations to set.
      * @return This instance, to allow chained invocations.
      */
-    public final Tenant setTrustedCertificateAuthority(final TrustedCertificateAuthority trustedCertificateAuthority) {
-        this.trustedCertificateAuthority = trustedCertificateAuthority;
+    public Tenant setTrustedCertificateAuthorities(final List<TrustedCertificateAuthority> trustedCertificateAuthorities) {
+        if (trustedCertificateAuthorities != null) {
+            this.trustedCertificateAuthorities = Collections.unmodifiableList(trustedCertificateAuthorities);
+        }
         return this;
+    }
+
+    /**
+     * Gets the subject DNs of this tenant's trusted certificate authorities.
+     * 
+     * @return The subject DNs.
+     */
+    @JsonIgnore
+    public Set<X500Principal> getTrustedCertificateAuthoritySubjectDNs() {
+
+        return Optional.ofNullable(trustedCertificateAuthorities)
+                .map(list -> list.stream().map(ca -> ca.getSubjectDn()).collect(Collectors.toSet()))
+                .orElse(Set.of());
+    }
+
+    /**
+     * Checks if this tenant trusts a certificate authority with a given subject DN.
+     * 
+     * @param subjectDn The subject DN to check for.
+     * @return {@code true} if this tenant trusts a certificate authority with the given
+     *         subject DN.
+     * @throws NullPointerException if subject DN is {@code null}.
+     */
+    public boolean hasTrustedCertificateAuthoritySubjectDN(final X500Principal subjectDn) {
+
+        Objects.requireNonNull(subjectDn);
+
+        return Optional.ofNullable(trustedCertificateAuthorities)
+                .map(list -> list.stream().anyMatch(ca -> subjectDn.equals(ca.getSubjectDn())))
+                .orElse(false);
     }
 }

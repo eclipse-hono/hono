@@ -55,7 +55,6 @@ tags:
         url: https://www.eclipse.org/hono/docs/concepts/device-identity/
    - name: credentials
      description: Device credentials
-
      externalDocs:
         description: Hono device identity
         url: https://www.eclipse.org/hono/docs/concepts/device-identity/
@@ -97,6 +96,17 @@ paths:
                $ref: '#/components/responses/Unauthorized'
             403:
                $ref: '#/components/responses/NotAllowed'
+            409:
+               description: |
+                  Indicates that an existing tenant uses a certificate authority with the same Subject DN.
+                  If the client has no read access to the conflicting tenant then `403` should be returned instead.
+               content:
+                  application/json:
+                     schema:
+                        $ref: '#/components/schemas/Error'
+                     example:
+                        error: "Root Certificate Authority is already used by other tenant"
+                        subject-dn: "CN=devices,OU=iot,O=ACME"
 
    /tenants/{tenantId}:
 
@@ -125,7 +135,16 @@ paths:
             403:
                $ref: '#/components/responses/NotAllowed'
             409:
-               $ref: '#/components/responses/AlreadyExists'
+               description: |
+                  Indicates that tenant with the given identifier already exists or that an existing tenant uses
+                  a certificate authority with the same Subject DN.
+                  If the client has no read access to the conflicting tenant then `403` should be returned instead.
+               content:
+                  application/json:
+                     schema:
+                        $ref: '#/components/schemas/Error'
+                     example:
+                        error: "tenant with given identifier already exists"
 
       get:
          tags:
@@ -176,6 +195,17 @@ paths:
                $ref: '#/components/responses/NotAllowed'
             404:
                $ref: '#/components/responses/NotFound'
+            409:
+               description: |
+                  Indicates that an existing tenant uses a certificate authority with the same Subject DN.
+                  If the client has no read access to the conflicting tenant then `403` should be returned instead.
+               content:
+                  application/json:
+                     schema:
+                        $ref: '#/components/schemas/Error'
+                     example:
+                        error: "Root Certificate Authority is already used by other tenant"
+                        subject-dn: "CN=devices,OU=iot,O=ACME"
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
 
@@ -446,7 +476,12 @@ components:
                $ref: '#/components/schemas/Extensions'
             "adapters":
                type: array
-               description: Only a single entry per type is allowed. If multiple entries for the same type are present it is handled as an error.
+               description: |
+                  A list of configuration options for certain types of protocol adapters.
+                  If set then the array must not be empty.
+                  Multiple entries for the same type are considered an error.
+                  If not set, then all adapters are enabled using their respective
+                  default configuration.
                items:
                   $ref: '#/components/schemas/Adapter'
             "defaults":
@@ -454,50 +489,104 @@ components:
             "minimum-message-size":
                type: integer
                default: 0
-               description: The minimum message size in bytes. If it is set
-                            then the payload size of the telemetry, event and
-                            command messages are calculated in accordance with
-                            the configured value and then reported to the metrics.
+               description: |
+                  The minimum message size in bytes. If set, then reported size of
+                  telemetry, event and command messages is calculated as the minimum multiple
+                  of the configured value that is greater than or equal to the messages
+                  payload size.
             "resource-limits":
                $ref: '#/components/schemas/ResourceLimit'
             "tracing":
                $ref: '#/components/schemas/TracingConfig'
             "trusted-ca":
-               $ref: '#/components/schemas/TrustedCA'
+               type: array
+               description: |
+                  The set of root certificate authorities which are used for verifying the signature of
+                  client certificates that devices use for authentication.
+               items:
+                  $ref: '#/components/schemas/TrustedCA'
 
       TrustedCA:
          type: object
          additionalProperties: false
-         required:
-            - "subject-dn"
          properties:
             "subject-dn":
                type: string
-               description: The subject DN of the trusted root certificate in
-                            the format defined by RFC 2253.
+               description: |
+                  The subject DN of the trusted root certificate in
+                  the format defined by RFC 2253.
+                  CAs of the *same* tenant may share the same subject DN, e.g.
+                  allowing for the definition of overlapping validity periods.
+                  However, CAs of *different* tenants must not share the same
+                  subject DN in order to allow for the unique look up of a tenant by
+                  the subject DN of one of its trusted CAs.
+                  If the `cert` property is used to provide an X.509 certificate
+                  then the subject DN is determined from the certificate and this
+                  property is ignored.
+                  Otherwise, i.e. if the `public-key` property is
+                  used, this property is mandatory.
             "public-key":
                type: string
                format: byte
-               description: The Base64 encoded binary DER encoding of the
-                            trusted root certificate’s public key.
-                            Either this property or `cert` must be set.
+               description: |
+                  The Base64 encoded binary DER encoding of the
+                  trusted root certificate’s public key.
+                  If the `cert` property is used to provide an
+                  X.509 certificate then the public key is extracted
+                  from the certificate and this property is ignored.
+                  Either this property or `cert` must be set.
+            "algorithm":
+               type: string
+               description: |
+                  The algorithm used for the public key of the CA.
+                  If the `cert` property is used to provide an
+                  X.509 certificate then the algorithm is determined
+                  from the certificate and this property is ignored.
+                  Otherwise, i.e. if the `public-key` property is
+                  used, this property must be set to the algorithm
+                  used, if other than the default.
+               default: RSA
+               example: EC
+            "not-before":
+               type: string
+               format: date-time
+               description: |
+                  The point in time from which on the certificate authority
+                  may be used for authenticating devices.
+                  If the `cert` property is used to provide an
+                  X.509 certificate then the point in time is
+                  determined from the certificate and this property is ignored.
+                  Otherwise, i.e. if the `public-key` property is
+                  used, this property is mandatory.
+            "not-after":
+               type: string
+               format: date-time
+               description: |
+                  The point in time until which the certificate authority
+                  may be used for authenticating devices.
+                  If the `cert` property is used to provide an
+                  X.509 certificate then the point in time is
+                  determined from the certificate and this property is ignored.
+                  Otherwise, i.e. if the `public-key` property is
+                  used, this property is mandatory.
             "cert":
                type: string
                format: byte
-               description: The Base64 encoded binary DER encoding of the
-                            trusted root certificate. Either this property
-                            or `public-key` must be set.
-            "algorithm":
-               type: string
-               description: The algorithm used for the public key of the CA.
-                            If the `cert` property is used to provide an
-                            X.509 certificate then the algorithm is determined
-                            from the certificate and this property is ignored.
-                            Otherwise, i.e. if the `public-key` property is
-                            used, this property must be set to the algorithm
-                            used, if other than the default.
-               default: RSA
-               example: EC
+               description: |
+                  The Base64 encoded binary DER encoding of the trusted X.509 root certificate.
+                  This property can be used as a convenient alternative to
+                  specifying the `public-key`, `not-before`, `not-after` and
+                  `algorithm` properties explicitly. Implementors of this
+                  API may choose to support this property only for uploading
+                  a certificate but then extract all relevant data and store
+                  it in the properties described above.
+                  Either this property or `public-key` must be set.
+         example:
+            subject-dn: "CN=devices,OU=iot,O=ACME"
+            public-key: "Tk9UIEEgUFVCTElDIEtFWQ=="
+            algorithm: "EC"
+            not-before: "2019-10-03T13:45:16+02:00"
+            not-after: "2021-10-03T00:00:00Z"
 
       Adapter:
          type: object
@@ -523,23 +612,24 @@ components:
             "max-connections":
                type: integer
                default: -1
-               description: The maximum number of concurrent connections allowed
-                            from devices of this tenant.
-                            A value of -1 (the default) indicates that no limit is set.
+               description: |
+                  The maximum number of concurrent connections allowed from devices of this tenant.
+                  A value of `-1` (the default) indicates that no limit is set.
             "max-ttl":
                type: integer
                default: -1
-               description: The maximum time-to-live (in seconds) to use for events published by
-                            devices of this tenant. Any default TTL value specified
-                            at either the tenant or device level will be limited to
-                            the max value specified here.
-                            If this property is set to a value greater than -1 and no
-                            default TTL is specified for a device, the max value will
-                            be used for events published by the device.
-                            A value of -1 (the default) indicates that no limit is set.
-                            Note that this property contains the TTL in seconds whereas
-                            the AMQP 1.0 specification defines a message's ttl header
-                            to use milliseconds.
+               description: |
+                  The maximum time-to-live (in seconds) to use for events published by
+                  devices of this tenant. Any default TTL value specified
+                  at either the tenant or device level will be limited to
+                  the max value specified here.
+                  If this property is set to a value greater than -1 and no
+                  default TTL is specified for a device, the max value will
+                  be used for events published by the device.
+                  A value of `-1` (the default) indicates that no limit is set.
+                  Note that this property contains the TTL in seconds whereas
+                  the AMQP 1.0 specification defines a message's ttl header
+                  to use milliseconds.
             "data-volume":
                $ref: '#/components/schemas/DataVolume'
             "ext":
@@ -551,15 +641,17 @@ components:
          properties:
             "sampling-mode":
                type: string
-               description: Defines in how far OpenTracing spans created when
-                  processing messages for this tenant shall be recorded
-                  (sampled) by the tracing system. The value `default`
-                  lets the default sampling mechanism be used.
-                  The value `all` marks the spans related to this tenant
-                  so that they should all be sampled.
-                  The value `none` marks the spans as not to be sampled.
-                  The mode defined here may be overridden for a particular
-                  auth-id by means of the `sampling-mode-per-auth-id`
+               description: |
+                  Defines if and how often OpenTracing spans are being
+                  sampled when processing messages for this tenant.
+                  The value `default` indicates that the underyling tracing
+                  system's default sampling mode should be used.
+                  The value `all` indicates that every span created for
+                  messages of the tenant will be sampled.
+                  The value `none` indicates that no spans should be sampled
+                  at all for the tenant.
+                  The mode defined here may be overridden for specific
+                  devices by means of the `sampling-mode-per-auth-id`
                   property.
                default: default
                enum:
@@ -568,21 +660,26 @@ components:
                   - none
             "sampling-mode-per-auth-id":
                type: object
-               description: Defines in how far OpenTracing spans created when
-                  processing messages for this tenant and a particular
-                  auth-id shall be recorded (sampled) by the tracing
-                  system. The child properties have the auth-id as name.
-                  A child property value of `default` lets the default
-                  sampling mechanism be used. The child property value
-                  `all` marks the spans related to this tenant and the
-                  auth-id so that they should all be sampled.
-                  The child property value `none` marks the spans as not
-                  to be sampled.
-                  The mode defined for a particular auth-id has precedence
+               description: |
+                  Defines if and how often OpenTracing spans are being
+                  sampled when processing messages for specific devices
+                  of this tenant.
+                  This object contains a property for each device for which
+                  specific behavior should be defined, using the device's
+                  authentication identifier as the property name and
+                  the device specific sampling mode as its value.
+                  The value `default` indicates that the underyling tracing
+                  system's default sampling mode should be used.
+                  The value `all` indicates that every span created for
+                  messages of the tenant will be sampled.
+                  The value `none` indicates that no spans should be sampled
+                  at all for the tenant.
+                  The mode defined for a particular device has precedence
                   over the value defined by the `sampling-mode` property.
                additionalProperties:
                   type: string
-                  description: The property name is the auth-id as used for authenticating requests from a device.
+                  description: |
+                    The property name is the device's 'authentication identifier.
                   default: default
                   enum:
                      - default

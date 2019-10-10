@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp;
 
-import java.security.GeneralSecurityException;
 import java.security.cert.Certificate;
+import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -331,13 +332,14 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                             checkTenantIsEnabled(tenant),
                             tenantConnectionLimit.apply(tenant)).map(ok -> tenant))
                     .compose(tenant -> {
-                        try {
+                        final Set<TrustAnchor> trustAnchors = tenant.getTrustAnchors();
+                        if (trustAnchors.isEmpty()) {
+                            LOG.debug("no valid trust anchors defined for tenant [{}]", tenant.getTenantId());
+                            return Future.failedFuture(new CredentialException("validation of client certificate failed"));
+                        } else {
                             return certValidator.validate(
                                     Collections.singletonList(deviceCert),
-                                    tenant.getTrustAnchor()).map(ok -> tenant);
-                        } catch (final GeneralSecurityException e) {
-                            LOG.debug("cannot retrieve trust anchor of tenant [{}]", tenant.getTenantId(), e);
-                            return Future.failedFuture(new CredentialException("validation of client certificate failed"));
+                                    trustAnchors).map(ok -> tenant);
                         }
                     })
                     .compose(tenant -> {

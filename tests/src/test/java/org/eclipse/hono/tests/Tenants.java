@@ -15,6 +15,10 @@ package org.eclipse.hono.tests;
 
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -47,23 +51,55 @@ public final class Tenants {
      * @return The new tenant. Never returns {@code null}.
      */
     public static Tenant createTenantForTrustAnchor(final X500Principal subjectDn, final PublicKey publicKey) {
-        return createTenantForTrustAnchor(subjectDn.getName(X500Principal.RFC2253), publicKey.getEncoded(), publicKey.getAlgorithm());
+        return createTenantForTrustAnchor(
+                subjectDn.getName(X500Principal.RFC2253),
+                publicKey.getEncoded(),
+                publicKey.getAlgorithm());
     }
 
     /**
      * Create a new tenant, based on a trust anchor.
      * 
-     * @param subjectDn  The subject DN of the trust anchor.
-     * @param publicKey  The public key for the anchor.
-     * @param algorithmn The public key algorithm.
+     * @param subjectDn The subject DN of the trust anchor.
+     * @param publicKey The public key for the anchor.
+     * @param algorithm The public key algorithm.
      * 
      * @return The new tenant. Never returns {@code null}.
      */
-    public static Tenant createTenantForTrustAnchor(final String subjectDn, final byte[] publicKey, final String algorithmn) {
+    public static Tenant createTenantForTrustAnchor(final String subjectDn, final byte[] publicKey, final String algorithm) {
+        return createTenantForTrustAnchor(
+                subjectDn,
+                publicKey,
+                algorithm,
+                Instant.now(),
+                Instant.now().plus(365, ChronoUnit.DAYS));
+    }
+
+    /**
+     * Create a new tenant, based on a trust anchor.
+     * 
+     * @param subjectDn The subject DN of the trust anchor.
+     * @param publicKey The public key for the anchor.
+     * @param algorithm The public key algorithm.
+     * @param notBefore The earliest instant that the trust anchor may be used.
+     * @param notAfter The latest instant that the trust anchor may be used.
+     * 
+     * @return The new tenant. Never returns {@code null}.
+     * @throws NullPointerException if any of the arguments other than algorithm are {@code null}.
+     */
+    public static Tenant createTenantForTrustAnchor(
+            final String subjectDn,
+            final byte[] publicKey,
+            final String algorithm,
+            final Instant notBefore,
+            final Instant notAfter) {
+
         final var trustedCa = new TrustedCertificateAuthority()
                 .setSubjectDn(subjectDn)
                 .setPublicKey(publicKey)
-                .setKeyAlgorithm(algorithmn);
-        return new Tenant().setTrustedCertificateAuthority(trustedCa);
+                .setNotBefore(notBefore)
+                .setNotAfter(notAfter);
+        Optional.ofNullable(algorithm).ifPresent(alg -> trustedCa.setKeyAlgorithm(alg));
+        return new Tenant().setTrustedCertificateAuthorities(List.of(trustedCa));
     }
 }

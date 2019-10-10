@@ -24,6 +24,9 @@ import java.security.GeneralSecurityException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -61,10 +64,15 @@ class TrustedCertificateAuthorityTest {
     @Test
     public void testDecodeTrustedCAUsingPublicKey() {
 
+        final Instant notBefore = certificate.getNotBefore().toInstant();
+        final Instant notAfter = certificate.getNotAfter().toInstant();
+
         final JsonObject ca = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, certificate.getSubjectX500Principal().getName(X500Principal.RFC2253))
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, certificate.getPublicKey().getEncoded())
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm());
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, certificate.getPublicKey().getAlgorithm())
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, DateTimeFormatter.ISO_INSTANT.format(notBefore))
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, DateTimeFormatter.ISO_INSTANT.format(notAfter));
 
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
         assertTrue(authority.isValid());
@@ -96,11 +104,16 @@ class TrustedCertificateAuthorityTest {
     @Test
     public void testDecodeTrustedCAUsingCertAndPublicKey() throws CertificateEncodingException {
 
+        final Instant notBefore = certificate.getNotBefore().toInstant().minus(1, ChronoUnit.DAYS);
+        final Instant notAfter = certificate.getNotAfter().toInstant().plus(2, ChronoUnit.DAYS);
+
         final JsonObject ca = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded())
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY".getBytes())
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=not the right subject")
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "unsupported");
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "unsupported")
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, DateTimeFormatter.ISO_INSTANT.format(notBefore))
+                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, DateTimeFormatter.ISO_INSTANT.format(notAfter));
 
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
         assertAuthority(authority);
@@ -111,5 +124,7 @@ class TrustedCertificateAuthorityTest {
         assertThat(authority.getSubjectDn(), is(certificate.getSubjectX500Principal()));
         assertThat(authority.getPublicKey(), is(certificate.getPublicKey().getEncoded()));
         assertThat(authority.getKeyAlgorithm(), is(certificate.getPublicKey().getAlgorithm()));
+        assertThat(authority.getNotBefore(), is(certificate.getNotBefore().toInstant()));
+        assertThat(authority.getNotAfter(), is(certificate.getNotAfter().toInstant()));
     }
 }

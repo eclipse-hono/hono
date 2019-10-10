@@ -15,7 +15,6 @@
 package org.eclipse.hono.service.auth.device;
 
 import java.net.HttpURLConnection;
-import java.security.GeneralSecurityException;
 import java.security.cert.Certificate;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
@@ -25,6 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -155,14 +155,14 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
             final Future<TenantObject> tenantTracker = getTenant(deviceCert, span);
             return tenantTracker
                     .compose(tenant -> {
-                        try {
-                            final TrustAnchor trustAnchor = tenant.getTrustAnchor();
-                            final List<X509Certificate> chainToValidate = Collections.singletonList(deviceCert);
-                            return certPathValidator.validate(chainToValidate, trustAnchor)
-                                    .recover(t -> Future.failedFuture(UNAUTHORIZED));
-                        } catch (final GeneralSecurityException e) {
-                            log.debug("cannot de-serialize trust anchor from tenant: {}", e.getMessage());
+                        final Set<TrustAnchor> trustAnchors = tenant.getTrustAnchors();
+                        if (trustAnchors.isEmpty()) {
+                            log.debug("no valid trust anchors defined for tenant [{}]", tenant.getTenantId());
                             return Future.failedFuture(UNAUTHORIZED);
+                        } else {
+                            final List<X509Certificate> chainToValidate = Collections.singletonList(deviceCert);
+                            return certPathValidator.validate(chainToValidate, trustAnchors)
+                                    .recover(t -> Future.failedFuture(UNAUTHORIZED));
                         }
                     }).compose(ok -> getCredentials(x509chain, tenantTracker.result()));
         }).map(authInfo -> {

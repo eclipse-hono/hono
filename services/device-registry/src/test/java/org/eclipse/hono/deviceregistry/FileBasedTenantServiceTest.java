@@ -25,12 +25,16 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
+import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.service.tenant.AbstractTenantServiceTest;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
@@ -52,6 +56,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -392,11 +397,25 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 "authId1", TracingSamplingMode.ALL,
                 "authId2", TracingSamplingMode.DEFAULT));
 
+        final TrustedCertificateAuthority ca1 = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=test.org")
+                .setKeyAlgorithm("EC")
+                .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
+                .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
+                .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS));
+        final TrustedCertificateAuthority ca2 = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=test.org")
+                .setKeyAlgorithm("RSA")
+                .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
+                .setNotBefore(Instant.now().plus(1, ChronoUnit.DAYS))
+                .setNotAfter(Instant.now().plus(20, ChronoUnit.DAYS));
+
         final Tenant source = new Tenant();
         source.setEnabled(true);
         source.setTracing(tracingConfig);
         source.setDefaults(Map.of("ttl", 30));
         source.setExtensions(Map.of("custom", "value"));
+        source.setTrustedCertificateAuthorities(List.of(ca1, ca2));
 
         final JsonObject tracingConfigJsonObject = new JsonObject();
         tracingConfigJsonObject.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE, "all");
@@ -405,10 +424,17 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 .put("authId2", "default");
         tracingConfigJsonObject.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, tracingSamplingModeJsonObject);
 
-        final JsonObject target = FileBasedTenantService.convertTenant("4711", source);
+        final JsonArray expectedAuthorities = new JsonArray().add(new JsonObject()
+                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test.org")
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOT_A_PUBLIC_KEY".getBytes())
+                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC"));
+
+        final JsonObject target = FileBasedTenantService.convertTenant("4711", source, true);
+
         assertThat(target.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("4711");
         assertThat(target.getBoolean(TenantConstants.FIELD_ENABLED)).isTrue();
         assertThat(target.getJsonObject(TenantConstants.FIELD_TRACING)).isEqualTo(tracingConfigJsonObject);
+        assertThat(target.getJsonArray(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)).isEqualTo(expectedAuthorities);
         assertThat(target.getJsonArray(TenantConstants.FIELD_ADAPTERS)).isNull();
         final JsonObject defaults = target.getJsonObject(TenantConstants.FIELD_PAYLOAD_DEFAULTS);
         assertThat(defaults).isNotNull();

@@ -13,17 +13,10 @@
 
 package org.eclipse.hono.util;
 
-import java.io.ByteArrayInputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.CertificateParsingException;
 import java.security.cert.TrustAnchor;
-import java.security.cert.X509Certificate;
-import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.LinkedList;
@@ -31,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -60,6 +55,8 @@ public final class TenantObject extends JsonBackedValueObject {
     private TrustAnchor trustAnchor;
     @JsonIgnore
     private TenantTracingConfig tracingConfig;
+    @JsonIgnore
+    private Set<TrustAnchor> trustAnchors;
 
     /**
      * Adds a property to this tenant.
@@ -118,25 +115,6 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Gets the subject DN of this tenant's configured trusted
-     * certificate authority.
-     * 
-     * @return The DN or {@code null} if no CA has been set.
-     */
-    @JsonIgnore
-    public X500Principal getTrustedCaSubjectDn() {
-
-        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
-        if (trustedCa == null) {
-            return null;
-        } else {
-            return Optional
-                    .ofNullable(getProperty(trustedCa, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class))
-                    .map(dn -> new X500Principal(dn)).orElse(null);
-        }
-    }
-
-    /**
      * Sets the trusted certificate authority to use for authenticating
      * devices of this tenant.
      * 
@@ -155,114 +133,58 @@ public final class TenantObject extends JsonBackedValueObject {
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
-        return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+        trustAnchors = null;
+        return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(trustedCa));
     }
 
     /**
-     * Sets the trusted certificate authority to use for authenticating
-     * devices of this tenant.
+     * Gets this tenant's trust anchor.
      * 
-     * @param certificate The CA certificate.
-     * @return This tenant for command chaining.
-     * @throws NullPointerException if certificate is {@code null}.
-     * @throws IllegalArgumentException if the certificate cannot be (binary) encoded.
+     * @return The first element of this tenant's set of trust anchors or {@code null},
+     *         if no trust anchors have been defined.
+     * @deprecated Use {@link #getTrustAnchors()} instead.
      */
     @JsonIgnore
-    public TenantObject setTrustAnchor(final X509Certificate certificate) {
+    @Deprecated
+    public TrustAnchor getTrustAnchor() {
 
-        Objects.requireNonNull(certificate);
-
-        try {
-            final JsonObject trustedCa = new JsonObject()
-                    .put(TenantConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
-            return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
-        } catch (final CertificateEncodingException e) {
-            throw new IllegalArgumentException("cannot encode certificate");
-        }
+        return getTrustAnchors().stream().findFirst().orElse(null);
     }
 
     /**
-     * Gets the trusted certificate authority configured for this tenant.
+     * Gets the trust anchors for this tenant.
      * <p>
-     * This method tries to extract the certificate from the data contained in
-     * the JSON object of the <em>trusted-ca</em> property.
-     * The value of the JSON object's <em>cert</em> property is expected to contain
-     * the Base64 encoded <em>binary</em> DER-encoding of the certificate, i.e. the same
-     * value as the <em>printable</em> form but without the leading
-     * {@code -----BEGIN CERTIFICATE-----} and trailing {@code -----END CERTIFICATE-----}.
-     * 
-     * @return The certificate or {@code null} if no certificate authority
-     *         has been set.
-     * @throws CertificateException if the value of <em>cert</em> property cannot be parsed into
-     *             an X.509 certificate.
-     */
-    @JsonIgnore
-    public X509Certificate getTrustedCertificateAuthority() throws CertificateException {
-
-        final JsonObject trustedCa = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
-        if (trustedCa == null) {
-            return null;
-        } else {
-            final Object obj = trustedCa.getValue(TenantConstants.FIELD_PAYLOAD_CERT);
-            if (obj instanceof String) {
-                try {
-                    final byte[] derEncodedCert = Base64.getDecoder().decode(((String) obj));
-                    final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                    return (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(derEncodedCert));
-                } catch (final IllegalArgumentException e) {
-                    // Base64 decoding failed
-                    throw new CertificateParsingException("cert property does not contain valid Base64 scheme", e);
-                }
-            } else {
-                return null;
-            }
-        }
-    }
-
-    /**
-     * Gets the trust anchor for this tenant.
+     * This method tries to create the trust anchors based on the information
+     * from the JSON objects contained in the <em>trusted-ca</em> property.
      * <p>
-     * This method tries to create the trust anchor based on the information
-     * from the JSON object contained in the <em>trusted-ca</em> property.
-     * <ol>
-     * <li>If the object contains a <em>cert</em> property then its content is
-     * expected to contain the Base64 encoded (binary) DER encoding of the
-     * trusted certificate. The returned trust anchor will contain this certificate.</li>
-     * <li>Otherwise, if the object contains a <em>public-key</em> and a <em>subject-dn</em>
-     * property, then the public key property is expected to contain the Base64 encoded
-     * DER encoding of the trusted certificate's public key. The returned trust anchor
-     * will contain this public key.</li>
-     * <li>Otherwise, this method returns {@code null}.</li>
-     * </ol>
+     * The JSON objects are expected to contain
+     * <ul>
+     * <li>the Base64 encoded DER encoding of the trusted certificate's public key in
+     * the <em>public-key</em> property and</li>
+     * <li>the subject DN of the CA in the <em>subject-dn</em> property.</li>
+     * </ul>
      * <p>
-     * Once a (non {@code null}) trust anchor has been created, it will be cached and
+     * Once a non empty set of trust anchors has been created, it will be cached and
      * returned on subsequent invocations of this method.
      * 
-     * @return The trust anchor or {@code null} if no trusted certificate authority
-     *         has been set.
-     * @throws GeneralSecurityException if the value of the <em>trusted-ca</em> property
-     *             cannot be parsed into a trust anchor, e.g. because of unsupported
-     *             key type, malformed certificate or public key encoding etc. 
+     * @return The set of trust anchors, may be empty.
      */
     @JsonIgnore
-    public TrustAnchor getTrustAnchor() throws GeneralSecurityException {
+    public Set<TrustAnchor> getTrustAnchors() {
 
-        if (trustAnchor != null) {
-            return trustAnchor;
-        } else {
-            final X509Certificate cert = getTrustedCertificateAuthority();
-            if (cert != null) {
-                trustAnchor = new TrustAnchor(cert, null);
-                return trustAnchor;
-            } else {
-                return getTrustAnchorForPublicKey(
-                        getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class));
-            }
+        if (trustAnchors == null) {
+            trustAnchors = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray())
+            .stream()
+            .filter(obj -> obj instanceof JsonObject)
+            .map(ca -> getTrustAnchorForPublicKey((JsonObject) ca))
+            .filter(anchor -> anchor != null)
+            .collect(Collectors.toSet());
         }
+        return trustAnchors;
     }
 
     @JsonIgnore
-    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) throws GeneralSecurityException {
+    private TrustAnchor getTrustAnchorForPublicKey(final JsonObject keyProps) {
 
         if (keyProps == null) {
             return null;
@@ -278,11 +200,10 @@ public final class TenantObject extends JsonBackedValueObject {
                     final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
                     final KeyFactory factory = KeyFactory.getInstance(type);
                     final PublicKey publicKey = factory.generatePublic(keySpec);
-                    trustAnchor = new TrustAnchor(subjectDn, publicKey, null);
-                    return trustAnchor;
-                } catch (final IllegalArgumentException e) {
+                    return new TrustAnchor(subjectDn, publicKey, null);
+                } catch (final IllegalArgumentException | GeneralSecurityException e) {
                     // Base64 decoding failed
-                    throw new InvalidKeySpecException("cannot decode Base64 encoded public key", e);
+                    return null;
                 }
             }
         }
