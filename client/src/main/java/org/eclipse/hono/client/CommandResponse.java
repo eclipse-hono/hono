@@ -14,7 +14,7 @@
 package org.eclipse.hono.client;
 
 import java.util.Objects;
-import java.util.function.IntPredicate;
+import java.util.function.Predicate;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.MessageHelper;
@@ -34,8 +34,8 @@ public final class CommandResponse {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandResponse.class);
 
-    private static final IntPredicate INVALID_STATUS_CODE = code ->
-        code < 200 || (code >= 300 && code < 400) || code >= 600;
+    private static final Predicate<Integer> INVALID_STATUS_CODE = code ->
+        code == null || code < 200 || (code >= 300 && code < 400) || code >= 600;
 
     private final Message message;
     private final String replyToId;
@@ -84,7 +84,7 @@ public final class CommandResponse {
         if (requestId == null) {
             LOG.debug("cannot create CommandResponse: request id is null");
             return null;
-        } else if (status == null || INVALID_STATUS_CODE.test(status)) {
+        } else if (INVALID_STATUS_CODE.test(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
         } else if (requestId.length() < 3) {
@@ -130,7 +130,7 @@ public final class CommandResponse {
             LOG.debug("cannot create CommandResponse: invalid message (correlationId: {}, address: {}, status: {})",
                     correlationId, message.getAddress(), status);
             return null;
-        } else if (status == null || INVALID_STATUS_CODE.test(status)) {
+        } else if (INVALID_STATUS_CODE.test(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
         } else {

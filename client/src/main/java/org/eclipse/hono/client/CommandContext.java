@@ -46,7 +46,7 @@ public class CommandContext extends MapBasedExecutionContext {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandContext.class);
 
-    private static final String ERROR_MSG_INVALID_CREDIT_VALUE = "";
+    private static final String ERROR_MSG_INVALID_CREDIT_VALUE = "credit must be >= 0";
 
     private final Command command;
     private final ProtonDelivery delivery;
@@ -247,7 +247,7 @@ public class CommandContext extends MapBasedExecutionContext {
     public void reject(final ErrorCondition errorCondition, final int credit) {
 
         if (credit < 0) {
-            throw new IllegalArgumentException("credit must be >= 0");
+            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
         }
         final Rejected rejected = new Rejected();
         if (errorCondition != null) {

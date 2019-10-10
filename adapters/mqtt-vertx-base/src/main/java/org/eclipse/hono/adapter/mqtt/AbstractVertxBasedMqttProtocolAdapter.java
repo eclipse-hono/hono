@@ -101,7 +101,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
-    private static final String KEY_TOPIC_NAME_FILTER = "filter";
+    private static final String KEY_TOPIC_FILTER = "filter";
 
     private MqttAdapterMetrics metrics = MqttAdapterMetrics.NOOP;
 
@@ -589,7 +589,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     result = createCommandConsumer(endpoint, cmdSub, cmdHandler).map(consumer -> {
                         final Map<String, Object> items = new HashMap<>(4);
                         items.put(Fields.EVENT, "accepting subscription");
-                        items.put(KEY_TOPIC_NAME_FILTER, subscription.topicName());
+                        items.put(KEY_TOPIC_FILTER, subscription.topicName());
                         items.put("requested QoS", subscription.qualityOfService());
                         items.put("granted QoS", subscription.qualityOfService());
                         span.log(items);
@@ -601,7 +601,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     }).recover(t -> {
                         final Map<String, Object> items = new HashMap<>(4);
                         items.put(Fields.EVENT, Tags.ERROR.getKey());
-                        items.put(KEY_TOPIC_NAME_FILTER, subscription.topicName());
+                        items.put(KEY_TOPIC_FILTER, subscription.topicName());
                         items.put("requested QoS", subscription.qualityOfService());
                         items.put(Fields.MESSAGE, "rejecting subscription: " + t.getMessage());
                         TracingHelper.logError(span, items);
@@ -698,7 +698,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             if (cmdSub == null) {
                 final Map<String, Object> items = new HashMap<>(2);
                 items.put(Fields.EVENT, "ignoring unsupported topic filter");
-                items.put(KEY_TOPIC_NAME_FILTER, topic);
+                items.put(KEY_TOPIC_FILTER, topic);
                 span.log(items);
                 log.debug("ignoring unsubscribe request for unsupported topic filter [{}]", topic);
             } else {
@@ -706,7 +706,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final String deviceId = cmdSub.getDeviceId();
                 final Map<String, Object> items = new HashMap<>(2);
                 items.put(Fields.EVENT, "unsubscribing device from topic");
-                items.put(KEY_TOPIC_NAME_FILTER, topic);
+                items.put(KEY_TOPIC_FILTER, topic);
                 span.log(items);
                 log.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
