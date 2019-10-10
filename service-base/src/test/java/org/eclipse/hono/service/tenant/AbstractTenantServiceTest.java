@@ -17,6 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
@@ -287,9 +290,9 @@ public abstract class AbstractTenantServiceTest {
     @Test
     public void testAddTenantFailsForDuplicateCa(final VertxTestContext ctx) {
 
-        final JsonObject trustedCa = new JsonObject()
+        final JsonArray trustedCa = new JsonArray().add(new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY".getBytes(StandardCharsets.UTF_8));
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY".getBytes(StandardCharsets.UTF_8)));
 
         final JsonObject tenant = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_ENABLED, true)
@@ -413,11 +416,17 @@ public abstract class AbstractTenantServiceTest {
     public void testGetForCertificateAuthoritySucceeds(final VertxTestContext ctx) {
 
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
-        final JsonObject trustedCa = new JsonObject()
+
+        final JsonArray expectedCaList = new JsonArray().add(new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8));
-        final JsonObject tenant = buildTenantPayload()
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8)));
+
+        final Tenant tenant = new Tenant()
+                .setTrustedCertificateAuthorities(List.of(new TrustedCertificateAuthority()
+                        .setSubjectDn(subjectDn)
+                        .setPublicKey("NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8))
+                        .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
+                        .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS))));
 
         addTenant("tenant", tenant)
         .map(ok -> {
@@ -429,8 +438,8 @@ public abstract class AbstractTenantServiceTest {
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                             final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
                             assertEquals("tenant", obj.getTenantId());
-                            final JsonObject ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonObject.class);
-                            assertEquals(trustedCa, ca);
+                            final JsonArray ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class);
+                            assertEquals(expectedCaList, ca);
                         });
                         ctx.completeNow();
                     }));
@@ -448,9 +457,9 @@ public abstract class AbstractTenantServiceTest {
 
         final X500Principal unknownSubjectDn = new X500Principal("O=Eclipse, OU=NotHono, CN=ca");
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
-        final JsonObject trustedCa = new JsonObject()
+        final JsonArray trustedCa = new JsonArray().add(new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8));
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8)));
         final JsonObject tenant = buildTenantPayload()
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
 
@@ -545,14 +554,14 @@ public abstract class AbstractTenantServiceTest {
 
         // GIVEN two tenants, one with a CA configured, the other with no CA
         final Tenant tenantOne = new Tenant().setEnabled(true);
-        tenantOne.setTrustedCertificateAuthority(trustedCa);
+        tenantOne.setTrustedCertificateAuthorities(List.of(trustedCa));
         final Tenant tenantTwo = new Tenant().setEnabled(true);
 
         addTenant("tenantOne", JsonObject.mapFrom(tenantOne))
         .compose(ok -> addTenant("tenantTwo", JsonObject.mapFrom(tenantTwo)))
         .compose(ok -> {
             // WHEN updating the second tenant to use the same CA as the first tenant
-            tenantTwo.setTrustedCertificateAuthority(trustedCa);
+            tenantTwo.setTrustedCertificateAuthorities(List.of(trustedCa));
             final Future<OperationResult<Void>> result = Future.future();
             getTenantManagementService().update(
                     "tenantTwo",
@@ -617,6 +626,17 @@ public abstract class AbstractTenantServiceTest {
     protected Future<OperationResult<Id>> addTenant(final String tenantId) {
 
         return addTenant(tenantId, buildTenantPayload());
+    }
+
+    /**
+     * Adds a tenant.
+     *
+     * @param tenantId The identifier of the tenant.
+     * @param tenant The tenant.
+     * @return A succeeded future if the tenant has been created.
+     */
+    protected Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenant) {
+        return addTenant(tenantId, JsonObject.mapFrom(tenant));
     }
 
     /**

@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,7 +29,6 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
-import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -295,7 +295,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         } else {
             return TenantResult.from(
                     HttpURLConnection.HTTP_OK,
-                    convertTenant(tenantId, tenant.getValue()),
+                    convertTenant(tenantId, tenant.getValue(), true),
                     getCacheDirective());
         }
     }
@@ -324,7 +324,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             } else {
                 return TenantResult.from(
                         HttpURLConnection.HTTP_OK,
-                        convertTenant(tenant.getKey(), tenant.getValue().getValue()),
+                        convertTenant(tenant.getKey(), tenant.getValue().getValue(), true),
                         getCacheDirective());
             }
         }
@@ -400,9 +400,8 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 log.trace("adding tenant [id: {}]: {}", tenantId, tenantSpec.encodePrettily());
             }
             final Tenant tenantToAdd = tenantSpec.mapTo(Tenant.class);
-            final boolean existsConflictingTenant = Optional.ofNullable(tenantToAdd.getTrustedCertificateAuthority())
-                    .map(ca -> getByCa(ca.getSubjectDn()) != null)
-                    .orElse(false);
+            final boolean existsConflictingTenant = tenantToAdd.getTrustedCertificateAuthoritySubjectDNs()
+            .stream().anyMatch(subjectDn -> getByCa(subjectDn) != null);
 
             if (existsConflictingTenant) {
                 // we are trying to use the same CA as an already existing tenant
@@ -465,8 +464,12 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             if (tenants.containsKey(tenantId)) {
                 try {
                     final Tenant newTenantData = tenantSpec.mapTo(Tenant.class);
-                    final Entry<String, Versioned<Tenant>> conflictingTenant = Optional.ofNullable(newTenantData.getTrustedCertificateAuthority())
-                            .map(ca -> getByCa(ca.getSubjectDn()))
+                    final Entry<String, Versioned<Tenant>> conflictingTenant = newTenantData
+                            .getTrustedCertificateAuthoritySubjectDNs()
+                            .stream()
+                            .map(subjectDn -> getByCa(subjectDn))
+                            .filter(entry -> entry != null)
+                            .findFirst()
                             .orElse(null);
 
                     if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getKey())) {
@@ -502,6 +505,12 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     static JsonObject convertTenant(final String tenantId, final Tenant source) {
+        return convertTenant(tenantId, source, false);
+    }
+
+    static JsonObject convertTenant(final String tenantId, final Tenant source, final boolean filterAuthorities) {
+
+        final Instant now = Instant.now();
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(source);
@@ -524,13 +533,29 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 .collect(JsonArray::new, JsonArray::add, JsonArray::add))
         .ifPresent(configurations -> target.setAdapterConfigurations(configurations));
 
-        Optional.ofNullable(source.getTrustedCertificateAuthority())
-        .map(JsonObject::mapFrom)
-        .ifPresent(authority -> target.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authority));
-
         Optional.ofNullable(source.getExtensions())
         .map(JsonObject::new)
         .ifPresent(extensions -> target.setProperty(RegistryManagementConstants.FIELD_EXT, extensions));
+
+        Optional.ofNullable(source.getTrustedCertificateAuthorities())
+        .map(list -> list.stream()
+                .filter(ca -> {
+                    if (filterAuthorities) {
+                        // filter out CAs which are not valid at this point in time
+                        return !now.isBefore(ca.getNotBefore()) && !now.isAfter(ca.getNotAfter());
+                    } else {
+                        return true;
+                    }
+                })
+                .map(ca -> JsonObject.mapFrom(ca))
+                .map(json -> {
+                    // validity period is not included in TenantObject
+                    json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+                    json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER);
+                    return json;
+                })
+                .collect(JsonArray::new, JsonArray::add, JsonArray::add))
+        .ifPresent(authorities -> target.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authorities));
 
         return JsonObject.mapFrom(target);
     }
@@ -541,10 +566,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             return null;
         } else {
             return tenants.entrySet().stream()
-                    .filter(entry -> {
-                        final TrustedCertificateAuthority ca = entry.getValue().getValue().getTrustedCertificateAuthority();
-                        return ca != null && subjectDn.equals(ca.getSubjectDn());
-                    })
+                    .filter(entry -> entry.getValue().getValue().hasTrustedCertificateAuthoritySubjectDN(subjectDn))
                     .findFirst()
                     .orElse(null);
         }

@@ -20,10 +20,14 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
+import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.annotation.HonoTimestamp;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -50,6 +54,13 @@ public class TrustedCertificateAuthority {
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM)
     private String keyAlgorithm;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE)
+    @HonoTimestamp
+    private Instant notBefore;
+    @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER)
+    @HonoTimestamp
+    private Instant notAfter;
+
     /**
      * Checks if this object contains all required data.
      * 
@@ -59,7 +70,7 @@ public class TrustedCertificateAuthority {
     public final boolean isValid() {
         if (cert != null) {
             return true;
-        } else if (subjectDn == null || publicKey == null) {
+        } else if (subjectDn == null || publicKey == null || notBefore == null || notAfter == null) {
             return false;
         } else {
             try {
@@ -81,7 +92,18 @@ public class TrustedCertificateAuthority {
      */
     @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN)
     public final TrustedCertificateAuthority setSubjectDn(final String subjectDn) {
-        this.subjectDn = new X500Principal(subjectDn);
+        setSubjectDn(new X500Principal(subjectDn));
+        return this;
+    }
+
+    /**
+     * Sets the subject of the trusted authority.
+     *
+     * @param subjectDn The subject distinguished name.
+     * @return A reference to this for fluent use.
+     */
+    public final TrustedCertificateAuthority setSubjectDn(final X500Principal subjectDn) {
+        this.subjectDn = subjectDn;
         return this;
     }
 
@@ -172,5 +194,51 @@ public class TrustedCertificateAuthority {
         return Optional.ofNullable(cert)
                 .map(c -> c.getPublicKey().getAlgorithm())
                 .orElse(keyAlgorithm);
+    }
+
+    /**
+     * Sets the earliest instant in time that this CA may be used for authenticating a device.
+     *
+     * @param notBefore The instant.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if the value is {@code null}.
+     */
+    public final TrustedCertificateAuthority setNotBefore(final Instant notBefore) {
+        this.notBefore = Objects.requireNonNull(notBefore);
+        return this;
+    }
+
+    /**
+     * Gets the earliest instant in time that this CA may be used for authenticating a device.
+     *
+     * @return The instant or {@code null} if not set.
+     */
+    public final Instant getNotBefore() {
+        return Optional.ofNullable(cert)
+                .map(cert -> cert.getNotBefore().toInstant())
+                .orElse(notBefore);
+    }
+
+    /**
+     * Sets the latest instant in time that this CA may be used for authenticating a device.
+     *
+     * @param notAfter The instant.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if the value is {@code null}.
+     */
+    public final TrustedCertificateAuthority setNotAfter(final Instant notAfter) {
+        this.notAfter = Objects.requireNonNull(notAfter);
+        return this;
+    }
+
+    /**
+     * Gets the latest instant in time that this CA may be used for authenticating a device.
+     * 
+     * @return The instant or {@code null} if not set.
+     */
+    public final Instant getNotAfter() {
+        return Optional.ofNullable(cert)
+                .map(cert -> cert.getNotAfter().toInstant())
+                .orElse(notAfter);
     }
 }

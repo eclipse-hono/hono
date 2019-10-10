@@ -254,16 +254,15 @@ public class TenantTest {
     /**
      * Decode "trusted-ca" section for an X.509 certificate.
      * 
-     * @throws CertificateException if the self signed certificate cannot be created.
-     * @throws IOException if the self signed certificate cannot be read.
+     * @throws CertificateException if the self signed certificate cannot be encoded.
      */
     @Test
-    public void testDecodeTrustedCAUsingCert() throws CertificateException, IOException {
+    public void testDecodeTrustedCAUsingCert() throws CertificateException {
 
         final JsonObject ca = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
         final JsonObject tenantJson = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, ca);
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(ca));
 
         final Tenant tenant = tenantJson.mapTo(Tenant.class);
         assertTrue(tenant.isValid());

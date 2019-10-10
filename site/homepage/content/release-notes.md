@@ -31,6 +31,9 @@ title = "Release Notes"
   new downstream messages from basic properties.
   `org.eclipse.hono.service.AbstractProtocolAdapterbase` has been adapted to delegate to these
   new factory methods.
+* Hono's protocol adapters can now use multiple trusted certificate authorities per tenant to authenticate
+  devices based on client certificates. The list of trusted certificate authorities can be managed at the
+  tenant level using the Device Registry Management API.
 
 ### API Changes
 
@@ -47,6 +50,13 @@ title = "Release Notes"
   Also the configuration parameters for the resource limits were renamed from `hono.plan`
   to `hono.resourceLimits`. Please refer to the protocol adapter [configuration guides]
   ({{% doclink "/admin-guide/" %}}) for more information.
+* The response payload of the *get Tenant* operation of the Tenant API has been changed to contain
+  a list of trusted certificate authorities instead of just a single one. This way, protocol
+  adapters can now authenticate devices based on client certificates signed by one of multiple
+  different trusted root authorities defined for a tenant.
+  All standard protocol adapters have been adapted to this change.
+  The *Tenant* JSON schema object used in the tenant related resources of the Device Registry Management API
+  has also been adapted to contain a list of trusted authorities instead of a single one.
 
 ### Deprecations
 

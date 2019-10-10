@@ -207,7 +207,8 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
-                final TrustAnchor trustAnchor = tenantObject.getTrustAnchor();
+                assertThat(tenantObject.getTrustAnchors()).size().isEqualTo(1);
+                final TrustAnchor trustAnchor = tenantObject.getTrustAnchors().iterator().next();
                 assertThat(trustAnchor.getCA()).isEqualTo(subjectDn);
                 assertThat(trustAnchor.getCAPublicKey()).isEqualTo(publicKey);
             });

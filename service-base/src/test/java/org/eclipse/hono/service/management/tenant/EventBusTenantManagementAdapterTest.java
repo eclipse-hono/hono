@@ -34,6 +34,7 @@ import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 
@@ -102,9 +103,9 @@ public class EventBusTenantManagementAdapterTest {
         final X509Certificate trustedCaCert = getCaCertificate();
         final JsonObject tenantPayload = buildTenantPayload()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                        new JsonObject()
+                        new JsonArray().add(new JsonObject()
                                 .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT,
-                                        trustedCaCert.getEncoded()));
+                                        trustedCaCert.getEncoded())));
 
         assertTrue(adapter.isValidRequestPayload(tenantPayload));
     }
@@ -121,9 +122,9 @@ public class EventBusTenantManagementAdapterTest {
         final X509Certificate trustedCaCert = getCaCertificate();
         final JsonObject tenantPayload = buildTenantPayload()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                        new JsonObject()
+                        new JsonArray().add(new JsonObject()
                                 .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
-                                        trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253)));
+                                        trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))));
 
         assertFalse(adapter.isValidRequestPayload(tenantPayload));
     }
