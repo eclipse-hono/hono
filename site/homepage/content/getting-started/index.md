@@ -381,7 +381,7 @@ If you send a _request/response_ command like this
 >>>>>>>>> Enter name of command for device [<DeviceId>] in tenant [<TenantId>] (prefix with 'ow:' to send one-way command):
 setBrightness
 >>>>>>>>> Enter command payload:
-{"brightness" : 87}
+{"brightness": 87}
 >>>>>>>>> Enter content type:
 application/json
 
@@ -392,7 +392,7 @@ the application will wait up to 60 seconds for the device's response.
 
 In the terminal for the simulated device you should see the received command that looks like this
 
-    command///req/10117f669c12-09ef-416d-88c1-1787f894856d/setBrightness {"brightness" : 87}
+    command///req/10117f669c12-09ef-416d-88c1-1787f894856d/setBrightness {"brightness": 87}
 
 The element between `req` and `setBrightness` is the request identifier that must be included in the response.
 

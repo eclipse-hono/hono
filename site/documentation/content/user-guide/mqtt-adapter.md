@@ -250,7 +250,7 @@ For example, a request/response command with name `setBrightness` from an applic
 ```
 command///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
-  "brightness" : 79
+  "brightness": 79
 }
 ```
 
@@ -259,7 +259,7 @@ A corresponding *one-way* command might look like this:
 ```
 command///q//setBrightness
 {
-  "brightness" : 79
+  "brightness": 79
 }
 ```
 
@@ -290,7 +290,7 @@ For example, a request/response command with name `setBrightness` from an applic
 ```
 command/DEFAULT_TENANT/4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
-  "brightness" : 79
+  "brightness": 79
 }
 ```
 
@@ -299,7 +299,7 @@ A corresponding *one-way* command might look like this:
 ```
 command/DEFAULT_TENANT/4711/q//setBrightness
 {
-  "brightness" : 79
+  "brightness": 79
 }
 ```
 
@@ -342,7 +342,7 @@ For example, a request/response command for device `4711` with name `setBrightne
 ```
 command//4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
-  "brightness" : 79
+  "brightness": 79
 }
 ```
 
@@ -351,7 +351,7 @@ A corresponding *one-way* command might look like this:
 ```
 command//4711/q//setBrightness
 {
-  "brightness" : 79
+  "brightness": 79
 }
 ```
 

@@ -125,11 +125,11 @@ The JSON structure below contains example information for tenant `TEST_TENANT`. 
 
 ~~~json
 {
-  "tenant-id" : "TEST_TENANT",
+  "tenant-id": "TEST_TENANT",
   "defaults": {
     "ttl": 30
   },
-  "enabled" : true,
+  "enabled": true,
   "customer": "ACME Inc.",
   "resource-limits": {
     "max-connections": 100000,
@@ -142,15 +142,15 @@ The JSON structure below contains example information for tenant `TEST_TENANT`. 
       "effective-since": "2019-07-27T14:30:00Z"
     }
   },
-  "adapters" : [
+  "adapters": [
     {
-      "type" : "hono-mqtt",
-      "enabled" : true,
-      "device-authentication-required" : true
+      "type": "hono-mqtt",
+      "enabled": true,
+      "device-authentication-required": true
     }, {
-      "type" : "hono-http",
-      "enabled" : true,
-      "device-authentication-required" : true,
+      "type": "hono-http",
+      "enabled": true,
+      "device-authentication-required": true,
       "deployment": {
         "maxInstances": 4
       }

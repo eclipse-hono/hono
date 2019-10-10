@@ -55,9 +55,9 @@ Add a tenant that has all adapters set to enabled:
 Add a tenant that can only use the MQTT adapter:
 
     curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
-        "adapters" : [ {
-            "type" : "hono-mqtt",
-            "enabled" : true
+        "adapters": [ {
+            "type": "hono-mqtt",
+            "enabled": true
             } ]
       }' http://localhost:28080/v1/tenants/tenantMqttAdapter
     
@@ -87,10 +87,10 @@ The following command retrieves the details for the tenant `tenantMqttAdapter`:
     Content-Type: application/json; charset=utf-8
     
     {
-         "enabled" : true,
-         "adapters" : [ {
-             "type" : "hono-mqtt",
-             "enabled" : true
+         "enabled": true,
+         "adapters": [ {
+             "type": "hono-mqtt",
+             "enabled": true
          } ]
     }
 
@@ -114,9 +114,9 @@ This resource can be used to change the configuration of a particular tenant.
 The following command disables the MQTT adapter for devices that belong to the tenant `tenantMqttAdapter`:
 
     curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
-          "adapters" : [ {
-              "type" : "hono-mqtt",
-              "enabled" : true
+          "adapters": [ {
+              "type": "hono-mqtt",
+              "enabled": true
               } ]
       }' http://localhost:28080/v1/tenants/tenantMqttAdapter
     
@@ -305,7 +305,7 @@ The following commands add some `hashed-password` credentials for device `4720` 
         "type": "hashed-password",
         "auth-id": "sensor20",
         "secrets": [{
-            "hash-function" : "sha-512",
+            "hash-function": "sha-512",
             "pwd-hash": "'$PWD_HASH'"
         }]
       }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
@@ -321,7 +321,7 @@ The following command adds an expiration date to the `hashed-password` credentia
         "type": "hashed-password",
         "auth-id": "sensor20",
         "secrets": [{
-            "hash-function" : "sha-512",
+            "hash-function": "sha-512",
             "pwd-hash": "'$PWD_HASH'",
             "not-after": "2018-01-01T00:00:00+01:00"
         }]
@@ -339,7 +339,7 @@ The following commands add `psk` credentials for the same device `4720` using au
         "type": "hashed-password",
         "auth-id": "sensor20",
         "secrets": [{
-            "hash-function" : "bcrypt",
+            "hash-function": "bcrypt",
             "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6"
         }]
     },
@@ -348,7 +348,7 @@ The following commands add `psk` credentials for the same device `4720` using au
        "type": "psk",
        "auth-id": "sensor20",
        "secrets": [{
-         "key" : "'$SHARED_KEY'"
+         "key": "'$SHARED_KEY'"
          }]
       }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
     
