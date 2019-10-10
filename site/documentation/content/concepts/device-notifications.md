@@ -9,16 +9,14 @@ weight = 190
 
 ## Time until Disconnect Notification
 
-*Devices* and *Protocol Adapters* can notify an application about the fact that a device is connected and ready to receive one or more commands by means of including a *time 'til disconnect* (*ttd*) property in downstream AMQP 1.0 messages containing data originating from a connected device.
+*Devices* and *Protocol Adapters* can notify an application about the fact that a device is connected and ready to receive one or more commands by means of including a *time 'til disconnect* (*ttd*) property in telemetry or event messages.
 
 The *ttd* property value indicates the time that the device will stay connected to the protocol adapter.
 Using this value together with the *creation-time* of the message, an application can determine whether an attempt to send a command to the device has a reasonable chance of succeeding.
-
 The *ttd* property can be included in any regular telemetry or event message. However, if a device does not have any telemetry data or event to upload to the adapter, it can also use an [empty notification]({{< relref "/api/event#empty-notification" >}}) instead.
 
 Hono includes utility classes that application developers can use to register a callback to be notified when a device sends a *ttd* notification.
 See Hono's example module for details where such a notification callback is used.
-
 Please refer to the [Telemetry API]({{< relref "/api/telemetry" >}}) and the [Event API]({{< relref "/api/event" >}}) for further details.
 
 The following table defines the possible values of the *ttd* property and their semantics:
@@ -43,13 +41,10 @@ If the *current* time is *after* the *expiration* time, the device should be ass
 
 While it seems to be natural that a device itself indicates when it is ready to receive a command, it may not always be
 possible or desirable to do so.
-
 A device could e.g. be not capable to specify the value for *ttd* in it's message, or all devices of a particular setup
 would always use the same value for *ttd*, so it would not make much sense to provide this value always again.
-
 Additionally different protocols may or may not let a sender set specific values for a message, so a device using a 
 specific protocol may not be able to provide a value for the *ttd* property at all.
-
 For these reasons there are (resp. may be) additional ways of setting the value of *ttd*:
 
 - Hono's Tenant and Device Registration APIs support the inclusion of default values for application-properties in the
@@ -61,7 +56,6 @@ For these reasons there are (resp. may be) additional ways of setting the value 
 
 Hono's HTTP protocol adapter supports the setting of the *ttd* value in requests explicitly - please refer to the
 [HTTP Adapter]({{< relref "/user-guide/http-adapter.md" >}}) for details.
-
 Alternatively the default property values for devices from the Device Registry can be used (described above).
   
 ### Hono's MQTT protocol adapter

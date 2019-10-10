@@ -12,7 +12,7 @@ Hono does not make any assumptions about the format of a device identifier (or *
 
 ## Tenant
 
-Hono supports the logical partitioning of devices into groups called *tenants*. Each tenant has a unique identifier, a string called the *tenant-id*, and can be used to provide a logical grouping of devices belonging e.g. to the same application scope or organizational unit. Each device can thus be uniquely identified by the tuple (*tenant-id*, *device-id*). This tuple is broadly used throughout Hono's APIs when addressing a particular device.
+Hono supports the logical partitioning of devices into groups called [*tenants*]({{< relref "/concepts/tenancy" >}}). Each tenant has a unique identifier, a string called the *tenant-id*, and can be used to provide a logical grouping of devices belonging e.g. to the same application scope or organizational unit. Each device can thus be uniquely identified by the tuple (*tenant-id*, *device-id*). This tuple is broadly used throughout Hono's APIs when addressing a particular device.
 
 ## Device Registration
 
@@ -27,7 +27,7 @@ For demonstration purposes, Hono comes with a [simple default implementation]({{
 
 Devices connect to protocol adapters in order to publish telemetry data or events. Downstream applications consuming this data often take particular actions based on the content of the messages. Such actions may include simply updating some statistics, e.g. tracking the average room temperature, but may also trigger more serious activities like shutting down a power plant. It is therefore important that applications can rely on the fact that the messages they process have in fact been produced by the device indicated by a message's source address.
 
-Hono relies on protocol adapters to establish a device's identity before it is allowed to publish telemetry data or send events. Conceptually, Hono distinguishes between two identities
+Hono relies on protocol adapters to establish a device's identity before it is allowed to publish downstream data or receive commands. Conceptually, Hono distinguishes between two identities
 
 1. an identity associated with the authentication credentials (termed the *authentication identity* or *auth-id*), and
 1. an identity to act as (the *device identity* or *device-id*).

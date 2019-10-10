@@ -19,10 +19,8 @@ In the following the different aspects of multi-tenancy in Hono are addressed an
 ## The Tenant API
 
 By means of the [Tenant API]({{< relref "/api/tenant" >}}) Hono handles tenants as own *entities*.
-
 The API defines how to *retrieve* the details of a specific tenant. This offers the possibility to handle arbitrary
 properties on the level of a tenant (see e.g. [Protocol adapter configuration]({{< relref "#protocol-adapter-configuration" >}})).
-
 For convenience, there are CRUD operations for the handling of tenants, which can be found in the 
 [Device Registry]({{< relref "device-registry.md#managing-tenants" >}}).
 
@@ -30,7 +28,6 @@ For convenience, there are CRUD operations for the handling of tenants, which ca
 
 When a device connects to one of Hono's protocol adapters, the adapter determines the tenant this device belongs to.
 How this is done is described in the User Guide.
-
 After the tenant is determined, the adapter retrieves the details of the determined tenant by means of the Tenant API.
 Only if the tenant exists and is enabled the adapter further processes the data of the device that is connecting. Otherwise
 the connection will be closed.
@@ -38,7 +35,6 @@ the connection will be closed.
 ## Protocol Adapter Configuration
 
 Protocol adapters retrieve parts of their configuration on a tenant level by using the details of the determined tenant.
-
 This includes e.g. if a specific protocol adapter is enabled at all for this tenant, allowing to define tenants with 
 only a subset of Hono's functionality. This feature is foreseen to be especially important for production setups.
 
@@ -48,8 +44,8 @@ only a subset of Hono's functionality. This feature is foreseen to be especially
 - but is not allowed to use the HTTP protocol adapter
 
 
-Please refer to the [Tenant API]({{< relref "/api/tenant" >}}) to find out which protocol adapter properties are
-configurable on a tenant level. The number of such properties may grow during further development of Hono.
+Please refer to the [Tenant API]({{< relref "/api/tenant" >}}) to find out which protocol adapter properties 
+can be configured at the tenant level.
 
 ## AMQP 1.0 Endpoints
 
@@ -69,13 +65,9 @@ is addressing the tenants themselves.
 
 ## Devices and Tenants
 
-All devices of Hono belong to exactly one tenant, so any data is sent in the context of the
-tenant a device belongs to.
-
-It is important here to focus on Hono's view of a device: it is on a logical level, meaning a device is created in the 
-context of a tenant purely by using Hono's Credentials and Device Registration API. 
-
-Usually a physical device will be created in Hono as exactly one logical device, and thus belongs to exactly one tenant.
+A physical device will usually be represented in Hono as an entity in the device registry, having a unique identity 
+and belonging to exactly one tenant. All data sent from a device, as well as from the application to the device, 
+is therefore treated as belonging to the corresponding tenant.
 
 The following diagram shows the relation between tenants, devices and their credentials:
 
@@ -86,16 +78,15 @@ The following diagram shows the relation between tenants, devices and their cred
 
 An important detail in Hono's architecture is that data sent downstream is transported via the tenant
 scoped AMQP 1.0 links from the protocol adapters to the AMQP 1.0 network.
-
 Each tenant has its own pair of AMQP 1.0 links and is treated 
 independently from other tenants regarding the back pressure mechanism that AMQP 1.0 offers.
-
 This enables a *Business application* to limit the rate at which it consumes AMQP 1.0 messages per tenant.
+
+For the other direction, when commands are sent from the application to the device, the rate is also limited per tenant.
  
 ## Authorization at Tenant Level
 
 Hono's components authenticate each other by means of the [Authentication API]({{< ref "/api/authentication" >}}).
-
 The returned token for a successful authentication contains authorization information that is addressing the AMQP 1.0
 endpoints. Since the endpoints (as outlined above) are scoped to a tenant, this enables to configure tenants that are
 authorized to only a subset of Hono's full functionality.
@@ -110,7 +101,6 @@ This is done by not including the event endpoint in the authorization token for 
 ## Business Applications and Tenants
 
 The northbound *Business applications* are always connecting to the AMQP 1.0 endpoints of Hono.
- 
 By means of the authentication and authorization setup and the fact that the endpoints are scoped to a tenant, the 
 *Business application* is only acting in the context of one tenant.
 
@@ -118,13 +108,13 @@ By means of the authentication and authorization setup and the fact that the end
 ## Separation of Tenants
 
 Tenants are separated from each other in all of Hono's components. 
-
 Here is a summary of how this is implemented:
 
 - the registration of devices are strictly scoped to a tenant
 - the credentials of devices are strictly scoped to a tenant
 - protocol adapters can be enabled/disabled for a tenant 
 - the downstream data flow is isolated for every tenant
+- the upstream data flow ([Command &amp; Control]({{< ref "/concepts/command-and-control" >}})) is isolated for every tenant
 - *Business applications* need to authenticate to the AMQP 1.0 network and are by that mechanism scoped to their tenant
  
 ## Hints for Production

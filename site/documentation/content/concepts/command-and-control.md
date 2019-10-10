@@ -11,15 +11,14 @@ Commands can be sent following a *request/response* or a *one-way* pattern. For 
 
 ## Command & Control over HTTP Adapter
 
-The following sequence diagrams give an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagram. 
+The following sequence diagrams give an overview of a device connecting via HTTP, which gets a command from the business application in the response to a downstream message - being an arbitrary event in this example. 
+[Device Notifications]({{< relref "/concepts/device-notifications" >}}) are used to indicate to the application the period in which the device is ready to receive a command.
 
-**(Request/Response) command over HTTP:**
- 
-{{< figure src="../command_control_concept_http.svg" title="Command & Control over HTTP Adapter" >}}
+The application and the adapter connect to the AMQP Network, which forwards the transfer - for clarity this is not shown in the diagrams. 
 
-**One-way command over HTTP:**
+{{< figure src="../command_control_concept_one_way_http.svg" title="One-way Command over HTTP Adapter" >}} 
 
-{{< figure src="../command_control_concept_one_way_http.svg" title="One-way Command & Control over HTTP Adapter" >}} 
+{{< figure src="../command_control_concept_http.svg" title="Request/Response Command over HTTP Adapter" >}}
 
 With the *hono-ttd* request parameter in (1) the device indicates it will stay connected for max. 30 seconds. In the shown example this means that it can handle the response to the HTTP request for up to 30 seconds before considering the request being expired. 
 
@@ -51,45 +50,24 @@ that was opened by the application. If the response reached the application, the
 
 ## Command & Control over MQTT Adapter
 
-When the device is connected to the MQTT Adapter it receives *Request/Response* commands on the topic:
+When the device is connected to the MQTT adapter, it can subscribe to the topic filters described in the [User Guide]({{< relref "/user-guide/mqtt-adapter.md#command-control" >}}).
+The topic on which commands are published has the structure `command/[${tenant-id}]/[${device-id}]/req/[${req-id}]/${command}`.
 
-* `command/[${tenant}]/[${device-id}]/req/${req-id}/${command}`
+For authenticated devices, the tenant-id and device-id topic levels are empty, and for *one-way* commands, the `${req-id}` level is.
+For example, authenticated devices typically subscribe to `command///req/#`.
 
-and *one-way* commands on the topic:
-
-* `command/[${tenant}]/[${device-id}]/req//${command}`
-
-In the above topics, `${tenant}` and `${device-id}` are kept empty for authenticated devices. 
-
-Authenticated devices typically subscribe to
-
-* `command///req/#`
-
-while unauthenticated devices have to fully specify their `${tenant}` and `${device-id}` in the subscription topic:
-
-* `command/${tenant-id}/${device-id}/req/#`
-
-Authenticated gateways subscribe to commands for all devices they act on behalf of using topic filter
-
-* `command//+/req/#`
-
+Gateways (which always need to authenticate) subscribe to commands for all devices they act on behalf of using topic filter
+`command//+/req/#`
 and will receive commands on a topic that contains the target device id.
 
-The response of the command will be sent by the device to 
-
-* `command/[${tenant}]/[${device-id}]/res/${req-id}/${status}`
-
-If the device is authenticated, the `${tenant}` and `${device-id}` are left empty (resulting in 3 subsequent `/`s).
+In the case of request/response commands, the device must publish the response on the topic `command///res/${req-id}/${status}`, inserting the `${req-id}` from the command.
 
 The following diagrams show the message flow for commands over the MQTT adapter:
 
-**Request/Response commands** :
+{{< figure src="../command_control_concept_one_way_mqtt.svg" title="One-way Command over MQTT Adapter" >}} 
 
 {{< figure src="../command_control_concept_mqtt.svg" title="Request/Response Command over MQTT Adapter" >}} 
 
-**one-way commands** :
-
-{{< figure src="../command_control_concept_one_way_mqtt.svg" title="One-way Command over MQTT Adapter" >}} 
 
 ## Command & Control over AMQP Adapter
 
@@ -100,26 +78,8 @@ When a device connected to the AMQP adapter wants to receive commands from the a
 
 Once the receiver link is opened, the AMQP adapter sends command messages to devices through the link. The *subject* property of the request message contains the actual command to be executed on the device.
 
-If the command request is a *one-way command*, then the device need not publish a command response message. However, if the application expects a response, then devices should publish a response back to the application. If an anonymous sender link is already opened by the device (e.g for publishing telemetry or events), then the device can reuse that link to publish the command response message. Otherwise, the device should publish the response by opening an anonymous sender link. The device should set the message address, status and correlation-id properties of the response accordingly. Consult the table below for a list of properties that a device must set on a command response message.
+If the command request is a *one-way command*, then the device need not publish a command response message. However, if the application expects a response, then devices should publish a response back to the application. If an anonymous sender link is already opened by the device (e.g for publishing telemetry or events), then the device can reuse that link to publish the command response message. Otherwise, the device should publish the response by opening an anonymous sender link. The device should set the message address, status and correlation-id properties of the response accordingly. 
 
-**Command Request Message Properties**
-
-The following properties are set by the AMQP adapter on a command message sent to devices.
-
-| Name              | Mandatory       | Location                 | Type        | Description |
-| :--------------   | :-------------: | :----------------------- | :---------- | :---------- |
-| *subject*         | yes             | *properties*             | *string*    | Contains the name of the command to be executed on a device.|
-| *reply-to*        | yes             | *properties*             | *string*    | Contains the address to which the command response should be published to. This value is empty for one-way commands.|
-| *correlation-id*  | yes             | *properties*             | *string*    | Contains the identifier used to correlate the response with the command request. If the command sent by the application contains a correlation-id, then that value is used as the correlation-id of the command request sent to the device. Otherwise, the value of the message-id property is used instead. |
-
-**Command Response Message Properties**
-
-If the application expects a response (i.e the *reply-to* property is set), then the device should set the following properties on a command response message.
-
-| Name              | Mandatory       | Location                 | Type        | Description |
-| :--------------   | :-------------: | :----------------------- | :---------- | :---------- |
-| *to*              | yes             | *properties*             | *string*    | MUST contain the address to which the command response should be published to, which is the value of the reply-to property of the command request message.|
-| *correlation-id*  | yes             | *properties*             | *string*    | MUST contain the identifier used to correlate the response with the original request, which is the value of the correlation-id of the original request. |
-| *status*          | yes             | *application-properties* | *string*    | The status code indicating the outcome of processing the command by the device. MUST be set by the device after executing the command. |
+Consult the [User Guide]({{< relref "/user-guide/amqp-adapter.md#command-control" >}}) for a list of properties in request and response messages.
 
 {{< figure src="../command_control_concept_amqp.svg" title="Command & Control over AMQP Adapter" >}} 
