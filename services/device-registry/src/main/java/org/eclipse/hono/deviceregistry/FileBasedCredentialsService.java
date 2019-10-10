@@ -530,6 +530,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                 credentialsJson.put(CredentialsConstants.FIELD_SECRETS, secretsJson);
             }
             secretsJson.addAll(credentialObject.getJsonArray(CredentialsConstants.FIELD_SECRETS));
+            // add an id for each secret.
+            secretsJson.forEach(secret -> {
+                ((JsonObject) secret).put(RegistryManagementConstants.FIELD_SECRETS_ID, UUID.randomUUID().toString());
+            });
             credentialsForTenant.put(authId, json);
         }
 
@@ -654,6 +658,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         for (final Object credential : matchingCredentials) {
             final JsonObject credentialsObject = (JsonObject) credential;
             credentialsObject.remove(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+            removePasswordDetails(credentialsObject);
             final CommonCredential cred = credentialsObject.mapTo(CommonCredential.class);
             credentials.add(cred);
         }
@@ -794,5 +799,20 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
     protected int getMaxBcryptIterations() {
         return getConfig().getMaxBcryptIterations();
+    }
+
+    /**
+     * Strips the hashed-password details from the jsonObject if needed.
+     */
+    private void removePasswordDetails(final JsonObject credential){
+        if (credential.getString(CredentialsConstants.FIELD_TYPE) == CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD){
+
+            credential.getJsonArray(CredentialsConstants.FIELD_SECRETS).forEach(secret -> {
+                ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+                ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+                ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_SALT);
+                ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
+                    });
+        }
     }
 }

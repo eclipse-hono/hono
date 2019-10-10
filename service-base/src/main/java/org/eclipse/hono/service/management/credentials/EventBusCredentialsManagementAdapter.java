@@ -152,7 +152,9 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
     protected CommonCredential decodeCredential(final String type, final JsonObject object) {
         switch (type) {
             case RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD:
-                return object.mapTo(PasswordCredential.class);
+                final PasswordCredential passwordCredential = object.mapTo(PasswordCredential.class);
+                passwordCredential.getSecrets().forEach(s -> s.checkIsPlainText());
+                return passwordCredential;
             case RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY:
                 return object.mapTo(PskCredential.class);
             case RegistryManagementConstants.SECRETS_TYPE_X509_CERT:

@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -1253,8 +1252,7 @@ public final class IntegrationTestSupport {
      * @return The new instance.
      */
     public static PasswordCredential createPasswordCredential(final String authId, final String password) {
-        return AbstractCredentialsServiceTest.createPasswordCredential(authId, password,
-                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
+        return AbstractCredentialsServiceTest.createPlainPasswordCredential(authId, password);
     }
 
 }

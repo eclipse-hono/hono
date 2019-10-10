@@ -124,6 +124,23 @@ public class PasswordSecret extends CommonSecret {
     }
 
     /**
+     * Verifies that only the "password-plain" field is set in the Password Secret, i.e. the password is not hashed.
+     *
+     * @throws IllegalStateException if this is not the case.
+     */
+    public void checkIsPlainText() {
+        if (Strings.isNullOrEmpty(passwordPlain)) {
+            throw new IllegalStateException(String.format("'%s' must be provided", RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN));
+        }
+        if (!Strings.isNullOrEmpty(hashFunction)) {
+            throw new IllegalStateException(String.format("'%s' must be empty", RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION));
+        }
+        if (!Strings.isNullOrEmpty(passwordHash)) {
+            throw new IllegalStateException(String.format("'%s' must be empty", RegistryManagementConstants.FIELD_SECRETS_PWD_HASH));
+        }
+    }
+
+    /**
      * Encodes the clear text password contained in the <em>pwd-plain</em> field.
      * 
      * @param encoder The password encoder to use.

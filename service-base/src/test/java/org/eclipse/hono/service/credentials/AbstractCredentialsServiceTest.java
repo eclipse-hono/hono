@@ -40,6 +40,7 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingConsumer;
 
@@ -218,7 +219,7 @@ public abstract class AbstractCredentialsServiceTest {
     }
 
     /**
-     * Create a new password secret.
+     * Create a new password secret containing a hashed secret.
      * 
      * @param password The password to use.
      * @param maxBcryptIterations max bcrypt iterations to use.
@@ -239,6 +240,19 @@ public abstract class AbstractCredentialsServiceTest {
     }
 
     /**
+     * Create a new password secret with a plain password secret.
+     *
+     * @param password The password to use.
+     * @return The password secret instance.
+     */
+    public static PasswordSecret createPlainTextPasswordSecret(final String password) {
+
+        final PasswordSecret s = new PasswordSecret();
+       s.setPasswordPlain(password);
+        return s;
+    }
+
+    /**
      * Verify that provided secret contains valid password.
      * @param secret Secret to check.
      * @param password Expected password.
@@ -250,6 +264,16 @@ public abstract class AbstractCredentialsServiceTest {
                 maxBcryptIterations.orElse(SpringBasedHonoPasswordEncoder.DEFAULT_BCRYPT_STRENGTH));
 
         return encoder.matches(password, JsonObject.mapFrom(secret));
+    }
+
+    /**
+     * Verify that provided secret does contains any of the hash, the salt, or the hash function.
+     * @param secret Secret to check.
+     */
+    public void assertPasswordSecretDoesNotContainPasswordDetails(final PasswordSecret secret) {
+        assertNull(secret.getPasswordHash());
+        assertNull(secret.getHashFunction());
+        assertNull(secret.getSalt());
     }
 
     /**
@@ -412,7 +436,8 @@ public abstract class AbstractCredentialsServiceTest {
                                     assertEquals(1, credentials.size());
                                     final List<PasswordSecret> secrets = ((PasswordCredential) credentials.get(0)).getSecrets();
                                     assertEquals(1, secrets.size());
-                                    assertEquals(true, verifyPasswordSecret(secrets.get(0), password, OptionalInt.empty()));
+                                    assertNotNull(JsonObject.mapFrom(secrets.get(0)).getString(RegistryManagementConstants.FIELD_SECRETS_ID));
+                                    assertPasswordSecretDoesNotContainPasswordDetails(secrets.get(0));
                                     assertNull(secrets.get(0).getPasswordPlain());
                                     assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },

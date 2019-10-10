@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +30,6 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -86,7 +84,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
+        final Collection<CommonCredential> credentials = getRandomPlainTextPasswordCredentials(authId);
 
         getHelper().registry
                 .registerDevice(Constants.DEFAULT_TENANT, deviceId)
@@ -119,7 +117,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = getRandomHashedPasswordCredential(authId);
+        final CommonCredential credential = getRandomPlainTextPasswordCredential(authId);
         credential.setEnabled(false);
 
         getHelper().registry
@@ -148,7 +146,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
+        final Collection<CommonCredential> credentials = getRandomPlainTextPasswordCredentials(authId);
 
         // FIXME: credentials.setProperty("client-id", "gateway-one");
 
@@ -186,7 +184,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
+        final Collection<CommonCredential> credentials = getRandomPlainTextPasswordCredentials(authId);
         // FIXME: credentials.setProperty("client-id", "gateway-one");
 
         final JsonObject clientContext = new JsonObject()
@@ -214,7 +212,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
         final String authId = UUID.randomUUID().toString();
-        final Collection<CommonCredential> credentials = getRandomHashedPasswordCredentials(authId);
+        final Collection<CommonCredential> credentials = getRandomPlainTextPasswordCredentials(authId);
 
         final JsonObject clientContext = new JsonObject()
                 .put("client-id", "gateway-one");
@@ -229,20 +227,17 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         }));
     }
 
-    private Collection<CommonCredential> getRandomHashedPasswordCredentials(final String authId) {
-        return Collections.singleton(getRandomHashedPasswordCredential(authId));
+    private Collection<CommonCredential> getRandomPlainTextPasswordCredentials(final String authId) {
+        return Collections.singleton(getRandomPlainTextPasswordCredential(authId));
     }
 
-    private CommonCredential getRandomHashedPasswordCredential(final String authId) {
+    private CommonCredential getRandomPlainTextPasswordCredential(final String authId) {
 
-        final var secret1 = AbstractCredentialsServiceTest.createPasswordSecret("ClearTextPWD",
-                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
+        final var secret1 = AbstractCredentialsServiceTest.createPlainTextPasswordSecret("ClearTextPWD");
         secret1.setNotBefore(Instant.parse("2017-05-01T14:00:00Z"));
         secret1.setNotAfter(Instant.parse("2037-06-01T14:00:00Z"));
 
-        final var secret2 = AbstractCredentialsServiceTest.createPasswordSecret("hono-password",
-                OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
-
+        final var secret2 = AbstractCredentialsServiceTest.createPlainTextPasswordSecret("hono-password");
         final var credential = new PasswordCredential();
         credential.setAuthId(authId);
         credential.setSecrets(Arrays.asList(secret1, secret2));

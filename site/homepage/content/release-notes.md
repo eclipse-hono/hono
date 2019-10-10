@@ -47,6 +47,9 @@ title = "Release Notes"
   Also the configuration parameters for the resource limits were renamed from `hono.plan`
   to `hono.resourceLimits`. Please refer to the protocol adapter [configuration guides]
   ({{% doclink "/admin-guide/" %}}) for more information.
+ * The device registry credentials endpoint will not accept secrets containing already 
+   hashed password anymore. The passwords MUST be sent as plain-text values and hashed 
+   by the device registry. 
 
 ### Deprecations
 

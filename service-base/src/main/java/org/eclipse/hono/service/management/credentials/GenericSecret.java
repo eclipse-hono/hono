@@ -35,5 +35,4 @@ public class GenericSecret extends CommonSecret {
     public Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
-
 }

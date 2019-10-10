@@ -256,15 +256,15 @@ public class CredentialsHttpIT {
 
     /**
      * Verifies that the service returns a 400 status code for an add credentials request with hashed password
-     * credentials that use a BCrypt hash with more than the configured max iterations.
+     * credentials.
      * 
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsFailsForBCryptWithTooManyIterations(final TestContext context)  {
+    public void testAddCredentialsFailsForHashedPassword(final TestContext context)  {
 
-        // GIVEN a hashed password using bcrypt with more than the configured max iterations
-        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS + 1);
+        // GIVEN a hashed password
+        final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS);
 
         final PasswordCredential credential = new PasswordCredential();
         credential.setAuthId(authId);
@@ -413,10 +413,10 @@ public class CredentialsHttpIT {
                 HttpURLConnection.HTTP_NO_CONTENT)
                 .compose(ar -> registry.getCredentials(TENANT, deviceId))
                 .setHandler(context.asyncAssertSuccess(b -> {
-                    context.assertEquals(
-                            new JsonArray()
-                                    .add(JsonObject.mapFrom(hashedPasswordCredential)),
-                            b.toJsonArray());
+                    final PasswordCredential cred = b.toJsonArray().getJsonObject(0).mapTo(PasswordCredential.class);
+                    cred.getSecrets().forEach(secret -> {
+                        context.assertNotNull(secret.getId());
+                    });
                 }));
 
     }
@@ -548,8 +548,40 @@ public class CredentialsHttpIT {
     private static void assertResponseBodyContainsAllCredentials(final TestContext context, final JsonArray responseBody,
             final List<CommonCredential> expected) {
 
+        context.assertEquals(expected.size(), responseBody.size());
+
+        responseBody.forEach(credential -> {
+            JsonObject.mapFrom(credential).getJsonArray(CredentialsConstants.FIELD_SECRETS)
+                    .forEach(secret -> {
+                        // each secret should contain an ID.
+                        context.assertNotNull(JsonObject.mapFrom(secret)
+                                .getString(RegistryManagementConstants.FIELD_SECRETS_ID));
+                    });
+        });
+
+        // secrets id were added by registry, strip it so we can compare other fields.
+        responseBody.forEach(credential ->{
+            ((JsonObject) credential).getJsonArray(CredentialsConstants.FIELD_SECRETS)
+                    .forEach(secret -> {
+                        ((JsonObject) secret).remove(RegistryManagementConstants.FIELD_SECRETS_ID);
+                    });
+        });
+
         final JsonArray expectedArray = new JsonArray();
-        expected.stream().forEach(credential -> expectedArray.add(JsonObject.mapFrom(credential)));
+        expected.stream().forEach(credential -> {
+            final JsonObject jsonCredential = JsonObject.mapFrom(credential);
+            jsonCredential.getJsonArray(CredentialsConstants.FIELD_SECRETS)
+                    .forEach(secret -> {
+                        // password details should not be expected from the registry as well
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_SALT);
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
+                    });
+            expectedArray.add(jsonCredential);
+        });
+
+        // now compare the other fields
         context.assertEquals(expectedArray, responseBody);
     }
 

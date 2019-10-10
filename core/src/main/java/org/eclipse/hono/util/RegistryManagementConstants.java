@@ -108,6 +108,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
 
     /* secrets fields */
     /**
+     * The name of the field that contains the secret id.
+     */
+    public static final String FIELD_SECRETS_ID                 = "id";
+    /**
      * The name of the field that contains the password hash.
      */
     public static final String FIELD_SECRETS_PWD_HASH            = "pwd-hash";
