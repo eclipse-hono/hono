@@ -79,7 +79,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * @param ep The endpoint.
      */
     public final void addEndpoint(final HttpEndpoint ep) {
-        LOG.debug("registering endpoint [{}]", ep.getName());
+        log.debug("registering endpoint [{}]", ep.getName());
         endpoints.add(Objects.requireNonNull(ep));
     }
 
@@ -197,7 +197,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         // 2. default handler for failed routes
         matchAllRoute.failureHandler(new DefaultFailureHandler());
         // 3. BodyHandler with request size limit
-        LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
+        log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         matchAllRoute.handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY)
                 .setBodyLimit(getConfig().getMaxPayloadSize()));
         //4. AuthHandler
@@ -308,14 +308,14 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             server.requestHandler(router).listen(bindAttempt -> {
                 if (bindAttempt.succeeded()) {
                     if (getPort() == getPortDefaultValue()) {
-                        LOG.info("server listens on standard secure port [{}:{}]", bindAddress, server.actualPort());
+                        log.info("server listens on standard secure port [{}:{}]", bindAddress, server.actualPort());
                     } else {
-                        LOG.warn("server listens on non-standard secure port [{}:{}], default is {}", bindAddress,
+                        log.warn("server listens on non-standard secure port [{}:{}], default is {}", bindAddress,
                                 server.actualPort(), getPortDefaultValue());
                     }
                     result.complete(bindAttempt.result());
                 } else {
-                    LOG.error("cannot bind to secure port", bindAttempt.cause());
+                    log.error("cannot bind to secure port", bindAttempt.cause());
                     result.fail(bindAttempt.cause());
                 }
             });
@@ -336,14 +336,14 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             insecureServer.requestHandler(router).listen(bindAttempt -> {
                 if (bindAttempt.succeeded()) {
                     if (getInsecurePort() == getInsecurePortDefaultValue()) {
-                        LOG.info("server listens on standard insecure port [{}:{}]", bindAddress, insecureServer.actualPort());
+                        log.info("server listens on standard insecure port [{}:{}]", bindAddress, insecureServer.actualPort());
                     } else {
-                        LOG.warn("server listens on non-standard insecure port [{}:{}], default is {}", bindAddress,
+                        log.warn("server listens on non-standard insecure port [{}:{}], default is {}", bindAddress,
                                 insecureServer.actualPort(), getInsecurePortDefaultValue());
                     }
                     result.complete(bindAttempt.result());
                 } else {
-                    LOG.error("cannot bind to insecure port", bindAttempt.cause());
+                    log.error("cannot bind to insecure port", bindAttempt.cause());
                     result.fail(bindAttempt.cause());
                 }
             });
@@ -366,7 +366,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             final
             List<Future> endpointFutures = new ArrayList<>(endpoints.size());
             for (final HttpEndpoint ep : endpoints) {
-                LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+                log.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
                 endpointFutures.add(ep.start());
             }
             CompositeFuture.all(endpointFutures).setHandler(startup -> {
@@ -387,7 +387,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (final HttpEndpoint ep : endpoints) {
-            LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+            log.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
         CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
@@ -415,7 +415,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     private Future<Void> stopServer() {
         final Future<Void> serverStopTracker = Future.future();
         if (server != null) {
-            LOG.info("stopping secure HTTP server [{}:{}]", getBindAddress(), getActualPort());
+            log.info("stopping secure HTTP server [{}:{}]", getBindAddress(), getActualPort());
             server.close(serverStopTracker);
         } else {
             serverStopTracker.complete();
@@ -426,7 +426,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     private Future<Void> stopInsecureServer() {
         final Future<Void> insecureServerStopTracker = Future.future();
         if (insecureServer != null) {
-            LOG.info("stopping insecure HTTP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
+            log.info("stopping insecure HTTP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
             insecureServer.close(insecureServerStopTracker);
         } else {
             insecureServerStopTracker.complete();

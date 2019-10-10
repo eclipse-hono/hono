@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.AbstractEndpoint;
@@ -227,7 +227,7 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      */
     protected final BiConsumer<Integer, EventBusMessage> getDefaultResponseHandler(
             final RoutingContext ctx,
-            final Predicate<Integer> successfulOutcomeFilter,
+            final IntPredicate successfulOutcomeFilter,
             final Handler<HttpServerResponse> customHandler) {
 
         Objects.requireNonNull(successfulOutcomeFilter);
@@ -270,7 +270,7 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
      */
     protected final BiConsumer<Integer, EventBusMessage> getDefaultResponseHandler(
             final RoutingContext ctx,
-            final Predicate<Integer> successfulOutcomeFilter,
+            final IntPredicate successfulOutcomeFilter,
             final BiConsumer<HttpServerResponse, EventBusMessage> customHandler) {
 
         Objects.requireNonNull(successfulOutcomeFilter);

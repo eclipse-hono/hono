@@ -39,8 +39,8 @@ public final class AuthoritiesImpl implements Authorities {
     public static final String PREFIX_OPERATION = "o:";
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthoritiesImpl.class);
-    private static final String opTemplate = PREFIX_OPERATION + "%s:%s";
-    private static final String resTemplate = PREFIX_RESOURCE + "%s";
+    private static final String TEMPLATE_OP = PREFIX_OPERATION + "%s:%s";
+    private static final String TEMPLATE_RESOURCE = PREFIX_RESOURCE + "%s";
     // holds mapping resources -> activities
     private final Map<String, String> authorities = new HashMap<>();
 
@@ -73,17 +73,17 @@ public final class AuthoritiesImpl implements Authorities {
 
     private static String getOperationKey(final String endpoint, final String tenant, final String operation) {
         if (tenant == null) {
-            return String.format(opTemplate, endpoint, operation);
+            return String.format(TEMPLATE_OP, endpoint, operation);
         } else {
-            return String.format(opTemplate, endpoint + "/" + tenant, operation);
+            return String.format(TEMPLATE_OP, endpoint + "/" + tenant, operation);
         }
     }
 
     private static String getResourceKey(final String endpoint, final String tenant) {
         if (tenant == null) {
-            return String.format(resTemplate, endpoint);
+            return String.format(TEMPLATE_RESOURCE, endpoint);
         } else {
-            return String.format(resTemplate, endpoint + "/" + tenant);
+            return String.format(TEMPLATE_RESOURCE, endpoint + "/" + tenant);
         }
     }
 
@@ -161,15 +161,15 @@ public final class AuthoritiesImpl implements Authorities {
 
         boolean allowed = false;
         if (resource.getResourceId() != null) {
-            allowed = isAuthorized(String.format(resTemplate, resource.toString()), intent);
+            allowed = isAuthorized(String.format(TEMPLATE_RESOURCE, resource.toString()), intent);
         }
         if (!allowed && resource.getTenantId() != null) {
-            allowed = isAuthorized(String.format(resTemplate, resource.getEndpoint() + "/" + resource.getTenantId()), intent) ||
-                    isAuthorized(String.format(resTemplate, resource.getEndpoint() + "/*"), intent);
+            allowed = isAuthorized(String.format(TEMPLATE_RESOURCE, resource.getEndpoint() + "/" + resource.getTenantId()), intent) ||
+                    isAuthorized(String.format(TEMPLATE_RESOURCE, resource.getEndpoint() + "/*"), intent);
         }
         if (!allowed) {
-            allowed = isAuthorized(String.format(resTemplate, resource.getEndpoint()), intent) ||
-                    isAuthorized(String.format(resTemplate, "*"), intent);
+            allowed = isAuthorized(String.format(TEMPLATE_RESOURCE, resource.getEndpoint()), intent) ||
+                    isAuthorized(String.format(TEMPLATE_RESOURCE, "*"), intent);
         }
         return allowed;
     }
@@ -179,20 +179,20 @@ public final class AuthoritiesImpl implements Authorities {
 
         boolean allowed = false;
         if (resource.getResourceId() != null) {
-            allowed = isAuthorized(String.format(opTemplate, resource.toString(), operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, resource.toString(), "*"), Activity.EXECUTE);
+            allowed = isAuthorized(String.format(TEMPLATE_OP, resource.toString(), operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(TEMPLATE_OP, resource.toString(), "*"), Activity.EXECUTE);
         }
         if (!allowed && resource.getTenantId() != null) {
-            allowed = isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/" + resource.getTenantId(), operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/" + resource.getTenantId(), "*"), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/*", operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, resource.getEndpoint() + "/*", "*"), Activity.EXECUTE);
+            allowed = isAuthorized(String.format(TEMPLATE_OP, resource.getEndpoint() + "/" + resource.getTenantId(), operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(TEMPLATE_OP, resource.getEndpoint() + "/" + resource.getTenantId(), "*"), Activity.EXECUTE) ||
+                    isAuthorized(String.format(TEMPLATE_OP, resource.getEndpoint() + "/*", operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(TEMPLATE_OP, resource.getEndpoint() + "/*", "*"), Activity.EXECUTE);
         }
         if (!allowed) {
-            allowed = isAuthorized(String.format(opTemplate, resource.getEndpoint(), operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, resource.getEndpoint(), "*"), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, "*", operation), Activity.EXECUTE) ||
-                    isAuthorized(String.format(opTemplate, "*", "*"), Activity.EXECUTE);
+            allowed = isAuthorized(String.format(TEMPLATE_OP, resource.getEndpoint(), operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(TEMPLATE_OP, resource.getEndpoint(), "*"), Activity.EXECUTE) ||
+                    isAuthorized(String.format(TEMPLATE_OP, "*", operation), Activity.EXECUTE) ||
+                    isAuthorized(String.format(TEMPLATE_OP, "*", "*"), Activity.EXECUTE);
         }
         return allowed;
     }

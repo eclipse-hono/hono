@@ -33,7 +33,7 @@ public abstract class AbstractCliClient {
     /**
      * A logger to be shared with subclasses.
      */
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
+    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
      * The vert.x instance to run on.

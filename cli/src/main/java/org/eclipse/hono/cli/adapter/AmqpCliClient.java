@@ -101,7 +101,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
             options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
 
 
-            LOG.info("connecting to AMQP org.eclipse.hono.cli.app.adapter using SASL PLAIN [host: {}, port: {}, username: {}]",
+            log.info("connecting to AMQP org.eclipse.hono.cli.app.adapter using SASL PLAIN [host: {}, port: {}, username: {}]",
                     properties.getHost(), properties.getPort(), properties.getUsername());
 
             client.connect(
@@ -118,7 +118,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
             } else {
                 // SASL ANONYMOUS auth
             }
-            LOG.info("connecting to AMQP org.eclipse.hono.cli.app.adapter [host: {}, port: {}]", properties.getHost(), properties.getPort());
+            log.info("connecting to AMQP org.eclipse.hono.cli.app.adapter [host: {}, port: {}]", properties.getHost(), properties.getPort());
             client.connect(options, properties.getHost(), properties.getPort(), connectAttempt);
         }
 

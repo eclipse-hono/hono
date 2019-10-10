@@ -450,18 +450,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     protected final Future<Void> stopInternal() {
 
-        LOG.info("stopping protocol adapter");
+        log.info("stopping protocol adapter");
         final Future<Void> result = Future.future();
         final Future<Void> doStopResult = Future.future();
         doStop(doStopResult);
         doStopResult
                 .compose(s -> closeServiceClients())
                 .recover(t -> {
-                    LOG.info("error while stopping protocol adapter", t);
+                    log.info("error while stopping protocol adapter", t);
                     return Future.failedFuture(t);
                 }).compose(s -> {
                     result.complete();
-                    LOG.info("successfully stopped protocol adapter");
+                    log.info("successfully stopped protocol adapter");
                 }, result);
         return result;
     }
@@ -510,11 +510,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(tenantConfig);
 
         if (tenantConfig.isAdapterEnabled(getTypeName())) {
-            LOG.debug("protocol adapter [{}] is enabled for tenant [{}]",
+            log.debug("protocol adapter [{}] is enabled for tenant [{}]",
                     getTypeName(), tenantConfig.getTenantId());
             return Future.succeededFuture(tenantConfig);
         } else {
-            LOG.debug("protocol adapter [{}] is disabled for tenant [{}]",
+            log.debug("protocol adapter [{}] is disabled for tenant [{}]",
                     getTypeName(), tenantConfig.getTenantId());
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
                     "adapter disabled for tenant"));
@@ -631,7 +631,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             }
         }
         return result.recover(t -> {
-            LOG.debug("validation failed for address [{}], device [{}]: {}", address, authenticatedDevice, t.getMessage());
+            log.debug("validation failed for address [{}], device [{}]: {}", address, authenticatedDevice, t.getMessage());
             return Future.failedFuture(t);
         });
     }
@@ -695,22 +695,22 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         Objects.requireNonNull(factory);
         factory.addDisconnectListener(c -> {
-            LOG.info("lost connection to {}", serviceName);
+            log.info("lost connection to {}", serviceName);
             if (disconnectListener != null) {
                 disconnectListener.onDisconnect(c);
             }
         });
         factory.addReconnectListener(c -> {
-            LOG.info("connection to {} re-established", serviceName);
+            log.info("connection to {} re-established", serviceName);
             if (reconnectListener != null) {
                 reconnectListener.onReconnect(c);
             }
         });
         return factory.connect().map(c -> {
-            LOG.info("connected to {}", serviceName);
+            log.info("connected to {}", serviceName);
             return c;
         }).recover(t -> {
-            LOG.warn("failed to connect to {}", serviceName, t);
+            log.warn("failed to connect to {}", serviceName, t);
             return Future.failedFuture(t);
         });
     }
@@ -954,7 +954,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     // so don't wait for the outcome here
                     updateLastGateway(registrationAssertion, tenantId, deviceId, authenticatedDevice, context)
                             .otherwise(t -> {
-                                LOG.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
+                                log.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
                                 return null;
                             });
                     return Future.succeededFuture(registrationAssertion);
@@ -1448,7 +1448,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final String deviceId,
             final BiConsumer<ProtonDelivery, Message> commandMessageConsumer) {
 
-        LOG.debug("command consumer closed [tenantId: {}, deviceId: {}] - no command will be received for this device anymore",
+        log.debug("command consumer closed [tenantId: {}, deviceId: {}] - no command will be received for this device anymore",
                 tenant, deviceId);
     }
 
@@ -1468,7 +1468,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     procedure.complete(Status.OK());
                 });
             } else {
-                LOG.info("Protocol Adapter - HealthCheck Server context match. Assume protocol adapter is alive.");
+                log.info("Protocol Adapter - HealthCheck Server context match. Assume protocol adapter is alive.");
                 procedure.complete(Status.OK());
             }
         });

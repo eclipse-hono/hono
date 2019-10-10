@@ -27,7 +27,7 @@ import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
@@ -175,7 +175,7 @@ public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
             final RoutingContext ctx,
             final String tenantId,
             final String action,
-            final Predicate<Integer> successfulOutcomeFilter,
+            final IntPredicate successfulOutcomeFilter,
             final BiConsumer<HttpServerResponse, EventBusMessage> httpServerResponseHandler) {
 
         logger.debug("http request [{}] for tenant [tenant: {}]", action, tenantId);

@@ -82,7 +82,7 @@ public class CommandAndControlClient extends AmqpCliClient {
     private Future<ProtonReceiver> startCommandReceiver(final ProtonMessageHandler msgHandler) {
         return connectToAdapter()
         .compose(con -> {
-            LOG.info("connection to AMQP adapter established");
+            log.info("connection to AMQP adapter established");
             adapterConnection = con;
             return createSender();
         }).compose(s -> {

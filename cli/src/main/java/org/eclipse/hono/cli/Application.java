@@ -32,7 +32,7 @@ public class Application {
     private String profiles;
 
     @PostConstruct
-    private void start() throws Exception {
+    private void start() {
         LOG.info("running command line client in role(s): {}", profiles);
     }
 

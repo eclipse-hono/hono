@@ -190,7 +190,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     onStartupSuccess();
                     startFuture.complete();
                 } catch (final Exception e) {
-                    LOG.error("error in onStartupSuccess", e);
+                    log.error("error in onStartupSuccess", e);
                     startFuture.fail(e);
                 }
             }, startFuture);
@@ -304,7 +304,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         matchAllRoute.failureHandler(new DefaultFailureHandler());
 
         // 4. BodyHandler with request size limit
-        LOG.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
+        log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY)
                 .setBodyLimit(getConfig().getMaxPayloadSize());
         matchAllRoute.handler(bodyHandler);
@@ -416,10 +416,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
             server.requestHandler(router).listen(done -> {
                 if (done.succeeded()) {
-                    LOG.info("secure http server listening on {}:{}", bindAddress, server.actualPort());
+                    log.info("secure http server listening on {}:{}", bindAddress, server.actualPort());
                     result.complete(done.result());
                 } else {
-                    LOG.error("error while starting up secure http server", done.cause());
+                    log.error("error while starting up secure http server", done.cause());
                     result.fail(done.cause());
                 }
             });
@@ -439,10 +439,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
             insecureServer.requestHandler(router).listen(done -> {
                 if (done.succeeded()) {
-                    LOG.info("insecure http server listening on {}:{}", bindAddress, insecureServer.actualPort());
+                    log.info("insecure http server listening on {}:{}", bindAddress, insecureServer.actualPort());
                     result.complete(done.result());
                 } else {
-                    LOG.error("error while starting up insecure http server", done.cause());
+                    log.error("error while starting up insecure http server", done.cause());
                     result.fail(done.cause());
                 }
             });
@@ -458,7 +458,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         try {
             preShutdown();
         } catch (final Exception e) {
-            LOG.error("error in preShutdown", e);
+            log.error("error in preShutdown", e);
         }
 
         final Future<Void> serverStopTracker = Future.future();
@@ -695,7 +695,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 }).recover(t -> {
             if (t instanceof ResourceConflictException) {
                 // simply return an empty response
-                LOG.debug("ignoring empty notification [tenant: {}, device-id: {}], command consumer is already in use",
+                log.debug("ignoring empty notification [tenant: {}, device-id: {}], command consumer is already in use",
                         tenant, deviceId);
                 return Future.succeededFuture();
             } else {
@@ -704,7 +704,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }).map(proceed -> {
 
             if (ctx.response().closed()) {
-                LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
+                log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
                         endpoint, tenant, deviceId);
                 TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
                 currentSpan.finish();
@@ -712,7 +712,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                 setResponsePayload(ctx.response(), commandContext, currentSpan);
                 ctx.addBodyEndHandler(ok -> {
-                    LOG.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
+                    log.trace("successfully processed [{}] message for device [tenantId: {}, deviceId: {}]",
                             endpoint, tenant, deviceId);
                     if (commandContext != null) {
                         commandContext.getCurrentSpan().log("forwarded command to device in HTTP response body");
@@ -741,7 +741,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
                 });
                 ctx.response().exceptionHandler(t -> {
-                    LOG.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
+                    log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
                             endpoint, tenant, deviceId, t);
                     if (commandContext != null) {
                         commandContext.getCurrentSpan().log("failed to forward command to device in HTTP response body");
@@ -770,7 +770,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         }).recover(t -> {
 
-            LOG.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
+            log.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                     endpoint, tenant, deviceId, t);
             final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
             if (commandContext != null) {
@@ -838,7 +838,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         if (messageConsumer != null && !ctx.response().closed()) {
             ctx.response().closeHandler(v -> {
-                LOG.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
+                log.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
                         tenantId, deviceId);
                 currentSpan.log("device closed connection");
                 cancelCommandReceptionTimer(ctx);
@@ -882,7 +882,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Command command = commandContext.getCommand();
         response.putHeader(Constants.HEADER_COMMAND, command.getName());
         currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
-        LOG.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
+        log.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                 command.getName(), command.getRequestId(), command.getTenant(), command.getDeviceId());
 
         if (!command.isOneWay()) {
@@ -960,7 +960,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                         ProcessingOutcome.UNDELIVERABLE,
                                         command.getPayloadSize(),
                                         commandSample);
-                                LOG.debug("command for device has already fired [tenantId: {}, deviceId: {}]",
+                                log.debug("command for device has already fired [tenantId: {}, deviceId: {}]",
                                         tenantObject.getTenantId(), deviceId);
                                 commandContext.release();
                             } else {
@@ -994,7 +994,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     ProcessingOutcome.UNPROCESSABLE,
                                     command.getPayloadSize(),
                                     commandSample);
-                            LOG.debug("command message is invalid: {}", command);
+                            log.debug("command message is invalid: {}", command);
                             commandContext.reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
                         }
                         // we do not issue any new credit because the
@@ -1002,7 +1002,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         // only per HTTP request
                     },
                     remoteDetach -> {
-                        LOG.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantObject.getTenantId(), deviceId);
+                        log.debug("peer closed command receiver link [tenant-id: {}, device-id: {}]", tenantObject.getTenantId(), deviceId);
                         // command consumer is closed by closeHandler, no explicit close necessary here
                     }).map(consumer -> {
                         if (!responseReady.isComplete()) {
@@ -1061,11 +1061,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final Long timerId = ctx.vertx().setTimer(delaySecs * 1000L, id -> {
 
-            LOG.trace("time to wait [{}s] for command expired [timer id: {}]", delaySecs, id);
+            log.trace("time to wait [{}s] for command expired [timer id: {}]", delaySecs, id);
 
             if (responseReady.isComplete()) {
                 // a command has been sent to the device already
-                LOG.trace("response already sent, nothing to do ...");
+                log.trace("response already sent, nothing to do ...");
             } else {
                 // no command to be sent,
                 // send empty response
@@ -1074,7 +1074,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
         });
 
-        LOG.trace("adding command reception timer [id: {}]", timerId);
+        log.trace("adding command reception timer [id: {}]", timerId);
 
         ctx.put(KEY_TIMER_ID, timerId);
     }
@@ -1084,9 +1084,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Long timerId = ctx.get(KEY_TIMER_ID);
         if (timerId != null && timerId >= 0) {
             if (ctx.vertx().cancelTimer(timerId)) {
-                LOG.trace("Cancelled timer id {}", timerId);
+                log.trace("Cancelled timer id {}", timerId);
             } else {
-                LOG.debug("Could not cancel timer id {}", timerId);
+                log.debug("Could not cancel timer id {}", timerId);
             }
         }
     }
@@ -1116,7 +1116,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Buffer payload = ctx.getBody();
         final String contentType = HttpUtils.getContentType(ctx);
 
-        LOG.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
+        log.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
                 tenant, deviceId, commandRequestId, responseStatus);
 
         final Device authenticatedDevice = getAuthenticatedDevice(ctx);
@@ -1157,7 +1157,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             .compose(ok -> sendCommandResponse(tenant, commandResponseTracker.result(),
                                     currentSpan.context()))
                             .map(delivery -> {
-                                LOG.trace("delivered command response [command-request-id: {}] to application",
+                                log.trace("delivered command response [command-request-id: {}] to application",
                                         commandRequestId);
                                 currentSpan.log("delivered command response to application");
                                 metrics.reportCommand(
@@ -1172,7 +1172,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 return delivery;
                             });
                 }).otherwise(t -> {
-                    LOG.debug("could not send command response [command-request-id: {}] to application",
+                    log.debug("could not send command response [command-request-id: {}] to application",
                             commandRequestId, t);
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();

@@ -20,7 +20,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CommandConstants;
@@ -175,7 +175,7 @@ public class HonoHttpDevice {
 
         final CompletableFuture<Void> result = new CompletableFuture<>();
 
-        final Predicate<Integer> successfulStatus = statusCode -> statusCode >= 200 && statusCode < 300;
+        final IntPredicate successfulStatus = statusCode -> statusCode >= 200 && statusCode < 300;
 
         final HttpClientRequest req = httpClient
                 .post(request.isEvent ? "/event" : "/telemetry")

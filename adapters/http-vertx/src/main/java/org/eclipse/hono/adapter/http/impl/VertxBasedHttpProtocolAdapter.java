@@ -138,8 +138,8 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             addCommandResponseRoutes(CommandConstants.COMMAND_LEGACY_ENDPOINT, router, authHandler);
         } else {
 
-            LOG.warn("device authentication has been disabled");
-            LOG.warn("any device may publish data on behalf of all other devices");
+            log.warn("device authentication has been disabled");
+            log.warn("any device may publish data on behalf of all other devices");
             addTelemetryApiRoutes(router, null);
             addEventApiRoutes(router, null);
             addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, null);

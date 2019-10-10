@@ -72,18 +72,17 @@ public class Commander extends AbstractApplicationClient {
 
     private Future<Void> processCommand(final Command command) {
 
-
         final Future<CommandClient> commandClient = clientFactory.getOrCreateCommandClient(tenantId);
         return commandClient
                 .map(this::setRequestTimeOut)
                 .compose(c -> {
                     if (command.isOneWay()) {
-                        LOG.info("Command sent to device");
+                        log.info("Command sent to device");
                         return c.sendOneWayCommand(deviceId, command.getName(), command.getContentType(),
                                 Buffer.buffer(command.getPayload()), null)
                                 .map(ok -> c);
                     } else {
-                        LOG.info("Command sent to device... [waiting for response for max. {} seconds]",
+                        log.info("Command sent to device... [waiting for response for max. {} seconds]",
                                 requestTimeoutInSecs);
                         return c.sendCommand(deviceId, command.getName(), command.getContentType(),
                                 Buffer.buffer(command.getPayload()), null)
@@ -94,11 +93,11 @@ public class Commander extends AbstractApplicationClient {
                 .map(this::closeCommandClient)
                 .otherwise(error -> {
                     if (ServerErrorException.extractStatusCode(error) == HttpURLConnection.HTTP_UNAVAILABLE) {
-                        LOG.error(
+                        log.error(
                                 "Error sending command (error code 503). Is the device really waiting for a command? (device [{}] in tenant [{}])",
                                 deviceId, tenantId);
                     } else {
-                        LOG.error("Error sending command: {}", error.getMessage());
+                        log.error("Error sending command: {}", error.getMessage());
                     }
                     if (commandClient.succeeded()) {
                         return closeCommandClient(commandClient.result());
@@ -114,15 +113,15 @@ public class Commander extends AbstractApplicationClient {
     }
 
     private Void closeCommandClient(final CommandClient commandClient) {
-        LOG.trace("Close command connection to device [{}:{}]", tenantId, deviceId);
+        log.trace("Close command connection to device [{}:{}]", tenantId, deviceId);
         commandClient.close(closeHandler -> {
         });
         return null;
     }
 
     private Void printResponse(final BufferResult result) {
-        LOG.info("Received Command response: {}",
-                Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()).toString());
+        log.info("Received Command response : {}",
+                Optional.ofNullable(result.getPayload()).orElse(Buffer.buffer()));
         return null;
     }
 
@@ -149,7 +148,7 @@ public class Commander extends AbstractApplicationClient {
     private void close(final Throwable t) {
         workerExecutor.close();
         vertx.close();
-        LOG.error("Error: {}", t.getMessage());
+        log.error("Error: {}", t.getMessage());
     }
 
     /**

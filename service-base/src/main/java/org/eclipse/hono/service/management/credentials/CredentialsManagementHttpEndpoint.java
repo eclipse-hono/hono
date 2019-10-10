@@ -19,7 +19,7 @@ import java.net.HttpURLConnection;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Predicate;
+import java.util.function.IntPredicate;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
@@ -152,7 +152,7 @@ public final class CredentialsManagementHttpEndpoint extends AbstractHttpEndpoin
      */
     protected BiConsumer<Integer, EventBusMessage> getCredentialsResponseHandler(
             final RoutingContext ctx,
-            final Predicate<Integer> successfulOutcomeFilter) {
+            final IntPredicate successfulOutcomeFilter) {
 
         Objects.requireNonNull(successfulOutcomeFilter);
         final HttpServerResponse response = ctx.response();

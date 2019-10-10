@@ -175,7 +175,7 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
-                        LOG.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
+                        log.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
                                 messageId, config.getSendMessageTimeout());
                         TracingHelper.logError(currentSpan, exception.getMessage());
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
@@ -190,11 +190,11 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
             if (timeoutReached.get()) {
-                LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+                log.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
             } else if (deliveryUpdated.remotelySettled()) {
                 logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
             } else {
-                LOG.warn("peer did not settle message [message ID: {}, remote state: {}]",
+                log.warn("peer did not settle message [message ID: {}, remote state: {}]",
                         messageId, remoteState);
                 TracingHelper.logError(currentSpan, new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
@@ -202,7 +202,7 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
             }
             currentSpan.finish();
         });
-        LOG.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+        log.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
 
         return Future.succeededFuture(result);
     }

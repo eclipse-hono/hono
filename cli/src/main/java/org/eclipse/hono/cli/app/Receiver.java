@@ -71,9 +71,9 @@ public class Receiver extends AbstractApplicationClient {
     private CompositeFuture createConsumer(final HonoConnection connection) {
 
         final Handler<Void> closeHandler = closeHook -> {
-            LOG.info("close handler of consumer is called");
+            log.info("close handler of consumer is called");
             vertx.setTimer(connectionRetryInterval, reconnect -> {
-                LOG.info("attempting to re-open the consumer link ...");
+                log.info("attempting to re-open the consumer link ...");
                 createConsumer(connection);
             });
         };
@@ -104,20 +104,20 @@ public class Receiver extends AbstractApplicationClient {
 
         final Buffer payload = MessageHelper.getPayload(msg);
 
-        LOG.info("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(),
+        log.info("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(),
                 payload);
 
         if (msg.getApplicationProperties() != null) {
-            LOG.info("... with application properties: {}", msg.getApplicationProperties().getValue());
+            log.info("... with application properties: {}", msg.getApplicationProperties().getValue());
         }
     }
 
     private void handleCreateConsumerStatus(final AsyncResult<CompositeFuture> startup) {
         if (startup.succeeded()) {
-            LOG.info("Receiver [tenant: {}, mode: {}] created successfully, hit ctrl-c to exit", tenantId,
+            log.info("Receiver [tenant: {}, mode: {}] created successfully, hit ctrl-c to exit", tenantId,
                     messageType);
         } else {
-            LOG.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
+            log.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
             vertx.close();
         }
     }
