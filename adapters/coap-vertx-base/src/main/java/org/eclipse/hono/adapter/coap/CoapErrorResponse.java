@@ -109,6 +109,7 @@ public class CoapErrorResponse {
                 try {
                     return ResponseCode.valueOf(codeClass << 5 | codeDetail);
                 } catch (MessageFormatException e) {
+                    // ignore
                 }
             }
         }

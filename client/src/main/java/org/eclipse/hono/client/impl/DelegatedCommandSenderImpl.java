@@ -134,7 +134,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after "
                                         + connection.getConfig().getSendMessageTimeout() + "ms");
-                        LOG.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
+                        log.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
                                 messageId, connection.getConfig().getSendMessageTimeout());
                         result.fail(exception);
                     }
@@ -147,12 +147,12 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
             if (result.isComplete()) {
-                LOG.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+                log.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
             } else if (deliveryUpdated.remotelySettled()) {
                 logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
                 result.complete(deliveryUpdated);
             } else {
-                LOG.debug("peer did not settle message [message ID: {}, remote state: {}], failing delivery",
+                log.debug("peer did not settle message [message ID: {}, remote state: {}], failing delivery",
                         messageId, remoteState);
                 final ServiceInvocationException e = new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
@@ -160,10 +160,10 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                 result.fail(e);
             }
         });
-        LOG.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+        log.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
 
         return result.map(delivery -> {
-            LOG.trace("message [ID: {}] accepted by peer", messageId);
+            log.trace("message [ID: {}] accepted by peer", messageId);
             Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
             currentSpan.finish();
             return delivery;

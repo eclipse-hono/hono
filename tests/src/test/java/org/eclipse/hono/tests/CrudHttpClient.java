@@ -16,6 +16,7 @@ package org.eclipse.hono.tests;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
 import io.vertx.core.http.HttpClientResponse;
@@ -100,7 +101,7 @@ public final class CrudHttpClient {
     public Future<MultiMap> options(
             final String uri,
             final MultiMap requestHeaders,
-            final Predicate<Integer> successPredicate) {
+            final IntPredicate successPredicate) {
 
         Objects.requireNonNull(uri);
         return options(createRequestOptions().setURI(uri), requestHeaders, successPredicate);
@@ -119,7 +120,7 @@ public final class CrudHttpClient {
     public Future<MultiMap> options(
             final RequestOptions requestOptions,
             final MultiMap requestHeaders,
-            final Predicate<Integer> successPredicate) {
+            final IntPredicate successPredicate) {
 
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
@@ -299,7 +300,7 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<MultiMap> update(final String uri, final JsonObject body, final Predicate<Integer> successPredicate) {
+    public Future<MultiMap> update(final String uri, final JsonObject body, final IntPredicate successPredicate) {
         return update(uri, body, CONTENT_TYPE_JSON, successPredicate);
     }
 
@@ -314,7 +315,7 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<MultiMap> update(final String uri, final JsonArray body, final Predicate<Integer> successPredicate) {
+    public Future<MultiMap> update(final String uri, final JsonArray body, final IntPredicate successPredicate) {
         return update(uri, body, CONTENT_TYPE_JSON, successPredicate);
     }
 
@@ -329,8 +330,9 @@ public final class CrudHttpClient {
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
     public Future<MultiMap> update(final String uri, final JsonObject body, final String contentType,
-            final Predicate<Integer> successPredicate) {
+            final IntPredicate successPredicate) {
         return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate, true);
+
     }
 
     /**
@@ -344,8 +346,9 @@ public final class CrudHttpClient {
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
     public Future<MultiMap> update(final String uri, final JsonArray body, final String contentType,
-            final Predicate<Integer> successPredicate) {
+            final IntPredicate successPredicate) {
         return update(uri, Optional.ofNullable(body).map(json -> json.toBuffer()).orElse(null), contentType, successPredicate, true);
+
     }
 
     /**
@@ -360,7 +363,7 @@ public final class CrudHttpClient {
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
     public Future<MultiMap> update(final String uri, final Buffer body, final String contentType,
-            final Predicate<Integer> successPredicate, final boolean checkCorsHeaders) {
+            final IntPredicate successPredicate, final boolean checkCorsHeaders) {
 
         final MultiMap headers = Optional.ofNullable(contentType)
                 .map(ct -> MultiMap.caseInsensitiveMultiMap().add(HttpHeaders.CONTENT_TYPE, ct))
@@ -383,7 +386,7 @@ public final class CrudHttpClient {
             final String uri,
             final Buffer body,
             final MultiMap requestHeaders,
-            final Predicate<Integer> successPredicate) {
+            final IntPredicate successPredicate) {
 
         Objects.requireNonNull(uri);
         Objects.requireNonNull(successPredicate);
@@ -411,7 +414,7 @@ public final class CrudHttpClient {
             final String uri,
             final Buffer body,
             final MultiMap requestHeaders,
-            final Predicate<Integer> successPredicate,
+            final IntPredicate successPredicate,
             final boolean checkCorsHeaders) {
 
         Objects.requireNonNull(uri);
@@ -440,7 +443,7 @@ public final class CrudHttpClient {
             final RequestOptions requestOptions,
             final Buffer body,
             final MultiMap requestHeaders,
-            final Predicate<Integer> successPredicate,
+            final IntPredicate successPredicate,
             final boolean checkCorsHeaders) {
 
         Objects.requireNonNull(requestOptions);
@@ -486,7 +489,7 @@ public final class CrudHttpClient {
      *         future will contain the response body.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Buffer> get(final String uri, final Predicate<Integer> successPredicate) {
+    public Future<Buffer> get(final String uri, final IntPredicate successPredicate) {
 
         Objects.requireNonNull(uri);
         Objects.requireNonNull(successPredicate);
@@ -502,7 +505,7 @@ public final class CrudHttpClient {
      *         future will contain the response body.
      * @throws NullPointerException if options or predicate are {@code null}.
      */
-    public Future<Buffer> get(final RequestOptions requestOptions, final Predicate<Integer> successPredicate) {
+    public Future<Buffer> get(final RequestOptions requestOptions, final IntPredicate successPredicate) {
 
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
@@ -537,7 +540,7 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if URI or predicate are {@code null}.
      */
-    public Future<Void> delete(final String uri, final Predicate<Integer> successPredicate) {
+    public Future<Void> delete(final String uri, final IntPredicate successPredicate) {
 
         Objects.requireNonNull(uri);
         Objects.requireNonNull(successPredicate);
@@ -553,7 +556,7 @@ public final class CrudHttpClient {
      * @return A future that will succeed if the predicate evaluates to {@code true}.
      * @throws NullPointerException if options or predicate are {@code null}.
      */
-    public Future<Void> delete(final RequestOptions requestOptions, final Predicate<Integer> successPredicate) {
+    public Future<Void> delete(final RequestOptions requestOptions, final IntPredicate successPredicate) {
 
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);

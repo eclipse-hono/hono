@@ -205,10 +205,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         bindInsecureEndpoint(startingServer, insecureConfig.result());
                         startingServer.start();
                         if (secureEndpoint != null) {
-                            LOG.info("coaps/udp endpoint running on {}", secureEndpoint.getAddress());
+                            log.info("coaps/udp endpoint running on {}", secureEndpoint.getAddress());
                         }
                         if (insecureEndpoint != null) {
-                            LOG.info("coap/udp endpoint running on {}", insecureEndpoint.getAddress());
+                            log.info("coap/udp endpoint running on {}", insecureEndpoint.getAddress());
                         }
                         return ok;
                     });
@@ -217,7 +217,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 onStartupSuccess();
                 startFuture.complete();
             } catch (final Exception e) {
-                LOG.error("error in onStartupSuccess", e);
+                log.error("error in onStartupSuccess", e);
                 startFuture.fail(e);
             }
         }, startFuture);
@@ -258,7 +258,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 // Californium's cipher suites support ECC based keys only
                 dtlsConfig.setIdentity(keyLoader.getPrivateKey(), keyLoader.getCertificateChain());
             } else {
-                LOG.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
+                log.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
             }
         }
 
@@ -270,7 +270,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             startingServer.addEndpoint(this.secureEndpoint);
 
         } catch (final IllegalStateException ex) {
-            LOG.warn("failed to create secure endpoint", ex);
+            log.warn("failed to create secure endpoint", ex);
         }
     }
 
@@ -278,7 +278,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         if (getConfig().isInsecurePortEnabled()) {
             if (getConfig().isAuthenticationRequired()) {
-                LOG.warn("skipping start up of insecure endpoint, configuration requires authentication of devices");
+                log.warn("skipping start up of insecure endpoint, configuration requires authentication of devices");
             } else {
                 final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
                 builder.setNetworkConfig(config);
@@ -376,10 +376,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     try (InputStream is = new ByteArrayInputStream(readAttempt.result().getBytes())) {
                         networkConfig.load(is);
                     } catch (final IOException e) {
-                        LOG.warn("skipping malformed NetworkConfig properties [{}]", fileName);
+                        log.warn("skipping malformed NetworkConfig properties [{}]", fileName);
                     }
                 } else {
-                    LOG.warn("error reading NetworkConfig file [{}]", fileName, readAttempt.cause());
+                    log.warn("error reading NetworkConfig file [{}]", fileName, readAttempt.cause());
                 }
             });
         }
@@ -406,7 +406,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         try {
             preShutdown();
         } catch (final Exception e) {
-            LOG.error("error in preShutdown", e);
+            log.error("error in preShutdown", e);
         }
 
         final Future<Void> serverStopTracker = Future.future();
@@ -591,7 +591,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         return sender.send(downstreamMessage);
                     }
             }).map(delivery -> {
-                LOG.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName());
                 metrics.reportTelemetry(
                         endpoint,
@@ -604,7 +604,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 context.respondWithCode(ResponseCode.CHANGED);
                 return delivery;
             }).recover(t -> {
-                LOG.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
+                log.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName(), t);
                 metrics.reportTelemetry(
                         endpoint,

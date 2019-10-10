@@ -46,6 +46,8 @@ public class CommandContext extends MapBasedExecutionContext {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandContext.class);
 
+    private static final String ERROR_MSG_INVALID_CREDIT_VALUE = "credit must be >= 0";
+
     private final Command command;
     private final ProtonDelivery delivery;
     private final ProtonReceiver receiver;
@@ -147,7 +149,7 @@ public class CommandContext extends MapBasedExecutionContext {
     public void accept(final int credit) {
 
         if (credit < 0) {
-            throw new IllegalArgumentException("credit must be >= 0");
+            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
         }
         LOG.trace("accepting command message [{}]", getCommand());
         ProtonHelper.accepted(delivery, true);
@@ -181,7 +183,7 @@ public class CommandContext extends MapBasedExecutionContext {
     public void release(final int credit) {
 
         if (credit < 0) {
-            throw new IllegalArgumentException("credit must be >= 0");
+            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
         }
         ProtonHelper.released(delivery, true);
         TracingHelper.logError(currentSpan, "released command for device");
@@ -206,7 +208,7 @@ public class CommandContext extends MapBasedExecutionContext {
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere, final int credit) {
 
         if (credit < 0) {
-            throw new IllegalArgumentException("credit must be >= 0");
+            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
         }
         ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
         TracingHelper.logError(currentSpan, "modified command for device"
@@ -245,7 +247,7 @@ public class CommandContext extends MapBasedExecutionContext {
     public void reject(final ErrorCondition errorCondition, final int credit) {
 
         if (credit < 0) {
-            throw new IllegalArgumentException("credit must be >= 0");
+            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
         }
         final Rejected rejected = new Rejected();
         if (errorCondition != null) {
@@ -289,7 +291,7 @@ public class CommandContext extends MapBasedExecutionContext {
 
         Objects.requireNonNull(deliveryState);
         if (credit < 0) {
-            throw new IllegalArgumentException("credit must be >= 0");
+            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
         }
         delivery.disposition(deliveryState, true);
         if (Accepted.class.isInstance(deliveryState)) {

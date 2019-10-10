@@ -201,7 +201,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private Future<Void> stopInsecureServer() {
         final Future<Void> result = Future.future();
         if (insecureServer != null) {
-            LOG.info("Shutting down insecure server");
+            log.info("Shutting down insecure server");
             insecureServer.close(result);
         } else {
             result.complete();
@@ -213,7 +213,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Future<Void> result = Future.future();
         if (secureServer != null) {
 
-            LOG.info("Shutting down secure server");
+            log.info("Shutting down secure server");
             secureServer.close(result);
 
         } else {
@@ -234,7 +234,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             insecureServer = createServer(insecureServer, options);
             insecureServer.connectHandler(this::onConnectRequest).listen(ar -> {
                 if (ar.succeeded()) {
-                    LOG.info("insecure AMQP server listening on [{}:{}]", getConfig().getInsecurePortBindAddress(), getActualInsecurePort());
+                    log.info("insecure AMQP server listening on [{}:{}]", getConfig().getInsecurePortBindAddress(), getActualInsecurePort());
                     result.complete();
                 } else {
                     result.fail(ar.cause());
@@ -260,10 +260,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             secureServer = createServer(secureServer, options);
             secureServer.connectHandler(this::onConnectRequest).listen(ar -> {
                 if (ar.succeeded()) {
-                    LOG.info("secure AMQP server listening on {}:{}", getConfig().getBindAddress(), getActualPort());
+                    log.info("secure AMQP server listening on {}:{}", getConfig().getBindAddress(), getActualPort());
                     result.complete();
                 } else {
-                    LOG.error("cannot bind to secure port", ar.cause());
+                    log.error("cannot bind to secure port", ar.cause());
                     result.fail(ar.cause());
                 }
             });
@@ -292,7 +292,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     protected void onConnectRequest(final ProtonConnection con) {
 
         con.disconnectHandler(lostConnection -> {
-            LOG.debug("lost connection to device [container: {}]", con.getRemoteContainer());
+            log.debug("lost connection to device [container: {}]", con.getRemoteContainer());
             Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
             decrementConnectionCount(con);
         });
@@ -321,7 +321,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
         con.openHandler(remoteOpen -> {
             if (remoteOpen.failed()) {
-                LOG.debug("ignoring device's open frame containing error", remoteOpen.cause());
+                log.debug("ignoring device's open frame containing error", remoteOpen.cause());
             } else {
                 processRemoteOpen(remoteOpen.result());
             }
@@ -354,20 +354,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             if (authenticatedDevice == null) {
                 connectAuthorizationCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "anonymous devices not supported"));
             } else {
-                LOG.trace("received connection request from {}", authenticatedDevice);
+                log.trace("received connection request from {}", authenticatedDevice);
                 // the SASL handshake will already have authenticated the device
                 // and will have verified that the adapter is enabled for the tenant
                 // we still need to check if the device/gateway exists and is enabled
                 checkDeviceRegistration(authenticatedDevice, span.context())
                 .map(ok -> {
-                    LOG.debug("{} is registered and enabled", authenticatedDevice);
+                    log.debug("{} is registered and enabled", authenticatedDevice);
                     span.log("device is registered and enabled");
                     return ok;
                 }).setHandler(connectAuthorizationCheck);
             }
 
         } else {
-            LOG.trace("received connection request from anonymous device [container: {}]", con.getRemoteContainer());
+            log.trace("received connection request from anonymous device [container: {}]", con.getRemoteContainer());
             connectAuthorizationCheck.complete();
         }
 
@@ -379,7 +379,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             con.setContainer(getTypeName());
             con.setOfferedCapabilities(new Symbol[] {Constants.CAP_ANONYMOUS_RELAY});
             con.open();
-            LOG.debug("connection with device [container: {}] established", con.getRemoteContainer());
+            log.debug("connection with device [container: {}] established", con.getRemoteContainer());
             span.log("connection established");
             if (authenticatedDevice == null) {
                 metrics.incrementUnauthenticatedConnections();
@@ -441,7 +441,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *
      */
     private void handleSessionOpen(final ProtonConnection conn, final ProtonSession session) {
-        LOG.debug("opening new session with client [container: {}, session window size: {}]",
+        log.debug("opening new session with client [container: {}, session window size: {}]",
                 conn.getRemoteContainer(), getConfig().getMaxSessionWindowSize());
         session.setIncomingCapacity(getConfig().getMaxSessionWindowSize());
         session.open();
@@ -456,9 +456,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
 
         if (res.succeeded()) {
-            LOG.debug("client [container: {}] closed connection", con.getRemoteContainer());
+            log.debug("client [container: {}] closed connection", con.getRemoteContainer());
         } else {
-            LOG.debug("client [container: {}] closed connection with error", con.getRemoteContainer(), res.cause());
+            log.debug("client [container: {}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
         con.disconnectHandler(null);
         con.close();
@@ -509,7 +509,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             closeLinkWithError(receiver, ex, span);
         } else  if (receiver.getRemoteTarget() != null && receiver.getRemoteTarget().getAddress() != null) {
             if (!receiver.getRemoteTarget().getAddress().isEmpty()) {
-                LOG.debug("closing link due to the presence of target address [{}]", receiver.getRemoteTarget().getAddress());
+                log.debug("closing link due to the presence of target address [{}]", receiver.getRemoteTarget().getAddress());
             }
             final Exception ex = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                     "this adapter supports anonymous relay mode only");
@@ -537,10 +537,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             });
             receiver.open();
             if (authenticatedDevice == null) {
-                LOG.debug("established link for receiving messages from device [container: {}]",
+                log.debug("established link for receiving messages from device [container: {}]",
                         conn.getRemoteContainer());
             } else {
-                LOG.debug("established link for receiving messages from device [tenant: {}, device-id: {}]]",
+                log.debug("established link for receiving messages from device [tenant: {}, device-id: {}]]",
                         authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
             }
             span.log("link established");
@@ -763,7 +763,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             // At this point, the remote peer's receiver link is successfully opened and is ready to receive
             // commands. Send "device ready for command" notification downstream.
-            LOG.debug("established link [address: {}] for sending commands to device", address);
+            log.debug("established link [address: {}] for sending commands to device", address);
 
             sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
             return consumer;
@@ -867,7 +867,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
                 }
             } else {
-                LOG.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
+                log.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
                         remoteState);
                 final Map<String, Object> logItems = new HashMap<>(2);
                 logItems.put(Fields.EVENT, "device did not settle command");
@@ -907,7 +907,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Span span) {
 
         final ErrorCondition ec = getErrorCondition(t);
-        LOG.debug("closing link with error condition [symbol: {}, description: {}]", ec.getCondition(), ec.getDescription());
+        log.debug("closing link with error condition [symbol: {}, description: {}]", ec.getCondition(), ec.getDescription());
         link.setCondition(ec);
         link.close();
         if (span != null) {
@@ -962,7 +962,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Future<DownstreamSender> senderFuture,
             final Span currentSpan) {
 
-        LOG.trace("forwarding {} message", context.getEndpoint().getCanonicalName());
+        log.trace("forwarding {} message", context.getEndpoint().getCanonicalName());
 
         final Future<JsonObject> tokenFuture = getRegistrationAssertion(resource.getTenantId(), resource.getResourceId(),
                 context.getAuthenticatedDevice(), currentSpan.context());
@@ -996,7 +996,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                 }).recover(t -> {
 
-                    LOG.debug("cannot process {} message from device [tenant: {}, device-id: {}]",
+                    log.debug("cannot process {} message from device [tenant: {}, device-id: {}]",
                             context.getEndpoint().getCanonicalName(),
                             resource.getTenantId(),
                             resource.getResourceId(), t);
@@ -1045,7 +1045,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return CompositeFuture.all(tenantTracker, responseTracker)
                 .compose(ok -> {
                     final CommandResponse commandResponse = responseTracker.result();
-                    LOG.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
+                    log.trace("sending command response [device-id: {}, status: {}, correlation-id: {}, reply-to: {}]",
                             resource.getResourceId(), commandResponse.getStatus(), commandResponse.getCorrelationId(),
                             commandResponse.getReplyToId());
 
@@ -1067,7 +1067,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                     currentSpan.context()));
                 }).map(delivery -> {
 
-                    LOG.trace("forwarded command response from device [tenant: {}, device-id: {}]",
+                    log.trace("forwarded command response from device [tenant: {}, device-id: {}]",
                             resource.getTenantId(), resource.getResourceId());
                     metrics.reportCommand(
                             Direction.RESPONSE,
@@ -1080,7 +1080,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
                 }).recover(t -> {
 
-                    LOG.debug("cannot process command response from device [tenant: {}, device-id: {}]",
+                    log.debug("cannot process command response from device [tenant: {}, device-id: {}]",
                             resource.getTenantId(), resource.getResourceId(), t);
                     metrics.reportCommand(
                             Direction.RESPONSE,
@@ -1100,7 +1100,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @param link The link to close.
      */
     private <T extends ProtonLink<T>> void onLinkDetach(final ProtonLink<T> link) {
-        LOG.debug("closing link [{}]", link.getName());
+        log.debug("closing link [{}]", link.getName());
         link.close();
     }
 
@@ -1135,7 +1135,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 }
                 break;
             default:
-                LOG.debug("device wants to send message for unsupported address [{}]", ctx.getAddress());
+                log.debug("device wants to send message for unsupported address [{}]", ctx.getAddress());
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unsupported endpoint"));
             }
         }

@@ -43,7 +43,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     /**
      * A logger to be shared with subclasses.
      */
-    protected final Logger LOG = LoggerFactory.getLogger(getClass());
+    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
      * The OpenTracing {@code Tracer} for tracking processing of requests.
@@ -63,7 +63,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     @Autowired(required = false)
     public final void setTracer(final Tracer opentracingTracer) {
-        LOG.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
+        log.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
         this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
@@ -239,24 +239,24 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     protected final Future<Void> checkPortConfiguration() {
 
         if (vertx != null) {
-            LOG.info("Vertx native support: {}", vertx.isNativeTransportEnabled());
+            log.info("Vertx native support: {}", vertx.isNativeTransportEnabled());
         }
 
         final Future<Void> result = Future.future();
 
         if (getConfig().getKeyCertOptions() == null) {
             if (getConfig().getPort() >= 0) {
-                LOG.warn("Secure port number configured, but the certificate setup is not correct. No secure port will be opened - please check your configuration!");
+                log.warn("Secure port number configured, but the certificate setup is not correct. No secure port will be opened - please check your configuration!");
             }
             if (!getConfig().isInsecurePortEnabled()) {
-                LOG.error("configuration must have at least one of key & certificate or insecure port set to start up");
+                log.error("configuration must have at least one of key & certificate or insecure port set to start up");
                 result.fail("no ports configured");
             } else {
                 result.complete();
             }
         } else if (getConfig().isInsecurePortEnabled()) {
             if (getConfig().getPort(getPortDefaultValue()) == getConfig().getInsecurePort(getInsecurePortDefaultValue())) {
-                LOG.error("secure and insecure ports must be configured to bind to different port numbers");
+                log.error("secure and insecure ports must be configured to bind to different port numbers");
                 result.fail("secure and insecure ports configured to bind to same port number");
             } else {
                 result.complete();
@@ -281,9 +281,9 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
         final int port = getConfig().getPort(getPortDefaultValue());
 
         if (port == getPortDefaultValue()) {
-            LOG.info("Server uses secure standard port {}", port);
+            log.info("Server uses secure standard port {}", port);
         } else if (port == 0) {
-            LOG.info("Server found secure port number configured for ephemeral port selection (port chosen automatically).");
+            log.info("Server found secure port number configured for ephemeral port selection (port chosen automatically).");
         }
         return port;
     }
@@ -301,12 +301,12 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
         final int insecurePort = getConfig().getInsecurePort(getInsecurePortDefaultValue());
 
         if (insecurePort == 0) {
-            LOG.info("Server found insecure port number configured for ephemeral port selection (port chosen automatically).");
+            log.info("Server found insecure port number configured for ephemeral port selection (port chosen automatically).");
         } else if (insecurePort == getInsecurePortDefaultValue()) {
-            LOG.info("Server uses standard insecure port {}", insecurePort);
+            log.info("Server uses standard insecure port {}", insecurePort);
         } else if (insecurePort == getPortDefaultValue()) {
-            LOG.warn("Server found insecure port number configured to standard port for secure connections {}", getConfig().getInsecurePort());
-            LOG.warn("Possibly misconfigured?");
+            log.warn("Server found insecure port number configured to standard port for secure connections {}", getConfig().getInsecurePort());
+            log.warn("Possibly misconfigured?");
         }
         return insecurePort;
     }
@@ -369,7 +369,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
             final TrustOptions trustOptions = getServerTrustOptions();
             if (trustOptions != null) {
                 serverOptions.setTrustOptions(trustOptions).setClientAuth(ClientAuth.REQUEST);
-                LOG.info("enabling client authentication using certificates [{}]", trustOptions.getClass().getName());
+                log.info("enabling client authentication using certificates [{}]", trustOptions.getClass().getName());
             }
         }
     }
@@ -419,21 +419,21 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
             final boolean useOpenSsl =
                     getConfig().isNativeTlsRequired() || (isOpenSslAvailable && supportsKeyManagerFactory);
 
-            LOG.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}]",
+            log.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}]",
                     isOpenSslAvailable, supportsKeyManagerFactory);
 
             if (useOpenSsl) {
-                LOG.info("using OpenSSL [version: {}] instead of JDK's default SSL engine",
+                log.info("using OpenSSL [version: {}] instead of JDK's default SSL engine",
                         OpenSsl.versionString());
                 serverOptions.setSslEngineOptions(new OpenSSLEngineOptions());
             } else {
-                LOG.info("using JDK's default SSL engine");
+                log.info("using JDK's default SSL engine");
             }
 
             serverOptions.getEnabledSecureTransportProtocols()
                 .forEach(protocol -> serverOptions.removeEnabledSecureTransportProtocol(protocol));
             getConfig().getSecureProtocols().forEach(protocol -> {
-                LOG.info("enabling secure protocol [{}]", protocol);
+                log.info("enabling secure protocol [{}]", protocol);
                 serverOptions.addEnabledSecureTransportProtocol(protocol);
             });
         }

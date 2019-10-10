@@ -51,7 +51,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
         .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
         .compose(targetAddress -> uploadMessage(ctx, targetAddress, ctx.message()))
         .recover(t -> {
-            LOG.debug("discarding message [topic: {}] from device: {}",
+            log.debug("discarding message [topic: {}] from device: {}",
                     ctx.message().topicName(), ctx.authenticatedDevice(), t);
             return Future.failedFuture(t);
         });
@@ -90,7 +90,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 break;
             default:
                 // MQTT client is trying to publish on a not supported endpoint
-                LOG.debug("no such endpoint [{}]", topic.getEndpoint());
+                log.debug("no such endpoint [{}]", topic.getEndpoint());
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such endpoint"));
         }
         return result;

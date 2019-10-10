@@ -126,9 +126,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     public final void addEndpoint(final AmqpEndpoint ep) {
         if (endpoints.putIfAbsent(ep.getName(), ep) != null) {
-            LOG.warn("multiple endpoints defined with name [{}]", ep.getName());
+            log.warn("multiple endpoints defined with name [{}]", ep.getName());
         } else {
-            LOG.debug("registering endpoint [{}]", ep.getName());
+            log.debug("registering endpoint [{}]", ep.getName());
         }
     }
 
@@ -219,7 +219,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         if (!con.isDisconnected()) {
             final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
             if (clientPrincipal != null) {
-                LOG.debug("client's [{}] access token has expired, closing connection", clientPrincipal.getName());
+                log.debug("client's [{}] access token has expired, closing connection", clientPrincipal.getName());
                 con.disconnectHandler(null);
                 con.closeHandler(null);
                 con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "access token expired"));
@@ -248,7 +248,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (final AmqpEndpoint ep : endpoints.values()) {
-            LOG.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+            log.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.start());
         }
         final Future<Void> startFuture = Future.future();
@@ -268,7 +268,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
         for (final AmqpEndpoint ep : endpoints.values()) {
-            LOG.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
+            log.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
         final Future<Void> stopFuture = Future.future();
@@ -293,20 +293,20 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     .listen(insecurePort, getConfig().getInsecurePortBindAddress(), bindAttempt -> {
                         if (bindAttempt.succeeded()) {
                             if (getInsecurePort() == getInsecurePortDefaultValue()) {
-                                LOG.info("server listens on standard insecure port [{}:{}]", getInsecurePortBindAddress(), getInsecurePort());
+                                log.info("server listens on standard insecure port [{}:{}]", getInsecurePortBindAddress(), getInsecurePort());
                             } else {
-                                LOG.warn("server listens on non-standard insecure port [{}:{}], default is {}", getInsecurePortBindAddress(),
+                                log.warn("server listens on non-standard insecure port [{}:{}], default is {}", getInsecurePortBindAddress(),
                                         getInsecurePort(), getInsecurePortDefaultValue());
                             }
                             result.complete();
                         } else {
-                            LOG.error("cannot bind to insecure port", bindAttempt.cause());
+                            log.error("cannot bind to insecure port", bindAttempt.cause());
                             result.fail(bindAttempt.cause());
                         }
                     });
             return result;
         } else {
-            LOG.info("insecure port is not enabled");
+            log.info("insecure port is not enabled");
             return Future.succeededFuture();
         }
     }
@@ -322,20 +322,20 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     .listen(securePort, getConfig().getBindAddress(), bindAttempt -> {
                         if (bindAttempt.succeeded()) {
                             if (getPort() == getPortDefaultValue()) {
-                                LOG.info("server listens on standard secure port [{}:{}]", getBindAddress(), getPort());
+                                log.info("server listens on standard secure port [{}:{}]", getBindAddress(), getPort());
                             } else {
-                                LOG.warn("server listens on non-standard secure port [{}:{}], default is {}", getBindAddress(),
+                                log.warn("server listens on non-standard secure port [{}:{}], default is {}", getBindAddress(),
                                         getPort(), getPortDefaultValue());
                             }
                             result.complete();
                         } else {
-                            LOG.error("cannot bind to secure port", bindAttempt.cause());
+                            log.error("cannot bind to secure port", bindAttempt.cause());
                             result.fail(bindAttempt.cause());
                         }
                     });
             return result;
         } else {
-            LOG.info("secure port is not enabled");
+            log.info("secure port is not enabled");
             return Future.succeededFuture();
         }
     }
@@ -397,7 +397,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         final Future<Void> secureTracker = Future.future();
 
         if (server != null) {
-            LOG.info("stopping secure AMQP server [{}:{}]", getBindAddress(), getActualPort());
+            log.info("stopping secure AMQP server [{}:{}]", getBindAddress(), getActualPort());
             server.close(secureTracker);
         } else {
             secureTracker.complete();
@@ -410,7 +410,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         final Future<Void> insecureTracker = Future.future();
 
         if (insecureServer != null) {
-            LOG.info("stopping insecure AMQP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
+            log.info("stopping insecure AMQP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
             insecureServer.close(insecureTracker);
         } else {
             insecureTracker.complete();
@@ -475,7 +475,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param address The unknown target address.
      */
     protected final void handleUnknownEndpoint(final ProtonConnection con, final ProtonLink<?> link, final ResourceIdentifier address) {
-        LOG.info("client [container: {}] wants to establish link for unknown endpoint [address: {}]",
+        log.info("client [container: {}] wants to establish link for unknown endpoint [address: {}]",
                 con.getRemoteContainer(), address);
         link.setCondition(
                 ProtonHelper.condition(
@@ -510,12 +510,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleReceiverOpen(final ProtonConnection con, final ProtonReceiver receiver) {
         if (receiver.getRemoteTarget().getAddress() == null) {
-            LOG.debug("client [container: {}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link ...",
+            log.debug("client [container: {}] wants to open an anonymous link for sending messages to arbitrary addresses, closing link ...",
                     con.getRemoteContainer());
             receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_ALLOWED, "anonymous relay not supported"));
             receiver.close();
         } else {
-            LOG.debug("client [container: {}] wants to open a link [address: {}] for sending messages",
+            log.debug("client [container: {}] wants to open a link [address: {}] for sending messages",
                     con.getRemoteContainer(), receiver.getRemoteTarget());
             try {
                 final ResourceIdentifier targetResource = getResourceIdentifier(receiver.getRemoteTarget().getAddress());
@@ -531,14 +531,14 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                             receiver.setTarget(receiver.getRemoteTarget());
                             endpoint.onLinkAttach(con, receiver, targetResource);
                         } else {
-                            LOG.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
+                            log.debug("subject [{}] is not authorized to WRITE to [{}]", user.getName(), targetResource);
                             receiver.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized"));
                             receiver.close();
                         }
                     });
                 }
             } catch (final IllegalArgumentException e) {
-                LOG.debug("client has provided invalid resource identifier as target address", e);
+                log.debug("client has provided invalid resource identifier as target address", e);
                 receiver.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such address"));
                 receiver.close();
             }
@@ -553,7 +553,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleSenderOpen(final ProtonConnection con, final ProtonSender sender) {
         final Source remoteSource = sender.getRemoteSource();
-        LOG.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
+        log.debug("client [container: {}] wants to open a link [address: {}] for receiving messages",
                 con.getRemoteContainer(), remoteSource);
         try {
             final ResourceIdentifier targetResource = getResourceIdentifier(remoteSource.getAddress());
@@ -569,14 +569,14 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                         sender.setTarget(sender.getRemoteTarget());
                         endpoint.onLinkAttach(con, sender, targetResource);
                     } else {
-                        LOG.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
+                        log.debug("subject [{}] is not authorized to READ from [{}]", user.getName(), targetResource);
                         sender.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS.toString(), "unauthorized"));
                         sender.close();
                     }
                 });
             }
         } catch (final IllegalArgumentException e) {
-            LOG.debug("client has provided invalid resource identifier as target address", e);
+            log.debug("client has provided invalid resource identifier as target address", e);
             sender.setCondition(ProtonHelper.condition(AmqpError.NOT_FOUND, "no such address"));
             sender.close();
         }
@@ -603,7 +603,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
 
-        LOG.debug("received connection request from client");
+        log.debug("received connection request from client");
         connection.sessionOpenHandler(session -> {
             HonoProtonHelper.setDefaultCloseHandler(session);
             handleSessionOpen(connection, session);
@@ -620,7 +620,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         connection.closeHandler(remoteClose -> handleRemoteConnectionClose(connection, remoteClose));
         connection.openHandler(remoteOpen -> {
             if (remoteOpen.failed()) {
-                LOG.debug("ignoring peer's open frame containing error", remoteOpen.cause());
+                log.debug("ignoring peer's open frame containing error", remoteOpen.cause());
             } else {
                 processRemoteOpen(remoteOpen.result());
             }
@@ -644,7 +644,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void processRemoteOpen(final ProtonConnection connection) {
 
-        LOG.debug("processing open frame from client container [{}]", connection.getRemoteContainer());
+        log.debug("processing open frame from client container [{}]", connection.getRemoteContainer());
         final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
         // attach an ID so that we can later inform downstream components when connection is closed
         connection.attachments().set(Constants.KEY_CONNECTION_ID, String.class, UUID.randomUUID().toString());
@@ -657,7 +657,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             }
         });
         connection.open();
-        LOG.info("client connected [container: {}, user: {}, token valid until: {}]",
+        log.info("client connected [container: {}, user: {}, token valid until: {}]",
                 connection.getRemoteContainer(), clientPrincipal.getName(), clientPrincipal.getExpirationTime().toString());
     }
 
@@ -684,7 +684,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param session The session that is initiated.
      */
     protected void handleSessionOpen(final ProtonConnection con, final ProtonSession session) {
-        LOG.debug("opening new session with client [container: {}]", con.getRemoteContainer());
+        log.debug("opening new session with client [container: {}]", con.getRemoteContainer());
         session.open();
     }
 
@@ -711,9 +711,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected void handleRemoteConnectionClose(final ProtonConnection con, final AsyncResult<ProtonConnection> res) {
         if (res.succeeded()) {
-            LOG.debug("client [container: {}] closed connection", con.getRemoteContainer());
+            log.debug("client [container: {}] closed connection", con.getRemoteContainer());
         } else {
-            LOG.debug("client [container: {}] closed connection with error", con.getRemoteContainer(), res.cause());
+            log.debug("client [container: {}] closed connection with error", con.getRemoteContainer(), res.cause());
         }
         con.close();
         con.disconnect();
@@ -726,7 +726,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param con The connection that was disconnected.
      */
     protected void handleRemoteDisconnect(final ProtonConnection con) {
-        LOG.debug("client [container: {}] disconnected", con.getRemoteContainer());
+        log.debug("client [container: {}] disconnected", con.getRemoteContainer());
         con.disconnect();
         publishConnectionClosedEvent(con);
     }

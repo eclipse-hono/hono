@@ -19,8 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.References;
 import io.opentracing.Span;
@@ -99,8 +97,6 @@ public final class TracingHelper {
     private static final String JSON_KEY_SPAN_CONTEXT = "span-context";
 
     private static final String AMQP_ANNOTATION_NAME_TRACE_CONTEXT = "x-opt-trace-context";
-
-    private static final Logger LOG = LoggerFactory.getLogger(TracingHelper.class);
 
     private TracingHelper() {
         // prevent instantiation
