@@ -89,3 +89,11 @@
 .swagger-ui table, .swagger-ui thead, .swagger-ui td {
 	border: none;
 }
+
+/* prevents that the anchor is positioned behind the menu bar */
+:target:before {
+  content: "";
+  display: block;
+  height: 60px;
+  margin: -60px 0 0;
+}
