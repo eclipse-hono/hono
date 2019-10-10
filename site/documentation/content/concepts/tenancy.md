@@ -44,8 +44,8 @@ only a subset of Hono's functionality. This feature is foreseen to be especially
 - but is not allowed to use the HTTP protocol adapter
 
 
-Please refer to the [Tenant API]({{< relref "/api/tenant" >}}) to find out which protocol adapter properties are
-configurable on a tenant level. 
+Please refer to the [Tenant API]({{< relref "/api/tenant" >}}) to find out which protocol adapter properties 
+can be configured at the tenant level.
 
 ## AMQP 1.0 Endpoints
 
@@ -65,10 +65,9 @@ is addressing the tenants themselves.
 
 ## Devices and Tenants
 
-All devices of Hono belong to exactly one tenant, so any data is sent in the context of the
-tenant a device belongs to.
-"Device" means here a logical entity consisting of a set of registry data.
-Usually a physical device will be created in Hono as exactly one logical device, and thus belongs to exactly one tenant.
+A physical device will usually be represented in Hono as an entity in the device registry, having a unique identity 
+and belonging to exactly one tenant. All data sent from a device, as well as from the application to the device, 
+is therefore treated as belonging to the corresponding tenant.
 
 The following diagram shows the relation between tenants, devices and their credentials:
 
