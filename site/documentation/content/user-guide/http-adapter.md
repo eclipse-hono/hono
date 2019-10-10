@@ -99,7 +99,7 @@ hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
 content-length: 23
 
 {
-  "brightness" : 87
+  "brightness": 87
 }
 ~~~
 
@@ -182,7 +182,7 @@ hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
 content-length: 23
 
 {
-  "brightness" : 87
+  "brightness": 87
 }
 ~~~
 
@@ -260,7 +260,7 @@ hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
 content-length: 23
 
 {
-  "brightness" : 87
+  "brightness": 87
 }
 ~~~
 

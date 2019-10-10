@@ -66,7 +66,7 @@ In case of a successful invocation of the operation, the body of the response me
 Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
 ~~~json
 {
-  "device-id" : "4711",
+  "device-id": "4711",
   "via": ["4712"],
   "defaults": {
     "content-type": "application/vnd.acme+json"
