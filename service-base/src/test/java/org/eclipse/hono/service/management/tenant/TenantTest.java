@@ -133,6 +133,41 @@ class TenantTest {
     }
 
     /**
+     * Verifies that decoding of a tenant object having more than one adapter of the same type fails.
+     */
+    @Test
+    public void testWithMultipleAdapterEntriesOfSameType() {
+        final JsonObject httpAdapterConfig = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
+                .put(RegistryManagementConstants.FIELD_ENABLED, false)
+                .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true);
+        final JsonArray adaptersConfig = new JsonArray()
+                .add(httpAdapterConfig)
+                .add(httpAdapterConfig);
+        final var tenant = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_ADAPTERS, adaptersConfig);
+
+        assertThrows(IllegalArgumentException.class, () -> tenant.mapTo(Tenant.class));
+    }
+
+    /**
+     * Verifies that adding an adapter fails, if the adapter's type is same as that of any
+     * already existing adapters.
+     */
+    @Test
+    public void testAddAdapterOfAlreadyExistingType() {
+        final Tenant tenant = new Tenant();
+        tenant.setEnabled(true);
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setEnabled(false)
+                .setDeviceAuthenticationRequired(true));
+        assertThrows(IllegalArgumentException.class, () -> tenant
+                .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                        .setEnabled(false)
+                        .setDeviceAuthenticationRequired(true)));
+    }
+
+    /**
      * Decode tenant with "minimum-message-size=4096".
      */
     @Test

@@ -132,7 +132,7 @@ public class EventBusTenantManagementAdapterTest {
     private static JsonObject buildTenantPayload() {
 
         final JsonObject adapterDetailsHttp = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
                 .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
         final JsonObject adapterDetailsMqtt = new JsonObject()
