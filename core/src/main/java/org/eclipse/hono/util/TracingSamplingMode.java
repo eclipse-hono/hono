@@ -15,8 +15,6 @@ package org.eclipse.hono.util;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import java.util.OptionalInt;
-
 /**
  * Value that defines in how far <em>OpenTracing</em> spans shall be recorded (sampled) by the tracing system.
  */
@@ -55,22 +53,5 @@ public enum TracingSamplingMode {
             }
         }
         return DEFAULT;
-    }
-
-    /**
-     * Gets the value for the <em>sampling.priority</em> span tag.
-     *
-     * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
-     *         <em>OptionalInt</em> if no such tag should be set.
-     */
-    public OptionalInt toSamplingPriority() {
-        switch (this) {
-        case ALL:
-            return OptionalInt.of(1);
-        case NONE:
-            return OptionalInt.of(0);
-        default:
-            return OptionalInt.empty();
-        }
     }
 }

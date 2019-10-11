@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalInt;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -41,8 +40,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import com.fasterxml.jackson.annotation.JsonSetter;
+
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -59,6 +58,8 @@ public final class TenantObject extends JsonBackedValueObject {
     private ResourceLimits resourceLimits;
     @JsonIgnore
     private TrustAnchor trustAnchor;
+    @JsonIgnore
+    private TenantTracingConfig tracingConfig;
 
     /**
      * Adds a property to this tenant.
@@ -611,34 +612,24 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Gets the value for the <em>sampling.priority</em> span tag as encoded in the properties of this tenant.
+     * Gets this tenant's tracing configuration.
      *
-     * @param authId The authentication identity of a device (may be null).
-     * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
-     *         <em>OptionalInt</em> if no priority should be set.
+     * @return The tracing configuration or {@code null} if not set.
      */
-    @JsonIgnore
-    public OptionalInt getTraceSamplingPriority(final String authId) {
-        final JsonObject tracingConfig = getProperty(TenantConstants.FIELD_TRACING, JsonObject.class);
-        if (tracingConfig == null) {
-            return OptionalInt.empty();
-        }
-        String samplingMode = null;
-        if (authId != null) {
-            // check device/auth-id specific setting first
-            final JsonObject samplingModePerAuthId = tracingConfig
-                    .getJsonObject(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID);
-            if (samplingModePerAuthId != null) {
-                samplingMode = samplingModePerAuthId.getString(authId);
-            }
-        }
-        if (samplingMode == null) {
-            // check tenant specific setting
-            samplingMode = tracingConfig.getString(TenantConstants.FIELD_TRACING_SAMPLING_MODE);
-        }
-        if (samplingMode == null) {
-            return OptionalInt.empty();
-        }
-        return TracingSamplingMode.from(samplingMode).toSamplingPriority();
+    @JsonProperty(value = TenantConstants.FIELD_TRACING)
+    public TenantTracingConfig getTracingConfig() {
+        return tracingConfig;
+    }
+
+    /**
+     * Sets this tenant's tracing configuration.
+     *
+     * @param tracing The tracing configuration.
+     * @return This tenant for command chaining.
+     */
+    @JsonProperty(value = TenantConstants.FIELD_TRACING)
+    public TenantObject setTracingConfig(final TenantTracingConfig tracing) {
+        this.tracingConfig = tracing;
+        return this;
     }
 }

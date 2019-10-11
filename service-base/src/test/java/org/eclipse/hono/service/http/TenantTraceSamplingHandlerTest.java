@@ -14,7 +14,14 @@
 package org.eclipse.hono.service.http;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -42,9 +49,9 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TracingSamplingMode;
 import org.eclipse.hono.util.TenantObject;
+import org.eclipse.hono.util.TenantTracingConfig;
+import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +65,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -126,10 +132,8 @@ public class TenantTraceSamplingHandlerTest {
         final String tenantId = "testTenant";
         final String authId = "testAuthId";
 
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE, TracingSamplingMode.ALL.getFieldValue());
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig().setSamplingMode(TracingSamplingMode.ALL));
         when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(testTenant));
 
         // WHEN handling a request with basic auth for that tenant
@@ -151,12 +155,9 @@ public class TenantTraceSamplingHandlerTest {
         final String tenantId = "testTenant";
         final String authId = "testAuthId";
 
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        final JsonObject samplingModePerAuthId = new JsonObject();
-        samplingModePerAuthId.put(authId, TracingSamplingMode.ALL.getFieldValue());
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, samplingModePerAuthId);
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig()
+                        .setSamplingModePerAuthId(Map.of(authId, TracingSamplingMode.ALL)));
         when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(testTenant));
 
         // WHEN handling a request with basic auth for that tenant
@@ -179,12 +180,9 @@ public class TenantTraceSamplingHandlerTest {
         final String tenantId = Constants.DEFAULT_TENANT;
         final String authId = "testAuthId";
 
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        final JsonObject samplingModePerAuthId = new JsonObject();
-        samplingModePerAuthId.put(authId, TracingSamplingMode.ALL.getFieldValue());
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, samplingModePerAuthId);
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig()
+                        .setSamplingModePerAuthId(Map.of(authId, TracingSamplingMode.ALL)));
         when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(testTenant));
         config.setSingleTenant(true);
 
@@ -208,13 +206,10 @@ public class TenantTraceSamplingHandlerTest {
         final String tenantId = "testTenant";
         final String authId = "testAuthId";
 
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE, TracingSamplingMode.ALL.getFieldValue());
-        final JsonObject samplingModePerAuthId = new JsonObject();
-        samplingModePerAuthId.put(authId, TracingSamplingMode.DEFAULT.getFieldValue());
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, samplingModePerAuthId);
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig()
+                        .setSamplingMode(TracingSamplingMode.ALL)
+                        .setSamplingModePerAuthId(Map.of(authId, TracingSamplingMode.DEFAULT)));
         when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(testTenant));
 
         // WHEN handling a request with basic auth for that tenant
@@ -252,10 +247,8 @@ public class TenantTraceSamplingHandlerTest {
         ctxMap.put(PARAM_TENANT, tenantId);
         ctxMap.put(PARAM_DEVICE_ID, authId);
 
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE, TracingSamplingMode.ALL.getFieldValue());
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig().setSamplingMode(TracingSamplingMode.ALL));
         when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(testTenant));
 
         // WHEN handling an unauthenticated request for that tenant
@@ -280,12 +273,9 @@ public class TenantTraceSamplingHandlerTest {
         ctxMap.put(PARAM_TENANT, tenantId);
         ctxMap.put(PARAM_DEVICE_ID, authId);
 
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        final JsonObject samplingModePerAuthId = new JsonObject();
-        samplingModePerAuthId.put(authId, TracingSamplingMode.ALL.getFieldValue());
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, samplingModePerAuthId);
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig()
+                        .setSamplingModePerAuthId(Map.of(authId, TracingSamplingMode.ALL)));
         when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(testTenant));
 
         // WHEN handling an unauthenticated request for that tenant
@@ -314,10 +304,9 @@ public class TenantTraceSamplingHandlerTest {
     public void testHandleSetsSamplingPriorityForGivenCert() throws SSLPeerUnverifiedException {
         // GIVEN a tenant where 'trace-sampling-mode' is set to 'all'
         final String tenantId = "testTenant";
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE, TracingSamplingMode.ALL.getFieldValue());
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig()
+                        .setSamplingMode(TracingSamplingMode.ALL));
         doAnswer(invocation -> {
             if (!invocation.getArgument(0).toString().equals("CN=" + tenantId)) {
                 return Future.failedFuture("tenant not found");
@@ -345,12 +334,9 @@ public class TenantTraceSamplingHandlerTest {
         // GIVEN a tenant and auth-id for which 'trace-sampling-mode-per-device' is set to 'all'
         final String tenantId = "testTenant";
         final String subjectDnAuthId = "CN=Device 4711,OU=Hono,O=Eclipse IoT,L=Ottawa,C=CA";
-        final TenantObject testTenant = TenantObject.from(tenantId, true);
-        final JsonObject tracingConfig = new JsonObject();
-        final JsonObject samplingModePerAuthId = new JsonObject();
-        samplingModePerAuthId.put(subjectDnAuthId, TracingSamplingMode.ALL.getFieldValue());
-        tracingConfig.put(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID, samplingModePerAuthId);
-        testTenant.setProperty(TenantConstants.FIELD_TRACING, tracingConfig);
+        final TenantObject testTenant = TenantObject.from(tenantId, true)
+                .setTracingConfig(new TenantTracingConfig()
+                        .setSamplingModePerAuthId(Map.of(subjectDnAuthId, TracingSamplingMode.ALL)));
         doAnswer(invocation -> {
             if (!invocation.getArgument(0).toString().equals("CN=" + tenantId)) {
                 return Future.failedFuture("tenant not found");
