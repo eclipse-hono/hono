@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileInputStream;
@@ -30,6 +31,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.eclipse.hono.util.Constants;
@@ -117,6 +119,18 @@ class TenantTest {
         final var adapters = tenant.getAdapters();
         assertNotNull(adapters);
         assertEquals( "http", adapters.get(0).getType());
+    }
+
+    /**
+     * Verifies that decoding of a tenant object with empty adapters list fails.
+     */
+    @Test
+    public void testWithEmptyAdaptersList() {
+        final JsonObject tenantJson = new JsonObject();
+        tenantJson.put(RegistryManagementConstants.FIELD_ADAPTERS, new ArrayList());
+        assertThrows(IllegalArgumentException.class, () -> {
+            tenantJson.mapTo(Tenant.class);
+        });
     }
 
     /**

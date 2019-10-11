@@ -166,8 +166,14 @@ public class Tenant {
      *
      * @param adapters The configuration properties.
      * @return This instance, to allow chained invocations.
+     * @throws IllegalArgumentException if the adapters list is empty.
      */
     public final Tenant setAdapters(final List<Adapter> adapters) {
+
+        if (adapters != null && adapters.isEmpty()) {
+            throw new IllegalArgumentException("Atleast one adapter must be configured");
+        }
+
         this.adapters.clear();
         if (adapters != null) {
             this.adapters.addAll(adapters);
