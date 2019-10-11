@@ -36,7 +36,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.net.SelfSignedCertificate;
-import io.vertx.ext.unit.TestContext;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -261,7 +260,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @throws CertificateException if the CA certificate cannot be created.
      */
     @Test
-    public void testConnectSucceedsForValidTrustedCaForTenant(final TestContext ctx) throws CertificateException {
+    public void testConnectSucceedsForValidTrustedCaForTenant(final VertxTestContext ctx) throws CertificateException {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
@@ -273,16 +272,17 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
             final Tenant tenant = Tenants.createTenantForTrustAnchor(cert);
             final var trustedCa = Tenants.createTrustedCA(cert.getSubjectX500Principal(), caPublicKey);
             tenant.addTrustedCAConfig(trustedCa);
-            ctx.assertEquals(2, tenant.getTrustedAuthorities().size());
+
+            ctx.verify(() -> assertThat(tenant.getTrustedAuthorities().size()).isEqualTo(2));
             return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
         }).compose(ok -> {
             // WHEN a device tries to connect to the adapter
             // using a client certificate signed by one of the
             // trusted CAs configured for the tenant.
             return connectToAdapter(deviceCert);
-        }).setHandler(ctx.asyncAssertSuccess(t -> {
-            // THEN the connection is established
-        }));
+        })
+        // THEN the connection is established
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -293,7 +293,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @throws GeneralSecurityException if the CA key pair cannot be created.
      */
     @Test
-    public void testConnectFailsForMultipleInValidTrustAnchorsForTenant(final TestContext ctx) throws GeneralSecurityException {
+    public void testConnectFailsForMultipleInValidTrustAnchorsForTenant(final VertxTestContext ctx) throws GeneralSecurityException {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
@@ -309,16 +309,18 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
             final Tenant tenant = new Tenant();
             tenant.addTrustedCAConfig(caTrustConfig);
             tenant.addTrustedCAConfig(otherCaTrustConfig);
-            ctx.assertEquals(2, tenant.getTrustedAuthorities().size());
+
+            ctx.verify(() -> assertThat(tenant.getTrustedAuthorities().size()).isEqualTo(2));
             return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
         }).compose(ok -> {
             // WHEN a device tries to connect to the adapter
             // using a client certificate that cannot be validated
             // by any of the trust anchors registered for the device's tenant
             return connectToAdapter(deviceCert);
-        }).setHandler(ctx.asyncAssertFailure(t -> {
+        }).setHandler(ctx.failing(t -> {
             // THEN the connection is not established
-            ctx.assertTrue(t instanceof SaslException);
+            ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+            ctx.completeNow();
         }));
     }
 }
