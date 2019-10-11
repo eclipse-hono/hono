@@ -1,0 +1,22 @@
+{{ if isset .Site.Params "clients" }}
+{{ if .Site.Params.clients.enable }}
+<section class="bar background-gray no-mb">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="heading text-center">
+                    <h2>{{ .Site.Params.clients.title }}</h2>
+                </div>
+
+                <p class="lead">
+                    {{ .Site.Params.clients.subtitle }}
+                </p>
+
+                <div class="eclipsefdn-adopters">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{{ end }}
+{{ end }}

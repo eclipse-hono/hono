@@ -29,3 +29,13 @@
 {{ end }}
 
 <script src="https://www.eclipse.org/eclipse.org-common/themes/solstice/public/javascript/vendor/cookieconsent/default.min.js"></script>
+
+<script src="//iot.eclipse.org/assets/js/eclipsefdn.adopters.js"></script>
+<script>
+    eclipseFdnAdopters.getList({
+        project_id: "iot.hono",
+        selector: ".eclipsefdn-adopters",
+        ul_classes: "owl-carousel customers",
+        logo_white: false
+    });
+</script>
