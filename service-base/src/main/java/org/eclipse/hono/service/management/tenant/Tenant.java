@@ -19,6 +19,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
@@ -170,8 +172,17 @@ public class Tenant {
      */
     public final Tenant setAdapters(final List<Adapter> adapters) {
 
-        if (adapters != null && adapters.isEmpty()) {
-            throw new IllegalArgumentException("Atleast one adapter must be configured");
+        if (adapters != null) {
+            if (adapters.isEmpty()) {
+                throw new IllegalArgumentException("Atleast one adapter must be configured");
+            }
+
+            final Set<String> uniqueAdapterTypes = adapters.stream()
+                    .map(Adapter::getType)
+                    .collect(Collectors.toSet());
+            if (adapters.size() != uniqueAdapterTypes.size()) {
+                throw new IllegalArgumentException("Each adapter must have a unique type");
+            }
         }
 
         this.adapters.clear();
@@ -202,6 +213,12 @@ public class Tenant {
             return this;
         }
 
+        final boolean hasAdapterOfSameType = adapters.stream()
+                .anyMatch(adapter -> configuration.getType().equals(adapter.getType()));
+        if (hasAdapterOfSameType) {
+            throw new IllegalArgumentException(
+                    String.format("Already an adapter of the type [%s] exists", configuration.getType()));
+        }
         adapters.add(configuration);
         return this;
     }
