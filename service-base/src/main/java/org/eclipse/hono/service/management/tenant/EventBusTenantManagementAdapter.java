@@ -173,7 +173,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         }
     }
 
-    Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
+    private Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
         final SpanContext spanContext = request.getSpanContext();
@@ -201,38 +201,17 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
      * @return boolean The result of the check : {@link Boolean#TRUE} if the payload is valid, {@link Boolean#FALSE} otherwise.
      * @throws NullPointerException If the payload is {@code null}.
      */
-    private boolean isValidRequestPayload(final JsonObject payload) {
+    boolean isValidRequestPayload(final JsonObject payload) {
 
-        return hasValidAdapterSpec(payload) && hasValidTrustedCaSpec(payload);
-    }
+        Objects.requireNonNull(payload);
 
-    /**
-     * Checks if a payload contains a valid protocol adapter specification.
-     *
-     * @param payload The payload to check.
-     * @return boolean {@code true} if the payload is valid.
-     */
-    private boolean hasValidAdapterSpec(final JsonObject payload) {
-
-        final Object adaptersObj = payload.getValue(RegistryManagementConstants.FIELD_ADAPTERS);
-        if (adaptersObj instanceof JsonArray) {
-
-            final JsonArray adapters = (JsonArray) adaptersObj;
-            if (adapters.size() == 0) {
-                // if given, adapters config array must not be empty
-                return false;
-            } else {
-                final boolean containsInvalidAdapter = adapters.stream()
-                        .anyMatch(obj -> !(obj instanceof JsonObject) ||
-                                !((JsonObject) obj).containsKey(RegistryManagementConstants.FIELD_ADAPTERS_TYPE));
-                if (containsInvalidAdapter) {
-                    return false;
-                }
-            }
-        } else if (adaptersObj != null) {
-            return false;
+        try {
+            payload.mapTo(Tenant.class);
+            return hasValidTrustedCaSpec(payload);
+        } catch (final IllegalArgumentException e) {
+            log.debug("Error parsing payload of tenant request", e);
         }
-        return true;
+        return false;
     }
 
     /**
