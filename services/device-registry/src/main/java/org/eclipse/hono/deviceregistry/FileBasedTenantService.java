@@ -34,6 +34,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -500,47 +501,38 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         }
     }
 
-    static JsonObject convertTenant(final String tenantId, final Tenant tenant) {
+    static JsonObject convertTenant(final String tenantId, final Tenant source) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(source);
 
-        final JsonObject result = new JsonObject();
-        result.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-        result.put(TenantConstants.FIELD_ENABLED, Optional.ofNullable(tenant.isEnabled()).orElse(true));
+        final TenantObject target = TenantObject.from(tenantId, Optional.ofNullable(source.isEnabled()).orElse(true));
+        target.setResourceLimits(source.getResourceLimits());
+        target.setTracingConfig(source.getTracing());
 
-        Optional.ofNullable(tenant.getDefaults())
+        Optional.ofNullable(source.getMinimumMessageSize())
+        .ifPresent(size -> target.setMinimumMessageSize(size));
+
+        Optional.ofNullable(source.getDefaults())
         .map(JsonObject::new)
-        .ifPresent(defaults -> result.put(TenantConstants.FIELD_PAYLOAD_DEFAULTS, defaults));
+        .ifPresent(defaults -> target.setDefaults(defaults));
 
-        Optional.ofNullable(tenant.getExtensions())
-        .map(JsonObject::new)
-        .ifPresent(extensions -> result.put(RegistryManagementConstants.FIELD_EXT, extensions));
-
-        Optional.ofNullable(tenant.getAdapters())
+        Optional.ofNullable(source.getAdapters())
         .filter(list -> !list.isEmpty())
         .map(list -> list.stream()
                 .map(adapterConfig -> JsonObject.mapFrom(adapterConfig))
                 .collect(JsonArray::new, JsonArray::add, JsonArray::add))
-        .ifPresent(configurations -> result.put(TenantConstants.FIELD_ADAPTERS, configurations));
+        .ifPresent(configurations -> target.setAdapterConfigurations(configurations));
 
-        Optional.ofNullable(tenant.getResourceLimits())
+        Optional.ofNullable(source.getTrustedCertificateAuthority())
         .map(JsonObject::mapFrom)
-        .ifPresent(limits -> result.put(TenantConstants.FIELD_RESOURCE_LIMITS, limits));
+        .ifPresent(authority -> target.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authority));
 
-        Optional.ofNullable(tenant.getTrustedCertificateAuthority())
-        .map(JsonObject::mapFrom)
-        .ifPresent(authority -> result.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authority));
+        Optional.ofNullable(source.getExtensions())
+        .map(JsonObject::new)
+        .ifPresent(extensions -> target.setProperty(RegistryManagementConstants.FIELD_EXT, extensions));
 
-
-        Optional.ofNullable(tenant.getMinimumMessageSize())
-        .ifPresent(size -> result.put(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE, size));
-
-        Optional.ofNullable(tenant.getTracing())
-        .map(JsonObject::mapFrom)
-        .ifPresent(tracing -> result.put(TenantConstants.FIELD_TRACING, tracing));
-
-        return result;
+        return JsonObject.mapFrom(target);
     }
 
     private Map.Entry<String, Versioned<Tenant>> getByCa(final X500Principal subjectDn) {

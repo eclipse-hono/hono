@@ -396,8 +396,11 @@ public final class TenantObject extends JsonBackedValueObject {
      * @throws IllegalArgumentException if the given configuration does not contain
      *                a <em>type</em> name.
      * @return This tenant for command chaining.
+     * @throws NullPointerException if config is {@code null}.
      */
     public TenantObject addAdapterConfiguration(final JsonObject config) {
+
+        Objects.requireNonNull(config);
 
         final Object type = config.getValue(TenantConstants.FIELD_ADAPTERS_TYPE);
         if (String.class.isInstance(type)) {
@@ -535,28 +538,26 @@ public final class TenantObject extends JsonBackedValueObject {
     /**
      * Sets the resource limits for the tenant.
      *
-     * @param resourceLimits The resource limits configuration to add.
+     * @param resourceLimits The resource limits configuration (may be {@code null}).
      * @return This tenant for command chaining.
-     * @throws NullPointerException if resource limits to be set is {@code null}.
      * @throws IllegalArgumentException if the resource limits object cannot be 
      *                                  instantiated from the given jsonObject.
      */
     @JsonIgnore
     public TenantObject setResourceLimits(final JsonObject resourceLimits) {
-        Objects.requireNonNull(resourceLimits);
-        return setResourceLimits(resourceLimits.mapTo(ResourceLimits.class));
+        return setResourceLimits(Optional.of(resourceLimits)
+                .map(json -> json.mapTo(ResourceLimits.class))
+                .orElse(null));
     }
 
     /**
      * Sets the resource limits for the tenant.
      *
-     * @param resourceLimits The resource limits configuration to add.
+     * @param resourceLimits The resource limits configuration (may be {@code null}).
      * @return This tenant for command chaining.
-     * @throws NullPointerException if resource limits to be set is {@code null}.
      */
     @JsonSetter(TenantConstants.FIELD_RESOURCE_LIMITS)
     public TenantObject setResourceLimits(final ResourceLimits resourceLimits) {
-        Objects.requireNonNull(resourceLimits);
         this.resourceLimits = resourceLimits;
         return this;
     }
