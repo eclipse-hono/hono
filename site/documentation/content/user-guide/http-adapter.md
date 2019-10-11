@@ -82,7 +82,7 @@ content-length: 0
 Publish some JSON data for device `4711` using *at least once* QoS:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'QoS-Level: 1' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
 
 HTTP/1.1 202 Accepted
 content-length: 0
@@ -120,7 +120,7 @@ content-length: 0
 * URI: `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) `content-type`: The type of payload contained in the body.
+  * (required) `content-type`: The type of payload contained in the request body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
   * (optional) `qos-level`: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`) and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
@@ -192,8 +192,7 @@ content-length: 23
 * Method: `PUT`
 * Request Headers:
   * (optional) `authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
-* Request Headers:
-  * (required) `content-type`: The type of payload contained in the body.
+  * (required) `content-type`: The type of payload contained in the request body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
   * (optional) `qos-level`: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`) and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
@@ -272,7 +271,7 @@ content-length: 23
 * Method: `POST`
 * Request Headers:
   * (optional) `authorization`: The device's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) `content-type`: The type of payload contained in the body.
+  * (required) `content-type`: The type of payload contained in the request body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
   * (optional) `hono-ttl`: The *time-to-live* in number of seconds for event messages.  
 * Request Body:
@@ -285,7 +284,7 @@ content-length: 23
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
 * Status Codes:
-  * 200 (OK): The telemetry data has been accepted for processing. The response contains a command for the device to execute.
+  * 200 (OK): The event has been accepted for processing. The response contains a command for the device to execute.
   * 202 (Accepted): The event has been accepted for processing.
   * 400 (Bad Request): The request cannot be processed. Possible reasons for this include:
         * The content type header is missing.
@@ -295,7 +294,7 @@ content-length: 23
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
@@ -315,7 +314,7 @@ content-length: 0
 * URI: `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Request Headers:
-  * (required) `content-type`: The type of payload contained in the body.
+  * (required) `content-type`: The type of payload contained in the request body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
   * (optional) `hono-ttl`: The *time-to-live* in number of seconds for event messages.
 * Request Body:
@@ -338,7 +337,7 @@ content-length: 0
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
 
@@ -359,7 +358,7 @@ content-length: 0
 * Method: `PUT`
 * Request Headers:
   * (optional) `authorization`: The gateway's *auth-id* and plain text password encoded according to the [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway to present a client certificate as part of the TLS handshake during connection establishment.
-  * (required) `content-type`: The type of payload contained in the body.
+  * (required) `content-type`: The type of payload contained in the request body.
   * (optional) `hono-ttd`: The number of seconds the device will wait for the response.
   * (optional) `hono-ttl`: The *time-to-live* in number of seconds for event messages.
 * Request Body:
@@ -385,7 +384,7 @@ content-length: 0
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
-  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
+  * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
 
