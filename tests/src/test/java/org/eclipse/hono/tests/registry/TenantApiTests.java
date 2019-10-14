@@ -20,6 +20,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.cert.TrustAnchor;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
@@ -106,15 +107,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         // expected tenant object
         final TenantObject expectedTenantObject = TenantObject.from(tenantId, true)
                 .setDefaults(defaults)
-                .setResourceLimits(new JsonObject()
-                        .put("max-connections", 100000)
-                        .put("max-ttl", 300L)
-                        .put("data-volume", new JsonObject()
-                                .put("max-bytes", 2147483648L)
-                                .put("effective-since", "2019-07-27T14:30:00Z")
-                                .put("period", new JsonObject()
-                                        .put("mode", "days")
-                                        .put("no-of-days", 30))))
+                .setResourceLimits(resourceLimits)
                 .setAdapterConfigurations(new JsonArray()
                         .add(new JsonObject()
                                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
@@ -136,6 +129,8 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                 assertThat(tenantObject.getAdapterConfigurations()).isEqualTo(expectedTenantObject.getAdapterConfigurations());
                 assertThat(tenantObject.getResourceLimits().getMaxConnections())
                         .isEqualTo(expectedTenantObject.getResourceLimits().getMaxConnections());
+                assertThat(tenantObject.getResourceLimits().getMaxTtl())
+                .isEqualTo(expectedTenantObject.getResourceLimits().getMaxTtl());
                 assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes())
                         .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getMaxBytes());
                 assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(
@@ -143,8 +138,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                 assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(
                         expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getMode());
                 assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays())
-                        .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getPeriod()
-                                .getNoOfDays());
+                        .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays());
                 assertThat(tenantObject.getProperty("ext", JsonObject.class).getString("customer")).isEqualTo("ACME Inc.");
             });
             ctx.completeNow();
@@ -213,8 +207,9 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
-                assertThat(tenantObject.getTrustedCaSubjectDn()).isEqualTo(subjectDn);
-                assertThat(tenantObject.getTrustAnchor().getCAPublicKey()).isEqualTo(publicKey);
+                final TrustAnchor trustAnchor = tenantObject.getTrustAnchor();
+                assertThat(trustAnchor.getCA()).isEqualTo(subjectDn);
+                assertThat(trustAnchor.getCAPublicKey()).isEqualTo(publicKey);
             });
             ctx.completeNow();
         }));
