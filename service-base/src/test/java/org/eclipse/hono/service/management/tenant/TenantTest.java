@@ -31,7 +31,6 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Map;
 
 import org.eclipse.hono.util.Constants;
@@ -125,9 +124,9 @@ class TenantTest {
      * Verifies that decoding of a tenant object with empty adapters list fails.
      */
     @Test
-    public void testWithEmptyAdaptersList() {
-        final JsonObject tenantJson = new JsonObject();
-        tenantJson.put(RegistryManagementConstants.FIELD_ADAPTERS, new ArrayList());
+    public void testDecodeEmptyAdaptersListFails() {
+        final JsonObject tenantJson = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_ADAPTERS, new JsonArray());
         assertThrows(IllegalArgumentException.class, () -> {
             tenantJson.mapTo(Tenant.class);
         });
