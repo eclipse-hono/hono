@@ -37,7 +37,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -495,11 +494,6 @@ public abstract class HttpTestBase {
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
     public void testUploadFailsForNonMatchingTrustAnchor(final VertxTestContext ctx) throws GeneralSecurityException {
 
-        final Tenant tenant = new Tenant();
-
-        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         final KeyPair keyPair = helper.newEcKeyPair();
 
@@ -507,21 +501,26 @@ public abstract class HttpTestBase {
         helper.getCertificate(deviceCert.certificatePath())
         .compose(cert -> {
 
-            final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority()
-                    .setSubjectDn(cert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                    .setPublicKey(keyPair.getPublic().getEncoded())
-                    .setKeyAlgorithm(keyPair.getPublic().getAlgorithm());
-            tenant.setTrustedCertificateAuthority(trustedCertificateAuthority);
+            final Tenant tenant = Tenants.createTenantForTrustAnchor(
+                    cert.getIssuerX500Principal().getName(X500Principal.RFC2253),
+                    keyPair.getPublic().getEncoded(),
+                    keyPair.getPublic().getAlgorithm());
 
             return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
         })
         // WHEN a device tries to upload data and authenticate with a client
         // certificate that has not been signed with the configured trusted CA
-        .compose(ok -> httpClientWithClientCert.create(
-                getEndpointUri(),
-                Buffer.buffer("hello"),
-                requestHeaders,
-                response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED))
+        .compose(ok -> {
+
+            final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                    .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+            return httpClientWithClientCert.create(
+                    getEndpointUri(),
+                    Buffer.buffer("hello"),
+                    requestHeaders,
+                    response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+        })
         // THEN the request fails with a 401
         .setHandler(ctx.failing(t -> {
             ctx.verify(() -> {
