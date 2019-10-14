@@ -63,6 +63,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -1283,8 +1284,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     public void verifyEventMessageLimitsTtlToMaxValue(final TestContext ctx) {
         // Given the maximum ttl as 10 seconds for the given tenant.
         final TenantObject myTenantConfig = TenantObject.from("tenant", true)
-                .setResourceLimits(new JsonObject()
-                        .put(TenantConstants.FIELD_MAX_TTL, 10));
+                .setResourceLimits(new ResourceLimits().setMaxTtl(10L));
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(myTenantConfig));
         // Given an adapter
         final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(
