@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -39,6 +39,7 @@ import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
@@ -48,7 +49,21 @@ import io.vertx.core.net.SelfSignedCertificate;
 /**
  * Verifies behavior of {@link Tenant}.
  */
-class TenantTest {
+public class TenantTest {
+
+    private static X509Certificate certificate;
+
+    /**
+     * Sets up class fixture.
+     * @throws GeneralSecurityException if the self signed certificate cannot be created.
+     * @throws IOException if the self signed certificate cannot be read.
+     */
+    @BeforeAll
+    public static void setUp() throws GeneralSecurityException, IOException {
+        final SelfSignedCertificate selfSignedCert = SelfSignedCertificate.create("eclipse.org");
+        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        certificate = (X509Certificate) factory.generateCertificate(new FileInputStream(selfSignedCert.certificatePath()));
+    }
 
     /**
      * Decode empty Tenant without any properties set.
@@ -237,30 +252,7 @@ class TenantTest {
     }
 
     /**
-     * Decode "trusted-ca" section for a public key.
-     */
-    @Test
-    public void testDecodeTrustedCAUsingPublicKey() {
-
-        final JsonObject ca = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=org.eclipse")
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY, "abc123".getBytes(StandardCharsets.UTF_8))
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC");
-        final JsonObject tenantJson = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, ca);
-
-        final Tenant tenant = tenantJson.mapTo(Tenant.class);
-        assertNotNull(tenant);
-        assertNull(tenant.isEnabled());
-
-        final var storedCa = tenant.getTrustedCertificateAuthority();
-        assertThat(storedCa.getSubjectDnAsString(), is("CN=org.eclipse"));
-        assertThat(storedCa.getPublicKey(), is("abc123".getBytes(StandardCharsets.UTF_8)));
-        assertThat(storedCa.getKeyAlgorithm(), is("EC"));
-    }
-
-    /**
-     * Decode "trusted-ca" section for a public key.
+     * Decode "trusted-ca" section for an X.509 certificate.
      * 
      * @throws CertificateException if the self signed certificate cannot be created.
      * @throws IOException if the self signed certificate cannot be read.
@@ -268,20 +260,13 @@ class TenantTest {
     @Test
     public void testDecodeTrustedCAUsingCert() throws CertificateException, IOException {
 
-        final SelfSignedCertificate cert = SelfSignedCertificate.create("eclipse.org");
-        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        final X509Certificate certificate = (X509Certificate) factory.generateCertificate(new FileInputStream(cert.certificatePath()));
-
         final JsonObject ca = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
         final JsonObject tenantJson = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, ca);
 
         final Tenant tenant = tenantJson.mapTo(Tenant.class);
-        final var storedCa = tenant.getTrustedCertificateAuthority();
-        assertThat(storedCa.getSubjectDn(), is(certificate.getSubjectX500Principal()));
-        assertThat(storedCa.getPublicKey(), is(certificate.getPublicKey().getEncoded()));
-        assertThat(storedCa.getKeyAlgorithm(), is(certificate.getPublicKey().getAlgorithm()));
+        assertTrue(tenant.isValid());
     }
 
     /**

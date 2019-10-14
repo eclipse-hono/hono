@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,6 +27,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantTracingConfig;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -70,6 +72,19 @@ public class Tenant {
 
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     private TrustedCertificateAuthority trustedCertificateAuthority;
+
+    /**
+     * Checks if this object contains all required data.
+     * 
+     * @return {@code true} if all required data is available.
+     */
+    @JsonIgnore
+    public final boolean isValid() {
+
+        return Optional.ofNullable(trustedCertificateAuthority)
+                .map(ca -> ca.isValid())
+                .orElse(true);
+    }
 
     /**
      * Sets whether devices of this tenant should be able to connect
@@ -283,9 +298,11 @@ public class Tenant {
      * Sets this tenant's tracing configuration.
      *
      * @param tracing The tracing configuration.
+     * @return This instance, to allow chained invocations.
      */
-    public final void setTracing(final TenantTracingConfig tracing) {
+    public final Tenant setTracing(final TenantTracingConfig tracing) {
         this.tracing = tracing;
+        return this;
     }
 
     /**

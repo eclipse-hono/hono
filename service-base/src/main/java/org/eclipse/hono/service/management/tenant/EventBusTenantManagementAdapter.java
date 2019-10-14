@@ -13,14 +13,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import java.io.ByteArrayInputStream;
 import java.net.HttpURLConnection;
-import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -206,90 +199,9 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         Objects.requireNonNull(payload);
 
         try {
-            payload.mapTo(Tenant.class);
-            return hasValidTrustedCaSpec(payload);
+            return payload.mapTo(Tenant.class).isValid();
         } catch (final IllegalArgumentException e) {
             log.debug("Error parsing payload of tenant request", e);
-        }
-        return false;
-    }
-
-    /**
-     * Ensure that the <em>public-key</em> or <em>cert</em> property of the JSON object contains a valid Base64 DER encoded value.
-     * This method also validates that the trusted CA config also contains the mandatory <em>subject-dn</em>
-     * property.
-     *
-     * @param trustedCa The JSON object containing either the <em>public-key</em> or the <em>cert</em> property.
-     * @return true if the trusted CA object is valid (i.e it can be parsed into either an X.509 certificate or the
-     *         public key can be generated) or false otherwise.
-     */
-    private boolean isValidTrustedCaSpec(final JsonObject trustedCa) {
-
-        final Object encodedCert = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_CERT);
-        final Object encodedKey = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_PUBLIC_KEY);
-        final Object subjectDn = trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN);
-
-        if (!String.class.isInstance(subjectDn)) {
-            return false;
-        }
-        if (encodedCert != null && encodedKey == null) {
-            // validate the certificate
-            return isEncodedCertificate(encodedCert);
-        } else if (encodedKey != null && encodedCert == null) {
-            // validate public-key
-            final String algorithmName = Optional
-                    .ofNullable((String) trustedCa.getValue(RegistryManagementConstants.FIELD_PAYLOAD_KEY_ALGORITHM)).orElse("RSA");
-            return isEncodedPublicKey(encodedKey, algorithmName);
-        } else {
-            // Either the trusted CA configuration:
-            // contains both a cert and a public-key property
-            // or they are both missing
-            return false;
-        }
-    }
-
-    private boolean isEncodedCertificate(final Object encodedCert) {
-        if (String.class.isInstance(encodedCert)) {
-            try {
-                CertificateFactory.getInstance("X.509").generateCertificate(
-                        new ByteArrayInputStream(Base64.getDecoder().decode((String) encodedCert)));
-                return true;
-            } catch (final CertificateException | IllegalArgumentException e) {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-
-    private boolean isEncodedPublicKey(final Object encodedKey, final String algorithmName) {
-        if (String.class.isInstance(encodedKey)) {
-            try {
-                KeyFactory.getInstance(algorithmName)
-                        .generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode((String) encodedKey)));
-                return true;
-            } catch (final GeneralSecurityException | IllegalArgumentException e) {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * Checks if a payload contains a valid trusted CA specification.
-     *
-     * @param payload The payload to check.
-     * @return boolean {@code true} if the payload is valid.
-     */
-    private boolean hasValidTrustedCaSpec(final JsonObject payload) {
-
-        final Object trustConfig = payload.getValue(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
-        if (trustConfig == null) {
-            return true;
-        } else if (JsonObject.class.isInstance(trustConfig)) {
-            return isValidTrustedCaSpec((JsonObject) trustConfig);
-        } else {
             return false;
         }
     }

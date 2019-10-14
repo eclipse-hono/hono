@@ -21,31 +21,27 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.GeneralSecurityException;
-import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
+import java.util.List;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.junit5.VertxExtension;
+import io.vertx.core.net.SelfSignedCertificate;
 
 /**
  * Tests behavior of {@link EventBusTenantManagementAdapterTest}.
  *
  */
-@ExtendWith(VertxExtension.class)
 public class EventBusTenantManagementAdapterTest {
-    private static final String TRUST_STORE_PATH = "target/certs/trustStore.jks";
-    private static final String TRUST_STORE_PASSWORD = "honotrust";
     private static EventBusTenantManagementAdapter adapter;
 
     /**
@@ -53,6 +49,7 @@ public class EventBusTenantManagementAdapterTest {
      */
     @BeforeAll
     public static void setup() {
+
         adapter = new EventBusTenantManagementAdapter() {
 
             @Override
@@ -71,13 +68,23 @@ public class EventBusTenantManagementAdapterTest {
     }
 
     /**
-     * Verifies that the given payload having incorrect values for the 
-     * minimum message size and the sampling mode is invalid.
+     * Verifies that validation of a request payload fails if the
+     * payload contains a negative minimum message size.
      */
     @Test
-    public void verifyValidationsFailsWithInvalidPayload() {
+    public void verifyValidationFailsForInvalidMinMessageSize() {
         final JsonObject tenantPayload = buildTenantPayload();
         tenantPayload.put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, -100);
+        assertFalse(adapter.isValidRequestPayload(tenantPayload));
+    }
+
+    /**
+     * Verifies that validation of a request payload fails if the
+     * payload contains an unsupported trace sampling mode.
+     */
+    @Test
+    public void verifyValidationFailsForUnsupportedSamplingMode() {
+        final JsonObject tenantPayload = buildTenantPayload();
         tenantPayload.put(RegistryManagementConstants.FIELD_TRACING, new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TRACING_SAMPLING_MODE, "invalid-mode"));
         assertFalse(adapter.isValidRequestPayload(tenantPayload));
@@ -91,14 +98,13 @@ public class EventBusTenantManagementAdapterTest {
      */
     @Test
     public void verifyValidTrustedCaSpec() throws GeneralSecurityException, IOException {
+
         final X509Certificate trustedCaCert = getCaCertificate();
         final JsonObject tenantPayload = buildTenantPayload()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
                         new JsonObject()
-                                .put(RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
-                                        trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
                                 .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT,
-                                        Base64.getEncoder().encodeToString(trustedCaCert.getEncoded())));
+                                        trustedCaCert.getEncoded()));
 
         assertTrue(adapter.isValidRequestPayload(tenantPayload));
     }
@@ -111,7 +117,7 @@ public class EventBusTenantManagementAdapterTest {
      * @throws IOException if the trust store could not be read.
      */
     @Test
-    public void verifyInValidTrustedCaSpec() throws GeneralSecurityException, IOException {
+    public void verifyInvalidTrustedCaSpec() throws GeneralSecurityException, IOException {
         final X509Certificate trustedCaCert = getCaCertificate();
         final JsonObject tenantPayload = buildTenantPayload()
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
@@ -131,28 +137,23 @@ public class EventBusTenantManagementAdapterTest {
      */
     private static JsonObject buildTenantPayload() {
 
-        final JsonObject adapterDetailsHttp = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject adapterDetailsMqtt = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
-        return new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE)
-                .put(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE, 100)
-                .put(RegistryManagementConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt))
-                .put(RegistryManagementConstants.FIELD_TRACING, new JsonObject()
-                .put(RegistryManagementConstants.FIELD_TRACING_SAMPLING_MODE, TracingSamplingMode.DEFAULT.getFieldValue()));
+        final Tenant tenant = new Tenant()
+                .setTracing(new TenantTracingConfig().setSamplingMode(TracingSamplingMode.DEFAULT))
+                .setEnabled(true)
+                .setMinimumMessageSize(100)
+                .setAdapters(List.of(
+                        new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP).setEnabled(true),
+                        new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT).setEnabled(true)));
+        return JsonObject.mapFrom(tenant);
     }
 
     private X509Certificate getCaCertificate() throws GeneralSecurityException, IOException {
 
-        try (InputStream is = new FileInputStream(TRUST_STORE_PATH)) {
-            final KeyStore store = KeyStore.getInstance("JKS");
-            store.load(is, TRUST_STORE_PASSWORD.toCharArray());
-            return (X509Certificate) store.getCertificate("ca");
+        final SelfSignedCertificate ssc = SelfSignedCertificate.create("eclipse.org");
+
+        try (InputStream is = new FileInputStream(ssc.certificatePath())) {
+            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            return (X509Certificate) factory.generateCertificate(is);
         }
     }
 }

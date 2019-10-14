@@ -14,14 +14,19 @@
 package org.eclipse.hono.service.management.tenant;
 
 import java.io.ByteArrayInputStream;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.TenantConstants;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -38,11 +43,34 @@ public class TrustedCertificateAuthority {
 
     private X500Principal subjectDn;
 
-    @JsonProperty(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY)
     private byte[] publicKey;
+
+    private X509Certificate cert;
 
     @JsonProperty(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM)
     private String keyAlgorithm;
+
+    /**
+     * Checks if this object contains all required data.
+     * 
+     * @return {@code true} if all required data is available.
+     */
+    @JsonIgnore
+    public final boolean isValid() {
+        if (cert != null) {
+            return true;
+        } else if (subjectDn == null || publicKey == null) {
+            return false;
+        } else {
+            try {
+                final String alg = Optional.ofNullable(keyAlgorithm).orElse("RSA");
+                KeyFactory.getInstance(alg).generatePublic(new X509EncodedKeySpec(publicKey));
+                return true;
+            } catch (final GeneralSecurityException | IllegalArgumentException e) {
+                return false;
+            }
+        }
+    }
 
     /**
      * Sets the subject of the trusted authority.
@@ -51,7 +79,7 @@ public class TrustedCertificateAuthority {
      * @return A reference to this for fluent use.
      * @throws IllegalArgumentException if the subject DN is invalid.
      */
-    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, required = true)
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN)
     public final TrustedCertificateAuthority setSubjectDn(final String subjectDn) {
         this.subjectDn = new X500Principal(subjectDn);
         return this;
@@ -63,17 +91,24 @@ public class TrustedCertificateAuthority {
      * @return The subject distinguished name.
      */
     public final X500Principal getSubjectDn() {
-        return subjectDn;
+        return Optional.ofNullable(cert)
+                .map(c -> c.getSubjectX500Principal())
+                .orElse(subjectDn);
     }
 
     /**
      * Gets this trusted authority's subject formatted as a string in RFC 2253 format.
      *
-     * @return The subject distinguished name.
+     * @return The subject distinguished name or {@code null} if not set.
      */
-    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, required = true)
+    @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_SUBJECT_DN)
     public final String getSubjectDnAsString() {
-        return subjectDn.getName(X500Principal.RFC2253);
+
+        return Optional.ofNullable(cert)
+                .map(c -> c.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                .orElseGet(() -> Optional.ofNullable(subjectDn)
+                    .map(s -> s.getName(X500Principal.RFC2253))
+                    .orElse(null));
     }
 
     /**
@@ -82,6 +117,7 @@ public class TrustedCertificateAuthority {
      * @param publicKey The DER encoded public key.
      * @return A reference to this for fluent use.
      */
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY)
     public final TrustedCertificateAuthority setPublicKey(final byte[] publicKey) {
         this.publicKey = publicKey;
         return this;
@@ -92,12 +128,16 @@ public class TrustedCertificateAuthority {
      *
      * @return The DER encoded public key.
      */
+    @JsonProperty(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY)
     public final byte[] getPublicKey() {
-        return publicKey;
+
+        return Optional.ofNullable(cert)
+                .map(c -> c.getPublicKey().getEncoded())
+                .orElse(publicKey);
     }
 
     /**
-     * Sets the public key, key algorithm and subject DN from an X.509 certificate.
+     * Sets the trusted certificate authority.
      *
      * @param certificate The DER encoded X.509 certificate.
      * @return A reference to this for fluent use.
@@ -107,10 +147,7 @@ public class TrustedCertificateAuthority {
     public final TrustedCertificateAuthority setCertificate(final byte[] certificate) throws CertificateException {
 
         final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        final X509Certificate cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certificate));
-        this.subjectDn = cert.getSubjectX500Principal();
-        this.keyAlgorithm = cert.getPublicKey().getAlgorithm();
-        this.publicKey = cert.getPublicKey().getEncoded();
+        cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(certificate));
         return this;
     }
 
@@ -131,6 +168,9 @@ public class TrustedCertificateAuthority {
      * @return The name of the algorithm.
      */
     public final String getKeyAlgorithm() {
-        return keyAlgorithm;
+
+        return Optional.ofNullable(cert)
+                .map(c -> c.getPublicKey().getAlgorithm())
+                .orElse(keyAlgorithm);
     }
 }
