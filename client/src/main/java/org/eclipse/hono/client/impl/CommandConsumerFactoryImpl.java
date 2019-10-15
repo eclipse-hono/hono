@@ -277,8 +277,12 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
     private void ensureNoConflictingConsumerExists(final String tenantId, final String deviceId, final String gatewayId,
             final String gatewayOrDeviceKey, final Future<MessageConsumer> result) {
         final DestinationCommandConsumer commandConsumer = destinationCommandConsumerFactory.getClient(gatewayOrDeviceKey);
-        if (commandConsumer != null && commandConsumer.isAlive()) {
-            if (commandConsumer.containsCommandHandler(deviceId)) {
+        if (commandConsumer != null) {
+            if (!commandConsumer.isAlive()) {
+                log.debug("cannot create command consumer, existing consumer not properly closed yet [tenant: {}, device-id: {}]",
+                        tenantId, deviceId);
+                result.fail(new ResourceConflictException("message consumer already in use"));
+            } else if (commandConsumer.containsCommandHandler(deviceId)) {
                 log.debug("cannot create concurrent command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
                 result.fail(new ResourceConflictException("message consumer already in use"));
             } else if (gatewayId != null) {
