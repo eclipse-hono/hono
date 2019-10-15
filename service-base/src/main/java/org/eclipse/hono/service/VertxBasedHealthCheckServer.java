@@ -130,7 +130,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
         final Future<Void> result = Future.future();
 
-        if (config.getInsecurePortBindAddress() == Constants.LOOPBACK_DEVICE_ADDRESS) {
+        if (Constants.LOOPBACK_DEVICE_ADDRESS.equals(config.getInsecurePortBindAddress())) {
             LOG.info("won't start insecure health checks HTTP server: no bind address configured.");
             return Future.failedFuture("no bind address configured for insecure server");
         } else {
@@ -163,7 +163,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
     private Future<Void> bindSecureHttpServer() {
 
-        if (config.getBindAddress() == Constants.LOOPBACK_DEVICE_ADDRESS) {
+        if (Constants.LOOPBACK_DEVICE_ADDRESS.equals(config.getBindAddress())) {
             LOG.info("won't start secure health checks HTTP server: no bind address configured.");
             return Future.failedFuture("no bind address configured for secure server");
         } else if (config.isSecurePortEnabled()) {
