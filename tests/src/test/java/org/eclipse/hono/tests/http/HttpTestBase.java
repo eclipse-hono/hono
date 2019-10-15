@@ -22,9 +22,11 @@ import java.security.KeyPair;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -64,6 +66,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
 
@@ -399,7 +402,7 @@ public abstract class HttpTestBase {
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Consumer<Message> messageConsumer,
+            final Function<Message, Future<?>> messageConsumer,
             final Function<Integer, Future<MultiMap>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, messageConsumer, requestSender, MESSAGES_TO_SEND);
     }
@@ -417,22 +420,34 @@ public abstract class HttpTestBase {
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Consumer<Message> messageConsumer,
+            final Function<Message, Future<?>> messageConsumer,
             final Function<Integer, Future<MultiMap>> requestSender,
             final int numberOfMessages) throws InterruptedException {
 
-        final CountDownLatch received = new CountDownLatch(numberOfMessages);
+        final VertxTestContext messageSending = new VertxTestContext();
+        final Checkpoint messageSent = messageSending.checkpoint(numberOfMessages);
+        final Checkpoint messageReceived = messageSending.laxCheckpoint(numberOfMessages);
+        final AtomicInteger receivedMessageCount = new AtomicInteger(0);
+
         final VertxTestContext setup = new VertxTestContext();
 
         createConsumer(tenantId, msg -> {
             logger.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
-            if (messageConsumer != null) {
-                messageConsumer.accept(msg);
-            }
-            received.countDown();
-            if (received.getCount() % 20 == 0) {
-                logger.info("messages received: {}", numberOfMessages - received.getCount());
+            Optional.ofNullable(messageConsumer)
+            .map(consumer -> consumer.apply(msg))
+            .orElseGet(() -> Future.succeededFuture())
+            .setHandler(attempt -> {
+                if (attempt.succeeded()) {
+                    receivedMessageCount.incrementAndGet();
+                    messageReceived.flag();
+                } else {
+                    logger.error("failed to process message from device", attempt.cause());
+                    messageSending.failNow(attempt.cause());
+                }
+            });
+            if (receivedMessageCount.get() % 20 == 0) {
+                logger.info("messages received: {}", receivedMessageCount.get());
             }
         }).setHandler(setup.completing());
 
@@ -447,38 +462,41 @@ public abstract class HttpTestBase {
 
         while (messageCount < numberOfMessages) {
 
-            final int currentMessage = messageCount;
             messageCount++;
+            final int currentMessage = messageCount;
 
             final CountDownLatch sending = new CountDownLatch(1);
-            requestSender.apply(currentMessage).compose(this::assertHttpResponse).setHandler(attempt -> {
+            requestSender.apply(currentMessage)
+            .compose(this::assertHttpResponse)
+            .setHandler(attempt -> {
                 try {
                     if (attempt.succeeded()) {
                         logger.debug("sent message {}", currentMessage);
+                        messageSent.flag();
                     } else {
                         logger.info("failed to send message {}: {}", currentMessage, attempt.cause().getMessage());
-                        ctx.failNow(attempt.cause());
+                        messageSending.failNow(attempt.cause());
                     }
                 } finally {
                     sending.countDown();
                 }
             });
-
+            sending.await();
             if (currentMessage % 20 == 0) {
                 logger.info("messages sent: " + currentMessage);
             }
-            sending.await();
         }
 
         final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 50 - (System.currentTimeMillis() - testStartTimeMillis),
                 1);
-        if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
-            logger.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
-            ctx.failNow(new IllegalStateException("did not receive all messages sent"));
+        assertThat(messageSending.awaitCompletion(timeToWait, TimeUnit.MILLISECONDS)).isTrue();
+
+        if (messageSending.failed()) {
+            logger.error("test execution failed", messageSending.causeOfFailure());
+            ctx.failNow(messageSending.causeOfFailure());
         } else {
-            logger.info("sent {} and received {} messages after {} milliseconds",
-                    messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
+            logger.info("successfully sent {} and received {} messages after {} milliseconds",
+                    messageCount, receivedMessageCount.get(), System.currentTimeMillis() - start);
             ctx.completeNow();
         }
     }
@@ -848,15 +866,18 @@ public abstract class HttpTestBase {
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
+                    // do NOT send a command, but let the HTTP adapter's timer expire
                     logger.trace("received message");
-                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+                    return TimeUntilDisconnectNotification.fromMessage(msg)
+                    .map(notification -> {
                         ctx.verify(() -> {
                             assertThat(notification.getTtd()).isEqualTo(2);
                             assertThat(notification.getTenantId()).isEqualTo(tenantId);
                             assertThat(notification.getDeviceId()).isEqualTo(deviceId);
                         });
-                    });
-                    // do NOT send a command, but let the HTTP adapter's timer expire
+                        return Future.succeededFuture();
+                    })
+                    .orElseGet(() -> Future.succeededFuture());
                 },
                 count -> {
                     return httpClient.create(
@@ -921,31 +942,34 @@ public abstract class HttpTestBase {
         testUploadMessages(ctx, tenantId,
                 msg -> {
 
-                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
-                        logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
-                        ctx.verify(() -> {
-                            assertThat(notification.getTenantId()).isEqualTo(tenantId);
-                            assertThat(notification.getDeviceId()).isEqualTo(deviceId);
-                        });
-                        // now ready to send a command
-                        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-                        helper.sendCommand(
-                                tenantId,
-                                commandTarget,
-                                COMMAND_TO_SEND,
-                                "application/json",
-                                inputData.toBuffer(),
-                                null,
-                                notification.getMillisecondsUntilExpiry(),
-                                endpointConfig.isLegacyNorthboundEndpoint())
-                        .setHandler(ctx.succeeding(response -> {
-                            ctx.verify(() -> {
-                                assertThat(response.getContentType()).isEqualTo("text/plain");
-                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(deviceId);
-                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
-                            });
-                        }));
-                    });
+                    return TimeUntilDisconnectNotification.fromMessage(msg)
+                            .map(notification -> {
+                                logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
+                                ctx.verify(() -> {
+                                    assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                                    assertThat(notification.getDeviceId()).isEqualTo(deviceId);
+                                });
+                                // now ready to send a command
+                                final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                                return helper.sendCommand(
+                                        tenantId,
+                                        commandTarget,
+                                        COMMAND_TO_SEND,
+                                        "application/json",
+                                        inputData.toBuffer(),
+                                        null,
+                                        notification.getMillisecondsUntilExpiry(),
+                                        endpointConfig.isLegacyNorthboundEndpoint())
+                                        .map(response -> {
+                                            ctx.verify(() -> {
+                                                assertThat(response.getContentType()).isEqualTo("text/plain");
+                                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(deviceId);
+                                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
+                                            });
+                                            return response;
+                                        });
+                            })
+                            .orElseGet(() -> Future.succeededFuture());
                 },
                 count -> {
                     return httpClient.create(
@@ -1003,7 +1027,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
+                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "4");
 
         helper.registry
         .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
@@ -1019,24 +1043,27 @@ public abstract class HttpTestBase {
 
         testUploadMessages(ctx, tenantId,
                 msg -> {
-                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+                    return TimeUntilDisconnectNotification.fromMessage(msg)
+                            .map(notification -> {
 
-                        logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
-                        assertThat(notification.getTenantId()).isEqualTo(tenantId);
-                        assertThat(notification.getDeviceId()).isEqualTo(deviceId);
-                        // now ready to send a command
-                        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-                        helper.sendOneWayCommand(
-                                tenantId,
-                                commandTarget,
-                                COMMAND_TO_SEND,
-                                "application/json",
-                                inputData.toBuffer(),
-                                null,
-                                notification.getMillisecondsUntilExpiry(),
-                                endpointConfig.isLegacyNorthboundEndpoint())
-                        .setHandler(ctx.succeeding());
-                    });
+                                logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
+                                ctx.verify(() -> {
+                                    assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                                    assertThat(notification.getDeviceId()).isEqualTo(deviceId);
+                                });
+                                // now ready to send a command
+                                final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                                return helper.sendOneWayCommand(
+                                        tenantId,
+                                        commandTarget,
+                                        COMMAND_TO_SEND,
+                                        "application/json",
+                                        inputData.toBuffer(),
+                                        null,
+                                        notification.getMillisecondsUntilExpiry(),
+                                        endpointConfig.isLegacyNorthboundEndpoint());
+                            })
+                            .orElseGet(() -> Future.succeededFuture());
                 },
                 count -> {
                     final Buffer payload = Buffer.buffer("hello " + count);
@@ -1052,8 +1079,9 @@ public abstract class HttpTestBase {
                         // consumer for the previous request
                         // wait a little and try again
                         final Future<MultiMap> retryResult = Future.future();
-                        VERTX.setTimer(100, retry -> {
-                            logger.info("re-trying last request [{}]", count);
+                        VERTX.setTimer(300, retry -> {
+                            logger.info("re-trying request [{}] which failed with unexpected status code {}",
+                                    count, ServiceInvocationException.extractStatusCode(t));
                             httpClient.create(
                                     getEndpointUri(),
                                     payload,
