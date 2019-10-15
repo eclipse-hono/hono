@@ -199,8 +199,7 @@ public final class AuthoritiesImpl implements Authorities {
 
     @Override
     public Map<String, Object> asMap() {
-        final Map<String, Object> result = new HashMap<>();
-        result.putAll(authorities);
+        final Map<String, Object> result = new HashMap<>(authorities);
         return result;
     }
 

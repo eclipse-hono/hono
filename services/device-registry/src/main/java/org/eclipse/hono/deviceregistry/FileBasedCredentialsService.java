@@ -427,7 +427,6 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                 final JsonObject secret = (JsonObject) o;
                 if (Boolean.FALSE.equals(secret.getBoolean(CredentialsConstants.FIELD_ENABLED, true))) {
                     i.remove();
-                    continue;
                 }
             }
 

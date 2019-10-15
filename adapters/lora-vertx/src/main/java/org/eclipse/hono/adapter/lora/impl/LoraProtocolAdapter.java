@@ -161,7 +161,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 ctx.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER));
 
         final Object normalizedProperties = ctx.get(LoraConstants.NORMALIZED_PROPERTIES);
-        if (normalizedProperties != null && normalizedProperties instanceof Map) {
+        if (normalizedProperties instanceof Map) {
             for (final Map.Entry<String, Object> entry:
                  ((Map<String, Object>) normalizedProperties).entrySet()) {
                 MessageHelper.addProperty(downstreamMessage, entry.getKey(), entry.getValue());

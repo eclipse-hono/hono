@@ -233,7 +233,7 @@ public final class HttpUtils {
         try {
             Optional<String> timeTilDisconnectHeader = Optional.ofNullable(ctx.request().getHeader(Constants.HEADER_TIME_TILL_DISCONNECT));
 
-            if (!timeTilDisconnectHeader.isPresent()) {
+            if (timeTilDisconnectHeader.isEmpty()) {
                 timeTilDisconnectHeader = Optional.ofNullable(ctx.request().getParam(Constants.HEADER_TIME_TILL_DISCONNECT));
             }
 
