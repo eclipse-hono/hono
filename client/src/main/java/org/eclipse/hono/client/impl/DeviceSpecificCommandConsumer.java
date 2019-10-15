@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
 /**
@@ -66,6 +67,9 @@ public final class DeviceSpecificCommandConsumer implements MessageConsumer {
         } else {
             LOG.debug("cannot delegate close() invocation; actual consumer not available [consumer device-id {}]",
                     deviceId);
+            if (closeHandler != null) {
+                closeHandler.handle(Future.failedFuture("actual consumer not available"));
+            }
         }
     }
 
