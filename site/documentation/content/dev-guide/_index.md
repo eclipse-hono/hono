@@ -7,4 +7,4 @@ pre = '<i class="fas fa-tools"></i> '
 
 # Developer Guide
 
-Learn how to integrate your custom components with Hono&trade;. 
+Learn how to build Eclipse Hono&trade; and how to integrate your custom components with it. 

@@ -7,4 +7,4 @@ pre = '<i class="fas fa-sliders-h"></i> '
 
 # Admin Guide
 
-Learn how to operate Hono&trade; and look-up the configuration options of it's components. 
+Learn how to operate Eclipse Hono&trade; and look up the configuration options of its components.
