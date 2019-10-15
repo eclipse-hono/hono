@@ -26,16 +26,16 @@ public class AmqpCommandEndpointConfiguration extends CommandEndpointConfigurati
     /**
      * Creates a new configuration.
      * 
-     * @param useGatewayDevice {@code true} if the device connecting to the adapter is a gateway.
+     * @param subscriberRole The way in which to subscribe for commands.
      * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
      * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
      */
     public AmqpCommandEndpointConfiguration(
-            final boolean useGatewayDevice,
+            final SubscriberRole subscriberRole,
             final boolean useLegacySouthboundEndpoint,
             final boolean useLegacyNorthboundEndpoint) {
 
-        super(useGatewayDevice, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
+        super(subscriberRole, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
     }
 
     /**
@@ -43,16 +43,22 @@ public class AmqpCommandEndpointConfiguration extends CommandEndpointConfigurati
      */
     @Override
     public String toString() {
-        return String.format("gateway device: %s, southbound endpoint: %s, northbound endpoint: %s",
-                isGatewayDevice(), getSouthboundEndpoint(), getNorthboundEndpoint());
+        return String.format("subscribe as: %s, southbound endpoint: %s, northbound endpoint: %s",
+                getSubscriberRole(), getSouthboundEndpoint(), getNorthboundEndpoint());
     }
 
     /**
      * Gets the source address that devices use for subscribing to commands.
-     * 
+     *
+     * @param tenantId The tenant identifier.
+     * @param deviceId The device id to subscribe to if subscribing as a gateway for commands to a single device.
+     *                 May be {@code null} otherwise.
      * @return The address.
      */
-    public final String getSubscriptionAddress() {
+    public final String getSubscriptionAddress(final String tenantId, final String deviceId) {
+        if (isSubscribeAsGatewayForSingleDevice()) {
+            return getSouthboundEndpoint() + "/" + tenantId + "/" + deviceId;
+        }
         return getSouthboundEndpoint();
     }
 }

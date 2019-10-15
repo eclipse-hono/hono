@@ -31,18 +31,18 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
     /**
      * Creates a new configuration.
      * 
-     * @param useGatewayDevice {@code true} if the device connecting to the adapter is a gateway.
+     * @param subscriberRole The way in which to subscribe for commands.
      * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
      * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
      * @param useLegacyTopicFilter {@code true} if the device uses the legacy topic filter for subscribing to commands.
      */
     public MqttCommandEndpointConfiguration(
-            final boolean useGatewayDevice,
+            final SubscriberRole subscriberRole,
             final boolean useLegacySouthboundEndpoint,
             final boolean useLegacyNorthboundEndpoint,
             final boolean useLegacyTopicFilter) {
 
-        super(useGatewayDevice, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
+        super(subscriberRole, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
         this.legacyTopicFilter = useLegacyTopicFilter;
     }
 
@@ -51,22 +51,30 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
      */
     @Override
     public String toString() {
-        return String.format("gateway device: %s, southbound endpoint: %s, northbound endpoint: %s, topic filter: %s",
-                isGatewayDevice(), getSouthboundEndpoint(), getNorthboundEndpoint(), getCommandTopicFilter());
+        return String.format("subscribe as: %s, southbound endpoint: %s, northbound endpoint: %s, topic filter: %s",
+                getSubscriberRole(), getSouthboundEndpoint(), getNorthboundEndpoint(), getCommandTopicFilter("${deviceId}"));
     }
 
     /**
      * Gets the topic filter that devices use for subscribing to commands.
-     * 
+     *
+     * @param deviceId The device id to subscribe to if subscribing as a gateway for commands to a single device.
+     *                 May be {@code null} otherwise.
      * @return The filter.
      */
-    public final String getCommandTopicFilter() {
-        if (isGatewayDevice()) {
-            return String.format(
-                    "%s/%s/req/#", getSouthboundEndpoint(), legacyTopicFilter ? "+/+" : "/+");
-        } else {
+    public final String getCommandTopicFilter(final String deviceId) {
+        switch (getSubscriberRole()) {
+        case DEVICE:
             return String.format(
                     "%s/%s/req/#", getSouthboundEndpoint(), legacyTopicFilter ? "+/+" : "/");
+        case GATEWAY_FOR_ALL_DEVICES:
+            return String.format(
+                    "%s/%s/req/#", getSouthboundEndpoint(), legacyTopicFilter ? "+/+" : "/+");
+        case GATEWAY_FOR_SINGLE_DEVICE:
+            return String.format(
+                    "%s/%s/req/#", getSouthboundEndpoint(), (legacyTopicFilter ? "+/" : "/") + deviceId);
+        default:
+            throw new IllegalStateException("unknown role");
         }
     }
 
@@ -100,14 +108,20 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
         .as("command topic does not contain tenant ID")
         .isNull();
 
-        if (isGatewayDevice()) {
-            assertThat(topic.getResourceId())
-            .as("command topic contains device ID")
-            .isEqualTo(expectedCommandTarget);
-        } else {
+
+        switch (getSubscriberRole()) {
+        case DEVICE:
             assertThat(topic.getResourceId())
             .as("command topic does not contain device ID")
             .isNull();
+            break;
+        case GATEWAY_FOR_ALL_DEVICES:
+            // fall through
+        case GATEWAY_FOR_SINGLE_DEVICE:
+            assertThat(topic.getResourceId())
+            .as("command topic contains device ID")
+            .isEqualTo(expectedCommandTarget);
+            break;
         }
 
         if (isOneWayCommand) {
