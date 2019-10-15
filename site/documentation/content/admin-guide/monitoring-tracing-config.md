@@ -126,7 +126,9 @@ Using a Docker *volume* instead of a *bind mount* works the same way but require
 
 **Hint**: to resolve all dependencies for `jaeger-tracerresolver` in order to provide them to `/opt/hono/extensions`, you may want to rely on Maven's dependency plugin. To obtain all jar files you can invoke the following command in a simple Maven project that contains only the dependency to `jaeger-tracerresolver`:
 
-    mvn dependency:copy-dependencies
+~~~sh
+mvn dependency:copy-dependencies
+~~~
     
 All jar files can then be found in the directory `target/dependency`.    
 
@@ -137,8 +139,10 @@ This is to have the Jaeger tracing jar files be included in the Hono Docker imag
 
 For example, building the HTTP adapter image with the Jaeger client included:
 
-    # in directory: hono/adapters/http-vertx/
-    mvn clean install -Pbuild-docker-image,jaeger
+~~~sh
+# in directory: hono/adapters/http-vertx/
+mvn clean install -Pbuild-docker-image,jaeger
+~~~
 
 Note that when running the created docker image, the environment variables for configuring the Jaeger client still need to be set. Please refer to the [Jaeger documentation](https://github.com/jaegertracing/jaeger-client-java/blob/master/jaeger-core/README.md) for details.
 

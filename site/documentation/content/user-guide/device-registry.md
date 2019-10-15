@@ -43,30 +43,34 @@ The following commands add some tenants with different adapter configurations:
 
 Add a tenant that has all adapters set to enabled:
 
-    curl -i -X POST -H 'Content-Type: application/json' http://localhost:28080/v1/tenants/tenantAllAdapters
-    
-    HTTP/1.1 201 Created
-    ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
-    Location: /v1/tenants/tenantAllAdapters
-    Content-Type: application/json; charset=utf-8
-    
-    {"id": "tenantAllAdapters"}
+~~~sh
+curl -i -X POST -H 'Content-Type: application/json' http://localhost:28080/v1/tenants/tenantAllAdapters
+
+HTTP/1.1 201 Created
+ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
+Location: /v1/tenants/tenantAllAdapters
+Content-Type: application/json; charset=utf-8
+
+{"id": "tenantAllAdapters"}
+~~~
 
 Add a tenant that can only use the MQTT adapter:
 
-    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
-        "adapters": [ {
-            "type": "hono-mqtt",
-            "enabled": true
-            } ]
-      }' http://localhost:28080/v1/tenants/tenantMqttAdapter
-    
-    HTTP/1.1 201 Created
-    ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
-    Location:  /v1/tenants/tenantMqttAdapter
-    Content-Type: application/json; charset=utf-8
-    
-    {"id": "tenantMqttAdapter"}
+~~~sh
+curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    "adapters": [ {
+        "type": "hono-mqtt",
+        "enabled": true
+        } ]
+  }' http://localhost:28080/v1/tenants/tenantMqttAdapter
+
+HTTP/1.1 201 Created
+ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
+Location:  /v1/tenants/tenantMqttAdapter
+Content-Type: application/json; charset=utf-8
+
+{"id": "tenantMqttAdapter"}
+~~~
 
 ### Get configuration details of a Tenant
 
@@ -80,19 +84,21 @@ Add a tenant that can only use the MQTT adapter:
 
 The following command retrieves the details for the tenant `tenantMqttAdapter`:
 
-    curl -i http://localhost:28080/v1/tenants/tenantMqttAdapter
-    
-    HTTP/1.1 200 OK
-    ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
-    Content-Type: application/json; charset=utf-8
-    
-    {
-         "enabled": true,
-         "adapters": [ {
-             "type": "hono-mqtt",
-             "enabled": true
-         } ]
-    }
+~~~sh
+curl -i http://localhost:28080/v1/tenants/tenantMqttAdapter
+
+HTTP/1.1 200 OK
+ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
+Content-Type: application/json; charset=utf-8
+
+{
+     "enabled": true,
+     "adapters": [ {
+         "type": "hono-mqtt",
+         "enabled": true
+     } ]
+}
+~~~
 
 ### Update Tenant
 
@@ -113,17 +119,18 @@ This resource can be used to change the configuration of a particular tenant.
 
 The following command disables the MQTT adapter for devices that belong to the tenant `tenantMqttAdapter`:
 
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
-          "adapters": [ {
-              "type": "hono-mqtt",
-              "enabled": true
-              } ]
-      }' http://localhost:28080/v1/tenants/tenantMqttAdapter
-    
-    HTTP/1.1 204 No Content
-    ETag: 8919c736-30aa-40ce-a45a-830b90c4cd42
-    Content-Length: 0
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+      "adapters": [ {
+          "type": "hono-mqtt",
+          "enabled": true
+          } ]
+  }' http://localhost:28080/v1/tenants/tenantMqttAdapter
 
+HTTP/1.1 204 No Content
+ETag: 8919c736-30aa-40ce-a45a-830b90c4cd42
+Content-Length: 0
+~~~
 
 ### Delete Tenant
 
@@ -135,10 +142,12 @@ The following command disables the MQTT adapter for devices that belong to the t
 
 **Example**
 
-    curl -i -X DELETE http://localhost:28080/v1/tenants/tenantMqttAdapter
-    
-    HTTP/1.1 204 No Content
-    Content-Length: 0
+~~~sh
+curl -i -X DELETE http://localhost:28080/v1/tenants/tenantMqttAdapter
+
+HTTP/1.1 204 No Content
+Content-Length: 0
+~~~
 
 ## Managing Device Registration Information
 
@@ -162,21 +171,26 @@ Please refer to the [Device Registry HTTP API]({{< relref "/api/management" >}})
 
 The following command registers a device with ID `4711` for tenant `DEFAULT_TENANT`
 
-    curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
-        "ext": {
-            "ep": "IMEI4711"
-        }
-    }' http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
+~~~sh
+curl -i -X POST -H 'Content-Type: application/json' --data-binary '{
+    "ext": {
+        "ep": "IMEI4711"
+    }
+}' http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
+~~~
 
 The response will contain a `Location` header containing the resource path created for the device. In this example it will look
 like this:
 
-    HTTP/1.1 201 Created
-    Location: /v1/devices/DEFAULT_TENANT/4711
-    ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
-    Content-Type: application/json; charset=utf-8
-    
-    {"id": "4711"}
+~~~sh
+HTTP/1.1 201 Created
+Location: /v1/devices/DEFAULT_TENANT/4711
+ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
+Content-Type: application/json; charset=utf-8
+
+{"id": "4711"}
+~~~
+
 
 ### Read Device
 
@@ -190,17 +204,19 @@ like this:
 
 The following command retrieves registration data for device `4711`:
 
-    curl -i http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
-    
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
+~~~sh
+curl -i http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
 
-    {
-        "enabled": true,
-        "ext": {
-            "ep": "IMEI4711"
-        }
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{
+    "enabled": true,
+    "ext": {
+        "ep": "IMEI4711"
     }
+}
+~~~
 
 ### Update Device
 
@@ -218,15 +234,17 @@ The following command retrieves registration data for device `4711`:
 
 **Example**
 
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
-        "ext": {
-            "ep": "IMEI4711",
-            "psk-id": "psk4711"
-        }
-    }' http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
-    
-    HTTP/1.1 204 No Content
-    Content-Length: 0
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+    "ext": {
+        "ep": "IMEI4711",
+        "psk-id": "psk4711"
+    }
+}' http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
+
+HTTP/1.1 204 No Content
+Content-Length: 0
+~~~
 
 ### Delete Device
 
@@ -238,10 +256,12 @@ The following command retrieves registration data for device `4711`:
 
 **Example**
 
-    curl -i -X DELETE http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
-    
-    HTTP/1.1 204 No Content
-    Content-Length: 0
+~~~sh
+curl -i -X DELETE http://localhost:28080/v1/devices/DEFAULT_TENANT/4711
+
+HTTP/1.1 204 No Content
+Content-Length: 0
+~~~
     
 ## Managing Credentials
 
@@ -266,102 +286,112 @@ Please refer to the [Device Registry HTTP API]({{< relref "/api/management" >}})
 
 The following command adds some `hashed-password` credentials from a given plain text password for device `4710` using authentication identifier `sensor10`: 
 
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[{
-      "type": "hashed-password",
-      "auth-id": "sensor10",
-      "secrets": [{
-          "pwd-plain": "mylittlesecret"
-      }]
-    }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4710
-      
-    HTTP/1.1 204 No Content
-    ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4x
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[{
+  "type": "hashed-password",
+  "auth-id": "sensor10",
+  "secrets": [{
+      "pwd-plain": "mylittlesecret"
+  }]
+}]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4710
+  
+HTTP/1.1 204 No Content
+ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4x
+~~~
     
 This uses a convenient option which lets the Device Registry do the hashing of the password. The following command retrieves the credentials that are stored by the Device Registry as a result of the command above: 
     
-    
-    curl -i http://localhost:28080/v1/credentials/DEFAULT_TENANT/4710
+~~~sh    
+curl -i http://localhost:28080/v1/credentials/DEFAULT_TENANT/4710
 
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4x
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4x
 
-    [{
-      "type": "hashed-password",
-      "auth-id": "sensor10",
-      "enabled": true,
-      "secrets": [
-        {
-          "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6",
-          "hash-function": "bcrypt"
-        }
-      ]
-    }]
+[{
+  "type": "hashed-password",
+  "auth-id": "sensor10",
+  "enabled": true,
+  "secrets": [
+    {
+      "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6",
+      "hash-function": "bcrypt"
+    }
+  ]
+}]
+~~~
     
 The following commands add some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
 
-    PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[{
-        "type": "hashed-password",
-        "auth-id": "sensor20",
-        "secrets": [{
-            "hash-function": "sha-512",
-            "pwd-hash": "'$PWD_HASH'"
-        }]
-      }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
-    
-    HTTP/1.1 204 No Content
-    ETag: 02c99fb5-af8c-409f-8520-b405e224b27f
+~~~sh
+PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[{
+    "type": "hashed-password",
+    "auth-id": "sensor20",
+    "secrets": [{
+        "hash-function": "sha-512",
+        "pwd-hash": "'$PWD_HASH'"
+    }]
+  }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
+
+HTTP/1.1 204 No Content
+ETag: 02c99fb5-af8c-409f-8520-b405e224b27f
+~~~
 
 The following command adds an expiration date to the `hashed-password` credentials for authentication identifier `sensor20`:
 
-    PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
-        "device-id": "4720",
-        "type": "hashed-password",
-        "auth-id": "sensor20",
-        "secrets": [{
-            "hash-function": "sha-512",
-            "pwd-hash": "'$PWD_HASH'",
-            "not-after": "2018-01-01T00:00:00+01:00"
-        }]
-    }' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
+~~~sh
+PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
+    "device-id": "4720",
+    "type": "hashed-password",
+    "auth-id": "sensor20",
+    "secrets": [{
+        "hash-function": "sha-512",
+        "pwd-hash": "'$PWD_HASH'",
+        "not-after": "2018-01-01T00:00:00+01:00"
+    }]
+}' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
 
-    HTTP/1.1 204 No Content
-    ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4x
+HTTP/1.1 204 No Content
+ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4x
+~~~
 
 Multiple credentials of different type can be registered for the same authentication identifier.
 The following commands add `psk` credentials for the same device `4720` using authentication identifier `sensor20`:
 
-    SHARED_KEY=$(echo -n "TheSharedKey" | base64 -w 0)
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[
-    {
-        "type": "hashed-password",
-        "auth-id": "sensor20",
-        "secrets": [{
-            "hash-function": "bcrypt",
-            "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6"
-        }]
-    },
-    {
-       "device-id": "4720",
-       "type": "psk",
-       "auth-id": "sensor20",
-       "secrets": [{
-         "key": "'$SHARED_KEY'"
-         }]
-      }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
-    
-    HTTP/1.1 204 No Content
-    ETag: 122c971a-505a-4336-8f7d-640360e909bc
+~~~sh
+SHARED_KEY=$(echo -n "TheSharedKey" | base64 -w 0)
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[
+{
+    "type": "hashed-password",
+    "auth-id": "sensor20",
+    "secrets": [{
+        "hash-function": "bcrypt",
+        "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6"
+    }]
+},
+{
+   "device-id": "4720",
+   "type": "psk",
+   "auth-id": "sensor20",
+   "secrets": [{
+     "key": "'$SHARED_KEY'"
+     }]
+  }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
 
+HTTP/1.1 204 No Content
+ETag: 122c971a-505a-4336-8f7d-640360e909bc
+~~~
 
 The following command deletes all credentials for device `4710`:
 
-    curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4710
+~~~sh
+curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4710
 
-    HTTP/1.1 204 No Content
-    ETag: d383ba4d-1853-4d03-b322-b7ff5af05ae2
+HTTP/1.1 204 No Content
+ETag: d383ba4d-1853-4d03-b322-b7ff5af05ae2
+~~~
 
 ### Get all Credentials for a Device
 
@@ -375,32 +405,34 @@ The following command deletes all credentials for device `4710`:
 
 The following command retrieves credentials for device `4720`:
 
-    curl -i http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
+~~~sh
+curl -i http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
 
-    HTTP/1.1 200 OK
-    Content-Type: application/json; charset=utf-8
-    ETag: f3449b77-2c84-4b09-8d04-2b305876e0cb
-    
-    {[
-        {
-            "auth-id": "sensor20",
-            "enabled": true,
-            "secrets": [
-                {
-                    "hash-function": "sha-512",
-                    "pwd-hash": "tnxz0zDFs+pJGdCVSuoPE4TnamXsfIjBEOb0rg3e9WFD9KfbCkoRuwVZKgRWInfqp87kCLsoV/HEwdJwgw793Q=="
-                }
-            ],
-            "type": "hashed-password"
-        },
-        {
-            "auth-id": "sensor20",
-            "enabled": true,
-            "secrets": [
-                {
-                    "key": "VGhlU2hhcmVkS2V5"
-                }
-            ],
-            "type": "psk"
-        }
-    ]}
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+ETag: f3449b77-2c84-4b09-8d04-2b305876e0cb
+
+{[
+    {
+        "auth-id": "sensor20",
+        "enabled": true,
+        "secrets": [
+            {
+                "hash-function": "sha-512",
+                "pwd-hash": "tnxz0zDFs+pJGdCVSuoPE4TnamXsfIjBEOb0rg3e9WFD9KfbCkoRuwVZKgRWInfqp87kCLsoV/HEwdJwgw793Q=="
+            }
+        ],
+        "type": "hashed-password"
+    },
+    {
+        "auth-id": "sensor20",
+        "enabled": true,
+        "secrets": [
+            {
+                "key": "VGhlU2hhcmVkS2V5"
+            }
+        ],
+        "type": "psk"
+    }
+]}
+~~~
