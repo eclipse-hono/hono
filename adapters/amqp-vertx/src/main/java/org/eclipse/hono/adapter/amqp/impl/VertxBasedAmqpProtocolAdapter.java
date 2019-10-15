@@ -741,7 +741,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Span span,
             final OptionalInt traceSamplingPriority) {
 
-        return createCommandConsumer(sender, address).map(consumer -> {
+        return createCommandConsumer(sender, address, authenticatedDevice).map(consumer -> {
 
             final String tenantId = address.getTenantId();
             final String deviceId = address.getResourceId();
@@ -774,51 +774,59 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private Future<MessageConsumer> createCommandConsumer(
             final ProtonSender sender,
-            final ResourceIdentifier sourceAddress) {
+            final ResourceIdentifier sourceAddress,
+            final Device authenticatedDevice) {
 
-        return getCommandConsumerFactory().createCommandConsumer(
-                sourceAddress.getTenantId(),
-                sourceAddress.getResourceId(),
-                commandContext -> {
+        final Handler<CommandContext> commandHandler = commandContext -> {
 
-                    final Sample timer = metrics.startTimer();
-                    addMicrometerSample(commandContext, timer);
-                    Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
-                    final Command command = commandContext.getCommand();
-                    final Future<TenantObject> tenantTracker = getTenantConfiguration(sourceAddress.getTenantId(),
-                            commandContext.getTracingContext());
+            final Sample timer = metrics.startTimer();
+            addMicrometerSample(commandContext, timer);
+            Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+            final Command command = commandContext.getCommand();
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(sourceAddress.getTenantId(),
+                    commandContext.getTracingContext());
 
-                    tenantTracker.compose(tenantObject -> {
-                        if (!command.isValid()) {
-                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                                    "malformed command message"));
-                        }
-                        if (!sender.isOpen()) {
-                            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                    "sender link is not open"));
-                        }
-                        return checkMessageLimit(tenantObject, command.getPayloadSize());
-                    }).compose(success -> {
-                        onCommandReceived(tenantTracker.result(), sender, commandContext);
-                        return Future.succeededFuture();
-                    }).otherwise(failure -> {
-                        if (failure instanceof ClientErrorException) {
-                            // issue credit so that application(s) can send the next command
-                            commandContext.reject(getErrorCondition(failure), 1);
-                        } else {
-                            commandContext.release(1);
-                        }
-                        metrics.reportCommand(
-                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                sourceAddress.getTenantId(),
-                                tenantTracker.result(),
-                                ProcessingOutcome.from(failure),
-                                command.getPayloadSize(),
-                                timer);
-                        return null;
-                    });
-                }, closeHandler -> {},
-                DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
+            tenantTracker.compose(tenantObject -> {
+                if (!command.isValid()) {
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "malformed command message"));
+                }
+                if (!sender.isOpen()) {
+                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                            "sender link is not open"));
+                }
+                return checkMessageLimit(tenantObject, command.getPayloadSize());
+            }).compose(success -> {
+                onCommandReceived(tenantTracker.result(), sender, commandContext);
+                return Future.succeededFuture();
+            }).otherwise(failure -> {
+                if (failure instanceof ClientErrorException) {
+                    // issue credit so that application(s) can send the next command
+                    commandContext.reject(getErrorCondition(failure), 1);
+                } else {
+                    commandContext.release(1);
+                }
+                metrics.reportCommand(
+                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                        sourceAddress.getTenantId(),
+                        tenantTracker.result(),
+                        ProcessingOutcome.from(failure),
+                        command.getPayloadSize(),
+                        timer);
+                return null;
+            });
+        };
+        final Handler<Void> remoteCloseHandler = closeHandler -> {};
+        if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
+            // gateway scenario
+            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
+                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler,
+                    remoteCloseHandler, DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
+        } else {
+            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
+                    sourceAddress.getResourceId(), commandHandler, remoteCloseHandler,
+                    DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
+        }
     }
 
     /**
