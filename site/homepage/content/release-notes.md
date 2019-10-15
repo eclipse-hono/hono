@@ -62,7 +62,9 @@ title = "Release Notes"
 
 * The OpenShift specific source-to-image deployment model has been removed in
   favor of the Helm charts and the Eclipse IoT Packages project. You can still
-  deploy Hono on OpenShift using the Helm charts. 
+  deploy Hono on OpenShift using the Helm charts.
+* Defining password secrets with user provided password hash, function and salt is deprecated in the device registry management
+  API and will be removed in the upcoming versions. You should use `pwd-plain` property only going forward.
 
 ## 1.0-M7
 

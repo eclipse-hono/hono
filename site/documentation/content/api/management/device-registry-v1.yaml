@@ -841,6 +841,10 @@ components:
             - $ref: '#/components/schemas/CommonSecret'
 
       PasswordSecret:
+         description: |
+                      Password based secret definition <br>
+                      __NOTE__: Defining password secrets with user provided password hash, function and salt is deprecated and will be removed
+                      in the upcoming versions. You should use `pwd-plain` property only going forward.
          additionalProperties: false
          allOf:
             - $ref: '#/components/schemas/CommonSecret'
@@ -850,24 +854,27 @@ components:
                  "hash-function":
                     type: string
                     example: bcrypt
-                    description: The name of the hash function used to create the password hash (defined in `pwd-hash` property).
+                    description: __DEPRECATED!__ The name of the hash function used to create the password hash (defined in `pwd-hash` property).
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
+                    deprecated: true
                  "pwd-hash":
                     type: string
                     format: byte
-                    description: The password hash created using the `hash-function` and optional `salt` values.
+                    description: __DEPRECATED!__ The password hash created using the `hash-function` and optional `salt` values.
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
+                    deprecated: true
                  "salt":
                     type: string
                     format: byte
-                    description: The Base64 encoding of the salt used in the password hash (defined in the `pwd-hash` property).
+                    description: __DEPRECATED!__ The Base64 encoding of the salt used in the password hash (defined in the `pwd-hash` property).
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
+                    deprecated: true
                  "pwd-plain":
                     type: string
                     format: byte
@@ -1036,32 +1043,39 @@ components:
    examples:
       HashedPasswordExample:
          value:
-            auth-id: sensor1
-            type: hashed-password
-            secrets: [{
-               "not-after": "2027-12-24T19:00:00Z",
-               "pwd-hash": "AQIDBAUGBwg=",
-               "salt": "Mq7wFw==",
-               "hash-function": "sha-512"
-            }]
+            [{
+                auth-id: sensor1,
+                type: hashed-password,
+                secrets: [{
+                             "not-after": "2027-12-24T19:00:00Z",
+                             "pwd-hash": "AQIDBAUGBwg=",
+                             "salt": "Mq7wFw==",
+                             "hash-function": "sha-512"
+                          }]
+             }]
+
       PlainPasswordExample:
          value:
-            auth-id: sensor1
-            type: hashed-password
-            secrets: [{
-               "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
-               "not-after": "2027-12-24T19:00:00Z",
-               "pwd-plain": "hono-secret"
+           [{
+               auth-id: sensor1,
+               type: hashed-password,
+               secrets: [{
+                  "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
+                  "not-after": "2027-12-24T19:00:00Z",
+                  "pwd-plain": "hono-secret"
+               }]
             }]
       MetaPasswordExample:
          value:
-            auth-id: sensor1
-            type: hashed-password
-            secrets: [{
-               "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
-               "not-after": "2027-12-24T19:00:00Z",
-               "pwd-plain": "",
-               "pwd-hash": "",
-               "salt": "",
-               "hash-function": ""
+           [{
+               auth-id: sensor1,
+               type: hashed-password,
+               secrets: [{
+                  "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
+                  "not-after": "2027-12-24T19:00:00Z",
+                  "pwd-plain": "",
+                  "pwd-hash": "",
+                  "salt": "",
+                  "hash-function": ""
+               }]
             }]
