@@ -178,7 +178,7 @@ and connection parameters.
 
 The easiest way to set these properties is by means of putting them into a YAML file with content like this:
 
-```
+```yaml
 # do not deploy example AMQP Messaging Network
 amqpMessagingNetworkExample:
   enabled: false
@@ -227,7 +227,7 @@ In order to do so, the protocol adapters need to be configured with information 
 
 The easiest way to set these properties is by means of putting them into a YAML file with the following content:
 
-```
+```yaml
 # do not deploy example Device Registry
 deviceRegistryExample:
   enabled: false
