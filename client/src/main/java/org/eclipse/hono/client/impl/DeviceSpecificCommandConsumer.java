@@ -49,6 +49,16 @@ public final class DeviceSpecificCommandConsumer implements MessageConsumer {
         this.deviceId = Objects.requireNonNull(deviceId);
     }
 
+    /**
+     * Gets the current consumer delegate.
+     * <p>
+     * {@code null} may be returned here if {@link #close(Handler)} has already been invoked on this
+     * consumer (and the delegate consumer got closed as a consequence) or if the delegate consumer
+     * was remotely closed and no re-creation of the consumer (e.g. as part of a liveness check) has
+     * happened (yet).
+     *
+     * @return The consumer instance or {@code null}.
+     */
     private DestinationCommandConsumer getDelegate() {
         return delegateSupplier.get();
     }
