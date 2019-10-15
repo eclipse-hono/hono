@@ -138,6 +138,9 @@ public class PasswordSecret extends CommonSecret {
         if (!Strings.isNullOrEmpty(passwordHash)) {
             throw new IllegalStateException(String.format("'%s' must be empty", RegistryManagementConstants.FIELD_SECRETS_PWD_HASH));
         }
+        if (!Strings.isNullOrEmpty(salt)) {
+            throw new IllegalStateException(String.format("'%s' must be empty", RegistryManagementConstants.FIELD_SECRETS_SALT));
+        }
     }
 
     /**

@@ -277,7 +277,7 @@ The following command adds some `hashed-password` credentials from a given plain
     HTTP/1.1 204 No Content
     ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4x
     
-This uses a convenient option which lets the Device Registry do the hashing of the password. The following command retrieves the credentials that are stored by the Device Registry as a result of the command above: 
+This lets the Device Registry do the hashing of the password. The following command retrieves some metadata credentials that are stored by the Device Registry as a result of the command above: 
     
     
     curl -i http://localhost:28080/v1/credentials/DEFAULT_TENANT/4710
@@ -292,21 +292,18 @@ This uses a convenient option which lets the Device Registry do the hashing of t
       "enabled": true,
       "secrets": [
         {
-          "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6",
-          "hash-function": "bcrypt"
+          "id": "349556ea-4902-47c7-beb0-1009ab693fb4"
         }
       ]
     }]
     
 The following commands add some `hashed-password` credentials for device `4720` using authentication identifier `sensor20`:
 
-    PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
     curl -i -X PUT -H 'Content-Type: application/json' --data-binary '[{
         "type": "hashed-password",
         "auth-id": "sensor20",
         "secrets": [{
-            "hash-function" : "sha-512",
-            "pwd-hash": "'$PWD_HASH'"
+            "pwd-plain": "mylittlesecret"
         }]
       }]' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
     
@@ -315,14 +312,12 @@ The following commands add some `hashed-password` credentials for device `4720` 
 
 The following command adds an expiration date to the `hashed-password` credentials for authentication identifier `sensor20`:
 
-    PWD_HASH=$(echo -n "mylittlesecret" | openssl dgst -binary -sha512 | base64 -w 0)
     curl -i -X PUT -H 'Content-Type: application/json' --data-binary '{
         "device-id": "4720",
         "type": "hashed-password",
         "auth-id": "sensor20",
         "secrets": [{
-            "hash-function" : "sha-512",
-            "pwd-hash": "'$PWD_HASH'",
+            "pwd-plain": "mylittlesecret",
             "not-after": "2018-01-01T00:00:00+01:00"
         }]
     }' http://localhost:28080/v1/credentials/DEFAULT_TENANT/4720
@@ -339,8 +334,7 @@ The following commands add `psk` credentials for the same device `4720` using au
         "type": "hashed-password",
         "auth-id": "sensor20",
         "secrets": [{
-            "hash-function" : "bcrypt",
-            "pwd-hash": "$2a$10$uc.qVDwXeDRE1DWa1sM9iOaY9wuevjfALGMtXmHKP.SJDEqg0q7M6"
+            "pwd-plain": "mylittlesecret"
         }]
     },
     {
@@ -387,8 +381,7 @@ The following command retrieves credentials for device `4720`:
             "enabled": true,
             "secrets": [
                 {
-                    "hash-function": "sha-512",
-                    "pwd-hash": "tnxz0zDFs+pJGdCVSuoPE4TnamXsfIjBEOb0rg3e9WFD9KfbCkoRuwVZKgRWInfqp87kCLsoV/HEwdJwgw793Q=="
+                    "id": "d383ba4d-1853-4d03-b322-b7ff5af05ae2"
                 }
             ],
             "type": "hashed-password"

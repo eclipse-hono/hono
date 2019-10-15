@@ -387,8 +387,6 @@ paths:
                   schema:
                      $ref: '#/components/schemas/CredentialsSet'
                   examples:
-                     Hashed Password:
-                        $ref: '#/components/examples/HashedPasswordExample'
                      Plain Password:
                         $ref: '#/components/examples/PlainPasswordExample'
             required: true
@@ -661,7 +659,7 @@ components:
          discriminator:
             propertyName: type
             mapping:
-               "hashed-password": '#/components/schemas/PasswordCredentials'
+               "password": '#/components/schemas/PasswordCredentials'
                "psk": '#/components/schemas/PSKCredentials'
                "x509-cert": '#/components/schemas/X509CertificateCredentials'
 
@@ -750,34 +748,12 @@ components:
             - type: object
               additionalProperties: false
               properties:
-                 "hash-function":
-                    type: string
-                    example: bcrypt
-                    description: The name of the hash function used to create the password hash (defined in `pwd-hash` property).
-                                 If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
-                                 This property should be empty when returning passwords from the device registry using only secret metadata.
-                                 In this case the id field must be set instead.
-                 "pwd-hash":
-                    type: string
-                    format: byte
-                    description: The password hash created using the `hash-function` and optional `salt` values.
-                                 If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
-                                 This property should be empty when returning passwords from the device registry using only secret metadata.
-                                 In this case the id field must be set instead.
-                 "salt":
-                    type: string
-                    format: byte
-                    description: The Base64 encoding of the salt used in the password hash (defined in the `pwd-hash` property).
-                                 If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
-                                 This property should be empty when returning passwords from the device registry using only secret metadata.
-                                 In this case the id field must be set instead.
                  "pwd-plain":
                     type: string
                     format: byte
                     description: The clear text value of the password to be hashed by the device registry.
-                                 If this property is specified, the device registry will ignore user-provided hash properties (`hash-function`, `pwd-hash` and `salt`).
-                                 This property should never be stored by the device registry.
-                                 This property should be empty when returning passwords from the device registry.
+                                 This property must never be stored by the device registry.
+                                 This property must be empty when returning passwords from the device registry.
 
       PSKSecret:
          additionalProperties: false
@@ -937,16 +913,6 @@ components:
          scheme: basic
 
    examples:
-      HashedPasswordExample:
-         value:
-            auth-id: sensor1
-            type: hashed-password
-            secrets: [{
-               "not-after": "2027-12-24T19:00:00Z",
-               "pwd-hash": "AQIDBAUGBwg=",
-               "salt": "Mq7wFw==",
-               "hash-function": "sha-512"
-            }]
       PlainPasswordExample:
          value:
             auth-id: sensor1
@@ -963,8 +929,5 @@ components:
             secrets: [{
                "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
                "not-after": "2027-12-24T19:00:00Z",
-               "pwd-plain": "",
-               "pwd-hash": "",
-               "salt": "",
-               "hash-function": ""
+               "pwd-plain": ""
             }]
