@@ -48,6 +48,7 @@ public class CommandSubscription {
     private String req;
     private String tenant;
     private String deviceId;
+    private String authenticatedDeviceId;
     private MqttQoS qos;
     private String clientId;
     private String topic;
@@ -101,14 +102,14 @@ public class CommandSubscription {
             }
         } else {
             isAuthenticated = true;
-            if ((tenant != null && !authenticatedDevice.getTenantId().equals(tenant)) ||
-                    (deviceId != null && !authenticatedDevice.getDeviceId().equals(deviceId))) {
+            if (tenant != null && !authenticatedDevice.getTenantId().equals(tenant)) {
                 throw new IllegalArgumentException(
-                        "tenant and device-id in topic filter do not match authenticated device");
-            } else {
-                tenant = authenticatedDevice.getTenantId();
+                        "tenant in topic filter does not match authenticated device");
+            } else if (deviceId == null || deviceId.isEmpty()) {
                 deviceId = authenticatedDevice.getDeviceId();
             }
+            tenant = authenticatedDevice.getTenantId();
+            authenticatedDeviceId = authenticatedDevice.getDeviceId();
         }
     }
 
@@ -134,6 +135,15 @@ public class CommandSubscription {
      */
     public String getDeviceId() {
         return deviceId;
+    }
+
+    /**
+     * Gets the device id from authentication.
+     *
+     * @return The device id or {@code null}.
+     */
+    public String getAuthenticatedDeviceId() {
+        return authenticatedDeviceId;
     }
 
     /**
@@ -189,6 +199,16 @@ public class CommandSubscription {
      */
     public boolean isAuthenticated() {
         return isAuthenticated;
+    }
+
+    /**
+     * Checks whether this subscription represents the case of a gateway subscribing for commands
+     * of a specific device that it acts on behalf of.
+     *
+     * @return {@code true} if a gateway is subscribing for commands of a specific device.
+     */
+    public boolean isGatewaySubscriptionForSpecificDevice() {
+        return authenticatedDeviceId != null && !authenticatedDeviceId.equals(deviceId);
     }
 
     /**

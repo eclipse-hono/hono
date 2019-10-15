@@ -70,6 +70,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttConnectionException;
@@ -730,47 +731,51 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         // the default value of the CommandConnection will be used
         final long livenessCheckInterval = (long) mqttEndpoint.keepAliveTimeSeconds() * 1000 / 2;
 
-        return getCommandConsumerFactory().createCommandConsumer(
-                sub.getTenant(),
-                sub.getDeviceId(),
-                commandContext -> {
+        final Handler<CommandContext> commandHandler = commandContext -> {
 
-                    Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
-                    final Sample timer = metrics.startTimer();
-                    final Command command = commandContext.getCommand();
-                    final Future<TenantObject> tenantTracker = getTenantConfiguration(sub.getTenant(),
-                            commandContext.getTracingContext());
+            Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
+            final Sample timer = metrics.startTimer();
+            final Command command = commandContext.getCommand();
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(sub.getTenant(),
+                    commandContext.getTracingContext());
 
-                    tenantTracker.compose(tenantObject -> {
-                        if (!command.isValid()) {
-                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                                    "malformed command message"));
-                        }
-                        return checkMessageLimit(tenantObject, command.getPayloadSize());
-                    }).compose(success -> {
-                        addMicrometerSample(commandContext, timer);
-                        onCommandReceived(tenantTracker.result(), mqttEndpoint, sub, commandContext,
-                                cmdHandler);
-                        return Future.succeededFuture();
-                    }).otherwise(failure -> {
-                        if (failure instanceof ClientErrorException) {
-                            // issue credit so that application(s) can send the next command
-                            commandContext.reject(getErrorCondition(failure), 1);
-                        } else {
-                            commandContext.release(1);
-                        }
-                        metrics.reportCommand(
-                                command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                sub.getTenant(),
-                                tenantTracker.result(),
-                                ProcessingOutcome.from(failure),
-                                command.getPayloadSize(),
-                                timer);
-                        return null;
-                    });
-                },
-                remoteClose -> {},
-                livenessCheckInterval);
+            tenantTracker.compose(tenantObject -> {
+                if (!command.isValid()) {
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "malformed command message"));
+                }
+                return checkMessageLimit(tenantObject, command.getPayloadSize());
+            }).compose(success -> {
+                addMicrometerSample(commandContext, timer);
+                onCommandReceived(tenantTracker.result(), mqttEndpoint, sub, commandContext,
+                        cmdHandler);
+                return Future.succeededFuture();
+            }).otherwise(failure -> {
+                if (failure instanceof ClientErrorException) {
+                    // issue credit so that application(s) can send the next command
+                    commandContext.reject(getErrorCondition(failure), 1);
+                } else {
+                    commandContext.release(1);
+                }
+                metrics.reportCommand(
+                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                        sub.getTenant(),
+                        tenantTracker.result(),
+                        ProcessingOutcome.from(failure),
+                        command.getPayloadSize(),
+                        timer);
+                return null;
+            });
+        };
+        final Handler<Void> remoteCloseHandler = remoteClose -> {};
+        if (sub.isGatewaySubscriptionForSpecificDevice()) {
+            // gateway scenario
+            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(),
+                    sub.getAuthenticatedDeviceId(), commandHandler, remoteCloseHandler, livenessCheckInterval);
+        } else {
+            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(), commandHandler,
+                    remoteCloseHandler, livenessCheckInterval);
+        }
     }
 
     void handlePublishedMessage(final MqttContext context) {
