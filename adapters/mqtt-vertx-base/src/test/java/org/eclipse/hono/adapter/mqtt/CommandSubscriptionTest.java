@@ -87,6 +87,27 @@ public class CommandSubscriptionTest {
     }
 
     /**
+     * Verifies subscription pattern with auth device differing device id in topic.
+     * This represents a scenario where a gateway subscribes on behalf of a device.
+     */
+    @Test
+    public void testSubscriptionAuthWithDifferentDeviceId() {
+        final String gatewayManagedDeviceId = "gatewayManagedDevice";
+        final MqttTopicSubscription mqttTopicSubscription = new MqttTopicSubscriptionImpl(
+                getCommandEndpoint() + "//" + gatewayManagedDeviceId + "/req/#", MqttQoS.AT_LEAST_ONCE);
+        final CommandSubscription subscription = CommandSubscription.fromTopic(mqttTopicSubscription, device,
+                "testMqttClient");
+        assertThat(subscription).isNotNull();
+        assertThat(subscription.getTenant()).isEqualTo(device.getTenantId());
+        assertThat(subscription.getDeviceId()).isEqualTo(gatewayManagedDeviceId);
+        assertThat(subscription.getAuthenticatedDeviceId()).isEqualTo(device.getDeviceId());
+        assertThat(subscription.getTopic()).isEqualTo(getCommandEndpoint() + "//" + gatewayManagedDeviceId + "/req/#");
+        assertThat(subscription.getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
+        assertThat(subscription.getClientId()).isEqualTo("testMqttClient");
+        assertThat(subscription.isGatewaySubscriptionForSpecificDevice()).isEqualTo(true);
+    }
+
+    /**
      * Verifies subscription pattern with authenticated device and correct short pattern.
      */
     @Test
