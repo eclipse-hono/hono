@@ -23,23 +23,41 @@ import org.eclipse.hono.util.CommandConstants;
  */
 public class CommandEndpointConfiguration {
 
-    private final boolean gatewayDevice;
+    private final SubscriberRole subscriberRole;
     private final boolean legacySouthboundEndpoint;
     private final boolean legacyNorthboundEndpoint;
 
     /**
+     * Defines the different ways in which to subscribe for commands.
+     */
+    public enum SubscriberRole {
+        /**
+         * Subscribe as device.
+         */
+        DEVICE,
+        /**
+         * Subscribe as gateway for all devices connected to the gateway.
+         */
+        GATEWAY_FOR_ALL_DEVICES,
+        /**
+         * Subscribe as gateway for a single device connected to the gateway.
+         */
+        GATEWAY_FOR_SINGLE_DEVICE
+    }
+
+    /**
      * Creates a new configuration.
      * 
-     * @param useGatewayDevice {@code true} if the device connecting to the adapter is a gateway.
+     * @param subscriberRole The way in which to subscribe for commands.
      * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
      * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
      */
     public CommandEndpointConfiguration(
-            final boolean useGatewayDevice,
+            final SubscriberRole subscriberRole,
             final boolean useLegacySouthboundEndpoint,
             final boolean useLegacyNorthboundEndpoint) {
 
-        this.gatewayDevice = useGatewayDevice;
+        this.subscriberRole = subscriberRole;
         this.legacySouthboundEndpoint = useLegacySouthboundEndpoint;
         this.legacyNorthboundEndpoint = useLegacyNorthboundEndpoint;
     }
@@ -49,8 +67,8 @@ public class CommandEndpointConfiguration {
      */
     @Override
     public String toString() {
-        return String.format("gateway device: %s, southbound endpoint: %s, northbound endpoint: %s",
-                gatewayDevice, getSouthboundEndpoint(), getNorthboundEndpoint());
+        return String.format("subscribe as: %s, southbound endpoint: %s, northbound endpoint: %s",
+                getSubscriberRole(), getSouthboundEndpoint(), getNorthboundEndpoint());
     }
 
     /**
@@ -63,12 +81,40 @@ public class CommandEndpointConfiguration {
     }
 
     /**
-     * Checks if the device connecting to the adapter is a gateway.
-     * 
-     * @return {@code true} if the device is a gateway.
+     * Gets the way in which to subscribe for commands.
+     *
+     * @return The subscriber role.
      */
-    public final boolean isGatewayDevice() {
-        return gatewayDevice;
+    public SubscriberRole getSubscriberRole() {
+        return subscriberRole;
+    }
+
+    /**
+     * Checks whether command subscription shall be done as a gateway.
+     *
+     * @return {@code true} if to subscribe as a gateway.
+     */
+    public boolean isSubscribeAsGateway() {
+        return subscriberRole == SubscriberRole.GATEWAY_FOR_ALL_DEVICES
+                || subscriberRole == SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE;
+    }
+
+    /**
+     * Checks whether command subscription shall be done as a gateway for all connected devices.
+     *
+     * @return {@code true} if to subscribe as a gateway for all connected devices.
+     */
+    public boolean isSubscribeAsGatewayForAllDevices() {
+        return subscriberRole == SubscriberRole.GATEWAY_FOR_ALL_DEVICES;
+    }
+
+    /**
+     * Checks whether command subscription shall be done as a gateway on behalf of a single device.
+     *
+     * @return {@code true} if to subscribe as a gateway on behalf of a single device.
+     */
+    public boolean isSubscribeAsGatewayForSingleDevice() {
+        return subscriberRole == SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE;
     }
 
     /**

@@ -38,6 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -682,26 +683,22 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Registers a new device for a tenant that is connected via a gateway.
+     * Registers a new device for a tenant that is connected via the given gateway.
      * 
      * @param tenantId The tenant that the gateway and device belong to.
-     * @param deviceId The device identifier.
-     * @param isGatewayDevice {@code true} if the given device is a gateway.
+     * @param gatewayId The gateway identifier.
      * @param timeoutSeconds The number of seconds to wait for the setup to succeed.
-     * @return The device identifier to use for sending commands.
-     *         The identifier will be that of the given device if it is not a gateway,
-     *         otherwise it will be the identifier of the newly registered device.
+     * @return The device identifier of the newly registered device.
      * @throws IllegalStateException if setup failed.
      */
     public String setupGatewayDeviceBlocking(
             final String tenantId,
-            final String deviceId,
-            final boolean isGatewayDevice,
+            final String gatewayId,
             final int timeoutSeconds) {
 
         final CompletableFuture<String> result = new CompletableFuture<>();
 
-        setupGatewayDevice(tenantId, deviceId, isGatewayDevice)
+        setupGatewayDevice(tenantId, gatewayId)
         .setHandler(attempt -> {
             if (attempt.succeeded()) {
                 result.complete(attempt.result());
@@ -718,32 +715,22 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Registers a new device for a tenant that is connected via a gateway.
+     * Registers a new device for a tenant that is connected via the given gateway.
      * 
      * @param tenantId The tenant that the gateway and device belong to.
-     * @param deviceId The device identifier.
-     * @param isGatewayDevice {@code true} if the given device is a gateway.
+     * @param gatewayId The gateway identifier.
      * @return A future indicating the outcome of the operation.
-     *         The future will be completed with the device identifier to use for
-     *         sending commands or will be failed with a {@link ServiceInvocationException}.
-     *         The identifier will be that of the given device if it is not a gateway,
-     *         otherwise it will be the identifier of the newly registered device.
+     *         The future will be completed with the device identifier of the newly
+     *         registered device or will be failed with a {@link ServiceInvocationException}.
      */
-    public Future<String> setupGatewayDevice(
-            final String tenantId,
-            final String deviceId,
-            final boolean isGatewayDevice) {
+    public Future<String> setupGatewayDevice(final String tenantId, final String gatewayId) {
 
         final Future<String> result = Future.future();
-        if (isGatewayDevice) {
-            final String newDeviceId = getRandomDeviceId(tenantId);
-            final Device newDevice = new Device().setVia(List.of(deviceId));
-            registry.addDeviceToTenant(tenantId, newDeviceId, newDevice, "pwd")
-            .map(ok -> newDeviceId)
-            .setHandler(result);
-        } else {
-            result.complete(deviceId);
-        }
+        final String newDeviceId = getRandomDeviceId(tenantId);
+        final Device newDevice = new Device().setVia(List.of(gatewayId));
+        registry.addDeviceToTenant(tenantId, newDeviceId, newDevice, "pwd")
+                .map(ok -> newDeviceId)
+                .setHandler(result);
         return result;
     }
 
@@ -1057,6 +1044,23 @@ public final class IntegrationTestSupport {
             }
             return result;
         });
+    }
+
+    /**
+     * Gets the properties to be set on a command message.
+     *
+     * @param forceCommandRerouting Supplies the value for the "force-command-rerouting" property. A {@code true}
+     *                              value of this property causes the command message to be rerouted to the
+     *                              AMQP messaging network, mimicking the behaviour when the command message
+     *                              has reached a protocol adapter instance that the command target device is
+     *                              not connected to, so that the message needs to be delegated to the correct
+     *                              protocol adapter instance. See the <em>CommandConsumerFactoryImpl</em> class.
+     * @return The properties map.
+     */
+    public static Map<String, Object> newCommandMessageProperties(final Supplier<Boolean> forceCommandRerouting) {
+        final HashMap<String, Object> properties = new HashMap<>();
+        properties.put("force-command-rerouting", forceCommandRerouting.get());
+        return properties;
     }
 
     /**

@@ -48,6 +48,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       -XX:MinRAMPercentage=80
       -XX:MaxRAMPercentage=80
       -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
+      -DenableForcedCommandRerouting=true
     </default.java.options>
     <amqp.java.options></amqp.java.options>
     <http.java.options></http.java.options>

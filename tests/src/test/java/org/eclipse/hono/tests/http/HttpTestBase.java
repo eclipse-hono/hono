@@ -39,6 +39,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -214,14 +215,17 @@ public abstract class HttpTestBase {
      */
     static Stream<HttpCommandEndpointConfiguration> commandAndControlVariants() {
         return Stream.of(
-                new HttpCommandEndpointConfiguration(false, false, false),
-                new HttpCommandEndpointConfiguration(false, false, true),
-                new HttpCommandEndpointConfiguration(false, true, false),
-                new HttpCommandEndpointConfiguration(false, true, true),
+                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false),
+                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, false, true),
+                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false),
+                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, true, true),
 
                 // gateway devices are supported with north bound "command" endpoint only
-                new HttpCommandEndpointConfiguration(true, false, false),
-                new HttpCommandEndpointConfiguration(true, true, false)
+                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false),
+                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false),
+
+                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false),
+                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false)
                 );
     }
 
@@ -821,7 +825,9 @@ public abstract class HttpTestBase {
         secondMessageReceived.await();
         // send command
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
-        final Future<Void> commandSent = helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND, "application/json", inputData.toBuffer(), null, 3000);
+        final Future<Void> commandSent = helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND,
+                "application/json", inputData.toBuffer(),
+                IntegrationTestSupport.newCommandMessageProperties(() -> true), 3000);
         logger.info("sent one-way command to device");
 
         // THEN both requests succeed
@@ -937,8 +943,13 @@ public abstract class HttpTestBase {
             return;
         }
 
-        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+        final String subscribingDeviceId = endpointConfig.isSubscribeAsGatewayForSingleDevice() ? commandTargetDeviceId
+                : deviceId;
 
+        final AtomicInteger counter = new AtomicInteger();
         testUploadMessages(ctx, tenantId,
                 msg -> {
 
@@ -947,17 +958,18 @@ public abstract class HttpTestBase {
                                 logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
                                 ctx.verify(() -> {
                                     assertThat(notification.getTenantId()).isEqualTo(tenantId);
-                                    assertThat(notification.getDeviceId()).isEqualTo(deviceId);
+                                    assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
                                 });
                                 // now ready to send a command
                                 final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
                                 return helper.sendCommand(
                                         tenantId,
-                                        commandTarget,
+                                        commandTargetDeviceId,
                                         COMMAND_TO_SEND,
                                         "application/json",
                                         inputData.toBuffer(),
-                                        null,
+                                        // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
+                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
                                         notification.getMillisecondsUntilExpiry(),
                                         endpointConfig.isLegacyNorthboundEndpoint())
                                         .map(response -> {
@@ -972,17 +984,16 @@ public abstract class HttpTestBase {
                             .orElseGet(() -> Future.succeededFuture());
                 },
                 count -> {
-                    return httpClient.create(
-                            getEndpointUri(),
-                            Buffer.buffer("hello " + count),
-                            requestHeaders,
-                            response -> response.statusCode() == HttpURLConnection.HTTP_OK)
+                    final Buffer buffer = Buffer.buffer("hello " + count);
+                    return sendHttpRequestForGatewayOrDevice(buffer, requestHeaders, endpointConfig, commandTargetDeviceId)
                             .map(responseHeaders -> {
 
                                 final String requestId = responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID);
 
                                 ctx.verify(() -> {
                                     // assert that the response contains a command
+                                    assertThat(responseHeaders.get(Constants.HEADER_COMMAND))
+                                            .as("response #" + count + " doesn't contain command").isNotNull();
                                     assertThat(responseHeaders.get(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
                                     assertThat(responseHeaders.get(HttpHeaders.CONTENT_TYPE)).isEqualTo("application/json");
                                     assertThat(requestId).isNotNull();
@@ -1039,8 +1050,13 @@ public abstract class HttpTestBase {
             return;
         }
 
-        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+        final String subscribingDeviceId = endpointConfig.isSubscribeAsGatewayForSingleDevice() ? commandTargetDeviceId
+                : deviceId;
 
+        final AtomicInteger counter = new AtomicInteger();
         testUploadMessages(ctx, tenantId,
                 msg -> {
                     return TimeUntilDisconnectNotification.fromMessage(msg)
@@ -1049,17 +1065,18 @@ public abstract class HttpTestBase {
                                 logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
                                 ctx.verify(() -> {
                                     assertThat(notification.getTenantId()).isEqualTo(tenantId);
-                                    assertThat(notification.getDeviceId()).isEqualTo(deviceId);
+                                    assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
                                 });
                                 // now ready to send a command
                                 final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
                                 return helper.sendOneWayCommand(
                                         tenantId,
-                                        commandTarget,
+                                        commandTargetDeviceId,
                                         COMMAND_TO_SEND,
                                         "application/json",
                                         inputData.toBuffer(),
-                                        null,
+                                        // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
+                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
                                         notification.getMillisecondsUntilExpiry(),
                                         endpointConfig.isLegacyNorthboundEndpoint());
                             })
@@ -1067,11 +1084,7 @@ public abstract class HttpTestBase {
                 },
                 count -> {
                     final Buffer payload = Buffer.buffer("hello " + count);
-                    return httpClient.create(
-                            getEndpointUri(),
-                            payload,
-                            requestHeaders,
-                            response -> response.statusCode() == HttpURLConnection.HTTP_OK)
+                    return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId)
                     .recover(t -> {
 
                         // we probably sent the request before the
@@ -1082,11 +1095,7 @@ public abstract class HttpTestBase {
                         VERTX.setTimer(300, retry -> {
                             logger.info("re-trying request [{}] which failed with unexpected status code {}",
                                     count, ServiceInvocationException.extractStatusCode(t));
-                            httpClient.create(
-                                    getEndpointUri(),
-                                    payload,
-                                    requestHeaders,
-                                    response -> response.statusCode() == HttpURLConnection.HTTP_OK)
+                            sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId)
                             .setHandler(retryResult);
                         });
                         return retryResult;
@@ -1094,6 +1103,8 @@ public abstract class HttpTestBase {
                     .map(responseHeaders -> {
                         ctx.verify(() -> {
                             // assert that the response contains a one-way command
+                            assertThat(responseHeaders.get(Constants.HEADER_COMMAND))
+                                    .as("response #" + count + " doesn't contain command").isNotNull();
                             assertThat(responseHeaders.get(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
                             assertThat(responseHeaders.get(HttpHeaders.CONTENT_TYPE)).isEqualTo("application/json");
                             assertThat(responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID)).isNull();
@@ -1101,6 +1112,18 @@ public abstract class HttpTestBase {
                         return responseHeaders;
                     });
                 });
+    }
+
+    private Future<MultiMap> sendHttpRequestForGatewayOrDevice(final Buffer payload, final MultiMap requestHeaders,
+            final HttpCommandEndpointConfiguration endpointConfig, final String requestDeviceId) {
+        if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
+            final String uri = getEndpointUri() + "/" + tenantId + "/" + requestDeviceId;
+            // GW uses PUT when acting on behalf of a device
+            return httpClient.update(uri, payload, requestHeaders, status -> status == HttpURLConnection.HTTP_OK);
+        } else {
+            return httpClient.create(getEndpointUri(), payload, requestHeaders,
+                    response -> response.statusCode() == HttpURLConnection.HTTP_OK);
+        }
     }
 
     private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {

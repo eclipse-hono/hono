@@ -26,15 +26,15 @@ public final class HttpCommandEndpointConfiguration extends CommandEndpointConfi
     /**
      * Creates a new configuration.
      * 
-     * @param useGatewayDevice {@code true} if the device connecting to the adapter is a gateway.
+     * @param subscriberRole The way in which to subscribe for commands.
      * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
      * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
      */
     public HttpCommandEndpointConfiguration(
-            final boolean useGatewayDevice,
+            final SubscriberRole subscriberRole,
             final boolean useLegacySouthboundEndpoint,
             final boolean useLegacyNorthboundEndpoint) {
-        super(useGatewayDevice, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
+        super(subscriberRole, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
     }
 
     String getCommandResponseUri(final String reqId) {

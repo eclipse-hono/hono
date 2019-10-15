@@ -32,6 +32,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -71,23 +72,29 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     static Stream<MqttCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
-                new MqttCommandEndpointConfiguration(false, true, true, false),
-                new MqttCommandEndpointConfiguration(false, true, false, false),
-                new MqttCommandEndpointConfiguration(false, false, true, false),
-                new MqttCommandEndpointConfiguration(false, false, false, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, true, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, true, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false, false),
 
                 // the following four variants can be removed once we no longer support the legacy topic filters
-                new MqttCommandEndpointConfiguration(false, true, true, true),
-                new MqttCommandEndpointConfiguration(false, true, false, true),
-                new MqttCommandEndpointConfiguration(false, false, true, true),
-                new MqttCommandEndpointConfiguration(false, false, false, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, true, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, true, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false, true),
 
                 // gateway devices are supported with north bound "command" endpoint only
-                new MqttCommandEndpointConfiguration(true, false, false, true),
-                new MqttCommandEndpointConfiguration(true, true, false, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false, true),
 
-                new MqttCommandEndpointConfiguration(true, false, false, false),
-                new MqttCommandEndpointConfiguration(true, true, false, false)
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false, false),
+
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false, true),
+
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false, false)
                 );
     }
 
@@ -109,6 +116,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     }
 
     private Future<Void> subscribeToCommands(
+            final String commandTargetDeviceId,
             final Handler<MqttPublishMessage> msgHandler,
             final MqttCommandEndpointConfiguration endpointConfig,
             final MqttQoS qos) {
@@ -123,7 +131,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     result.fail("could not subscribe to command topic");
                 }
             });
-            mqttClient.subscribe(endpointConfig.getCommandTopicFilter(), qos.value());
+            mqttClient.subscribe(endpointConfig.getCommandTopicFilter(commandTargetDeviceId), qos.value());
         });
         return result;
     }
@@ -143,24 +151,28 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
-        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
         final Checkpoint commandsReceived = ctx.checkpoint(COMMANDS_TO_SEND);
 
-        testSendCommandSucceeds(ctx, msg -> {
+        final AtomicInteger counter = new AtomicInteger();
+        testSendCommandSucceeds(ctx, commandTargetDeviceId, msg -> {
             LOGGER.trace("received one-way command [topic: {}]", msg.topicName());
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
             ctx.verify(() -> {
-                endpointConfig.assertCommandPublishTopicStructure(topic, commandTarget, true, "setValue");
+                endpointConfig.assertCommandPublishTopicStructure(topic, commandTargetDeviceId, true, "setValue");
             });
             commandsReceived.flag();
         }, payload -> {
             return helper.sendOneWayCommand(
                     tenantId,
-                    commandTarget,
+                    commandTargetDeviceId,
                     "setValue",
                     "text/plain",
                     payload,
-                    null,
+                    // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
+                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND/2),
                     200,
                     endpointConfig.isLegacyNorthboundEndpoint());
         }, endpointConfig, COMMANDS_TO_SEND, MqttQoS.AT_MOST_ONCE);
@@ -205,14 +217,17 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final MqttCommandEndpointConfiguration endpointConfig,
             final MqttQoS qos) throws InterruptedException {
 
-        final String commandTarget = helper.setupGatewayDeviceBlocking(tenantId, deviceId, endpointConfig.isGatewayDevice(), 5);
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
 
-        testSendCommandSucceeds(ctx, msg -> {
+        final AtomicInteger counter = new AtomicInteger();
+        testSendCommandSucceeds(ctx, commandTargetDeviceId, msg -> {
             LOGGER.trace("received command [{}]", msg.topicName());
             final ResourceIdentifier topic = ResourceIdentifier.fromString(msg.topicName());
 
             ctx.verify(() -> {
-                endpointConfig.assertCommandPublishTopicStructure(topic, commandTarget, false, "setValue");
+                endpointConfig.assertCommandPublishTopicStructure(topic, commandTargetDeviceId, false, "setValue");
             });
 
             final String commandRequestId = topic.elementAt(4);
@@ -220,7 +235,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
             // send response
             mqttClient.publish(
-                    endpointConfig.getResponseTopic(commandTarget, commandRequestId, HttpURLConnection.HTTP_OK),
+                    endpointConfig.getResponseTopic(commandTargetDeviceId, commandRequestId, HttpURLConnection.HTTP_OK),
                     Buffer.buffer(command + ": ok"),
                     qos,
                     false,
@@ -228,11 +243,12 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         }, payload -> {
             return helper.sendCommand(
                     tenantId,
-                    commandTarget,
+                    commandTargetDeviceId,
                     "setValue",
                     "text/plain",
                     payload,
-                    null,
+                    // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
+                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND/2),
                     200,
                     endpointConfig.isLegacyNorthboundEndpoint())
                     .map(response -> {
@@ -247,6 +263,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     private void testSendCommandSucceeds(
             final VertxTestContext ctx,
+            final String commandTargetDeviceId,
             final Handler<MqttPublishMessage> commandConsumer,
             final Function<Buffer, Future<?>> commandSender,
             final MqttCommandEndpointConfiguration endpointConfig,
@@ -269,7 +286,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 ready.flag();
             }
         }))
-        .compose(conAck -> subscribeToCommands(commandConsumer, endpointConfig, subscribeQos))
+        .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
         .setHandler(setup.succeeding(ok -> ready.flag()));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
@@ -341,6 +358,10 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint ready = setup.checkpoint(3);
 
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
@@ -354,13 +375,13 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                         ready.flag();
                     }
                 }))
-                .compose(conAck -> subscribeToCommands(msg -> {
+                .compose(conAck -> subscribeToCommands(commandTargetDeviceId, msg -> {
                     setup.failNow(new IllegalStateException("should not have received command"));
                 }, endpointConfig, MqttQoS.AT_MOST_ONCE))
                 .setHandler(ctx.succeeding(ok -> ready.flag()));
 
         final AtomicReference<MessageSender> sender = new AtomicReference<>();
-        final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId, deviceId);
+        final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId, commandTargetDeviceId);
 
         helper.applicationClientFactory.createGenericMessageSender(linkTargetAddress)
         .map(s -> {
@@ -376,7 +397,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         }
 
         final Checkpoint failedAttempts = ctx.checkpoint(2);
-        final String messageAddress = endpointConfig.getCommandMessageAddress(tenantId, deviceId);
+        final String messageAddress = endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId);
 
         LOGGER.debug("sending command message lacking subject");
         final Message messageWithoutSubject = ProtonHelper.message("input data");
