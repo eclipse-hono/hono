@@ -23,7 +23,7 @@ The following operations can be used by *Protocol Adapters* to forward telemetry
 **Preconditions**
 
 1. Adapter has established an AMQP connection with the AMQP Messaging Network.
-1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload telemetry data for. 
+1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the client for which the client wants to forward telemetry data. 
 1. The device for which the adapter wants to send telemetry data has been registered (see [Device Registration API]({{< relref "/api/device-registration" >}})).
 
 The adapter indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment.
@@ -39,9 +39,9 @@ All other combinations are not supported by Hono and may result in the terminati
 
 As indicated above, it is up to the discretion of the protocol adapter whether it wants to use *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics.
 
-Hono's HTTP adapter allows devices to indicate, which delivery semantics they want to use when uploading telemetry data.
+Hono's HTTP adapter allows devices to indicate, which delivery semantics they want to use when forwarding telemetry data.
 
-The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
+The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *settled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
 
 {{< figure src="forward_qos0.svg" title="Forward telemetry data flow (AT MOST ONCE)" >}}
 
@@ -86,7 +86,7 @@ Any additional properties set by the client in either the *properties* or *appli
 
 ### Receive Telemetry Data
 
-Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the *Upload Telemetry Data* operation defined above). Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
+Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the [Forward Telemetry Data]({{< relref "#forward-telemetry-data" >}}) operation). Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
 
 Hono supports multiple non-competing *Business Application* consumers of telemetry data for a given tenant. Hono allows each *Business Application* to have multiple competing consumers for telemetry data for a given tenant to share the load of processing the messages.
 
@@ -116,4 +116,4 @@ The *Business Application* can only consume telemetry messages that have been up
 
 **Message Format**
 
-The format of the messages containing the telemetry data is the same as for the [Upload Telemetry Data operation]({{< relref "#upload-telemetry-data" >}}).
+The format of the messages containing the telemetry data is the same as for the [Forward Telemetry Data operation]({{< relref "#forward-telemetry-data" >}}).

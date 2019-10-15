@@ -23,7 +23,7 @@ The following operations can be used by *Protocol Adapters* to forward event mes
 **Preconditions**
 
 1. Adapter has established an AMQP connection with the AMQP Messaging Network.
-1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `event/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload event messages for. 
+1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `event/${tenant_id}` where `${tenant_id}` is the ID of the client for which the client wants to forward event messages.
 1. The device for which the adapter wants to send an event has been registered (see [Device Registration API]({{< relref "/api/device-registration" >}})).
 
 Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST use `unsettled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported by Hono and may result in the termination of the link or connection (depending on the configuration of the AMQP Messaging Network).
@@ -39,19 +39,19 @@ The following sequence diagram illustrates the flow of messages involved in the 
 1. *Device* `4711` publishes an event using MQTT QoS 1.
    1. *MQTT Adapter* transfers data to *AMQP 1.0 Messaging Network*.
    1. *AMQP 1.0 Messaging Network* acknowledges reception of the message.
-   1. *MQTT Adapter* acknowledges the message published by the device.
+   1. *MQTT Adapter* acknowledges the reception of the message to the *Device*.
 
 When the AMQP Messaging Network fails to settle the transfer of an event message or settles the transfer with any other outcome than `accepted`, the protocol adapter MUST NOT try to re-send such rejected messages but MUST indicate the failed transfer to the device if the transport protocol provides means to do so.
 
 **Message Format**
 
-See [Telemetry API]({{< relref "/api/telemetry#upload-telemetry-data" >}}) for definition of message format.
+See [Telemetry API]({{< relref "/api/telemetry#forward-telemetry-data" >}}) for definition of message format.
 
 ## Northbound Operations
 
 ### Receive Events
 
-Hono delivers messages containing events reported by a particular device in the same order that they have been received in (using the *Forward Event* operation defined above).
+Hono delivers messages containing events reported by a particular device in the same order that they have been received in (using the [Forward Event]({{< relref "#forward-event" >}}) operation).
 
 Hono supports multiple non-competing *Business Application* consumers of event messages for a given tenant. Hono allows each *Business Application* to have multiple competing consumers for event messages for a given tenant to share the load of processing the messages.
 
@@ -64,8 +64,7 @@ Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client theref
 
 **Message Flow**
 
-The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving an event data message from Hono. 
-
+The following sequence diagram illustrates the flow of messages involved in a *Business Application* receiving an event message from Hono. 
 
 {{< figure src="consume.svg" title="Receive event data flow (success)" >}}
 
@@ -74,7 +73,7 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 
 **Message Format**
 
-See [*Telemetry API*]({{< relref "/api/telemetry" >}}) for definition of message format. 
+See [Telemetry API]({{< relref "/api/telemetry#forward-telemetry-data" >}}) for definition of message format. 
 
 
 ## Well-known Event Message Types
