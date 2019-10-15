@@ -12,7 +12,7 @@ By default, all Hono protocol adapters require clients (devices or gateway compo
 
 In this guide, we will give examples for publishing telemetry and events for *authenticated* (using SASL PLAIN) and *unauthenticated* clients. 
 
-NB: The AMQP adapter can be configured to *allow* unauthenticated devices to connect by setting configuration variable `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
+**NB** The AMQP adapter can be configured to *allow* unauthenticated devices to connect by setting configuration variable `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
 
 ### SASL PLAIN Authentication
 
@@ -34,7 +34,7 @@ When a device uses a client certificate for authentication, the TLS handshake is
 * Adapter validates the device’s client certificate using the registered trust anchor for the tenant.
 * Finally, adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter uses the client certificate’s *Subject DN* (as authentication identifier) and `x509-cert` (for the credentials type) in order to determine the device ID.
 
-NB: The AMQP adapter needs to be configured for TLS in order to support this mechanism.
+**NB** The AMQP adapter needs to be configured for TLS in order to support this mechanism.
 
 ## Connection Limits
 

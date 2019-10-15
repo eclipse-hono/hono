@@ -93,7 +93,7 @@ The relevant properties are listed again in the following table:
 | *content-type* | yes              | *properties*             | *symbol*  | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
 | *ttd*          | no               | *application-properties* | *int*     | The *time 'til disconnect* as described in the [*Telemetry API*]({{< relref "/api/telemetry" >}}). |
 
-NB: An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. *Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
+**NB** An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. *Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
 
 ### Connection Event
 
