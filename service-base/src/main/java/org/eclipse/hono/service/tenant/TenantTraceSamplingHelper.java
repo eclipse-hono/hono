@@ -72,7 +72,7 @@ public final class TenantTraceSamplingHelper {
     /**
      * Gets the value for the <em>sampling.priority</em> span tag as encoded in the properties of this tenant.
      *
-     * @param authId The authentication identity of a device.
+     * @param tenantAndAuthId The authentication identity of a device.
      * @return An <em>OptionalInt</em> containing the value for the <em>sampling.priority</em> span tag or an empty
      *         <em>OptionalInt</em> if no priority should be set.
      */
