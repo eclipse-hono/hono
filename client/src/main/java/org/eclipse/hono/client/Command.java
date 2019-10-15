@@ -282,7 +282,7 @@ public final class Command {
     public String getOriginalDeviceId() {
         if (isValid()) {
             // commands directed at the legacy control endpoint didn't have to have the message address set
-            // (and it's content didn't get checked), that's why the 'deviceId' field is used as fallback here
+            // (and its content didn't get checked), that's why the 'deviceId' field is used as fallback here
             final String addressDeviceId = message.getAddress() != null
                     ? ResourceIdentifier.fromString(message.getAddress()).getResourceId()
                     : null;

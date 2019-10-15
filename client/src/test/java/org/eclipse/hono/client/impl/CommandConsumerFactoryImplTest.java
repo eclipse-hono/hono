@@ -27,8 +27,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 
 import org.apache.qpid.proton.amqp.transport.Source;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.GatewayMapper;
@@ -77,11 +79,14 @@ public class CommandConsumerFactoryImplTest {
     private CommandConsumerFactoryImpl commandConsumerFactory;
     private GatewayMapper gatewayMapper;
     private ProtonReceiver deviceSpecificCommandReceiver;
+    private ProtonReceiver gatewaySpecificCommandReceiver;
     private ProtonReceiver tenantScopedCommandReceiver;
     private String deviceSpecificCommandAddress;
+    private String gatewaySpecificCommandAddress;
     private String tenantCommandAddress;
     private String tenantId;
     private String deviceId;
+    private String gatewayId;
 
     /**
      * Sets up fixture.
@@ -99,6 +104,7 @@ public class CommandConsumerFactoryImplTest {
         }).when(vertx).setTimer(anyLong(), VertxMockSupport.anyHandler());
 
         deviceId = "theDevice";
+        gatewayId = "theGateway";
         tenantId = "theTenant";
 
         props = new ClientConfigProperties();
@@ -113,6 +119,16 @@ public class CommandConsumerFactoryImplTest {
                 anyInt(),
                 anyBoolean(),
                 VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(deviceSpecificCommandReceiver));
+        gatewaySpecificCommandReceiver = mock(ProtonReceiver.class);
+        when(gatewaySpecificCommandReceiver.isOpen()).thenReturn(Boolean.TRUE);
+        gatewaySpecificCommandAddress = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT, tenantId, gatewayId).toString();
+        when(connection.createReceiver(
+                eq(gatewaySpecificCommandAddress),
+                any(ProtonQoS.class),
+                any(ProtonMessageHandler.class),
+                anyInt(),
+                anyBoolean(),
+                VertxMockSupport.anyHandler())).thenReturn(Future.succeededFuture(gatewaySpecificCommandReceiver));
         tenantScopedCommandReceiver = mock(ProtonReceiver.class);
         tenantCommandAddress = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, null).toString();
         when(connection.createReceiver(
@@ -182,16 +198,46 @@ public class CommandConsumerFactoryImplTest {
         final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler);
-        final ArgumentCaptor<Handler<String>> captor = VertxMockSupport.argumentCaptorHandler();
+        final ArgumentCaptor<Handler<String>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(connection).createReceiver(
                 eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 eq(0),
                 eq(false),
-                captor.capture());
-        captor.getValue().handle(deviceSpecificCommandAddress);
+                closeHookCaptor.capture());
+        // invoke close hook
+        closeHookCaptor.getValue().handle(deviceSpecificCommandAddress);
         verify(closeHandler).handle(null);
+    }
+
+    /**
+     * Verifies that the close handler passed as an argument when creating
+     * a command consumer with a gateway id is invoked when the peer closes the link.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    public void testCreateCommandConsumerWithGatewaySetsRemoteCloseHandler(final TestContext ctx) {
+
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Handler<Void> closeHandlerDeviceA = VertxMockSupport.mockHandler();
+        final Handler<Void> closeHandlerDeviceB = VertxMockSupport.mockHandler();
+
+        commandConsumerFactory.createCommandConsumer(tenantId, "deviceA", gatewayId, commandHandler, closeHandlerDeviceA);
+        commandConsumerFactory.createCommandConsumer(tenantId, "deviceB", gatewayId, commandHandler, closeHandlerDeviceB);
+        final ArgumentCaptor<Handler<String>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
+        verify(connection).createReceiver(
+                eq(gatewaySpecificCommandAddress),
+                eq(ProtonQoS.AT_LEAST_ONCE),
+                any(ProtonMessageHandler.class),
+                eq(0),
+                eq(false),
+                closeHookCaptor.capture());
+        // invoke close hook
+        closeHookCaptor.getValue().handle(gatewaySpecificCommandAddress);
+        verify(closeHandlerDeviceA).handle(null);
+        verify(closeHandlerDeviceB).handle(null);
     }
 
     /**
@@ -316,7 +362,13 @@ public class CommandConsumerFactoryImplTest {
         // GIVEN a liveness check for a command consumer
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Handler<Void> remoteCloseHandler = VertxMockSupport.mockHandler();
-        final Handler<Long> livenessCheck = commandConsumerFactory.newLivenessCheck(tenantId, deviceId, "key", commandHandler, remoteCloseHandler);
+        final CommandHandlerWrapper commandHandlerWrapper = new CommandHandlerWrapper(deviceId, null, commandHandler,
+                remoteCloseHandler);
+        final String gatewayOrDeviceKey = Device.asAddress(tenantId, deviceId);
+        commandConsumerFactory.getDestinationCommandConsumerLivenessChecks().put(gatewayOrDeviceKey,
+                new CommandConsumerFactoryImpl.LivenessCheckData(10L, () -> Collections.singletonList(commandHandlerWrapper)));
+
+        final Handler<Long> livenessCheck = commandConsumerFactory.newLivenessCheck(tenantId, deviceId);
         final Future<ProtonReceiver> createdReceiver = Future.future();
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.createReceiver(

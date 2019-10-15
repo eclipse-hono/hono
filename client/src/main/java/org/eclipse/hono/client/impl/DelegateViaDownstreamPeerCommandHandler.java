@@ -30,7 +30,7 @@ import io.vertx.proton.ProtonDelivery;
  * Handler for command messages that delegates command handling by setting a device-specific message target address and
  * sending the message to the downstream peer.
  * <p>
- * That way, further command handling is delegated to the {@link DeviceSpecificCommandConsumer} eventually.
+ * That way, further command handling is delegated to the {@link DestinationCommandConsumer} eventually.
  */
 public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandContext> {
 
