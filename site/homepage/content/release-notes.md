@@ -34,6 +34,10 @@ title = "Release Notes"
 * Hono's protocol adapters can now use multiple trusted certificate authorities per tenant to authenticate
   devices based on client certificates. The list of trusted certificate authorities can be managed at the
   tenant level using the Device Registry Management API.
+* Authenticated gateway devices can now subscribe to commands for specific devices. Before, gateways
+  could only subscribe to commands directed at any of the devices that the gateway has acted on behalf of.
+  With the new feature of also being able to subscribe to commands for specific devices, northbound
+  applications will get notified of such a subscription along with the specific device id.
 
 ### API Changes
 
