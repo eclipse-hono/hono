@@ -52,8 +52,6 @@ public final class TenantObject extends JsonBackedValueObject {
     @JsonIgnore
     private ResourceLimits resourceLimits;
     @JsonIgnore
-    private TrustAnchor trustAnchor;
-    @JsonIgnore
     private TenantTracingConfig tracingConfig;
     @JsonIgnore
     private Set<TrustAnchor> trustAnchors;
