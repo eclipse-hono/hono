@@ -115,3 +115,9 @@ pre {
 .navbar ul.dropdown-menu li a {
   font-size: 0.9rem;
 }
+
+/*Vertically align adopter logos */
+.customers .owl-wrapper-outer .owl-wrapper {
+  display: flex !important;
+  align-items: center;
+}
