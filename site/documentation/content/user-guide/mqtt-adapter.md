@@ -81,7 +81,7 @@ Publish some JSON data for device `4711` using a client certificate for authenti
 mosquitto_pub -p 8883 -t telemetry -m '{"temp": 5}' --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cafile demo-certs/certs/trusted-certs.pem
 ```
 
-**NB**: The example above assumes that the MQTT adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) and the secure port is used.
+**NB** The example above assumes that the MQTT adapter is [configured for TLS]({{< ref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) and the secure port is used.
 
 ## Publish Telemetry Data (unauthenticated Device)
 
@@ -120,7 +120,7 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t telemetry/DEFAULT_TENANT/4712 -m '{"temp": 5}'
 ```
 
-**NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
+**NB** The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
 ## Publishing Events
 
@@ -204,7 +204,7 @@ Publish some JSON data for device `4712` via gateway `gw-1`:
 mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t event/DEFAULT_TENANT/4712 -q 1 -m '{"temp": 5}'
 ```
 
-**NB**: The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
+**NB** The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret`.
 
 ## Command & Control
 

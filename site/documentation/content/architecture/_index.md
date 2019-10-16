@@ -7,4 +7,4 @@ pre = '<i class="fas fa-landmark"></i> '
 
 # Architecture
 
-Get an overview over Hono's architecture.
+Get an overview of the architecture of Eclipse Hono&trade;.

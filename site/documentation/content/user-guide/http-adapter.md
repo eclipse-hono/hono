@@ -16,7 +16,7 @@ The adapter tries to authenticate the device using these mechanisms in the follo
 
 When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to, based on the *issuer DN* contained in the certificate. In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of [registering the trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}). The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to. In a second step, the adapter then uses the Credentials API's *get* operation with the client certificate's *subject DN* as the *auth-id* and `x509-cert` as the *type* of secret as query parameters.
 
-NB: The HTTP adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#http-adapter" >}}) in order to support this mechanism.
+**NB** The HTTP adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#http-adapter" >}}) in order to support this mechanism.
 
 ### HTTP Basic Auth
 
@@ -113,7 +113,7 @@ HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-**NB**: The example above assumes that the HTTP adapter is [configured for TLS]({{< relref "/admin-guide/secure_communication.md#http-adapter" >}}) and the secure port is used.
+**NB** The example above assumes that the HTTP adapter is [configured for TLS]({{< relref "/admin-guide/secure_communication.md#http-adapter" >}}) and the secure port is used.
 
 ## Publish Telemetry Data (unauthenticated Device)
 
@@ -263,7 +263,7 @@ content-length: 23
 }
 ~~~
 
-**NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+**NB** The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
 
 ## Publish an Event (authenticated Device)
 
@@ -401,7 +401,7 @@ HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-**NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+**NB** The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
 
 ## Specifying the Time a Device will wait for a Response
 
@@ -557,7 +557,7 @@ HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-**NB**: The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+**NB** The example above assumes that a gateway device has been registered with `hashed-password` credentials with *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
 
 ## Downstream Meta Data
 

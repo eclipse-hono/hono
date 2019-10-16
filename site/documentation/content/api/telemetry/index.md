@@ -40,6 +40,7 @@ All other combinations are not supported by Hono and may result in the terminati
 As indicated above, it is up to the discretion of the protocol adapter whether it wants to use *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics.
 
 Hono's HTTP adapter allows devices to indicate, which delivery semantics they want to use when uploading telemetry data.
+The HTTP adapter always forwards messages unsettled and either ignores the outcome of the message transfer (*AT MOST ONCE*) or waits for the downstream peer to accept the message (*AT LEAST ONCE*) before acknowledging the reception of the message to the device.
 
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
 
@@ -86,7 +87,7 @@ Any additional properties set by the client in either the *properties* or *appli
 
 ### Receive Telemetry Data
 
-Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the *Upload Telemetry Data* operation defined above). Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
+Hono delivers messages containing telemetry data reported by a particular device in the same order that they have been received in (using the [Forward Telemetry Data]({{< relref "#forward-telemetry-data" >}}) operation). Hono MAY drop telemetry messages that it cannot deliver to any consumers. Reasons for this include that there are no consumers connected to Hono or the existing consumers are not able to process the messages from Hono fast enough.
 
 Hono supports multiple non-competing *Business Application* consumers of telemetry data for a given tenant. Hono allows each *Business Application* to have multiple competing consumers for telemetry data for a given tenant to share the load of processing the messages.
 
@@ -116,4 +117,4 @@ The *Business Application* can only consume telemetry messages that have been up
 
 **Message Format**
 
-The format of the messages containing the telemetry data is the same as for the [Upload Telemetry Data operation]({{< relref "#upload-telemetry-data" >}}).
+The format of the messages containing the telemetry data is the same as for the [Forward Telemetry Data operation]({{< relref "#forward-telemetry-data" >}}).

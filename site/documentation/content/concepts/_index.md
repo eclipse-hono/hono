@@ -7,4 +7,4 @@ pre = '<i class="far fa-lightbulb"></i> '
 
 # Concepts
 
-Understand the concepts behind Hono&trade;.
+Understand the concepts behind Eclipse Hono&trade;.

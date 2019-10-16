@@ -7,4 +7,4 @@ pre = '<i class="fas fa-book-reader"></i> '
 
 # User Guide
 
-Learn how to quickly send data with Hono&trade; from devices to business applications -- as well as commands the other way round. 
+Learn how Eclipse Hono&trade; enables you to quickly send data from devices to business applications and vice versa.
