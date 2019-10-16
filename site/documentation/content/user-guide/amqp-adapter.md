@@ -18,7 +18,7 @@ In this guide, we will give examples for publishing telemetry and events for *au
 
 The AMQP adapter supports authenticating clients using a *username* and *password*. This means that clients need to provide a *username* and a *password* when connecting to the AMQP adapter. If the adapter is configured for multi-tenancy (i.e `HONO_AMQP_SINGLE_TENANT` is set to `false`), then the *username* must match the pattern [*auth-id@tenant*], e.g. `sensor1@DEFAULT_TENANT`. Otherwise the `DEFAULT_TENANT` is assumed and the tenant-id can be omitted from the username.
 
-The adapter verifies the credentials provided by the client against the credentials that the [Credentials Service] ({{< relref "#credentials-service-connection-configuration" >}}) has on record for the device. If the credentials match, then authentication is successful and the client device can proceed to publish messages to Hono.
+The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< relref "/admin-guide/amqp-adapter-config#credentials-service-connection-configuration" >}}) has on record for the client. If the credentials match, then authentication is successful and the client device can proceed to publish messages to Hono.
 
 The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
 
@@ -371,7 +371,7 @@ The adapter includes the following meta data in the application properties of me
 | *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The AMQP adapter's type name is `hono-amqp`. |
 | *orig_address*     | *string*  | Contains the AMQP *target address* that the device has used to send the data. |
 
-The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#tenant-information-format" >}}) or the [device level]({{< relref "/api/device-registration#assert-device-registration" >}}). The values of the default properties are determined as follows:
 
 1. If the message already contains a non-empty property of the same name, the value if unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.

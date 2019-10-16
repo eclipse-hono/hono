@@ -22,7 +22,7 @@ The adapter tries to authenticate the device using these mechanisms in the follo
 
 ### Client Certificate
 
-When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to, based on the *issuer DN* contained in the certificate. In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/tenant#payload-format" >}}). The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to. In a second step, the adapter then uses the Credentials API's *get* operation with the client certificate's *subject DN* as the *auth-id* and `x509-cert` as the *type* of secret as query parameters.
+When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to, based on the *issuer DN* contained in the certificate. In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}). The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to. In a second step, the adapter then uses the Credentials API's *get* operation with the client certificate's *subject DN* as the *auth-id* and `x509-cert` as the *type* of secret as query parameters.
 
 **NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) in order to support this mechanism.
 
@@ -110,7 +110,7 @@ mosquitto_pub -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 
 This topic can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the topic name are used to identify the device that the gateway publishes data for.
 
-The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "#device-registration-service-connection-configuration" >}}).
+The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "/admin-guide/mqtt-adapter-config#device-registration-service-connection-configuration" >}}).
 
 **Examples**
 
@@ -194,7 +194,7 @@ mosquitto_pub -t event/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
 
 This topic can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the topic name are used to identify the device that the gateway publishes data for.
 
-The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "#device-registration-service-connection-configuration" >}}).
+The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "/admin-guide/mqtt-adapter-config#device-registration-service-connection-configuration" >}}).
 
 **Examples**
 
@@ -403,7 +403,7 @@ The adapter includes the following meta data in messages being sent downstream:
 | *orig_address*     | *application*           | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
 | *x-opt-retain*     | * *message-annotations* | *boolean* | Contains `true` if the device has published an event or telemetry message with its *retain* flag set to `1` |
 
-The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#payload-format" >}}) or the [device level]({{< relref "/api/device-registration#payload-format" >}}). The values of the default properties are determined as follows:
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#tenant-information-format" >}}) or the [device level]({{< relref "/api/device-registration#assert-device-registration" >}}). The values of the default properties are determined as follows:
 
 1. If the message already contains a non-empty property of the same name, the value if unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.

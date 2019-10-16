@@ -14,7 +14,7 @@ and how to interpret actual values.
 
 Hono uses [Micrometer](https://micrometer.io/) in combination with Spring Boot
 to internally collect metrics. Those metrics can be exported to different
-back ends. Please refer to [Configuring Metrics]({{< relref "/admin-guide/monitoring-tracing-config.md#configuring-metrics" >}})
+back ends. Please refer to [Configuring Metrics]({{< relref "/admin-guide/monitoring-tracing-config#configuring-a-metrics-back-end" >}})
 for details.
 
 The example deployment by default uses [Prometheus](https://prometheus.io/) as the metrics back end.
