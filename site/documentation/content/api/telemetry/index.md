@@ -23,7 +23,7 @@ The following operations can be used by *Protocol Adapters* to forward telemetry
 **Preconditions**
 
 1. Adapter has established an AMQP connection with the AMQP Messaging Network.
-1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the client for which the client wants to forward telemetry data. 
+1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `telemetry/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload telemetry data for. 
 1. The device for which the adapter wants to send telemetry data has been registered (see [Device Registration API]({{< relref "/api/device-registration" >}})).
 
 The adapter indicates its preferred message delivery mode by means of the *snd-settle-mode* and *rcv-settle-mode* fields of its *attach* frame during link establishment.
@@ -39,9 +39,10 @@ All other combinations are not supported by Hono and may result in the terminati
 
 As indicated above, it is up to the discretion of the protocol adapter whether it wants to use *AT LEAST ONCE* or *AT MOST ONCE* delivery semantics.
 
-Hono's HTTP adapter allows devices to indicate, which delivery semantics they want to use when forwarding telemetry data.
+Hono's HTTP adapter allows devices to indicate, which delivery semantics they want to use when uploading telemetry data.
+The HTTP adapter always forwards messages unsettled and either ignores the outcome of the message transfer (*AT MOST ONCE*) or waits for the downstream peer to accept the message (*AT LEAST ONCE*) before acknowledging the reception of the message to the device.
 
-The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *settled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
+The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT MOST ONCE* delivery semantics.
 
 {{< figure src="forward_qos0.svg" title="Forward telemetry data flow (AT MOST ONCE)" >}}
 

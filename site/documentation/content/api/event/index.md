@@ -23,7 +23,7 @@ The following operations can be used by *Protocol Adapters* to forward event mes
 **Preconditions**
 
 1. Adapter has established an AMQP connection with the AMQP Messaging Network.
-1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `event/${tenant_id}` where `${tenant_id}` is the ID of the client for which the client wants to forward event messages.
+1. Adapter has established an AMQP link in role *sender* with the AMQP Messaging Network using target address `event/${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to upload event messages for. 
 1. The device for which the adapter wants to send an event has been registered (see [Device Registration API]({{< relref "/api/device-registration" >}})).
 
 Hono supports *AT LEAST ONCE* delivery of *Event* messages only. A client therefore MUST use `unsettled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported by Hono and may result in the termination of the link or connection (depending on the configuration of the AMQP Messaging Network).
