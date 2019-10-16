@@ -32,9 +32,12 @@ minikube start --cpus 2 --memory 8192
 
 After the Minikube VM has started successfully, the `minikube tunnel` command should be run in order to support Hono's services being deployed using the *LoadBalancer* type. Please refer to the [Minikube Loadbalancer docs](https://minikube.sigs.k8s.io/docs/tasks/loadbalancer/) for details.
 
-{{% note title="Supported Kubernetes Versions" %}}
-Minikube will use the most recent Kubernetes version that was available when it has been compiled by default. Hono *should* run on any version of Kubernetes starting with 1.13.6. However, it has been tested with several specific versions only so if you experience any issues with running Hono on a more recent version, please try to deploy to 1.13.6 before
-raising an issue. You can use Minikube's `--kubernetes-version` command line switch to set a particular version.
+{{% note title="Setting Kubernetes Version" %}}
+Minikube will use the most recent Kubernetes version that was available when it has been compiled by default.
+Hono *should* run on any version of Kubernetes starting with 1.13.6. However, it has been tested with several
+specific versions only. The most recent version known to work is 1.15.4 so if you experience any issues with
+running Hono on another version, please try to deploy to 1.15.4 before raising an issue.
+You can use Minikube's `--kubernetes-version` command line switch to set a particular version.
 {{% /note %}}
 
 ## Setting up a Production Environment

@@ -18,6 +18,12 @@ The example configuration that comes with Hono and which is used in this guide i
 The most basic requirement is, of course, a Kubernetes cluster to deploy to.
 The [Kubernetes setup guide]({{< relref "create-kubernetes-cluster.md" >}}) describes options available for setting up a cluster.
 
+{{% note title="Supported Kubernetes Versions" %}}
+Hono *should* run on any version of Kubernetes starting with 1.13.6. However, it has been tested with several
+specific versions only. The most recent version known to work is 1.15.4 so if you experience any issues with
+running Hono on another version, please try to deploy to 1.15.4 before raising an issue.
+{{% /note %}}
+
 #### Helm
 
 Helm is a tool for managing (complex) Kubernetes applications. In this guide it is used to deploy Hono to the cluster.
@@ -57,6 +63,13 @@ helm status hono
 helm get hono
 ~~~
 
+{{% note title="Kubernetes 1.16" %}}
+Hono can not be deployed to Kubernetes 1.16 using Helm because current versions (< 2.15) of Helm [don't support installation of
+the Tiller component to Kubernetes 1.16](https://github.com/helm/helm/issues/6374).
+Until that problem is fixed in Helm, the workaround is to either deploy to an earlier version of Kubernetes or deploy using
+the *kubectl* command as described in the next section.
+{{% /note %}}
+
 ### Deploying Hono using kubectl
 
 In cases where installation of Helm's Tiller service into the cluster is not an option, the Kubernetes resource descriptors created by Helm can be deployed manually using the `kubectl` command line tool.
@@ -70,6 +83,19 @@ helm dep update eclipse-hono/
 helm template --name hono --namespace hono --output-dir resources eclipse-hono/
 ~~~
 
+{{% note title="Kubernetes 1.16" %}}
+Hono can currently only be deployed to Kubernetes 1.16 if Prometheus and Grafana are disabled.
+This is due to a [bug](https://github.com/helm/charts/pull/17268) in the Prometheus Helm chart which is used to deploy
+Prometheus as part of Hono' example deployment.
+Until the bug is fixed, the workaround is to disable deployment of Prometheus and Grafana by setting the following
+configuration properties when creating the resource descriptors:
+
+```sh
+# in directory: eclipse-hono-$VERSION
+helm template --name hono --namespace hono --set prometheus.createInstance=false --set grafana.enabled=false --output-dir resources eclipse-hono/
+```
+{{% /note %}}
+
 This will create a `resources/eclipse-hono` folder containing all the resource descriptors which can then be deployed to the cluster using `kubectl`:
 
 ~~~sh
@@ -78,6 +104,7 @@ kubectl create namespace hono
 kubectl config set-context $(kubectl config current-context) --namespace=hono
 kubectl apply -f ./resources -R
 ~~~
+
 
 ## Verifying the Installation
 
