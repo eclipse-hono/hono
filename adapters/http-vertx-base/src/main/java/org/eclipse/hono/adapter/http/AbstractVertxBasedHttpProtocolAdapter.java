@@ -893,6 +893,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             response.putHeader(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
             currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
         }
+        if (command.isTargetedAtGateway()) {
+            response.putHeader(Constants.HEADER_COMMAND_TARGET_DEVICE, command.getOriginalDeviceId());
+            currentSpan.setTag(Constants.HEADER_COMMAND_TARGET_DEVICE, command.getOriginalDeviceId());
+        }
 
         response.setStatusCode(HttpURLConnection.HTTP_OK);
         HttpUtils.setResponseBody(response, command.getPayload(), command.getContentType());

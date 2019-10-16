@@ -231,6 +231,12 @@ public final class Constants {
     public static final String HEADER_COMMAND_REQUEST_ID = "hono-cmd-req-id";
 
     /**
+     * The header name defined for setting the <em>target device id</em> when sending a command to a gateway acting on
+     * behalf of the device.
+     */
+    public static final String HEADER_COMMAND_TARGET_DEVICE = "hono-cmd-target-device";
+
+    /**
      * The header name defined for setting the <em>command</em> that is sent to the device.
      */
     public static final String HEADER_COMMAND = "hono-command";

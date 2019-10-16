@@ -46,6 +46,7 @@ Before accepting any telemetry or event or command messages, the HTTP adapter ve
   * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device and if the response goes to a gateway that acts on behalf of the target device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
@@ -67,6 +68,8 @@ Before accepting any telemetry or event or command messages, the HTTP adapter ve
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
+
+If the `hono-ttd` header is set in order to receive a command and if the authenticated device is actually a gateway, the returned command will be the first command that the northbound application has sent to either the gateway itself or (if not using the legacy control endpoint) to *any* device that has last sent a telemetry or event message via this gateway.
 
 **Examples**
 
@@ -201,6 +204,7 @@ content-length: 23
   * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
@@ -280,6 +284,7 @@ content-length: 23
   * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device and if the response goes to a gateway that acts on behalf of the target device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
@@ -297,6 +302,8 @@ content-length: 23
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
+
+If the `hono-ttd` header is set in order to receive a command and if the authenticated device is actually a gateway, the returned command will be the first command that the northbound application has sent to either the gateway itself or (if not using the legacy control endpoint) to *any* device that has last sent a telemetry or event message via this gateway.
 
 **Example**
 
@@ -367,6 +374,7 @@ content-length: 0
   * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
+  * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 200.
   * (optional) Error details, if status code is >= 400.
