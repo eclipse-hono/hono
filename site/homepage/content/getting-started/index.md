@@ -69,7 +69,7 @@ export HTTP_ADAPTER_IP=hono.eclipse.org
 export MQTT_ADAPTER_IP=hono.eclipse.org
 ~~~
 
-and then proceed to the [Overview of Hono Components]({{< relref "#overview" >}}).
+and then proceed to the [Overview of Hono Components]({{< relref "#overview-of-hono-components" >}}).
 
 However, if the `curl` command yielded different output, you will need to set up Hono locally as described in the next section.
 
@@ -78,7 +78,7 @@ However, if the `curl` command yielded different output, you will need to set up
 In case you cannot access the Hono Sandbox as described above, you will need to set up an instance of Hono running on your local computer.
 For evaluation purposes a single node *Minikube* cluster is sufficient to deploy Hono to.
 
-1. Please refer to the [installation instructions]({{% doclink "/deployment/create-kubernetes-cluster/#local-development" %}}) for setting up a local Minikube cluster, then
+1. Please refer to the [installation instructions]({{% doclink "/deployment/create-kubernetes-cluster/#setting-up-a-local-development-environment" %}}) for setting up a local Minikube cluster, then
 1. follow the [Deployment Guide]({{% doclink "/deployment/helm-based-deployment/" %}}) in order to install Hono to your local Minikube cluster.
 
 Once Hono has been deployed to your local cluster, run the following commands to set some environment variables which will be used during the guide
@@ -318,7 +318,7 @@ The application used the AMQP 1.0 protocol to receive messages regardless of the
 **What to try next?**
 
 * Continue with the next sections to learn how applications can send commands to devices by means of the [Command & Control API]({{% doclink "/api/command-and-control/" %}}).
-* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipse.org:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard]({{% doclink "/deployment/helm-based-deployment/#dashboard" %}}) for instructions.
+* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipse.org:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard]({{% doclink "/deployment/helm-based-deployment/#accessing-the-grafana-dashboard" %}}) for instructions.
 * Check out the [User Guides]({{% doclink "/user-guide/" %}}) to explore more options for devices to connect to Hono using different transport protocols.
 * Learn more about the managing tenants, devices and credentials using the [Device Registry's HTTP API]({{% doclink "/user-guide/device-registry/" %}}).
 {{% /note %}}

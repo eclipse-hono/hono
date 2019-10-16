@@ -44,7 +44,7 @@ The following table provides an overview of the properties a client needs to set
 | :--------------- | :-------: | :----------------------- | :----------- | :---------- |
 | *correlation-id* | no        | *properties*             | *message-id* | MAY contain an ID used to correlate a response message to the original request. If set, it is used as the *correlation-id* property in the response, otherwise the value of the *message-id* property is used. Either this or the *message-id* property MUST be set. |
 | *message-id*     | no        | *properties*             | *string*     | MAY contain an identifier that uniquely identifies the message at the sender side. Either this or the *correlation-id* property MUST be set. |
-| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to receive response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
+| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to receive response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions-for-invoking-the-tenant-api" >}})). |
 | *subject*        | yes       | *properties*             | *string*     | MUST be set to `get`. |
 
 The body of the request message MUST consist of a single *Data* section containing a UTF-8 encoded string representation of a single JSON object.

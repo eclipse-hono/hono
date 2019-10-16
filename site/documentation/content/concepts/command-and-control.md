@@ -40,7 +40,7 @@ The *hono-cmd* is the command that should be executed by the device. Typically t
 The *hono-cmd-req-id* response header is needed for the command response to correlate it. It has to be sent back from the device to the adapter in a following operation (5). 
  
 The device needs to respond to the command (5), to inform the business application about the outcome of executing the command. For this purpose 
-specific URIs are defined in [HTTP Adapter]({{< relref "/user-guide/http-adapter.md#sending-a-response-to-a-previously-received-command" >}}).
+specific URIs are defined in [HTTP Adapter]({{< relref "/user-guide/http-adapter#sending-a-response-to-a-command-authenticated-device" >}}).
 
 The URI contains the *hono-cmd-req-id* and a status code indicating the outcome of executing the command.
 

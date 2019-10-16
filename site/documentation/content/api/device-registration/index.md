@@ -39,7 +39,7 @@ The following table provides an overview of the properties a client needs to set
 | *device_id*      | yes       | *application-properties* | *string*     | MUST contain the ID of the device that is subject to the operation. |
 | *gateway_id*     | no        | *application-properties* | *string*     | The identifier of the gateway that wants to get an assertion *on behalf* of another device (given in the *device_id* property).<br>An implementation SHOULD verify that the gateway exists, is enabled and is authorized to get an assertion for, and thus send data on behalf of, the device. |
 | *message-id*     | no        | *properties*             | *string*     | MAY contain an identifier that uniquely identifies the message at the sender side. Either this or the *correlation-id* property MUST be set. |
-| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions" >}})). |
+| *reply-to*       | yes       | *properties*             | *string*     | MUST contain the source address that the client wants to received response messages from. This address MUST be the same as the source address used for establishing the client's receive link (see [Preconditions]({{< relref "#preconditions-for-invoking-the-device-registration-api" >}})). |
 | *subject*        | yes       | *properties*             | *string*     | MUST be set to `assert`. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
