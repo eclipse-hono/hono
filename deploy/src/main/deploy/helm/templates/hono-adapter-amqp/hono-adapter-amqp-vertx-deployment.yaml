@@ -1,5 +1,5 @@
 {{- $args := dict "dot" . "component" "adapter-amqp-vertx" "name" "adapter-amqp-vertx" }}
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   {{- include "hono.metadata" $args | nindent 2 }}

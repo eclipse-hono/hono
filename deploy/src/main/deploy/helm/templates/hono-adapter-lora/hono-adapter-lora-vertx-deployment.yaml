@@ -1,6 +1,6 @@
 {{- if .Values.adapters.lora.enabled }}
 {{- $args := dict "dot" . "component" "adapter-lora-vertx" "name" "adapter-lora-vertx" }}
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   {{- include "hono.metadata" $args | nindent 2 }}

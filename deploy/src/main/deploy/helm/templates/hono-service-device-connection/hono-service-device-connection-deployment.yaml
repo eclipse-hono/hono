@@ -1,6 +1,6 @@
 {{- if .Values.deviceConnectionService.enabled }}
 {{- $args := dict "dot" . "component" "service-device-connection" "name" "service-device-connection" }}
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   {{- include "hono.metadata" $args | nindent 2 }}

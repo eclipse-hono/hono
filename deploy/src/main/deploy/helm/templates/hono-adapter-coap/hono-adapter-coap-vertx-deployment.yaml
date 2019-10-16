@@ -1,6 +1,6 @@
 {{- if .Values.adapters.coap.enabled }}
 {{- $args := dict "dot" . "component" "adapter-coap-vertx" "name" "adapter-coap-vertx" }}
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   {{- include "hono.metadata" $args | nindent 2 }}

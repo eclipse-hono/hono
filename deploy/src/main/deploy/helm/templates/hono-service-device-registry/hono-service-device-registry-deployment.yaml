@@ -1,6 +1,6 @@
 {{- if .Values.deviceRegistryExample.enabled }}
 {{- $args := dict "dot" . "component" "service-device-registry" "name" "service-device-registry" }}
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   {{- include "hono.metadata" $args | nindent 2 }}
