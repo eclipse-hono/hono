@@ -51,6 +51,7 @@ The scope passed in is expected to be a dict with keys
 */}}
 {{- define "hono.metadata" -}}
 name: {{ .dot.Release.Name }}-{{ .name }}
+namespace: {{ .dot.Release.Namespace }}
 labels:
   app.kubernetes.io/name: {{ template "hono.name" .dot }}
   helm.sh/chart: {{ template "hono.chart" .dot }}
