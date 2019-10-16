@@ -315,6 +315,8 @@ If a device is configured to be used with *multiple* gateways, the particular ga
 
 An authenticated gateway MUST use the topic filter `command//+/req/#` to subscribe to commands for all devices in whose behalf it acts.
 
+To subscribe only to commands for a specific device, an authenticated gateway MUST use the topic filter `command//${device-id}/req/#`.
+
 {{% note title="Deprecation" %}}
 Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
 This old topic filter is deprecated. Gateways MAY still use it until support for it will be removed in a future Hono version.
@@ -322,9 +324,15 @@ This old topic filter is deprecated. Gateways MAY still use it until support for
 
 **Example**
 
+A subscription to commands for all devices that a gateway acts on behalf of looks like this:
 ```sh
 mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//+/req/#
 ```
+A subscription to commands for a specific device can be done like this:
+```sh
+mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//4711/req/#
+```
+
 The adapter will then publish *Request/Response* commands for devices, that the gateway has acted on behalf of, to topic `command//${device-id}/req/${req-id}/${command}` and *one-way* commands to topic `command//${device-id}/req//${command}`.
 
 For example, a request/response command for device `4711` with name `setBrightness` from an application might look like this:

@@ -279,8 +279,10 @@ The AMQP adapter checks the configured [message limit] ({{< relref "/concepts/re
 
 A device MUST use the following source address in its *attach* frame to open a link for receiving commands:
 
-* `command` (authenticated device/gateway)
+* `command` (authenticated device)
+* `command` (authenticated gateway receiving commands for all devices it acts on behalf of)
 * `command/${tenant}/${device-id}` (unauthenticated device)
+* `command/${tenant}/${device-id}` (authenticated gateway receiving commands for a specific device it acts on behalf of)
 
 {{% note %}}
 Previous versions of Hono used `control` instead of `command` as address prefix. Using the `control` prefix is still supported but deprecated. 
