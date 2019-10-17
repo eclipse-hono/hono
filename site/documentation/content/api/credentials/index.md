@@ -8,7 +8,7 @@ resources:
   - src: mqtt_adapter_device_authentication.svg
 ---
 
-The *Credentials API* is used by *Protocol Adapters* to retrieve credentials used to authenticate *Devices* connecting to the adapter. In particular, the API supports the look up *shared secrets* which are often used by IoT devices by means of *username/password* based authentication schemes.
+The *Credentials API* is used by *Protocol Adapters* to retrieve credentials used to authenticate *Devices* connecting to the adapter. In particular, the API supports to look up *shared secrets* which are often used by IoT devices by means of *username/password* based authentication schemes.
 <!--more-->
 
 Credentials are of a certain *type* which indicates which authentication mechanism the credentials can be used with. Each set of credentials also contains an *authentication identity* which is the identity claimed by the device during authentication. This authentication identity is usually different from the *device-id* the device has been registered under. A device may have multiple sets of credentials, using arbitrary *authentication identities*.
@@ -30,7 +30,7 @@ Protocol adapters use this command to *look up* credentials of a particular type
 
 **Message Flow**
 
-{{< figure src="getCredentials_Success.svg" title="Client looking up credentials for a device" alt="A client sends a request message for looking up device credentials and receives a response containing the credentials" >}}
+{{< figure src="get-credentials-success.svg" title="Client looking up credentials for a device" alt="A client sends a request message for looking up device credentials and receives a response containing the credentials" >}}
 
 
 **Request Message Format**
