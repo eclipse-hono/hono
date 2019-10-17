@@ -665,38 +665,39 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         responseReady, currentSpan));
 
         CompositeFuture.all(senderTracker, commandConsumerTracker)
-                .compose(ok -> {
+        .compose(ok -> {
 
-                    final DownstreamSender sender = senderTracker.result();
+            final DownstreamSender sender = senderTracker.result();
 
-                    final Integer ttd = Optional.ofNullable(commandConsumerTracker.result()).map(c -> ttdTracker.result())
-                            .orElse(null);
-                    final Message downstreamMessage = newMessage(
-                            ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
-                            ctx.request().uri(),
-                            contentType,
-                            payload,
-                            tenantTracker.result(),
-                            tokenTracker.result(),
-                            ttd,
-                            EndpointType.EVENT.equals(endpoint) ? HttpUtils.getTimeToLive(ctx) : null);
-                    customizeDownstreamMessage(downstreamMessage, ctx);
+            final Integer ttd = Optional.ofNullable(commandConsumerTracker.result()).map(c -> ttdTracker.result())
+                    .orElse(null);
+            final Message downstreamMessage = newMessage(
+                    ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
+                    ctx.request().uri(),
+                    contentType,
+                    payload,
+                    tenantTracker.result(),
+                    tokenTracker.result(),
+                    ttd,
+                    EndpointType.EVENT.equals(endpoint) ? HttpUtils.getTimeToLive(ctx) : null);
+            customizeDownstreamMessage(downstreamMessage, ctx);
 
-                    addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);
+            addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 
-                    if (MetricsTags.QoS.AT_MOST_ONCE.equals(qos)) {
-                        return CompositeFuture.all(
-                                sender.send(downstreamMessage, currentSpan.context()),
-                                responseReady)
-                                .map(s -> (Void) null);
-                    } else {
-                        // unsettled
-                        return CompositeFuture.all(
-                                sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
-                                responseReady)
-                                .map(s -> (Void) null);
-                    }
-                }).recover(t -> {
+            if (MetricsTags.QoS.AT_MOST_ONCE.equals(qos)) {
+                return CompositeFuture.all(
+                        sender.send(downstreamMessage, currentSpan.context()),
+                        responseReady)
+                        .map(s -> (Void) null);
+            } else {
+                // unsettled
+                return CompositeFuture.all(
+                        sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
+                        responseReady)
+                        .map(s -> (Void) null);
+            }
+        })
+        .recover(t -> {
             if (t instanceof ResourceConflictException) {
                 // simply return an empty response
                 log.debug("ignoring empty notification [tenant: {}, device-id: {}], command consumer is already in use",
@@ -705,7 +706,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             } else {
                 return Future.failedFuture(t);
             }
-        }).map(proceed -> {
+        })
+        .map(proceed -> {
 
             if (ctx.response().closed()) {
                 log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
@@ -772,7 +774,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
             return proceed;
 
-        }).recover(t -> {
+        })
+        .recover(t -> {
 
             log.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                     endpoint, tenant, deviceId, t);
