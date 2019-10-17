@@ -418,27 +418,29 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long start = System.currentTimeMillis();
 
         while (commandsSent.get() < totalNoOfCommandsToSend) {
+            final int currentMessage = commandsSent.incrementAndGet();
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
-                final Buffer payload = Buffer.buffer("value: " + commandsSent.getAndIncrement());
+                final Buffer payload = Buffer.buffer("value: " + currentMessage);
                 commandSender.apply(payload).setHandler(sendAttempt -> {
                     if (sendAttempt.failed()) {
-                        log.debug("error sending command {}", commandsSent.get(), sendAttempt.cause());
+                        log.debug("error sending command {}", currentMessage, sendAttempt.cause());
                     } else {
                         lastReceivedTimestamp.set(System.currentTimeMillis());
                         commandsSucceeded.countDown();
+                        log.debug("sent command no {}", currentMessage);
                         if (commandsSucceeded.getCount() % 20 == 0) {
                             log.info("commands succeeded: {}", totalNoOfCommandsToSend - commandsSucceeded.getCount());
                         }
-                    }
-                    if (commandsSent.get() % 20 == 0) {
-                        log.info("commands sent: " + commandsSent.get());
                     }
                     commandSent.countDown();
                 });
             });
 
             commandSent.await();
+            if (currentMessage % 20 == 0) {
+                log.info("commands sent: " + currentMessage);
+            }
         }
 
         final long timeToWait = totalNoOfCommandsToSend * 200;
