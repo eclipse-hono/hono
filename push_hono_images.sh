@@ -21,6 +21,7 @@ IMAGES="hono-adapter-http-vertx \
        hono-adapter-lora-vertx \
        hono-adapter-sigfox-vertx \
        hono-service-auth \
+       hono-service-device-connection \
        hono-service-device-registry"
 
 if [ -n "$TAG" ]
