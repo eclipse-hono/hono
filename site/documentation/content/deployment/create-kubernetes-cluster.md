@@ -51,7 +51,7 @@ This chapter describes how Hono can be deployed on Microsoft Azure. It includes:
 - [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview) templates for an automated infrastructure deployment.
 - Hono deployment into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
 - Push Hono docker images to an [Azure Container Registry (ACR)](https://azure.microsoft.com/en-us/services/container-registry/).
-- Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as broker for the [Hono AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of a self hosted ActiveMQ Artemis.
+- Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as broker for the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of a self hosted ActiveMQ Artemis.
 - [Virtual Network (VNet) service endpoints](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview) ensure protected communication between AKS and Azure Service Bus.
 
 <!--more-->
@@ -103,7 +103,7 @@ cd deploy/src/main/deploy/azure/
 az group deployment create --name HonoBasicInfrastructure --resource-group $resourcegroup_name --template-file arm/honoInfrastructureDeployment.json --parameters uniqueSolutionPrefix=$unique_solution_prefix servicePrincipalObjectId=$object_id_principal servicePrincipalClientId=$app_id_principal servicePrincipalClientSecret=$password_principal
 ```
 
-Note: add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Hono AMQP 1.0 Messaging Network](https://www.eclipse.org/hono/docs/architecture/component-view/component-view/#amqp-1-0-messaging-network) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
+Note: add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
 
 After the deployment is complete you can set your cluster in _kubectl_.
 
@@ -119,7 +119,7 @@ helm init --service-account tiller
 kubectl apply -f managed-premium-retain.yaml
 ```
 
-Now wait until the Azure deployment is complete and then continue with the [Helm deployment](helm-based-deployment/) of Hono itself.
+Now wait until the Azure deployment is complete and then continue with the [Helm deployment]({{< relref "helm-based-deployment.md" >}}) of Hono itself.
 
 ### Monitoring
 
