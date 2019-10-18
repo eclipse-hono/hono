@@ -45,7 +45,7 @@ be used that is designed to scale out, e.g. using a persistent store for keeping
 
 ## AMQP 1.0 Messaging Network
 
-The *AMQP 1.0 Messaging Network* is not *per se* a component being developed as part of Hono. Instead, Hono comes with a default implementation of the messaging network relying on artifacts provided by other open source projects. The default implementation currently consists of a single [Apache Qpid Dispatch Router](https://qpid.apache.org) instance connected to a single [Apache Artemis](https://activemq.apache.org/artemis) broker instance. Note that this setup is useful for development purposes but will probably not meet requirements regarding e.g. scalability of real world use cases.
+The *AMQP 1.0 Messaging Network* is not *per se* a component being developed as part of Hono. Instead, Hono comes with a default implementation of the messaging network relying on artifacts provided by other open source projects. The default implementation currently consists of a single [Apache Qpid Dispatch Router](https://qpid.apache.org) instance connected to a single [Apache Artemis](https://activemq.apache.org/artemis/) broker instance. Note that this setup is useful for development purposes but will probably not meet requirements regarding e.g. scalability of real world use cases.
 
 The diagram below provides an overview of the default implementation of the Messaging Network component used with Hono.
 

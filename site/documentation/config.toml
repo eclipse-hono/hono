@@ -60,13 +60,13 @@ pluralizeListTitles = "false"
 # Menu Shortcuts
 [[menu.shortcuts]]
 name = "<i class='fas fa-home'></i> Hono Home"
-url = "https://www.eclipse.org/hono"
+url = "https://www.eclipse.org/hono/"
 title = "Hono's Homepage"
 weight = 10
 
 [[menu.shortcuts]] 
 name = "<i class='fas fa-plane-departure'></i> Getting Started"
-url = "https://www.eclipse.org/hono/getting-started"
+url = "https://www.eclipse.org/hono/getting-started/"
 title = "Getting started with Eclipse Hono"
 weight = 20
 
