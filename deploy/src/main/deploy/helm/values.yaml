@@ -151,7 +151,7 @@ adapters:
   # which protocol adapters close tenant specific links to services they
   # interact with.
   # Please refer to the Spring Boot documentation for the supported syntax:
-  # https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html#boot-features-external-config-conversion-duration
+  # https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config-conversion-duration
   defaultTenantIdleTimeout: "1h"
 
   amqp:

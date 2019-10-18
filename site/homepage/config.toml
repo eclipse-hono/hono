@@ -10,7 +10,7 @@ pluralizeListTitles = "false"
 [[menu.main]]
     name = "Documentation"
     weight = 120
-    url  = "/docs"
+    url  = "/docs/"
 
 [params]
     author = "The Eclipse Hono Project"
