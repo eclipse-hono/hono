@@ -196,12 +196,11 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * applications connected to the AMQP messaging network.
      *
      * @param senderQos The delivery semantics to use for the device.
-     * @param ctx The Vert.x test context.
      * @throws InterruptedException if test is interrupted while running.
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("senderQoSTypes")
-    public void testUploadMessagesUsingSaslPlain(final ProtonQoS senderQos, final VertxTestContext ctx) throws InterruptedException {
+    public void testUploadMessagesUsingSaslPlain(final ProtonQoS senderQos) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -214,11 +213,11 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         }));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-        } else {
-            testUploadMessages(tenantId, senderQos, ctx);
-        }
+        assertThat(setup.failed())
+        .as("successfully connect to adapter")
+        .isFalse();
+
+        testUploadMessages(tenantId, senderQos);
     }
 
     /**
@@ -226,12 +225,11 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * based authentication can be successfully consumed via the AMQP Messaging Network.
      *
      * @param senderQos The delivery semantics used by the device for uploading messages.
-     * @param ctx The test context.
      * @throws InterruptedException if test execution is interrupted.
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("senderQoSTypes")
-    public void testUploadMessagesUsingSaslExternal(final ProtonQoS senderQos, final VertxTestContext ctx) throws InterruptedException {
+    public void testUploadMessagesUsingSaslExternal(final ProtonQoS senderQos) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
@@ -253,19 +251,20 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         }));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
-        } else {
-            testUploadMessages(tenantId, senderQos, ctx);
-        }
+        assertThat(setup.failed())
+        .as("successfully connect to adapter")
+        .isFalse();
+
+        testUploadMessages(tenantId, senderQos);
     }
 
     //------------------------------------------< private methods >---
 
     private void testUploadMessages(
             final String tenantId,
-            final ProtonQoS senderQoS,
-            final VertxTestContext ctx) throws InterruptedException {
+            final ProtonQoS senderQoS) throws InterruptedException {
+
+        final VertxTestContext messageSending = new VertxTestContext();
 
         final Function<Handler<Void>, Future<Void>> receiver = callback -> {
             return createConsumer(tenantId, msg -> {
@@ -274,7 +273,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                     log.trace("received message [{}]: {}",
                             msg.getContentType(), payload.toString(StandardCharsets.UTF_8));
                 }
-                assertAdditionalMessageProperties(ctx, msg);
+                assertAdditionalMessageProperties(messageSending, msg);
                 callback.handle(null);
             }).map(c -> {
                 consumer = c;
@@ -282,7 +281,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             });
         };
 
-        doUploadMessages(ctx, receiver, payload -> {
+        doUploadMessages(messageSending, receiver, payload -> {
 
             final Message msg = ProtonHelper.message();
             MessageHelper.setPayload(msg, "text/plain", payload.getBytes(StandardCharsets.UTF_8));
@@ -321,25 +320,23 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     /**
      * Upload a number of messages to Hono's Telemetry/Event APIs.
      * 
-     * @param context The Vert.x test context.
+     * @param messageSending The Vert.x test context to use for tracking the messages being received.
      * @param receiverFactory The factory to use for creating the receiver for consuming
      *                        messages from the messaging network.
      * @param sender The sender for sending messaging to the Hono server.
      * @throws InterruptedException if test execution is interrupted.
      */
     protected void doUploadMessages(
-            final VertxTestContext context,
+            final VertxTestContext messageSending,
             final Function<Handler<Void>, Future<Void>> receiverFactory,
             final Function<String, Future<?>> sender) throws InterruptedException {
 
-        final CountDownLatch remainingMessages = new CountDownLatch(IntegrationTestSupport.MSG_COUNT);
-        final AtomicInteger messagesSent = new AtomicInteger(0);
+        final AtomicInteger messagesReceived = new AtomicInteger(0);
 
         final VertxTestContext receiverCreation = new VertxTestContext();
 
         receiverFactory.apply(msgReceived -> {
-            remainingMessages.countDown();
-            final long msgNo = IntegrationTestSupport.MSG_COUNT - remainingMessages.getCount();
+            final int msgNo = messagesReceived.incrementAndGet();
             if (msgNo % 200 == 0) {
                 log.info("messages received: {}", msgNo);
             }
@@ -347,45 +344,54 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         .setHandler(receiverCreation.completing());
 
         assertThat(receiverCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        if (receiverCreation.failed()) {
-            context.failNow(receiverCreation.causeOfFailure());
-            return;
-        }
+        assertThat(receiverCreation.failed()).isFalse();
 
-        while (messagesSent.get() < IntegrationTestSupport.MSG_COUNT) {
+        final AtomicInteger messagesSent = new AtomicInteger(0);
 
-            final int msgNo = messagesSent.incrementAndGet();
-            final String payload = "temp: " + msgNo;
+        new Thread(() -> {
 
-            final CountDownLatch msgSent = new CountDownLatch(1);
+            while (messagesReceived.get() < IntegrationTestSupport.MSG_COUNT) {
 
-            sender.apply(payload).setHandler(sendAttempt -> {
-                if (sendAttempt.failed()) {
-                    if (sendAttempt.cause() instanceof ServerErrorException &&
-                            ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
-                        // no credit available
-                        // do not expect this message to be received
-                        log.info("skipping message no {}, no credit", msgNo);
-                        remainingMessages.countDown();
-                    } else {
-                        log.info("error sending message no {}", msgNo, sendAttempt.cause());
+                final int msgNo = messagesSent.incrementAndGet();
+                final String payload = "temp: " + msgNo;
+
+                final CountDownLatch msgSent = new CountDownLatch(1);
+
+                sender.apply(payload).setHandler(sendAttempt -> {
+                    if (sendAttempt.failed()) {
+                        if (sendAttempt.cause() instanceof ServerErrorException &&
+                                ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+                            // no credit available
+                            // do not expect this message to be received
+                            log.info("skipping message no {}, no credit", msgNo);
+                            messagesReceived.incrementAndGet();
+                        } else {
+                            log.info("error sending message no {}", msgNo, sendAttempt.cause());
+                        }
                     }
+                    msgSent.countDown();
+                });
+                try {
+                    msgSent.await();
+                    log.trace("sent message no {}", msgNo);
+                    if (msgNo % 200 == 0) {
+                        log.info("messages sent: {}", msgNo);
+                    }
+                } catch (final InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-                msgSent.countDown();
-            });
-            msgSent.await();
-            log.trace("sent message no {}", msgNo);
-            if (msgNo % 200 == 0) {
-                log.info("messages sent: {}", msgNo);
             }
-        }
+            messageSending.completeNow();
+        }, "message sender")
+        .run();
+
 
         final long timeToWait = Math.max(DEFAULT_TEST_TIMEOUT, Math.round(IntegrationTestSupport.MSG_COUNT * 1.2));
-        if (remainingMessages.await(timeToWait, TimeUnit.MILLISECONDS)) {
-            context.completeNow();
-        } else {
-            context.failNow(new IllegalStateException("did not receive all uploaded messages"));
-        }
+        assertThat(messageSending.awaitCompletion(timeToWait, TimeUnit.MILLISECONDS)).isTrue();
+        assertThat(messageSending.failed()).isFalse();
+        assertThat(messagesReceived.get())
+        .as(String.format("assert all %d expected messages are received", IntegrationTestSupport.MSG_COUNT))
+        .isGreaterThanOrEqualTo(IntegrationTestSupport.MSG_COUNT);
     }
 
     /**
