@@ -105,7 +105,13 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 
 ### Client Application
 
-When the connection between an application client and Hono (i.e. the Dispatch Router) is supposed to be secured by TLS (which is a good idea), then the client application needs to be configured to trust the CA that signed the Dispatch Router's certificate chain. When the application uses the `org.eclipse.hono.client.HonoClientImpl` class from the `client` module, then this can be done by means of configuring the `org.eclipse.hono.connection.ConnectionFactoryImpl` with a trust store containing the CA's certificate. Please refer to the [Hono Client configuration guide]({{< relref "hono-client-configuration.md" >}}) for details regarding the configuration properties that need to be set.
+When the connection between an application client and Hono (i.e. the Dispatch Router) is supposed to be secured by TLS (which is a good idea),
+then the client application needs to be configured to trust the CA that signed the Dispatch Router's certificate chain.
+Clients can use the `org.eclipse.hono.client.HonoConnection.newConnection(ClientConfigProperties)` method to establish a connection
+to Hono. The `org.eclipse.hono.config.ClientConfigProperties` instance passed in to the method needs to be configured
+with the trust store containing the CA's certificate.
+Please refer to the [Hono Client configuration guide]({{< relref "hono-client-configuration.md" >}}) for details regarding the
+corresponding configuration properties that need to be set.
 
 The `demo-certs/certs` folder contains the following demo keys to be used with client applications for that purpose.
 

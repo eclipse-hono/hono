@@ -3,10 +3,10 @@ title = "Hono Client Configuration"
 weight = 340
 +++
 
-The `org.eclipse.hono.client.HonoClient` factory can be used to create specific clients for accessing services implementing one or more of Hono's APIs.
+The `org.eclipse.hono.client.HonoConnection` factory can be used to create AMQP 1.0 connections to Hono's service components.
 <!--more-->
 
-The factory uses environment variables and/or command line options to configure the connection to the service and the caching of responses to service invocations. All variables used for configuring a particular Hono Client factory instance share a common *prefix*. This way, multiple sets of variables can be used to configure multiple factories for connecting to different service endpoints without interfering with each other. For example, the set of variables for configuring the client factory for the Device Registration service may use the common prefix `HONO_REGISTRATION` whereas the set for configuring the factory for the Credentials service may use `HONO_CREDENTIALS`.
+The factory uses environment variables and/or command line options to configure the connection to the service and the caching of responses to service invocations. All variables used for configuring the connection factory for a particular service share a common *prefix*. This way, multiple sets of variables can be used to configure multiple factories for connecting to different service endpoints without interfering with each other. For example, the set of variables for configuring the connection factory for the Device Registration service may use the common prefix `HONO_REGISTRATION` whereas the set for configuring the factory for the Credentials service may use `HONO_CREDENTIALS`.
 
 ## Connection Properties
 
@@ -65,13 +65,13 @@ The following table provides an overview of the configuration variables and corr
 
 ## Using TLS
 
-The client can be configured to use TLS for
+The factory can be configured to use TLS for
 
 * authenticating the server during connection establishment and
 * (optionally) authenticating to the server using a client certificate (if the server supports this)
 
-In order to authenticate the server by means of the server's certificate, the client needs to be configured with a *trust anchor* containing the *certificate authorities* that the client trusts. The trust anchor can be configured explicitly by means of the `${PREFIX}_TRUST_STORE_PATH` and `${PREFIX}_TRUST_STORE_PASSWORD` variables. This is most useful in cases where the server's certificate has not been signed by one of the public root CAs that are contained in the JRE's standard trust store. However, if the server does use a certificate signed by such a public CA, then it is sufficient to set the `${PREFIX}_TLS_ENABLED` variable to `true` in order for the client to support TLS when connecting to the server.
+In order to authenticate the server by means of the server's certificate, the factory needs to be configured with a *trust anchor* containing the *certificate authorities* that the client trusts. The trust anchor can be configured explicitly by means of the `${PREFIX}_TRUST_STORE_PATH` and `${PREFIX}_TRUST_STORE_PASSWORD` variables. This is most useful in cases where the server's certificate has not been signed by one of the public root CAs that are contained in the JRE's standard trust store. However, if the server does use a certificate signed by such a public CA, then it is sufficient to set the `${PREFIX}_TLS_ENABLED` variable to `true` in order for the client to support TLS when connecting to the server.
 
 The client can also be configured to authenticate to the server by means of an X.509 client certificate if the server is configured to support this. The `${PREFIX}_CERT_PATH` and `${PREFIX}_KEY_PATH` variables can be used to set the paths to PEM files containing the certificate and private key. Alternatively, the `${PREFIX}_KEY_STORE_PATH` and `${PREFIX}_KEY_STORE_PASSWORD` variables can be used to set the path and password of a key store which contains both the certificate as well as the private key.
 
-The client supports TLS 1.2 only by default for negotiating TLS sessions with servers. Additional protocols can be enabled by setting the `${PREFIX}_SECURE_PROTOCOLS` variable to a comma separated list of protocol names as defined in the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl). However, great care should be taken when enabling older protocols because most of them are vulnerable to attacks.
+The factory supports TLS 1.2 only by default for negotiating TLS sessions with servers. Additional protocols can be enabled by setting the `${PREFIX}_SECURE_PROTOCOLS` variable to a comma separated list of protocol names as defined in the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl). However, great care should be taken when enabling older protocols because most of them are vulnerable to attacks.
