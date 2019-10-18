@@ -328,8 +328,8 @@ The application used the AMQP 1.0 protocol to receive messages regardless of the
 The following example will guide you through an advanced feature of Hono. You will see how an application can send a command 
 to a device and receive a response with the result of processing the command on the device. The communication direction here is exactly the other way round than with telemetry and events. 
 
-The following assumes that the steps in the [Prerequisites for the Getting started Guide](https://www.eclipse.org/hono/getting-started/#prerequisites-for-the-getting-started-guide) 
-and [Registering Devices](https://www.eclipse.org/hono/getting-started/#registering-devices) sections above have been completed. 
+The following assumes that the steps in the [Prerequisites for the Getting started Guide]({{< relref "#prerequisites-for-the-getting-started-guide" >}}) 
+and [Registering Devices]({{< relref "#registering-devices" >}}) sections above have been completed. 
 To simulate the device, you can use the Mosquitto tools again while the Hono Command Line Client simulates the application as before. 
 
 ### Receiving a Command
