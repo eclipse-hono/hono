@@ -27,7 +27,7 @@ running Hono on another version, please try to deploy to 1.15.4 before raising a
 #### Helm
 
 Helm is a tool for managing (complex) Kubernetes applications. In this guide it is used to deploy Hono to the cluster.
-[Helm's installation instructions](https://docs.helm.sh/install/) provide more details.
+[Helm's installation instructions](https://helm.sh/docs/install/) provide more details.
 
 #### Kubectl
 
@@ -524,7 +524,7 @@ az servicebus queue create --resource-group $resourcegroup_name \
 ### Using Jaeger Tracing
 
 Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages flowing through the system.
-The Hono chart can be configured to report tracing information to the [Jaeger tracing system](https://jaegertracing.io). The *Spans* reported
+The Hono chart can be configured to report tracing information to the [Jaeger tracing system](https://www.jaegertracing.io/). The *Spans* reported
 by the components can then be viewed in a web browser.
 
 In order for Hono's components to use the Jaeger client for reporting tracing information, the container images need to be built
