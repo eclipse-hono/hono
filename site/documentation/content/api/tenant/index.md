@@ -179,7 +179,7 @@ The table below provides an overview of the members of a JSON object representin
 | *algorithm*              | *no*       | *string*      | `RSA`         | The name of the public key algorithm. Supported values are `RSA` and `EC`. |
 
 **NB** CAs of the *same* tenant MAY share the same subject DN, e.g. allowing for the definition of overlapping validity periods.
-However, CAs of *different* tenants MUST NOT share the same subject DN in order to allow for the unique look up of a tenant by
+However, CAs of *different* tenants MUST NOT share the same subject DN in order to allow for the unique look-up of a tenant by
 the subject DN of one of its trusted CAs.
 
 **Examples**
