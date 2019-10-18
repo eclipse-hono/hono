@@ -29,7 +29,7 @@ title = "Release Notes"
   by allowing the service to be exposed to configured domains (by default, it's exposed to all domains).
 * The `org.eclipse.hono.util.MessageHelper` now provides convenience factory methods for creating
   new downstream messages from basic properties.
-  `org.eclipse.hono.service.AbstractProtocolAdapterbase` has been adapted to delegate to these
+  `org.eclipse.hono.service.AbstractProtocolAdapterBase` has been adapted to delegate to these
   new factory methods.
 * Hono's protocol adapters can now use multiple trusted certificate authorities per tenant to authenticate
   devices based on client certificates. The list of trusted certificate authorities can be managed at the
