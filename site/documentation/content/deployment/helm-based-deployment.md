@@ -415,7 +415,7 @@ helm install --dep-up --name hono --namespace hono target/deploy/helm/eclipse-ho
 
 ### Deploying to Azure Kubernetes Service (AKS)
 
-The following chapter describes how to use Azure Kubernetes Service (AKS) as a deployment target that has been set up as described in the [Setting up a Kubernetes Cluster guide](create-kubernetes-cluster).
+The following chapter describes how to use Azure Kubernetes Service (AKS) as a deployment target that has been set up as described in the [Setting up a Kubernetes Cluster guide]({{< relref "create-kubernetes-cluster.md" >}}).
 
 First we build the docker images and push them into the ACR. Note that if you define a custom image tag you have to provide the helm with the image tags as described in the chapters above.
 
@@ -501,7 +501,7 @@ Have fun with Hono on Microsoft Azure!
 
 Next steps:
 
-You can follow the steps as described in the [getting started](https://www.eclipse.org/hono/getting-started/) tutorial with the following differences:
+You can follow the steps as described in the [Getting Started]({{% homelink "/getting-started/" %}}) guide with the following differences:
 
 Compared to a plain k8s deployment Azure provides us DNS names with static IPs for the Hono endpoints. To retrieve them:
 
