@@ -19,30 +19,21 @@ Here is a (non-exclusive, non-prioritized) list of things you might be able to h
 
 You might also want to take a look at our [GitHub Issues](https://github.com/eclipse/hono/issues) page and see if you can help out with any of the issues listed. We have put a [help wanted](https://github.com/eclipse/hono/labels/help%20wanted) label on those issues that we are particularly keen on receiving contributions for.
 
-## Legal Requirements
+## Eclipse Contributor Agreement
 
-In order to get you started as fast as possible we need to go through some organizational issues first, though.
+Before your contribution can be accepted by the project team contributors must
+electronically sign the Eclipse Contributor Agreement (ECA).
 
-Hono is an [Eclipse IoT](https://iot.eclipse.org) project and as such is governed by the Eclipse Development process.
-This process helps us in creating great open source software within a safe legal framework.
+* http://www.eclipse.org/legal/ECA.php
 
-For you as a contributor, the following preliminary steps are required in order for us to be able to accept your contribution:
+Commits that are provided by non-committers must have a Signed-off-by field in
+the footer indicating that the author is aware of the terms by which the
+contribution has been provided to the project. The non-committer must
+additionally have an Eclipse Foundation account and must have a signed Eclipse
+Contributor Agreement (ECA) on file.
 
-1. Sign the [Eclipse Foundation Contributor License Agreement](https://eclipse.org/contribute/cla).
-   In order to do so:
-
-   * Obtain an Eclipse Foundation user ID. Anyone who currently uses Eclipse Bugzilla or Gerrit systems already has one of those. If you don't already have an account simply [register on the Eclipse web site](https://dev.eclipse.org/site_login/createaccount.php).
-   * Once you have your account, log in to the [Eclipse Project Portal](https://projects.eclipse.org/), select *My Account* and then the *Contributor License Agreement* tab.
-
-1. Add your GiHub username to your Eclipse Foundation account. Log in to Eclipse and go to [Edit my account](https://dev.eclipse.org/site_login/myaccount.php).
-
-The easiest way to contribute code/patches/whatever is by creating a GitHub pull request (PR). When you do, make sure that you *Sign-off* your commit records using the same email address used for your Eclipse account.
-
-You do this by adding the `-s` flag when you make the commit(s), e.g.
-
-    git commit -s -m "Shave the yak some more"
-
-You can find all the details in the [Contributing via Git](http://wiki.eclipse.org/Development_Resources/Contributing_via_Git) document on the Eclipse web site.
+For more information, please see the Eclipse Committer Handbook:
+https://www.eclipse.org/projects/handbook/#resources-commit
 
 ## Conventions
 
@@ -79,12 +70,12 @@ You can find all the details in the [Contributing via Git](http://wiki.eclipse.o
 9. Commit your changes into your *feature branch*.
 10. Use descriptive and meaningful commit messages.
 11. Squash multiple commits related to the same feature/issue into a single one, if reasonable.
-12. Make sure you use the `-s` flag when committing as explained above.
+12. Make sure you use the `-s` flag when committing in order to add a *Signed-off-by* footer as mentioned above.
 13. Push your changes to your branch in your forked repository.
 
 ## Submitting the Changes
 
-Submit a pull request via the normal GitHub UI.
+Submit a pull request via the GitHub UI.
 
 ## After Submitting
 
