@@ -159,7 +159,7 @@ The configuration file's location is `/deploy/src/main/deploy/example-tenants.js
 
 ## Configuring Gateway Devices
 
-The Device Registry supports devices to *act on behalf of* other devices. This is particularly useful for cases where a device does not connect directly to a Hono protocol adapter but is connected to a *gateway* component that is usually specific to the device's communication protocol. It is the gateway component which then connects to a Hono protocol adapter and publishes data on behalf of the device(s). Examples of such a set up include devices using [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/) for communication.
+The Device Registry supports devices to *act on behalf of* other devices. This is particularly useful for cases where a device does not connect directly to a Hono protocol adapter but is connected to a *gateway* component that is usually specific to the device's communication protocol. It is the gateway component which then connects to a Hono protocol adapter and publishes data on behalf of the device(s). Examples of such a set up include devices using [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/) for communication.
 
 In these cases the protocol adapter will authenticate the gateway component instead of the device for which it wants to publish data. In order to verify that the gateway is *authorized* to publish data on behalf of the particular device, the protocol adapter should include the gateway's device identifier (as determined during the authentication process) in its invocation of the Device Registration API's *assert Device Registration* operation.
 

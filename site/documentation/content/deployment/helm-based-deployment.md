@@ -36,12 +36,12 @@ The [installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/
 
 #### Hono Helm Chart
 
-The Helm chart is contained in the Hono archive that is available from [Hono's download page]({{% homelink "/downloads/" %}}).
+The Helm chart is contained in the Hono archive that is available from [Hono's download page]({{% homelink "downloads/" %}}).
 After the archive has been extracted, the chart can be found in the `eclipse-hono-$VERSION/eclipse-hono` folder.
 
 #### Hono Command Line Client
 
-The Hono command line client is available from the [download page]({{% homelink "/downloads/" %}}).
+The Hono command line client is available from the [download page]({{% homelink "downloads/" %}}).
 The command line client requires a Java 11 runtime environment to run.
 
 ## Deploying Hono
@@ -501,7 +501,7 @@ Have fun with Hono on Microsoft Azure!
 
 Next steps:
 
-You can follow the steps as described in the [Getting Started]({{% homelink "/getting-started/" %}}) guide with the following differences:
+You can follow the steps as described in the [Getting Started]({{% homelink "getting-started/" %}}) guide with the following differences:
 
 Compared to a plain k8s deployment Azure provides us DNS names with static IPs for the Hono endpoints. To retrieve them:
 
