@@ -186,7 +186,11 @@ public class Tenant {
      * @param adapters The configuration properties.
      * @return This instance, to allow chained invocations.
      * @throws IllegalArgumentException if the adapters list is empty.
+     * @deprecated From Hono 2.0.0, this method will take list of objects of type
+     *             {@link org.eclipse.hono.util.Adapter} instead of
+     *             {@link org.eclipse.hono.service.management.tenant.Adapter} as argument.
      */
+    @Deprecated
     public final Tenant setAdapters(final List<Adapter> adapters) {
 
         if (adapters != null) {
@@ -213,7 +217,11 @@ public class Tenant {
      * Gets protocol adapter configuration specific to this tenant.
      *
      * @return An unmodifiable view on the adapter configuration properties.
+     * @deprecated From Hono 2.0.0, this method will return a list of objects of type
+     *             {@link org.eclipse.hono.util.Adapter} instead of
+     *             {@link org.eclipse.hono.service.management.tenant.Adapter}.
      */
+    @Deprecated
     public final List<Adapter> getAdapters() {
         return Collections.unmodifiableList(adapters);
     }
@@ -223,7 +231,11 @@ public class Tenant {
      * 
      * @param configuration The configuration properties to add.
      * @return This instance, to allow chained invocations.
+     * @deprecated From Hono 2.0.0, this method will take an argument of type
+     *             {@link org.eclipse.hono.util.Adapter} instead of
+     *             {@link org.eclipse.hono.service.management.tenant.Adapter}.
      */
+    @Deprecated
     public final Tenant addAdapterConfig(final Adapter configuration) {
 
         if (configuration == null) {

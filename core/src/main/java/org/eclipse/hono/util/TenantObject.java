@@ -48,7 +48,7 @@ import io.vertx.core.json.JsonObject;
 public final class TenantObject extends JsonBackedValueObject {
 
     @JsonIgnore
-    private List<Map<String, Object>> adapterConfigurations;
+    private List<Adapter> adapters;
     @JsonIgnore
     private ResourceLimits resourceLimits;
     @JsonIgnore
@@ -251,20 +251,78 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
+     * Gets the list of configured adapters for the tenant.
+     *
+     * @return The list of configured adapters or {@code null} if not set.
+     */
+    @JsonIgnore
+    public List<Adapter> getAdapters() {
+        return adapters;
+    }
+
+    /**
+     * Sets the given list of adapters for the tenant.
+     *
+     * @param adapters The list of adapters or {@code null} if not set.
+     * @return This tenant for command chaining.
+     * @throws IllegalArgumentException if more than one of the adapters have the same <em>type</em>.
+     */
+    @JsonIgnore
+    public TenantObject setAdapters(final List<Adapter> adapters) {
+        this.adapters = validateAdapterTypes(adapters);
+        return this;
+    }
+
+    @JsonIgnore
+    private List<Adapter> validateAdapterTypes(final List<Adapter> adapters) {
+        if (adapters != null) {
+            final Set<String> uniqueAdapterTypes = adapters.stream()
+                    .map(Adapter::getType)
+                    .collect(Collectors.toSet());
+            if (adapters.size() != uniqueAdapterTypes.size()) {
+                throw new IllegalArgumentException("Each adapter must have a unique type");
+            }
+        }
+        return adapters;
+    }
+
+    /**
+     * Gets the adapter configuration for the given type.
+     *
+     * @param type The adapter's type.
+     * @return The adapter configuration or {@code null} if not set.
+     * @throws NullPointerException if type is {@code null}.
+     */
+    @JsonIgnore
+    public Adapter getAdapter(final String type) {
+
+        Objects.requireNonNull(type);
+
+        return Optional.ofNullable(adapters)
+                .flatMap(ok -> adapters.stream()
+                        .filter(adapter -> type.equals(adapter.getType()))
+                        .findFirst())
+                .orElse(null);
+    }
+
+    /**
      * Gets the configuration information for this tenant's
      * configured adapters.
      * 
      * @return An unmodifiable list of configuration properties or
      *         {@code null} if no specific configuration has been
      *         set for any protocol adapter.
+     * @deprecated Use {@link #getAdapters()} instead.
      */
+    @Deprecated
     @JsonProperty(TenantConstants.FIELD_ADAPTERS)
     public List<Map<String, Object>> getAdapterConfigurationsAsMaps() {
-        if (adapterConfigurations == null) {
-            return null;
-        } else {
-            return adapterConfigurations;
-        }
+        return Optional.ofNullable(adapters)
+                .map(adapters -> adapters.stream()
+                        .map(JsonObject::mapFrom)
+                        .map(JsonObject::getMap)
+                        .collect(Collectors.toList()))
+                .orElse(null);
     }
 
     /**
@@ -274,16 +332,17 @@ public final class TenantObject extends JsonBackedValueObject {
      * @return The configuration properties for this tenant's
      *         configured adapters or {@code null} if no specific
      *         configuration has been set for any protocol adapter.
+     * @deprecated Use {@link #getAdapters()} instead.
      */
+    @Deprecated
     @JsonIgnore
     public JsonArray getAdapterConfigurations() {
-        if (adapterConfigurations == null) {
-            return null;
-        } else {
-            final JsonArray result = new JsonArray();
-            adapterConfigurations.stream().forEach(config -> result.add(new JsonObject(config)));
-            return result;
-        }
+        return Optional.ofNullable(adapters)
+                .map(adapters -> adapters.stream()
+                        .map(JsonObject::mapFrom)
+                        .collect(Collectors.toList()))
+                .map(JsonArray::new)
+                .orElse(null);
     }
 
     /**
@@ -293,19 +352,16 @@ public final class TenantObject extends JsonBackedValueObject {
      * @return The configuration properties or {@code null} if no specific
      *         properties have been set.
      * @throws NullPointerException if type is {@code null}.
+     * @deprecated Use {@link #getAdapter(String type)} instead.
      */
+    @Deprecated
     public JsonObject getAdapterConfiguration(final String type) {
 
         Objects.requireNonNull(type);
-        if (adapterConfigurations == null) {
-            return null;
-        } else {
-            return adapterConfigurations.stream()
-                    .filter(entry -> type.equalsIgnoreCase((String) entry.get(TenantConstants.FIELD_ADAPTERS_TYPE)))
-                    .findFirst()
-                    .map(entry -> new JsonObject(entry))
-                    .orElse(null);
-        }
+
+        return Optional.ofNullable(getAdapter(type))
+                .map(JsonObject::mapFrom)
+                .orElse(null);
     }
 
     /**
@@ -317,14 +373,21 @@ public final class TenantObject extends JsonBackedValueObject {
      *                              copied into a new list in order to prevent modification
      *                              of the list after this method has been invoked.
      * @return This tenant for command chaining.
+     * @throws IllegalArgumentException if the given configurations does not contain a <em>type</em> or
+     *                                  if more than one of the adapter configurations have the same <em>type</em> or
+     *                                  if error parsing the given configuration.
+     * @deprecated Use {@link #setAdapters(List adapters)} instead.
      */
+    @Deprecated
     @JsonProperty(TenantConstants.FIELD_ADAPTERS)
     public TenantObject setAdapterConfigurations(final List<Map<String, Object>> configurations) {
-        if (configurations == null) {
-            this.adapterConfigurations = null;
-        } else {
-            this.adapterConfigurations = new LinkedList<>(configurations);
-        }
+        final List<Adapter> adapters = Optional.ofNullable(configurations)
+                .map(ok -> configurations.stream()
+                        .map(JsonObject::mapFrom)
+                        .map(config -> config.mapTo(Adapter.class))
+                        .collect(Collectors.toList()))
+                .orElse(null);
+        setAdapters(adapters);
         return this;
     }
 
@@ -336,17 +399,44 @@ public final class TenantObject extends JsonBackedValueObject {
      *                       configured adapters or {@code null} in order to
      *                       remove any existing configuration.
      * @return This tenant for command chaining.
+     * @throws IllegalArgumentException if the given configurations does not contain a <em>type</em> or
+     *                                  if more than one of the adapter configurations have the same <em>type</em> or
+     *                                  if error parsing the given configuration.
+     * @deprecated Use {@link #setAdapters(List adapters)} instead.
      */
+    @Deprecated
     @JsonIgnore
     public TenantObject setAdapterConfigurations(final JsonArray configurations) {
-        if (configurations == null) {
-            this.adapterConfigurations = null;
-        } else {
-            this.adapterConfigurations = new LinkedList<>();
-            configurations.stream().filter(obj -> JsonObject.class.isInstance(obj)).forEach(config -> {
-                addAdapterConfiguration((JsonObject) config);
-            });
+        final List<Adapter> adapters = Optional.ofNullable(configurations)
+                .map(ok -> configurations.stream()
+                        .filter(obj -> JsonObject.class.isInstance(obj))
+                        .map(JsonObject::mapFrom)
+                        .map(config -> config.mapTo(Adapter.class))
+                        .collect(Collectors.toList()))
+                .orElse(null);
+        setAdapters(adapters);
+        return this;
+    }
+
+    /**
+     * Adds an adapter configuration.
+     *
+     * @param adapter The adapter configuration to add.
+     * @return This tenant for command chaining.
+     * @throws NullPointerException if the given adapter configuration is {@code null}.
+     * @throws IllegalArgumentException  if any of the already existing adapters has the same <em>type</em>.
+     */
+    public TenantObject addAdapter(final Adapter adapter) {
+
+        Objects.requireNonNull(adapter);
+
+        if (adapters == null) {
+            adapters = new LinkedList<>();
+        } else if (getAdapter(adapter.getType()) != null) {
+            throw new IllegalArgumentException(
+                    String.format("Already an adapter of the type [%s] exists", adapter.getType()));
         }
+        adapters.add(adapter);
         return this;
     }
 
@@ -354,25 +444,19 @@ public final class TenantObject extends JsonBackedValueObject {
      * Adds configuration information for a protocol adapter.
      * 
      * @param config The configuration properties to add.
-     * @throws NullPointerException if config is {@code null}.
-     * @throws IllegalArgumentException if the given configuration does not contain
-     *                a <em>type</em> name.
      * @return This tenant for command chaining.
-     * @throws NullPointerException if config is {@code null}.
+     * @throws NullPointerException if the given configuration is {@code null}.
+     * @throws IllegalArgumentException if the given configuration does not contain a <em>type</em> or
+     *                                  if any of the already existing adapters has the same <em>type</em> or
+     *                                  if error parsing the given configuration.
+     * @deprecated Use {@link #addAdapter(Adapter)} instead.
      */
+    @Deprecated
     public TenantObject addAdapterConfiguration(final JsonObject config) {
 
         Objects.requireNonNull(config);
 
-        final Object type = config.getValue(TenantConstants.FIELD_ADAPTERS_TYPE);
-        if (String.class.isInstance(type)) {
-            if (adapterConfigurations == null) {
-                adapterConfigurations = new LinkedList<>();
-            }
-            adapterConfigurations.add(config.getMap());
-        } else {
-            throw new IllegalArgumentException("adapter configuration must contain type field");
-        }
+        addAdapter(config.mapTo(Adapter.class));
         return this;
     }
 
@@ -387,17 +471,16 @@ public final class TenantObject extends JsonBackedValueObject {
 
         if (!isEnabled()) {
             return false;
-        } else if (adapterConfigurations == null) {
+        } else if (adapters == null) {
             // all adapters are enabled
             return true;
         } else {
-            final JsonObject config = getAdapterConfiguration(typeName);
-            if (config == null) {
+            final Adapter adapter = getAdapter(typeName);
+            if (adapter == null) {
                 // if not explicitly configured, the adapter is disabled by default
                 return false;
-            } else {
-                return config.getBoolean(TenantConstants.FIELD_ENABLED, Boolean.FALSE);
             }
+            return adapter.isEnabled();
         }
     }
 
@@ -419,10 +502,16 @@ public final class TenantObject extends JsonBackedValueObject {
 
         Objects.requireNonNull(typeName);
 
-        return Optional.ofNullable(getAdapterConfiguration(typeName))
-                .map(conf -> getProperty(conf, TenantConstants.FIELD_EXT, JsonObject.class))
-                .map(extension -> getProperty(extension, TenantConstants.FIELD_MAX_TTD, Integer.class))
-                .map(maxTtd -> maxTtd < 0 ? TenantConstants.DEFAULT_MAX_TTD : maxTtd)
+        return Optional.ofNullable(getAdapter(typeName))
+                .map(Adapter::getExtensions)
+                .map(extensions -> {
+                    try {
+                        return (Integer) extensions.get(TenantConstants.FIELD_MAX_TTD);
+                    } catch (final ClassCastException e) {
+                        return null;
+                    }
+                })
+                .filter(maxTtd -> maxTtd >= 0)
                 .orElse(TenantConstants.DEFAULT_MAX_TTD);
     }
 
