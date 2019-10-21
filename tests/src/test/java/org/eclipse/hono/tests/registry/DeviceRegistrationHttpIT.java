@@ -343,6 +343,6 @@ public class DeviceRegistrationHttpIT {
             final String expectedDeviceId,
             final Device expectedData) {
 
-        Assertions.assertThat(response).isEqualToComparingFieldByFieldRecursively(expectedData);
+        Assertions.assertThat(response).usingRecursiveComparison().isEqualTo(expectedData);
     }
 }
