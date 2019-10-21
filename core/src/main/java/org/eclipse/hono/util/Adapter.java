@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.management.tenant;
+package org.eclipse.hono.util;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -21,17 +21,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.util.RegistryManagementConstants;
-
 /**
  * Protocol Adapter configuration properties.
  * <p>
  * Represents the <em>Adapter</em> schema object defined in the
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
- * 
- * @deprecated This class will be removed in Hono 2.0.0. Use {@link org.eclipse.hono.util.Adapter} instead.
  */
-@Deprecated(forRemoval = true)
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class Adapter {
 
