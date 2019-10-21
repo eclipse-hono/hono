@@ -13,15 +13,16 @@
 
 package org.eclipse.hono.util;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -34,17 +35,18 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
-
 
 /**
  * Verifies behavior of {@link TenantObject}.
@@ -62,7 +64,7 @@ public class TenantObjectTest {
      * @throws IOException if the trust store could not be read.
      * @throws GeneralSecurityException if the trust store could not be read.
      */
-    @BeforeClass
+    @BeforeAll
     public static void init() throws GeneralSecurityException, IOException {
         trustedCaCert = getCaCertificate();
     }
@@ -88,7 +90,8 @@ public class TenantObjectTest {
         final JsonObject adapterConfig = new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, "custom")
                 .put(TenantConstants.FIELD_ENABLED, true)
-                .put("deployment", deploymentValue);
+                .put(TenantConstants.FIELD_EXT, new JsonObject()
+                        .put("deployment", deploymentValue));
         final JsonObject config = new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "my-tenant")
                 .put(TenantConstants.FIELD_ENABLED, true)
@@ -100,9 +103,9 @@ public class TenantObjectTest {
         assertNotNull(obj);
         assertThat(obj.getProperty("plan", String.class), is("gold"));
 
-        final JsonObject customAdapterConfig = obj.getAdapterConfiguration("custom");
-        assertNotNull(customAdapterConfig);
-        assertThat(customAdapterConfig.getJsonObject("deployment"), is(deploymentValue));
+        final Adapter adapter = obj.getAdapter("custom");
+        assertNotNull(adapter);
+        assertEquals(deploymentValue, JsonObject.mapFrom(adapter.getExtensions().get("deployment")));
 
         final JsonObject defaultProperties = obj.getDefaults();
         assertThat(defaultProperties.getInteger("time-to-live"), is(60));
@@ -185,6 +188,79 @@ public class TenantObjectTest {
         obj.addAdapterConfiguration(TenantObject.newAdapterConfig("type-one", true));
         assertTrue(obj.isAdapterEnabled("type-one"));
         assertFalse(obj.isAdapterEnabled("any-other-type"));
+    }
+
+    /**
+     * Verifies that adding more than one adapter of the same type fails.
+     */
+    @Test
+    public void testAddingAdapterOfSameTypeFails() {
+        final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
+        tenantConfig.addAdapter(new Adapter("type-1"));
+        assertThrows(IllegalArgumentException.class, () -> tenantConfig.addAdapter(new Adapter("type-1")));
+    }
+
+    /**
+     * Verifies that adding a list of adapters that contain duplicate types fails. In addition,
+     * it is also verified that the existing adapters list in the tenant configuration remain unchanged.
+     */
+    @Test
+    public void testAddingListOfAdaptersOfSameTypeFails() {
+        final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
+        tenantConfig.addAdapter(new Adapter("type-1"));
+        final List<Adapter> adapters = Arrays.asList(new Adapter("type-2"), new Adapter("type-2"));
+        assertThrows(IllegalArgumentException.class, () -> tenantConfig.setAdapters(adapters));
+        assertEquals("type-1", tenantConfig.getAdapters().get(0).getType());
+    }
+
+    /**
+     * Verifies that adding a list of adapter configurations that contain duplicate types fails. In addition,
+     * it is also verified that the existing adapter configurations in the tenant configuration remain unchanged.
+     */
+    @Test
+    public void testAddingListOfAdapterConfigurationsOfSameTypeFails() {
+        final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
+        tenantConfig.addAdapterConfiguration(new JsonObject().put("type", "type-1"));
+        final JsonArray adapterConfigurations = new JsonArray()
+                .add(new JsonObject().put("type", "type-2"))
+                .add(new JsonObject().put("type", "type-2"));
+        assertThrows(IllegalArgumentException.class,
+                () -> tenantConfig.setAdapterConfigurations(adapterConfigurations));
+        assertEquals(1, tenantConfig.getAdapterConfigurations().size());
+        assertNotNull(tenantConfig.getAdapterConfiguration("type-1"));
+    }
+
+    /**
+     * Verifies that adding invalid adapter configuration fails. In addition,
+     * it is also verified that the existing adapter configurations in the tenant configuration remain unchanged.
+     */
+    @Test
+    public void testAddingListOfAdapterConfigurationsWithNoTypeFails() {
+        final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
+        tenantConfig.addAdapterConfiguration(new JsonObject().put("type", "type-1"));
+        final JsonArray adapterConfigurations = new JsonArray()
+                // No adapter type is specified, which makes this adapter configuration invalid.
+                .add(new JsonObject().put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED,
+                        true))
+                .add(new JsonObject().put("type", "type-2"));
+        assertThrows(IllegalArgumentException.class,
+                () -> tenantConfig.setAdapterConfigurations(adapterConfigurations));
+        assertEquals(1, tenantConfig.getAdapterConfigurations().size());
+        assertNotNull(tenantConfig.getAdapterConfiguration("type-1"));
+    }
+
+    /**
+     * Verifies that setting a list of adapters replaces the already existing 
+     * adapters list from the tenant configuration.
+     */
+    @Test
+    public void testSetAdaptersReplacesExistingOnes() {
+        final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
+        tenantConfig.setAdapters(Arrays.asList(new Adapter("type-1"), new Adapter("type-2")));
+        assertEquals(2, tenantConfig.getAdapters().size());
+        tenantConfig.setAdapters(Arrays.asList(new Adapter("type-3")));
+        assertEquals(1, tenantConfig.getAdapters().size());
+        assertEquals("type-3", tenantConfig.getAdapters().get(0).getType());
     }
 
     /**

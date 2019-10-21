@@ -21,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -538,11 +539,12 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         .ifPresent(defaults -> target.setDefaults(defaults));
 
         Optional.ofNullable(source.getAdapters())
-        .filter(list -> !list.isEmpty())
-        .map(list -> list.stream()
-                .map(adapterConfig -> JsonObject.mapFrom(adapterConfig))
-                .collect(JsonArray::new, JsonArray::add, JsonArray::add))
-        .ifPresent(configurations -> target.setAdapterConfigurations(configurations));
+                .filter(adapters -> !adapters.isEmpty())
+                .map(adapters -> adapters.stream()
+                                .map(adapter -> JsonObject.mapFrom(adapter))
+                                .map(json -> json.mapTo(org.eclipse.hono.util.Adapter.class))
+                                .collect(Collectors.toList()))
+                .ifPresent(adapters -> target.setAdapters(adapters));
 
         Optional.ofNullable(source.getExtensions())
         .map(JsonObject::new)
