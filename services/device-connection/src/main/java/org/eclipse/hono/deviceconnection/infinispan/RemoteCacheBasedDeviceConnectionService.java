@@ -33,6 +33,7 @@ import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -216,7 +217,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         livenessHandler.register("remote-cache-connection", this::checkForCacheAvailability);
     }
 
-    private void checkForCacheAvailability(final Future<Status> status) {
+    private void checkForCacheAvailability(final Promise<Status> status) {
 
         if (cache == null) {
             status.complete(Status.KO());

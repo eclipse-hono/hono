@@ -617,6 +617,11 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             public JsonArray bodyAsJsonArray() {
                 return null;
             }
+
+            @Override
+            public List<String> followedRedirects() {
+                return null;
+            }
         };
     }
 
