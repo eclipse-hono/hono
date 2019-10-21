@@ -12,7 +12,7 @@ This section will guide you through the steps to build your own custom HTTP prot
 ## Prerequisites
 
 You should be familiar with the setup and start of Hono. Refer to the 
-[Getting Started]({{% homelink "/getting-started/" %}}) guide.
+[Getting Started]({{% homelink "getting-started/" %}}) guide.
 
 ## The standard HTTP Adapter
 
@@ -71,7 +71,7 @@ Now that you have your custom HTTP protocol adapter up and running, you can use 
 `HTTPie`, to publish data to your custom adapter.
 
 Note that before publishing data to your custom HTTP protocol adapter, you need to start a *consumer* for the tenant you intend to publish data for.
-Otherwise you will not be able to successfully send data. For this purpose, you may use the example consumer as described in the [Getting Started]({{% homelink "/getting-started/" %}}) guide.
+Otherwise you will not be able to successfully send data. For this purpose, you may use the example consumer as described in the [Getting Started]({{% homelink "getting-started/" %}}) guide.
 
 ## Further extend the custom HTTP Protocol Adapter
 

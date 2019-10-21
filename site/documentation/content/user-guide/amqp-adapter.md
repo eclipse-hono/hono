@@ -177,7 +177,7 @@ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --message.addre
 
 ## Publish Telemetry Data (authenticated Gateway)
 
-A device that publishes data on behalf of another device is called a gateway device. The message address is used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://www.lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the message address is used to identify the device that the gateway publishes data for.
+A device that publishes data on behalf of another device is called a gateway device. The message address is used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the message address is used to identify the device that the gateway publishes data for.
 
 **Examples**
 
