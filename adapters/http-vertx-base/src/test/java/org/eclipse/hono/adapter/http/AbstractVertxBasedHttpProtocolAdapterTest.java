@@ -569,11 +569,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter fails the upload of a command response with a 404 if the device is not registered and
-     * the valid credentials for the device is available.
+     * Verifies that an authenticated device that is not a gateway fails to
+     * upload a command response for another device.
      */
     @Test
-    public void testUploadCommandResponseFailsForNonExistingDevice() {
+    public void testUploadCommandResponseFailsForOtherDevice() {
 
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
@@ -890,6 +890,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * Verifies that a command response message is rejected due to the limit exceeded.
      *
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testMessageLimitExceededForACommandResponseMessage() {
 
