@@ -16,7 +16,7 @@ pluralizeListTitles = "false"
   copyright = "The Eclipse Hono Project"
 
   # used in shortcode "homelink" to create absoulte URL for links into the home page
-  homeBaseUrl = "https://www.eclipse.org/hono"
+  homeBaseUrl = "https://www.eclipse.org/hono/"
 
   # Prefix URL to edit current page. Will display an "Edit this page" button on top right hand corner of every page. 
   # Useful to give opportunity to people to create merge request for your doc.
