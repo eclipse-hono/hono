@@ -76,6 +76,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
@@ -201,11 +202,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
 
         // THEN the client provided HTTP server has been configured and started
         startup.await();
@@ -231,11 +232,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
 
         // THEN the onStartupSuccess method has been invoked
         startup.await();
@@ -257,9 +258,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 s -> ctx.fail("should not invoke onStartupSuccess"));
 
         // WHEN starting the adapter
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure());
-        adapter.start(startupTracker);
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertFailure());
+        adapter.start(startupTracker.future());
 
         // THEN the onStartupSuccess method has not been invoked
     }
@@ -370,8 +371,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadEventWaitsForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenAnEventSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenAnEventSenderForOutcome(outcome.future());
 
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
@@ -424,8 +425,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadEventFailsForRejectedOutcome() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenAnEventSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenAnEventSenderForOutcome(outcome.future());
 
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
@@ -458,8 +459,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     @Test
     public void testUploadEventWithTimeToLive() {
         // GIVEN an adapter with a downstream event consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final DownstreamSender sender = givenAnEventSenderForOutcome(outcome.future());
 
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
@@ -493,8 +494,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadCommandResponseWaitsForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream application attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenACommandResponseSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenACommandResponseSenderForOutcome(outcome.future());
 
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
@@ -618,8 +619,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     public void testUploadCommandResponseFailsForRejectedOutcome() {
 
         // GIVEN an adapter with a downstream application attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenACommandResponseSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenACommandResponseSenderForOutcome(outcome.future());
 
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
@@ -897,8 +898,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // GIVEN an adapter with a downstream application attached
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(
                 getHttpServer(false), null);
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenACommandResponseSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenACommandResponseSenderForOutcome(outcome.future());
 
         // WHEN the message limit exceeds
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))

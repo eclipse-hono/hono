@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -55,9 +56,11 @@ import io.opentracing.Span;
 import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
 import io.opentracing.tag.Tags;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -186,15 +189,17 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     addRoutes(router);
                     return CompositeFuture.all(bindSecureHttpServer(router), bindInsecureHttpServer(router));
                 }
-            }).compose(s -> {
+            })
+            .compose(ok -> {
                 try {
                     onStartupSuccess();
-                    startFuture.complete();
+                    return Future.succeededFuture((Void) null);
                 } catch (final Exception e) {
                     log.error("error in onStartupSuccess", e);
-                    startFuture.fail(e);
+                    return Future.failedFuture(e);
                 }
-            }, startFuture);
+            })
+            .setHandler(startFuture);
     }
 
     private Sample getMicrometerSample(final RoutingContext ctx) {
@@ -410,7 +415,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private Future<HttpServer> bindSecureHttpServer(final Router router) {
 
         if (isSecurePortEnabled()) {
-            final Future<HttpServer> result = Future.future();
+            final Promise<HttpServer> result = Promise.promise();
             final String bindAddress = server == null ? getConfig().getBindAddress() : "?";
             if (server == null) {
                 server = vertx.createHttpServer(getHttpServerOptions());
@@ -424,7 +429,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     result.fail(done.cause());
                 }
             });
-            return result;
+            return result.future();
         } else {
             return Future.succeededFuture();
         }
@@ -433,7 +438,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     private Future<HttpServer> bindInsecureHttpServer(final Router router) {
 
         if (isInsecurePortEnabled()) {
-            final Future<HttpServer> result = Future.future();
+            final Promise<HttpServer> result = Promise.promise();
             final String bindAddress = insecureServer == null ? getConfig().getInsecurePortBindAddress() : "?";
             if (insecureServer == null) {
                 insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
@@ -447,7 +452,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     result.fail(done.cause());
                 }
             });
-            return result;
+            return result.future();
         } else {
             return Future.succeededFuture();
         }
@@ -462,23 +467,23 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             log.error("error in preShutdown", e);
         }
 
-        final Future<Void> serverStopTracker = Future.future();
+        final Promise<Void> serverStopTracker = Promise.promise();
         if (server != null) {
             server.close(serverStopTracker);
         } else {
             serverStopTracker.complete();
         }
 
-        final Future<Void> insecureServerStopTracker = Future.future();
+        final Promise<Void> insecureServerStopTracker = Promise.promise();
         if (insecureServer != null) {
             insecureServer.close(insecureServerStopTracker);
         } else {
             insecureServerStopTracker.complete();
         }
 
-        CompositeFuture.all(serverStopTracker, insecureServerStopTracker)
-            .compose(v -> postShutdown())
-            .compose(s -> stopFuture.complete(), stopFuture);
+        CompositeFuture.all(serverStopTracker.future(), insecureServerStopTracker.future())
+        .compose(v -> postShutdown())
+        .setHandler(stopFuture);
     }
 
     /**
@@ -633,7 +638,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .withTag(Constants.HEADER_QOS_LEVEL, qos.asTag().getValue())
                 .start();
 
-        final Future<Void> responseReady = Future.future();
+        final Promise<Void> responseReady = Promise.promise();
         final Future<JsonObject> tokenTracker = getRegistrationAssertion(
                 tenant,
                 deviceId,
@@ -661,15 +666,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     });
                 });
         final Future<MessageConsumer> commandConsumerTracker = ttdTracker
-                .compose(ttd -> createCommandConsumer(ttd, tenantTracker.result(), deviceId, gatewayId, ctx,
-                        responseReady, currentSpan));
+                .compose(ttd -> createCommandConsumer(
+                        ttd,
+                        tenantTracker.result(),
+                        deviceId,
+                        gatewayId,
+                        ctx,
+                        responseReady,
+                        currentSpan));
 
         CompositeFuture.all(senderTracker, commandConsumerTracker)
         .compose(ok -> {
 
             final DownstreamSender sender = senderTracker.result();
 
-            final Integer ttd = Optional.ofNullable(commandConsumerTracker.result()).map(c -> ttdTracker.result())
+            final Integer ttd = Optional.ofNullable(commandConsumerTracker.result())
+                    .map(c -> ttdTracker.result())
                     .orElse(null);
             final Message downstreamMessage = newMessage(
                     ResourceIdentifier.from(endpoint.getCanonicalName(), tenant, deviceId),
@@ -687,13 +699,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (MetricsTags.QoS.AT_MOST_ONCE.equals(qos)) {
                 return CompositeFuture.all(
                         sender.send(downstreamMessage, currentSpan.context()),
-                        responseReady)
+                        responseReady.future())
                         .map(s -> (Void) null);
             } else {
                 // unsettled
                 return CompositeFuture.all(
                         sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
-                        responseReady)
+                        responseReady.future())
                         .map(s -> (Void) null);
             }
         })
@@ -941,7 +953,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final String deviceId,
             final String gatewayId,
             final RoutingContext ctx,
-            final Future<Void> responseReady,
+            final Handler<AsyncResult<Void>> responseReady,
             final Span currentSpan) {
 
         Objects.requireNonNull(tenantObject);
@@ -950,9 +962,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         Objects.requireNonNull(responseReady);
         Objects.requireNonNull(currentSpan);
 
+        final AtomicBoolean requestProcessed = new AtomicBoolean(false);
+
         if (ttdSecs == null || ttdSecs <= 0) {
             // no need to wait for a command
-            responseReady.tryComplete();
+            if (requestProcessed.compareAndSet(false, true)) {
+                responseReady.handle(Future.succeededFuture());
+            }
             return Future.succeededFuture();
         }
 
@@ -963,7 +979,30 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final Command command = commandContext.getCommand();
             final Sample commandSample = getMetrics().startTimer();
             if (isCommandValid(command, currentSpan)) {
-                if (responseReady.isComplete()) {
+
+                if (requestProcessed.compareAndSet(false, true)) {
+                    checkMessageLimit(tenantObject, command.getPayloadSize())
+                    .setHandler(result -> {
+                        if (result.succeeded()) {
+                            addMicrometerSample(commandContext, commandSample);
+                            // put command context to routing context and notify
+                            ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
+                        } else {
+                            // issue credit so that application(s) can send the next command
+                            commandContext.reject(getErrorCondition(result.cause()), 1);
+                            metrics.reportCommand(
+                                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                                    tenantObject.getTenantId(),
+                                    tenantObject,
+                                    ProcessingOutcome.from(result.cause()),
+                                    command.getPayloadSize(),
+                                    commandSample);
+                        }
+                        cancelCommandReceptionTimer(ctx);
+                        setTtdStatus(ctx, TtdStatus.COMMAND);
+                        responseReady.handle(Future.succeededFuture());
+                    });
+                } else {
                     // the timer has already fired, release the command
                     getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -975,29 +1014,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     log.debug("command for device has already fired [tenantId: {}, deviceId: {}]",
                             tenantObject.getTenantId(), deviceId);
                     commandContext.release();
-                } else {
-                    checkMessageLimit(tenantObject, command.getPayloadSize())
-                            .setHandler(result -> {
-                                if (result.succeeded()) {
-                                    addMicrometerSample(commandContext, commandSample);
-                                    // put command context to routing context and notify
-                                    ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
-                                } else {
-                                    // issue credit so that application(s) can send the next command
-                                    commandContext.reject(getErrorCondition(result.cause()), 1);
-                                    metrics.reportCommand(
-                                            command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                                            tenantObject.getTenantId(),
-                                            tenantObject,
-                                            ProcessingOutcome.from(result.cause()),
-                                            command.getPayloadSize(),
-                                            commandSample);
-                                }
-                                cancelCommandReceptionTimer(ctx);
-                                setTtdStatus(ctx, TtdStatus.COMMAND);
-                                responseReady.tryComplete();
-                            });
                 }
+
             } else {
                 getMetrics().reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -1038,12 +1056,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         }
         return commandConsumerFuture
                 .map(consumer -> {
-                    if (!responseReady.isComplete()) {
+                    if (!requestProcessed.get()) {
                         // if the request was not responded already, add a timer for triggering an empty response
-                        addCommandReceptionTimer(ctx, responseReady, ttdSecs);
+                        addCommandReceptionTimer(ctx, requestProcessed, responseReady, ttdSecs);
                     }
                     return consumer;
-                }).recover(t -> {
+                })
+                .recover(t -> {
                     if (t instanceof ResourceConflictException) {
                         // another request from the same device that contains
                         // a TTD value is already being processed
@@ -1052,7 +1071,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             return Future.failedFuture(t);
                         } else {
                             // let the other request handle the command (if any)
-                            responseReady.tryComplete();
+                            if (requestProcessed.compareAndSet(false, true)) {
+                                responseReady.handle(Future.succeededFuture());
+                            }
                             return Future.succeededFuture();
                         }
                     } else {
@@ -1088,21 +1109,22 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     private void addCommandReceptionTimer(
             final RoutingContext ctx,
-            final Future<Void> responseReady,
+            final AtomicBoolean requestProcessed,
+            final Handler<AsyncResult<Void>> responseReady,
             final long delaySecs) {
 
         final Long timerId = ctx.vertx().setTimer(delaySecs * 1000L, id -> {
 
             log.trace("time to wait [{}s] for command expired [timer id: {}]", delaySecs, id);
 
-            if (responseReady.isComplete()) {
-                // a command has been sent to the device already
-                log.trace("response already sent, nothing to do ...");
-            } else {
+            if (requestProcessed.compareAndSet(false, true)) {
                 // no command to be sent,
                 // send empty response
                 setTtdStatus(ctx, TtdStatus.EXPIRED);
-                responseReady.complete();
+                responseReady.handle(Future.succeededFuture());
+            } else {
+                // a command has been sent to the device already
+                log.trace("response already sent, nothing to do ...");
             }
         });
 
