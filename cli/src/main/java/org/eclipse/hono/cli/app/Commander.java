@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.buffer.Buffer;
 
@@ -126,7 +127,7 @@ public class Commander extends AbstractApplicationClient {
     }
 
     private Future<Command> getCommandFromUser() {
-        final Future<Command> commandFuture = Future.future();
+        final Promise<Command> result = Promise.promise();
         workerExecutor.executeBlocking(userInputFuture -> {
             System.out.println();
             System.out.println();
@@ -141,8 +142,8 @@ public class Commander extends AbstractApplicationClient {
             final String honoContentType = scanner.nextLine();
             System.out.println();
             userInputFuture.complete(new Command(honoCmd, honoPayload, honoContentType));
-        }, commandFuture);
-        return commandFuture;
+        }, result);
+        return result.future();
     }
 
     private void close(final Throwable t) {
