@@ -80,8 +80,8 @@ acr_login_server=$acr_registry_name.azurecr.io
 
 # Create service principal
 service_principal=`az ad sp create-for-rbac --name http://honoServicePrincipal --skip-assignment --output tsv`
-app_id_principal=`echo $service_principal|cut -f1 -d ' '`
-password_principal=`echo $service_principal|cut -f4 -d ' '`
+app_id_principal=`echo $service_principal|cut -f1`
+password_principal=`echo $service_principal|cut -f4`
 object_id_principal=`az ad sp show --id $app_id_principal --query objectId --output tsv`
 acr_id_access_registry=`az acr show --resource-group $acr_resourcegroupname --name $acr_registry_name --query "id" --output tsv`
 ```
@@ -103,7 +103,10 @@ cd deploy/src/main/deploy/azure/
 az group deployment create --name HonoBasicInfrastructure --resource-group $resourcegroup_name --template-file arm/honoInfrastructureDeployment.json --parameters uniqueSolutionPrefix=$unique_solution_prefix servicePrincipalObjectId=$object_id_principal servicePrincipalClientId=$app_id_principal servicePrincipalClientSecret=$password_principal
 ```
 
-Note: add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
+Notes:
+
+- add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
+- add the following parameter to define the k8s version of the AKS cluster. The default as defined in the template [might not be supported](https://docs.microsoft.com/en-us/azure/aks/supported-kubernetes-versions) in your target Azure region, e.g. _kubernetesVersion=1.14.6_
 
 After the deployment is complete you can set your cluster in _kubectl_.
 

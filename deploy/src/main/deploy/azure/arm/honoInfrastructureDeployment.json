@@ -16,6 +16,13 @@
                 "description": "Optional AKS cluster name. Otherwise calculated from uniqueSolutionPrefix."
             }
         },
+        "kubernetesVersion": {
+            "type": "string",
+            "defaultValue": "1.14.7",
+            "metadata": {
+                "description": "Kubernetes version."
+            }
+        },
         "vnetName": {
             "type": "string",
             "defaultValue": "",
@@ -176,7 +183,8 @@
         "vnetName": "[if(empty(parameters('vnetName')),concat(parameters('uniqueSolutionPrefix'), 'honovnet'),parameters('vnetName'))]",
         "aksSubnetName": "[if(empty(parameters('aksSubnetName')),concat(parameters('uniqueSolutionPrefix'), 'honoakssubnet'),parameters('aksSubnetName'))]"
     },
-    "resources": [{
+    "resources": [
+        {
             "condition": "[parameters('aks')]",
             "name": "honoKubernetesDeployment",
             "type": "Microsoft.Resources/deployments",
@@ -192,6 +200,9 @@
                 "parameters": {
                     "clusterName": {
                         "value": "[variables('aksClusterName')]"
+                    },
+                    "kubernetesVersion": {
+                        "value": "[parameters('kubernetesVersion')]"
                     },
                     "location": {
                         "value": "[parameters('location')]"
@@ -249,7 +260,8 @@
                     }
                 }
             }
-        }, {
+        },
+        {
             "condition": "[parameters('serviceBus')]",
             "name": "honoServiceBusDeployment",
             "type": "Microsoft.Resources/deployments",
@@ -318,51 +330,51 @@
         },
         "mqttPublicIPAddress": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.mqttIpAddress.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.mqttIpAddress.value]"
         },
         "mqttPublicIPFQDN": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.mqttIpFQDN.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.mqttIpFQDN.value]"
         },
         "httpPublicIPAddress": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.httpIpAddress.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.httpIpAddress.value]"
         },
         "httpPublicIPFQDN": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.httpIpFQDN.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.httpIpFQDN.value]"
         },
         "amqpPublicIPAddress": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.amqpIpAddress.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.amqpIpAddress.value]"
         },
         "amqpPublicIPFQDN": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.amqpIpFQDN.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.amqpIpFQDN.value]"
         },
         "registryPublicIPAddress": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.registryIpAddress.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.registryIpAddress.value]"
         },
         "registryPublicIPFQDN": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.registryIpFQDN.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.registryIpFQDN.value]"
         },
         "networkPublicIPAddress": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.networkIpAddress.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.networkIpAddress.value]"
         },
         "networkPublicIPFQDN": {
             "type": "string",
-            "value": "[reference('honoKubernetesDeployment').outputs.networkIpFQDN.value]"
+            "value": "[reference('honoKubernetesDeployment', '2019-06-01').outputs.networkIpFQDN.value]"
         },
         "serviceBusKey": {
             "type": "string",
-            "value": "[reference('honoServiceBusDeployment').outputs.DefaultSharedAccessPolicyPrimaryKey.value]"
+            "value": "[reference('honoServiceBusDeployment', '2019-06-01').outputs.DefaultSharedAccessPolicyPrimaryKey.value]"
         },
         "serviceBusKeyName": {
             "type": "string",
-            "value": "[reference('honoServiceBusDeployment').outputs.DefaultSharedAccessPolicyKeyName.value]"
+            "value": "[reference('honoServiceBusDeployment', '2019-06-01').outputs.DefaultSharedAccessPolicyKeyName.value]"
         },
         "serviceBusNamespaceName": {
             "type": "string",
