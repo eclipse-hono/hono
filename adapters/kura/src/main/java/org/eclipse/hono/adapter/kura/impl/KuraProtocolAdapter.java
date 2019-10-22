@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,7 @@ import org.eclipse.hono.util.TelemetryConstants;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs from
@@ -58,7 +59,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
 
     Future<ResourceIdentifier> mapTopic(final MqttContext ctx) {
 
-        final Future<ResourceIdentifier> result = Future.future();
+        final Promise<ResourceIdentifier> result = Promise.promise();
         final ResourceIdentifier topic = ctx.topic();
         final ResourceIdentifier mappedTopic;
 
@@ -88,7 +89,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
                     topic, ctx.message().qosLevel(), mappedTopic.getBasePath(), mappedTopic.getResourceId(), ctx.contentType());
             result.complete(mappedTopic);
         }
-        return result;
+        return result.future();
     }
 
     private static String getEndpoint(final MqttQoS level) {
