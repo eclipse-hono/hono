@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
@@ -100,13 +101,13 @@ public class CommandAndControlClient extends AmqpCliClient {
      *
      */
     private Future<ProtonReceiver> subscribeToCommands(final ProtonMessageHandler msgHandler) {
-        final Future<ProtonReceiver> result = Future.future();
+        final Promise<ProtonReceiver> result = Promise.promise();
         final ProtonReceiver receiver = adapterConnection.createReceiver(CommandConstants.COMMAND_ENDPOINT);
         receiver.setQoS(ProtonQoS.AT_LEAST_ONCE);
         receiver.handler(msgHandler);
         receiver.openHandler(result);
         receiver.open();
-        return result.map(recver -> {
+        return result.future().map(recver -> {
             writer.println("Device is now ready to receive commands (Press Ctrl + c to terminate)");
             writer.flush();
             return recver;

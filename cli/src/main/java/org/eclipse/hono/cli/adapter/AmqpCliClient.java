@@ -22,6 +22,7 @@ import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
@@ -71,11 +72,11 @@ public abstract class AmqpCliClient extends AbstractCliClient {
             throw new IllegalStateException("connection to AMQP org.eclipse.hono.cli.app.adapter not established");
         }
 
-        final Future<ProtonSender> result = Future.future();
+        final Promise<ProtonSender> result = Promise.promise();
         final ProtonSender sender = adapterConnection.createSender(null);
         sender.openHandler(result);
         sender.open();
-        return result;
+        return result.future();
     }
 
     /**
@@ -86,7 +87,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      */
     protected Future<ProtonConnection> connectToAdapter() {
 
-        final Future<ProtonConnection> connectAttempt = Future.future();
+        final Promise<ProtonConnection> connectAttempt = Promise.promise();
         final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);
 
@@ -122,12 +123,13 @@ public abstract class AmqpCliClient extends AbstractCliClient {
             client.connect(options, properties.getHost(), properties.getPort(), connectAttempt);
         }
 
-        return connectAttempt.compose(unopenedConnection -> {
-            final Future<ProtonConnection> con = Future.future();
-            unopenedConnection.openHandler(con);
-            unopenedConnection.open();
-            return con;
-        });
+        return connectAttempt.future()
+                .compose(unopenedConnection -> {
+                    final Promise<ProtonConnection> con = Promise.promise();
+                    unopenedConnection.openHandler(con);
+                    unopenedConnection.open();
+                    return con.future();
+                });
     }
 
     private void addTlsTrustOptions(final ProtonClientOptions clientOptions, final ClientConfigProperties config) {
