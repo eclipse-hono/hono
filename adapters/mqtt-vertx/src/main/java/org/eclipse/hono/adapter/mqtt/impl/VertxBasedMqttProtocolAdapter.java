@@ -25,6 +25,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using MQTT.
@@ -59,7 +60,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
 
     Future<ResourceIdentifier> mapTopic(final MqttContext context) {
 
-        final Future<ResourceIdentifier> result = Future.future();
+        final Promise<ResourceIdentifier> result = Promise.promise();
         final ResourceIdentifier topic = context.topic();
         final MqttQoS qos = context.message().qosLevel();
 
@@ -93,6 +94,6 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 log.debug("no such endpoint [{}]", topic.getEndpoint());
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such endpoint"));
         }
-        return result;
+        return result.future();
     }
 }

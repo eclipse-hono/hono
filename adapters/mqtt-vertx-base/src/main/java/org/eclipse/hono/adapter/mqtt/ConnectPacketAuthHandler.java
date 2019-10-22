@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,6 +27,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttAuth;
 
@@ -72,7 +73,7 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
             throw new IllegalArgumentException("no device endpoint");
         }
 
-        final Future<JsonObject> result = Future.future();
+        final Promise<JsonObject> result = Promise.promise();
         final MqttAuth auth = context.deviceEndpoint().auth();
 
         if (auth == null) {
@@ -98,6 +99,6 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
             result.complete(credentialsJSON);
         }
 
-        return result;
+        return result.future();
     }
 }

@@ -71,6 +71,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttConnectionException;
@@ -285,7 +286,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private Future<MqttServer> bindMqttServer(final MqttServerOptions options, final MqttServer mqttServer) {
 
-        final Future<MqttServer> result = Future.future();
+        final Promise<MqttServer> result = Promise.promise();
         final MqttServer createdMqttServer = mqttServer == null ? MqttServer.create(this.vertx, options) : mqttServer;
 
         createdMqttServer
@@ -301,7 +302,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         result.fail(done.cause());
                     }
                 });
-        return result;
+        return result.future();
     }
 
     @Override
@@ -317,17 +318,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         setConnectionLimitManager(connectionLimitManager);
 
         checkPortConfiguration()
-            .compose(ok -> {
-                return CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer());
-            }).compose(t -> {
-                if (authHandler == null) {
-                    authHandler = createAuthHandler();
-                }
-                if (tenantObjectWithAuthIdProvider == null) {
-                    tenantObjectWithAuthIdProvider = createTenantAndAuthIdProvider();
-                }
-                startFuture.complete();
-            }, startFuture);
+        .compose(ok -> CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer()))
+        .compose(ok -> {
+            if (authHandler == null) {
+                authHandler = createAuthHandler();
+            }
+            if (tenantObjectWithAuthIdProvider == null) {
+                tenantObjectWithAuthIdProvider = createTenantAndAuthIdProvider();
+            }
+            return Future.succeededFuture((Void) null);
+        })
+        .setHandler(startFuture);
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -339,22 +340,23 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     @Override
     public void doStop(final Future<Void> stopFuture) {
 
-        final Future<Void> serverTracker = Future.future();
+        final Promise<Void> serverTracker = Promise.promise();
         if (this.server != null) {
             this.server.close(serverTracker);
         } else {
             serverTracker.complete();
         }
 
-        final Future<Void> insecureServerTracker = Future.future();
+        final Promise<Void> insecureServerTracker = Promise.promise();
         if (this.insecureServer != null) {
             this.insecureServer.close(insecureServerTracker);
         } else {
             insecureServerTracker.complete();
         }
 
-        CompositeFuture.all(serverTracker, insecureServerTracker)
-                .compose(d -> stopFuture.complete(), stopFuture);
+        CompositeFuture.all(serverTracker.future(), insecureServerTracker.future())
+        .map(ok -> (Void) null)
+        .setHandler(stopFuture);
     }
 
     /**
