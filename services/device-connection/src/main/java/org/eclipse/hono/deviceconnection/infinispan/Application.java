@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 
 /**
@@ -80,10 +81,10 @@ public class Application extends AbstractApplication {
     private Future<String> deployVerticle(final Object component) {
 
         if (component instanceof Verticle) {
-            final Future<String> result = Future.future();
+            final Promise<String> result = Promise.promise();
             log.info("deploying component [{}]", component.getClass().getName());
             getVertx().deployVerticle((Verticle) component, result);
-            return result.map(id -> {
+            return result.future().map(id -> {
                 registerHealthCheckProvider(serviceImplementation);
                 return id;
             });

@@ -71,14 +71,17 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
     @Override
     protected void doStart(final Future<Void> startFuture) {
 
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(startFuture);
+
         if (cacheManager == null) {
-            startFuture.fail(new IllegalStateException("cache manager is not set"));
+            result.fail(new IllegalStateException("cache manager is not set"));
         } else {
-            context.executeBlocking(result -> {
+            context.executeBlocking(r -> {
                 cacheManager.start();
                 cache = cacheManager.getCache("device-connection");
                 cache.start();
-                result.complete(cacheManager);
+                r.complete(cacheManager);
             }, attempt -> {
                 if (attempt.succeeded()) {
                     LOG.info("successfully connected to remote cache");
@@ -86,7 +89,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
                     LOG.info("failed to connect to remote cache", attempt.cause());
                 }
             });
-            startFuture.complete();
+            result.complete();
         }
     }
 
@@ -95,18 +98,22 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
      */
     @Override
     protected void doStop(final Future<Void> stopFuture) {
-        context.executeBlocking(result -> {
+
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(stopFuture);
+
+        context.executeBlocking(r -> {
             if (cacheManager != null) {
                 cacheManager.stop();
             }
-            result.complete();
+            r.complete();
         }, stopAttempt -> {
             if (stopAttempt.succeeded()) {
                 LOG.info("connection(s) to remote cache stopped successfully");
             } else {
                 LOG.info("error trying to stop connection(s) to remote cache", stopAttempt.cause());
             }
-            stopFuture.complete();
+            result.complete();
         });
     }
 
@@ -154,7 +161,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         } else {
             cache.getAsync(getKey(tenantId, deviceId))
             .whenComplete((gatewayId, error) -> {
-                final Future<DeviceConnectionResult> result = Future.future();
+                final Promise<DeviceConnectionResult> result = Promise.promise();
                 if (error != null) {
                     log.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
                             tenantId, deviceId, error);
@@ -166,7 +173,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
                     log.debug("found last known gateway for device [tenant: {}, device-id: {}]: {}", tenantId, deviceId, gatewayId);
                     result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, getResult(gatewayId)));
                 }
-                resultHandler.handle(result);
+                resultHandler.handle(result.future());
             });
         }
     }
