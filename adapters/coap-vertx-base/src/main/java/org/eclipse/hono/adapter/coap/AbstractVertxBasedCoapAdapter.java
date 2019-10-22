@@ -62,6 +62,7 @@ import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
@@ -224,14 +225,17 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     });
         })
         .compose(ok -> {
+            final Promise<Void> result = Promise.promise();
             try {
                 onStartupSuccess();
-                startFuture.complete();
+                result.complete();
             } catch (final Exception e) {
                 log.error("error in onStartupSuccess", e);
-                startFuture.fail(e);
+                result.fail(e);
             }
-        }, startFuture);
+            return result.future();
+        })
+        .setHandler(startFuture);
     }
 
     private void addResources(final CoapServer startingServer) {
@@ -433,7 +437,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             log.error("error in preShutdown", e);
         }
 
-        final Future<Void> serverStopTracker = Future.future();
+        final Promise<Void> serverStopTracker = Promise.promise();
         if (server != null) {
             getVertx().executeBlocking(future -> {
                 // Call some blocking API
@@ -444,7 +448,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             serverStopTracker.complete();
         }
 
-        serverStopTracker.compose(v -> postShutdown()).compose(s -> stopFuture.complete(), stopFuture);
+        serverStopTracker.future()
+        .compose(v -> postShutdown())
+        .setHandler(stopFuture);
     }
 
     /**
@@ -478,7 +484,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final Device device,
             final CoapExchange exchange) {
 
-        final Future<ExtendedDevice> result = Future.future();
+        final Promise<ExtendedDevice> result = Promise.promise();
         final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
         if (peerIdentity instanceof ExtensiblePrincipal) {
             @SuppressWarnings("unchecked")
@@ -499,7 +505,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         }
 
-        return result;
+        return result.future();
     }
 
 
