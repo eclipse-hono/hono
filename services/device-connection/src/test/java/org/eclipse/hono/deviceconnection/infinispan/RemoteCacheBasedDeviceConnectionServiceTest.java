@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.deviceconnection.infinispan;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -79,11 +78,11 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
         final Context ctx = mock(Context.class);
         doAnswer(invocation -> {
-            final Future<RemoteCacheContainer> result = Future.future();
+            final Promise<RemoteCacheContainer> result = Promise.promise();
             final Handler<Future<RemoteCacheContainer>> blockingCode = invocation.getArgument(0);
             final Handler<AsyncResult<RemoteCacheContainer>> resultHandler = invocation.getArgument(1);
-            blockingCode.handle(result);
-            resultHandler.handle(result);
+            blockingCode.handle(result.future());
+            resultHandler.handle(result.future());
             return null;
         }).when(ctx).executeBlocking(any(Handler.class), any(Handler.class));
         final EventBus eventBus = mock(EventBus.class);
@@ -111,13 +110,13 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
         givenAStartedService()
         .compose(ok -> {
-            final Future<DeviceConnectionResult> setLastGwResult = Future.future();
+            final Promise<DeviceConnectionResult> setLastGwResult = Promise.promise();
             svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
-            return setLastGwResult;
+            return setLastGwResult.future();
         })
         .setHandler(ctx.succeeding(result -> {
             ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
+                assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                 verify(cache).putAsync(anyString(), eq(gatewayId));
             });
             ctx.completeNow();
@@ -139,14 +138,14 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
         givenAStartedService()
         .compose(ok -> {
-            final Future<DeviceConnectionResult> getLastGwResult = Future.future();
+            final Promise<DeviceConnectionResult> getLastGwResult = Promise.promise();
             svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span, getLastGwResult);
-            return getLastGwResult;
+            return getLastGwResult.future();
         })
         .setHandler(ctx.succeeding(deviceConnectionResult -> {
             ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NOT_FOUND, deviceConnectionResult.getStatus());
-                assertNull(deviceConnectionResult.getPayload());
+                assertThat(deviceConnectionResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                assertThat(deviceConnectionResult.getPayload()).isNull();
             });
             ctx.completeNow();
         }));
