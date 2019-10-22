@@ -57,6 +57,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
@@ -307,9 +308,9 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                                 checkTenantIsEnabled(tenant),
                                 tenantConnectionLimit.apply(tenant)))
                     .compose(ok -> {
-                        final Future<DeviceUser> authResult = Future.future();
+                        final Promise<DeviceUser> authResult = Promise.promise();
                         usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
-                        return authResult;
+                        return authResult.future();
                     });
         }
 
@@ -343,11 +344,11 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         }
                     })
                     .compose(tenant -> {
-                        final Future<DeviceUser> authResult = Future.future();
+                        final Promise<DeviceUser> authResult = Promise.promise();
                         final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenant.getTenantId(),
                                 deviceCert.getSubjectX500Principal());
                         clientCertAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
-                        return authResult;
+                        return authResult.future();
                     });
         }
 

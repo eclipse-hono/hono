@@ -89,6 +89,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -201,11 +202,11 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(result -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertSuccess(result -> {
             startup.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
 
         // THEN the client provided server is started
         startup.await();
@@ -313,8 +314,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // GIVEN an adapter configured to use a user-define server.
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
-        final Future<ProtonDelivery> downstreamDelivery = Future.future();
-        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(downstreamDelivery);
+        final Promise<ProtonDelivery> downstreamDelivery = Promise.promise();
+        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any()))
+        .thenReturn(downstreamDelivery.future());
 
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -401,7 +403,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // GIVEN an adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
-        final DownstreamSender eventSender = givenAnEventSender(Future.future());
+        final DownstreamSender eventSender = givenAnEventSender(Promise.promise());
 
         // with an enabled tenant
         givenAConfiguredTenant(TEST_TENANT_ID, true);
@@ -434,7 +436,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void testAdapterOpensSenderLinkAndNotifyDownstreamApplication() {
         // GIVEN an AMQP adapter configured to use a user-defined server
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
-        final Future<ProtonDelivery> outcome = Future.future();
+        final Promise<ProtonDelivery> outcome = Promise.promise();
         final DownstreamSender eventSender = givenAnEventSender(outcome);
 
         // WHEN an unauthenticated device opens a receiver link with a valid source address
@@ -468,7 +470,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
-        final Future<ProtonDelivery> outcome = Future.future();
+        final Promise<ProtonDelivery> outcome = Promise.promise();
         final DownstreamSender eventSender = givenAnEventSender(outcome);
 
         // and a device that wants to receive commands
@@ -545,16 +547,18 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private void testAdapterClosesCommandConsumer(final TestContext ctx, final Handler<ProtonConnection> connectionLossTrigger) {
 
         // GIVEN an AMQP adapter
-        final DownstreamSender downstreamEventSender = givenAnEventSender(Future.succeededFuture());
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        outcome.complete();
+        final DownstreamSender downstreamEventSender = givenAnEventSender(outcome);
         final ProtonServer server = getAmqpServer();
         final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
 
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(ok -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertSuccess(ok -> {
             startup.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
         startup.await();
 
         // to which a device is connected
@@ -901,7 +905,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
-        final DownstreamSender eventSender = givenAnEventSender(Future.future());
+        final DownstreamSender eventSender = givenAnEventSender(Promise.promise());
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
@@ -1066,9 +1070,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
         return responseSender;
     }
 
-    private DownstreamSender givenAnEventSender(final Future<ProtonDelivery> outcome) {
+    private DownstreamSender givenAnEventSender(final Promise<ProtonDelivery> outcome) {
         final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome);
+        when(sender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(outcome.future());
 
         when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
