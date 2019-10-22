@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
@@ -95,10 +96,10 @@ public final class AuthenticationServerClient {
         options.setReconnectAttempts(3).setReconnectInterval(50);
         options.addEnabledSaslMechanism(AuthenticationConstants.MECHANISM_PLAIN);
 
-        final Future<ProtonConnection> connectAttempt = Future.future();
+        final Promise<ProtonConnection> connectAttempt = Promise.promise();
         factory.connect(options, authcid, password, null, null, connectAttempt);
 
-        connectAttempt
+        connectAttempt.future()
         .compose(openCon -> getToken(openCon))
         .setHandler(s -> {
             if (s.succeeded()) {
@@ -107,7 +108,8 @@ public final class AuthenticationServerClient {
                 authenticationResultHandler
                 .handle(Future.failedFuture(mapConnectionFailureToServiceInvocationException(s.cause())));
             }
-            Optional.ofNullable(connectAttempt.result()).ifPresent(con -> {
+            Optional.ofNullable(connectAttempt.future().result())
+            .ifPresent(con -> {
                 LOG.debug("closing connection to Authentication service");
                 con.close();
             });
@@ -131,7 +133,7 @@ public final class AuthenticationServerClient {
 
     private Future<HonoUser> getToken(final ProtonConnection openCon) {
 
-        final Future<HonoUser> result = Future.future();
+        final Promise<HonoUser> result = Promise.promise();
         final ProtonMessageHandler messageHandler = (delivery, message) -> {
 
             final String type = MessageHelper.getApplicationProperty(
@@ -163,22 +165,27 @@ public final class AuthenticationServerClient {
         };
 
         openReceiver(openCon, messageHandler)
-        .compose(openReceiver -> {
-            vertx.setTimer(5000, tid -> {
-                result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                        "time out reached while waiting for token from Authentication service"));
-            });
-            LOG.debug("opened receiver link to Authentication service, waiting for token ...");
-        }, result);
-        return result;
+        .setHandler(attempt -> {
+            if (attempt.succeeded()) {
+                vertx.setTimer(5000, tid -> {
+                    result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                            "time out reached while waiting for token from Authentication service"));
+                });
+                LOG.debug("opened receiver link to Authentication service, waiting for token ...");
+            } else {
+                result.fail(attempt.cause());
+            }
+        });
+        return result.future();
     }
 
     private static Future<ProtonReceiver> openReceiver(final ProtonConnection openConnection, final ProtonMessageHandler messageHandler) {
-        final Future<ProtonReceiver> result = Future.future();
+
+        final Promise<ProtonReceiver> result = Promise.promise();
         final ProtonReceiver recv = openConnection.createReceiver(AuthenticationConstants.ENDPOINT_NAME_AUTHENTICATION);
         recv.openHandler(result);
         recv.handler(messageHandler);
         recv.open();
-        return result;
+        return result.future();
     }
 }

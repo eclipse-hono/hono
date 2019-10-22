@@ -47,6 +47,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.proton.ProtonReceiver;
 
 /**
@@ -233,66 +234,118 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
             final Handler<CommandContext> commandHandler,
             final Handler<Void> remoteCloseHandler,
             final Long checkInterval) {
+
         log.trace("create command consumer [tenant-id: {}, device-id: {}, gateway-id: {}]", tenantId, deviceId, gatewayId);
-        return connection.executeOrRunOnContext(result -> {
+
+        return connection.executeOnContext(result -> {
+
             final String gatewayOrDeviceId = gatewayId != null ? gatewayId : deviceId;
             final String gatewayOrDeviceKey = getGatewayOrDeviceKey(tenantId, deviceId, gatewayId);
 
-            ensureNoConflictingConsumerExists(tenantId, deviceId, gatewayId, gatewayOrDeviceKey, result);
-
-            if (!result.isComplete()) {
-                final Future<DestinationCommandConsumer> destinationCommandConsumerFuture = Future.future();
+            ensureNoConflictingConsumerExists(tenantId, deviceId, gatewayId, gatewayOrDeviceKey)
+            .compose(noConflict -> {
+                final Promise<DestinationCommandConsumer> destinationCommandConsumerPromise = Promise.promise();
                 // create the gateway or device specific destination consumer
                 destinationCommandConsumerFactory.getOrCreateClient(
                         gatewayOrDeviceKey,
                         () -> newDestinationCommandConsumer(tenantId, gatewayOrDeviceId),
-                        destinationCommandConsumerFuture);
+                        destinationCommandConsumerPromise);
 
                 // create the device specific consumer to be returned by this method
-                final Future<MessageConsumer> deviceSpecificConsumerFuture = destinationCommandConsumerFuture
-                        .compose(c -> {
-                            return c.addDeviceSpecificCommandHandler(deviceId, gatewayId,
-                                    commandHandler, remoteCloseHandler);
-                        }).map(c -> {
-                            return new DeviceSpecificCommandConsumer(() -> {
-                                return destinationCommandConsumerFactory.getClient(gatewayOrDeviceKey);
-                            }, deviceId);
-                        });
+                final Future<MessageConsumer> deviceSpecificConsumerFuture = destinationCommandConsumerPromise.future()
+                        .compose(consumer -> consumer.addDeviceSpecificCommandHandler(
+                                deviceId,
+                                gatewayId,
+                                commandHandler,
+                                remoteCloseHandler))
+                        .map(ok -> new DeviceSpecificCommandConsumer(
+                                    () -> destinationCommandConsumerFactory.getClient(gatewayOrDeviceKey),
+                                    deviceId));
 
                 // create the tenant-scoped consumer that maps/delegates incoming commands to the right device-scoped handler/consumer
                 final Future<MessageConsumer> mappingAndDelegatingCommandConsumer = getOrCreateMappingAndDelegatingCommandConsumer(tenantId);
-                CompositeFuture.all(deviceSpecificConsumerFuture, mappingAndDelegatingCommandConsumer).map(res -> {
-                    if (checkInterval != null) {
-                        final DestinationCommandConsumer destinationCommandConsumer = destinationCommandConsumerFuture
-                                .result();
-                        registerLivenessCheck(tenantId, gatewayOrDeviceId,
-                                () -> destinationCommandConsumer.getCommandHandlers(), checkInterval);
-                    }
-                    return deviceSpecificConsumerFuture.result();
-                }).setHandler(result);
-            }
+
+                return CompositeFuture.all(deviceSpecificConsumerFuture, mappingAndDelegatingCommandConsumer)
+                        .map(ok -> {
+                            if (checkInterval != null) {
+                                final DestinationCommandConsumer destinationCommandConsumer = destinationCommandConsumerPromise.future().result();
+                                registerLivenessCheck(
+                                        tenantId,
+                                        gatewayOrDeviceId,
+                                        () -> destinationCommandConsumer.getCommandHandlers(),
+                                        checkInterval);
+                            }
+                            return deviceSpecificConsumerFuture.result();
+                        });
+            })
+            .setHandler(result);
+
+//            if (!result.isComplete()) {
+//                final Promise<DestinationCommandConsumer> destinationCommandConsumerPromise = Promise.promise();
+//                // create the gateway or device specific destination consumer
+//                destinationCommandConsumerFactory.getOrCreateClient(
+//                        gatewayOrDeviceKey,
+//                        () -> newDestinationCommandConsumer(tenantId, gatewayOrDeviceId),
+//                        destinationCommandConsumerPromise);
+//
+//                // create the device specific consumer to be returned by this method
+//                final Future<MessageConsumer> deviceSpecificConsumerFuture = destinationCommandConsumerPromise.future()
+//                        .compose(consumer -> consumer.addDeviceSpecificCommandHandler(
+//                                deviceId,
+//                                gatewayId,
+//                                commandHandler,
+//                                remoteCloseHandler))
+//                        .map(ok -> new DeviceSpecificCommandConsumer(
+//                                    () -> destinationCommandConsumerFactory.getClient(gatewayOrDeviceKey),
+//                                    deviceId));
+//
+//                // create the tenant-scoped consumer that maps/delegates incoming commands to the right device-scoped handler/consumer
+//                final Future<MessageConsumer> mappingAndDelegatingCommandConsumer = getOrCreateMappingAndDelegatingCommandConsumer(tenantId);
+//
+//                CompositeFuture.all(deviceSpecificConsumerFuture, mappingAndDelegatingCommandConsumer)
+//                .map(ok -> {
+//                    if (checkInterval != null) {
+//                        final DestinationCommandConsumer destinationCommandConsumer = destinationCommandConsumerPromise.future().result();
+//                        registerLivenessCheck(
+//                                tenantId,
+//                                gatewayOrDeviceId,
+//                                () -> destinationCommandConsumer.getCommandHandlers(),
+//                                checkInterval);
+//                    }
+//                    return deviceSpecificConsumerFuture.result();
+//                })
+//                .setHandler(result);
+//            }
         });
     }
 
-    private void ensureNoConflictingConsumerExists(final String tenantId, final String deviceId, final String gatewayId,
-            final String gatewayOrDeviceKey, final Future<MessageConsumer> result) {
+    private Future<Void> ensureNoConflictingConsumerExists(
+            final String tenantId,
+            final String deviceId,
+            final String gatewayId,
+            final String gatewayOrDeviceKey) {
+
+        final Promise<Void> result = Promise.promise();
         final DestinationCommandConsumer commandConsumer = destinationCommandConsumerFactory.getClient(gatewayOrDeviceKey);
-        if (commandConsumer != null) {
-            if (!commandConsumer.isAlive()) {
-                log.debug("cannot create command consumer, existing consumer not properly closed yet [tenant: {}, device-id: {}]",
-                        tenantId, deviceId);
-                result.fail(new ResourceConflictException("message consumer already in use"));
-            } else if (commandConsumer.containsCommandHandler(deviceId)) {
-                log.debug("cannot create concurrent command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
-                result.fail(new ResourceConflictException("message consumer already in use"));
-            } else if (gatewayId != null) {
-                log.trace("gateway command consumer already exists, will add device handler to that [tenant: {}, gateway-id: {}, device-id: {}]",
-                        tenantId, gatewayId, deviceId);
-            } else {
-                log.trace("gateway command consumer with a device specific handler already exists, will add handler for all gateway devices [tenant: {}, gateway-id: {}]",
-                        tenantId, deviceId);
-            }
+        if (commandConsumer == null) {
+            result.complete();
+        } else if (!commandConsumer.isAlive()) {
+            log.debug("cannot create command consumer, existing consumer not properly closed yet [tenant: {}, device-id: {}]",
+                    tenantId, deviceId);
+            result.fail(new ResourceConflictException("message consumer already in use"));
+        } else if (commandConsumer.containsCommandHandler(deviceId)) {
+            log.debug("cannot create concurrent command consumer [tenant: {}, device-id: {}]", tenantId, deviceId);
+            result.fail(new ResourceConflictException("message consumer already in use"));
+        } else if (gatewayId != null) {
+            log.trace("gateway command consumer already exists, will add device handler to that [tenant: {}, gateway-id: {}, device-id: {}]",
+                    tenantId, gatewayId, deviceId);
+            result.complete();
+        } else {
+            log.trace("gateway command consumer with a device specific handler already exists, will add handler for all gateway devices [tenant: {}, gateway-id: {}]",
+                    tenantId, deviceId);
+            result.complete();
         }
+        return result.future();
     }
 
     private Future<DestinationCommandConsumer> newDestinationCommandConsumer(
@@ -317,7 +370,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
 
     private Future<MessageConsumer> getOrCreateMappingAndDelegatingCommandConsumer(final String tenantId) {
         Objects.requireNonNull(tenantId);
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             final MessageConsumer messageConsumer = mappingAndDelegatingCommandConsumerFactory.getClient(tenantId);
             if (messageConsumer != null) {
                 result.complete(messageConsumer);
@@ -428,7 +481,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
 
     private Future<DelegatedCommandSender> createDelegatedCommandSender(final String tenantId, final String deviceId) {
         Objects.requireNonNull(tenantId);
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             delegatedCommandSenderFactory.createClient(
                     () -> DelegatedCommandSenderImpl.create(connection, tenantId, deviceId, null), result);
         });
@@ -470,12 +523,13 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                             // to re-create the consumer
                             log.debug("trying to re-create destination command consumer [tenant: {}, device-id: {}]",
                                     tenantId, gatewayOrDeviceId);
-                            final Future<DestinationCommandConsumer> destinationCommandConsumerFuture = Future.future();
+                            final Promise<DestinationCommandConsumer> destinationCommandConsumerFuture = Promise.promise();
                             destinationCommandConsumerFactory.getOrCreateClient(
                                     gatewayOrDeviceKey,
                                     () -> newDestinationCommandConsumer(tenantId, gatewayOrDeviceId),
                                     destinationCommandConsumerFuture);
-                            destinationCommandConsumerFuture.map(consumer -> {
+                            destinationCommandConsumerFuture.future()
+                            .map(consumer -> {
                                 livenessCheck.getCommandHandlers().forEach(handler -> {
                                     log.debug("adding {} to created destination command consumer [tenant: {}, device-id: {}]",
                                             handler, tenantId, gatewayOrDeviceId);
@@ -534,7 +588,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             CommandResponseSenderImpl.create(
                     connection,
                     tenantId,
@@ -549,6 +603,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
      *
      * This implementation always creates a new sender link.
      */
+    @Deprecated
     @Override
     public Future<CommandResponseSender> getLegacyCommandResponseSender(
             final String tenantId,
@@ -557,7 +612,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             LegacyCommandResponseSenderImpl.create(
                     connection,
                     tenantId,
@@ -591,12 +646,13 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
 
     @Override
     public void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
-        final Future<Void> amqpNetworkDisconnectFuture = Future.future();
-        super.disconnect(amqpNetworkDisconnectFuture);
-        final Future<Void> gatewayMapperDisconnectFuture = Future.future();
-        gatewayMapper.disconnect(gatewayMapperDisconnectFuture);
-        CompositeFuture.all(amqpNetworkDisconnectFuture, gatewayMapperDisconnectFuture)
-                .map(obj -> amqpNetworkDisconnectFuture.result()).setHandler(completionHandler);
+        final Promise<Void> amqpNetworkDisconnectPromise = Promise.promise();
+        super.disconnect(amqpNetworkDisconnectPromise);
+        final Promise<Void> gatewayMapperDisconnectPromise = Promise.promise();
+        gatewayMapper.disconnect(gatewayMapperDisconnectPromise);
+        CompositeFuture.all(amqpNetworkDisconnectPromise.future(), gatewayMapperDisconnectPromise.future())
+                .map(obj -> amqpNetworkDisconnectPromise.future().result())
+                .setHandler(completionHandler);
     }
 
     /**

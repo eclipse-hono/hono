@@ -33,6 +33,7 @@ import org.mockito.Mockito;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -135,7 +136,7 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
-        final Future<ProtonConnection> resultHandler = Future.future();
+        final Promise<ProtonConnection> resultHandler = Promise.promise();
 
         factory.connect(new ProtonClientOptions(), null, null, resultHandler);
 
@@ -144,7 +145,7 @@ public class ConnectionFactoryImplTest {
         verify(protonConnectionMock).disconnectHandler(disconnectHandlerCaptor.capture());
         disconnectHandlerCaptor.getValue().handle(protonConnectionMock);
         // as we call handler ourselves handling is synchronous here
-        assertTrue("Connection result handler was not failed", resultHandler.failed());
+        assertTrue("Connection result handler was not failed", resultHandler.future().failed());
     }
 
     /**

@@ -58,6 +58,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -300,7 +301,7 @@ public class HonoConnectionImplTest {
 
         honoConnection.connect().compose(ok -> {
             // GIVEN a client that is in the process of shutting down
-            honoConnection.shutdown(Future.future());
+            honoConnection.shutdown(Promise.<Void>promise().future());
             // WHEN the client tries to reconnect before shut down is complete
             return honoConnection.connect();
         }).setHandler(ctx.asyncAssertFailure(cause -> {
@@ -317,20 +318,23 @@ public class HonoConnectionImplTest {
     @Test
     public void testConnectSucceedsAfterDisconnect(final TestContext ctx) {
 
-        honoConnection.connect().compose(ok -> {
+        honoConnection.connect()
+        .compose(ok -> {
             // GIVEN a client that is connected to a server
-            final Future<Void> disconnected = Future.future();
+            final Promise<Void> disconnected = Promise.promise();
             // WHEN the client disconnects
             honoConnection.disconnect(disconnected);
             @SuppressWarnings("unchecked")
             final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
             verify(con).closeHandler(closeHandler.capture());
             closeHandler.getValue().handle(Future.succeededFuture(con));
-            return disconnected;
-        }).compose(d -> {
+            return disconnected.future();
+        })
+        .compose(d -> {
             // AND tries to reconnect again
             return honoConnection.connect(new ProtonClientOptions());
-        }).setHandler(ctx.asyncAssertSuccess(success -> {
+        })
+        .setHandler(ctx.asyncAssertSuccess(success -> {
             // THEN the connection succeeds
         }));
     }

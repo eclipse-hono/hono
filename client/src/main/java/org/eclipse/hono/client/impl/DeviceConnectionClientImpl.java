@@ -34,6 +34,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -172,7 +173,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
         // using FollowsFrom instead of ChildOf reference here as invoking methods usually don't depend and wait on the result of this method
         final Span currentSpan = newFollowingSpan(context, "set last known gateway for device");
-        final Future<DeviceConnectionResult> resultTracker = Future.future();
+        final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
         createAndSendRequest(
                 DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject(),
                 properties,
@@ -181,14 +182,17 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
                 resultTracker,
                 null,
                 currentSpan);
-        return mapResultAndFinishSpan(resultTracker, result -> {
-            switch (result.getStatus()) {
-            case HttpURLConnection.HTTP_NO_CONTENT:
-                return null;
-            default:
-                throw StatusCodeMapper.from(result);
-            }
-        }, currentSpan);
+        return mapResultAndFinishSpan(
+                resultTracker.future(),
+                result -> {
+                    switch (result.getStatus()) {
+                    case HttpURLConnection.HTTP_NO_CONTENT:
+                        return null;
+                    default:
+                        throw StatusCodeMapper.from(result);
+                    }
+                },
+                currentSpan);
     }
 
     /**
@@ -199,7 +203,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
     @Override
     public Future<JsonObject> getLastKnownGatewayForDevice(final String deviceId, final SpanContext context) {
         Objects.requireNonNull(deviceId);
-        final Future<DeviceConnectionResult> resultTracker = Future.future();
+        final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
 
         final Span currentSpan = newChildSpan(context, "get last known gateway for device");
         createAndSendRequest(
@@ -210,13 +214,16 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
                 resultTracker,
                 null,
                 currentSpan);
-        return mapResultAndFinishSpan(resultTracker, result -> {
-            switch (result.getStatus()) {
-            case HttpURLConnection.HTTP_OK:
-                return result.getPayload();
-            default:
-                throw StatusCodeMapper.from(result);
-            }
-        }, currentSpan);
+        return mapResultAndFinishSpan(
+                resultTracker.future(),
+                result -> {
+                    switch (result.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        return result.getPayload();
+                    default:
+                        throw StatusCodeMapper.from(result);
+                    }
+                },
+                currentSpan);
     }
 }

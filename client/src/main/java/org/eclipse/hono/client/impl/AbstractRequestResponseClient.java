@@ -52,6 +52,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -833,7 +834,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
             currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         }
 
-        connection.executeOrRunOnContext(res -> {
+        connection.executeOnContext(res -> {
 
             if (sender.sendQueueFull()) {
                 LOG.debug("cannot send request to peer, no credit left for link [link target: {}]", linkTargetAddress);
@@ -855,7 +856,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                 replyMap.put(correlationId, handler);
 
                 sender.send(request, deliveryUpdated -> {
-                    final Future<R> failedResult = Future.future();
+                    final Promise<R> failedResult = Promise.promise();
                     final DeliveryState remoteState = deliveryUpdated.getRemoteState();
                     if (Rejected.class.isInstance(remoteState)) {
                         final Rejected rejected = (Rejected) remoteState;
@@ -863,12 +864,12 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                     requestTargetAddress, request.getSubject(), correlationId, rejected.getError());
                             failedResult.fail(StatusCodeMapper.from(rejected.getError()));
-                            cancelRequest(correlationId, failedResult);
+                            cancelRequest(correlationId, failedResult.future());
                         } else {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",
                                     requestTargetAddress, request.getSubject(), correlationId);
                             failedResult.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-                            cancelRequest(correlationId, failedResult);
+                            cancelRequest(correlationId, failedResult.future());
                         }
                     } else if (Accepted.class.isInstance(remoteState)) {
                         LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
@@ -883,14 +884,14 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
                                 requestTargetAddress, request.getSubject(), correlationId, remoteState);
                         failedResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
-                        cancelRequest(correlationId, failedResult);
+                        cancelRequest(correlationId, failedResult.future());
                     } else if (Modified.class.isInstance(remoteState)) {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
                                 requestTargetAddress, request.getSubject(), correlationId, remoteState);
                         final Modified modified = (Modified) deliveryUpdated.getRemoteState();
                         failedResult.fail(modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
                                 : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
-                        cancelRequest(correlationId, failedResult);
+                        cancelRequest(correlationId, failedResult.future());
                     }
                 });
                 if (requestTimeoutMillis > 0) {
@@ -1079,7 +1080,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * @return The Future with the result of applying the mapping function or with the error from the given Future.
      * @throws NullPointerException if either of the parameters is {@code null}.
      */
-    protected final <T> Future<T> mapResultAndFinishSpan(final Future<R> result, final Function<R, T> resultMapper,
+    protected final <T> Future<T> mapResultAndFinishSpan(
+            final Future<R> result,
+            final Function<R, T> resultMapper,
             final Span currentSpan) {
         return result.recover(t -> {
             Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));

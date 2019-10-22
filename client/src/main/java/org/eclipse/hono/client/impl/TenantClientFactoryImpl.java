@@ -59,7 +59,7 @@ public class TenantClientFactoryImpl extends AbstractHonoClientFactory implement
     @Override
     public Future<TenantClient> getOrCreateTenantClient() {
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             tenantClientFactory.getOrCreateClient(
                     TenantClientImpl.getTargetAddress(),
                     () -> TenantClientImpl.create(

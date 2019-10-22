@@ -37,6 +37,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -183,7 +184,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
     public final Future<JsonObject> get(final String deviceId, final SpanContext context) {
 
         Objects.requireNonNull(deviceId);
-        final Future<RegistrationResult> resultTracker = Future.future();
+        final Promise<RegistrationResult> resultTracker = Promise.promise();
 
         createAndSendRequest(
                 RegistrationConstants.ACTION_GET,
@@ -193,14 +194,15 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                 null,
                 context);
 
-        return resultTracker.map(regResult -> {
-            switch (regResult.getStatus()) {
-            case HttpURLConnection.HTTP_OK:
-                return regResult.getPayload();
-            default:
-                throw StatusCodeMapper.from(regResult);
-            }
-        });
+        return resultTracker.future()
+                .map(regResult -> {
+                    switch (regResult.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        return regResult.getPayload();
+                    default:
+                        throw StatusCodeMapper.from(regResult);
+                    }
+                });
     }
 
     /**
@@ -251,7 +253,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
         final Future<RegistrationResult> resultTracker = getResponseFromCache(key, span)
                 .recover(t -> {
-                    final Future<RegistrationResult> regResult = Future.future();
+                    final Promise<RegistrationResult> regResult = Promise.promise();
                     final Map<String, Object> properties = createDeviceIdProperties(deviceId);
                     if (gatewayId != null) {
                         properties.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
@@ -264,7 +266,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
                             regResult,
                             key,
                             span);
-                    return regResult;
+                    return regResult.future();
                 });
         return mapResultAndFinishSpan(resultTracker, result -> {
             switch (result.getStatus()) {

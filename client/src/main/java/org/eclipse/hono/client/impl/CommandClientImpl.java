@@ -36,6 +36,7 @@ import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -168,19 +169,22 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
 
         final Span currentSpan = newChildSpan(null, command);
 
-        final Future<BufferResult> resultTracker = Future.future();
+        final Promise<BufferResult> resultTracker = Promise.promise();
 
         final String messageTargetAddress = getTargetAddress(getTenantId(), deviceId);
         createAndSendRequest(command, messageTargetAddress, properties, data, contentType, resultTracker,
                 null, currentSpan);
 
-        return mapResultAndFinishSpan(resultTracker, result -> {
-            if (result.isOk()) {
-                return result;
-            } else {
-                throw StatusCodeMapper.from(result);
-            }
-        }, currentSpan);
+        return mapResultAndFinishSpan(
+                resultTracker.future(),
+                result -> {
+                    if (result.isOk()) {
+                        return result;
+                    } else {
+                        throw StatusCodeMapper.from(result);
+                    }
+                },
+                currentSpan);
     }
 
     @Override
@@ -205,7 +209,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         final Span currentSpan = newChildSpan(null, command);
 
         if (sender.isOpen()) {
-            final Future<BufferResult> responseTracker = Future.future();
+            final Promise<BufferResult> responseTracker = Promise.promise();
             final Message request = ProtonHelper.message();
 
             AbstractHonoClient.setApplicationProperties(request, properties);
@@ -218,16 +222,17 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
             MessageHelper.setPayload(request, contentType, data);
             sendRequest(request, responseTracker, null, currentSpan);
 
-            return responseTracker.recover(t -> {
-                Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
-                TracingHelper.logError(currentSpan, t);
-                currentSpan.finish();
-                return Future.failedFuture(t);
-            }).map(ignore -> {
-                Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
-                currentSpan.finish();
-                return null;
-            });
+            return responseTracker.future()
+                    .recover(t -> {
+                        Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
+                        TracingHelper.logError(currentSpan, t);
+                        currentSpan.finish();
+                        return Future.failedFuture(t);
+                    }).map(ignore -> {
+                        Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
+                        currentSpan.finish();
+                        return null;
+                    });
         } else {
             Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
             TracingHelper.logError(currentSpan, "sender link is not open");

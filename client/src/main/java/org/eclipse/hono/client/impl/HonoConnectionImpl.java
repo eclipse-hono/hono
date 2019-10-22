@@ -51,6 +51,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
@@ -220,6 +221,31 @@ public class HonoConnectionImpl implements HonoConnection {
      *         property is {@code null}.
      */
     @Override
+    public final <T> Future<T> executeOnContext(final Handler<Promise<T>> codeToRun) {
+
+        if (context == null) {
+            // this means that the connection to the peer is not established (yet)
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
+        } else {
+            return HonoProtonHelper.executeOnContext(context, codeToRun);
+        }
+    }
+
+    /**
+     * Executes some code on the vert.x Context that has been used to establish the
+     * connection to the peer.
+     * 
+     * @param <T> The type of the result that the code produces.
+     * @param codeToRun The code to execute. The code is required to either complete or
+     *                  fail the future that is passed into the handler.
+     * @return The future passed into the handler for executing the code. The future
+     *         thus indicates the outcome of executing the code. The future will
+     *         be failed with a {@link ServerErrorException} if the <em>context</em>
+     *         property is {@code null}.
+     * @deprecated Use {@link #executeOnContext(Handler)} instead.
+     */
+    @Override
+    @Deprecated
     public final <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
 
         if (context == null) {
@@ -235,7 +261,7 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final Future<Void> isConnected() {
-        return executeOrRunOnContext(result -> checkConnected(result));
+        return executeOnContext(result -> checkConnected(result));
     }
 
     /**
@@ -244,9 +270,9 @@ public class HonoConnectionImpl implements HonoConnection {
      * @return A succeeded future if this client is connected.
      */
     protected final Future<Void> checkConnected() {
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         checkConnected(result);
-        return result;
+        return result.future();
     }
 
     private void checkConnected(final Handler<AsyncResult<Void>> resultHandler) {
@@ -330,13 +356,13 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final Future<HonoConnection> connect(final ProtonClientOptions options) {
-        final Future<HonoConnection> result = Future.future();
+        final Promise<HonoConnection> result = Promise.promise();
         if (shuttingDown.get()) {
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "client is already shut down"));
         } else {
             connect(options, result, null);
         }
-        return result;
+        return result.future();
     }
 
     private void connect(
@@ -349,7 +375,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
         // context cannot be null thus it is safe to
         // ignore the Future returned by executeOrRunContext
-        executeOrRunOnContext(ignore -> {
+        executeOnContext(ignore -> {
 
             if (isConnectedInternal()) {
                 log.debug("already connected to server [{}:{}]", connectionFactory.getHost(),
@@ -616,7 +642,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
         Objects.requireNonNull(qos);
 
-        return executeOrRunOnContext(result -> {
+        return executeOnContext(result -> {
             checkConnected().compose(v -> {
 
                 if (targetAddress == null && !supportsCapability(Constants.CAP_ANONYMOUS_RELAY)) {
@@ -627,7 +653,7 @@ public class HonoConnectionImpl implements HonoConnection {
                             "server does not support anonymous terminus"));
                 }
 
-                final Future<ProtonSender> senderFuture = Future.future();
+                final Promise<ProtonSender> senderPromise = Promise.promise();
                 final ProtonSender sender = connection.createSender(targetAddress);
                 sender.setQoS(qos);
                 sender.setAutoSettle(true);
@@ -644,11 +670,11 @@ public class HonoConnectionImpl implements HonoConnection {
                         final ErrorCondition error = sender.getRemoteCondition();
                         if (error == null) {
                             log.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
-                            senderFuture.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                            senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                                     "cannot open sender", senderOpen.cause()));
                         } else {
                             log.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
-                            senderFuture.tryFail(StatusCodeMapper.from(error));
+                            senderPromise.tryFail(StatusCodeMapper.from(error));
                         }
 
                     } else if (HonoProtonHelper.isLinkEstablished(sender)) {
@@ -662,7 +688,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                                 targetAddress,
                                                 sender.getCredit(), clientConfigProperties.getFlowLatency());
                                         sender.sendQueueDrainHandler(null);
-                                        senderFuture.tryComplete(sender);
+                                        senderPromise.tryComplete(sender);
                                     });
                             sender.sendQueueDrainHandler(replenishedSender -> {
                                 log.debug("sender [target: {}] has received {} initial credits",
@@ -674,7 +700,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                   // sendQueueDrainHandler
                             });
                         } else {
-                            senderFuture.tryComplete(sender);
+                            senderPromise.tryComplete(sender);
                         }
 
                     } else {
@@ -682,7 +708,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         // and will send a detach frame for closing the link very shortly
                         // see AMQP 1.0 spec section 2.6.3
                         log.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
-                        senderFuture.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                        senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                     }
                 });
                 HonoProtonHelper.setDetachHandler(sender,
@@ -691,8 +717,8 @@ public class HonoConnectionImpl implements HonoConnection {
                         remoteClosed -> onRemoteDetach(sender, connection.getRemoteContainer(), true, closeHook));
                 sender.open();
                 vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
-                        tid -> onTimeOut(sender, clientConfigProperties, senderFuture));
-                return senderFuture;
+                        tid -> onTimeOut(sender, clientConfigProperties, senderPromise));
+                return senderPromise.future();
             }).setHandler(result);
         });
     }
@@ -732,9 +758,9 @@ public class HonoConnectionImpl implements HonoConnection {
             throw new IllegalArgumentException("pre-fetch size must be >= 0");
         }
 
-        return executeOrRunOnContext(result -> {
+        return executeOnContext(result -> {
             checkConnected().compose(v -> {
-                final Future<ProtonReceiver> receiverFuture = Future.future();
+                final Promise<ProtonReceiver> receiverPromise = Promise.promise();
                 final ProtonReceiver receiver = connection.createReceiver(sourceAddress);
                 receiver.setAutoAccept(autoAccept);
                 receiver.setQoS(qos);
@@ -765,21 +791,21 @@ public class HonoConnectionImpl implements HonoConnection {
                         final ErrorCondition error = receiver.getRemoteCondition();
                         if (error == null) {
                             log.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
-                            receiverFuture.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                            receiverPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                                     "cannot open receiver", recvOpen.cause()));
                         } else {
                             log.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
-                            receiverFuture.tryFail(StatusCodeMapper.from(error));
+                            receiverPromise.tryFail(StatusCodeMapper.from(error));
                         }
                     } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
                         log.debug("receiver open [source: {}]", sourceAddress);
-                        receiverFuture.tryComplete(recvOpen.result());
+                        receiverPromise.tryComplete(recvOpen.result());
                     } else {
                         // this means that the peer did not create a local terminus for the link
                         // and will send a detach frame for closing the link very shortly
                         // see AMQP 1.0 spec section 2.6.3
                         log.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
-                        receiverFuture.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                        receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                     }
                 });
                 HonoProtonHelper.setDetachHandler(receiver, remoteDetached -> onRemoteDetach(receiver,
@@ -788,8 +814,8 @@ public class HonoConnectionImpl implements HonoConnection {
                         connection.getRemoteContainer(), true, remoteCloseHook));
                 receiver.open();
                 vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
-                        tid -> onTimeOut(receiver, clientConfigProperties, receiverFuture));
-                return receiverFuture;
+                        tid -> onTimeOut(receiver, clientConfigProperties, receiverPromise));
+                return receiverPromise.future();
             }).setHandler(result);
         });
     }
@@ -797,7 +823,7 @@ public class HonoConnectionImpl implements HonoConnection {
     private void onTimeOut(
             final ProtonLink<?> link,
             final ClientConfigProperties clientConfig,
-            final Future<?> result) {
+            final Promise<?> result) {
 
         if (link.isOpen() && !HonoProtonHelper.isLinkEstablished(link)) {
             log.info("link establishment [peer: {}] timed out after {}ms",
@@ -921,7 +947,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
         synchronized (connectionLock) {
             if (isConnectedInternal()) {
-                executeOrRunOnContext(r -> {
+                executeOnContext(r -> {
                     final ProtonConnection connectionToClose = connection;
                     connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
                     final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {

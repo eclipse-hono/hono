@@ -58,7 +58,7 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
     public final Future<DownstreamSender> getOrCreateTelemetrySender(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             clientFactory.getOrCreateClient(
                     TelemetrySenderImpl.getTargetAddress(tenantId, null),
                     () -> TelemetrySenderImpl.create(connection, tenantId,
@@ -76,7 +76,7 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
     public final Future<DownstreamSender> getOrCreateEventSender(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             clientFactory.getOrCreateClient(
                     EventSenderImpl.getTargetAddress(tenantId, null),
                     () -> EventSenderImpl.create(connection, tenantId,

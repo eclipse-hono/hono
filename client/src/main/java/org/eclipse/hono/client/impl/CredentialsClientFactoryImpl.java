@@ -67,7 +67,7 @@ public class CredentialsClientFactoryImpl extends AbstractHonoClientFactory impl
             final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             credentialsClientFactory.getOrCreateClient(
                     CredentialsClientImpl.getTargetAddress(tenantId),
                     () -> CredentialsClientImpl.create(

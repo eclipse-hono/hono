@@ -46,6 +46,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.tag.StringTag;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonReceiver;
@@ -227,7 +228,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
 
         final Future<TenantResult<TenantObject>> resultTracker = getResponseFromCache(key, currentSpan)
                 .recover(cacheMiss -> {
-                    final Future<TenantResult<TenantObject>> tenantResult = Future.future();
+                    final Promise<TenantResult<TenantObject>> tenantResult = Promise.promise();
                     createAndSendRequest(
                             TenantAction.get.toString(),
                             customizeRequestApplicationProperties(),
@@ -236,7 +237,7 @@ public class TenantClientImpl extends AbstractRequestResponseClient<TenantResult
                             tenantResult,
                             key,
                             currentSpan);
-                    return tenantResult;
+                    return tenantResult.future();
                 });
         return mapResultAndFinishSpan(resultTracker, tenantResult -> {
             switch (tenantResult.getStatus()) {

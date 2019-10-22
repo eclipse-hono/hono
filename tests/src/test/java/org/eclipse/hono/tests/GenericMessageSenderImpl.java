@@ -135,15 +135,13 @@ public class GenericMessageSenderImpl extends AbstractHonoClient implements Mess
      */
     @Override
     public Future<ProtonDelivery> send(final Message message) {
-        final Future<ProtonDelivery> result = Future.future();
-        connection.executeOrRunOnContext(go -> {
+        return connection.executeOnContext(result -> {
             if (sender.isOpen() && sender.getCredit() > 0) {
                 result.complete(sender.send(message));
             } else {
                 result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
             }
         });
-        return result;
     }
 
     /**
@@ -164,8 +162,7 @@ public class GenericMessageSenderImpl extends AbstractHonoClient implements Mess
      */
     @Override
     public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
-        final Future<ProtonDelivery> result = Future.future();
-        connection.executeOrRunOnContext(go -> {
+        return connection.executeOnContext(result -> {
             if (sender.isOpen() && sender.getCredit() > 0) {
                 sender.send(message, updatedDelivery -> {
                     if (updatedDelivery.getRemoteState() instanceof Accepted) {
@@ -180,6 +177,5 @@ public class GenericMessageSenderImpl extends AbstractHonoClient implements Mess
                 result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
             }
         });
-        return result;
     }
 }

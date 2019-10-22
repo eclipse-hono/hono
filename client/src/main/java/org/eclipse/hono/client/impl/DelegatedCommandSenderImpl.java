@@ -33,6 +33,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
@@ -83,7 +84,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
     }
 
     private Future<ProtonDelivery> runSendAndWaitForOutcomeOnContext(final Message rawMessage, final Span span) {
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
                 logError(span, e);
@@ -123,13 +124,13 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
 
-        final Future<ProtonDelivery> result = Future.future();
+        final Promise<ProtonDelivery> result = Promise.promise();
         final String messageId = message.getMessageId() != null ? message.getMessageId().toString() : "";
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
-                    if (!result.isComplete()) {
+                    if (!result.future().isComplete()) {
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after "
@@ -146,7 +147,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                 connection.getVertx().cancelTimer(timerId);
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
-            if (result.isComplete()) {
+            if (result.future().isComplete()) {
                 log.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
             } else if (deliveryUpdated.remotelySettled()) {
                 logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
@@ -162,17 +163,18 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         });
         log.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
 
-        return result.map(delivery -> {
-            log.trace("message [ID: {}] accepted by peer", messageId);
-            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
-            currentSpan.finish();
-            return delivery;
-        }).recover(t -> {
-            TracingHelper.logError(currentSpan, t);
-            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
-            currentSpan.finish();
-            return Future.failedFuture(t);
-        });
+        return result.future()
+                .map(delivery -> {
+                    log.trace("message [ID: {}] accepted by peer", messageId);
+                    Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
+                    currentSpan.finish();
+                    return delivery;
+                }).recover(t -> {
+                    TracingHelper.logError(currentSpan, t);
+                    Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
+                    currentSpan.finish();
+                    return Future.failedFuture(t);
+                });
     }
 
     @Override

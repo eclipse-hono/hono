@@ -15,7 +15,11 @@
 package org.eclipse.hono.client.impl;
 
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.notNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 
@@ -27,6 +31,7 @@ import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -90,10 +95,10 @@ public class CachingClientFactoryTest {
 
         // GIVEN a factory that already creates a client for key "bumlux" (and never completes doing so)
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
-        final Future<Object> creationResult = Future.future();
+        final Promise<Object> creationResult = Promise.promise();
         factory.getOrCreateClient(
                 "bumlux",
-                () -> Future.future(),
+                () -> Promise.promise().future(),
                 creationResult);
 
         // WHEN an additional, concurrent attempt is made to create a client for the same key
@@ -124,17 +129,17 @@ public class CachingClientFactoryTest {
 
         // GIVEN a factory that already creates a client for key "bumlux"
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
-        final Future<Object> creationResult = Future.future();
-        final Future<Object> clientInstanceFuture = Future.future();
+        final Promise<Object> creationResult = Promise.promise();
+        final Promise<Object> clientInstancePromise = Promise.promise();
         factory.getOrCreateClient(
                 "bumlux",
-                () -> clientInstanceFuture,
+                () -> clientInstancePromise.future(),
                 creationResult);
 
         // WHEN an additional, concurrent attempt is made to create a client for the same key
         // and the first 'setTimer' invocation finishes the first creation attempt.
         when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            clientInstanceFuture.tryComplete(new Object());
+            clientInstancePromise.tryComplete(new Object());
             final Handler<Void> task = invocation.getArgument(1);
             task.handle(null);
             return 1L;
@@ -163,12 +168,12 @@ public class CachingClientFactoryTest {
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
         final Async supplierInvocation = ctx.async();
 
-        final Future<Object> creationAttempt = Future.future();
+        final Promise<Object> creationAttempt = Promise.promise();
         factory.getOrCreateClient(
                 "tenant",
                 () -> {
                     supplierInvocation.complete();
-                    return Future.future();
+                    return Promise.promise().future();
                 }, creationAttempt);
 
         // WHEN the factory's state is being cleared
@@ -176,7 +181,7 @@ public class CachingClientFactoryTest {
         factory.clearState();
 
         // THEN all creation requests are failed
-        ctx.assertTrue(creationAttempt.failed());
+        ctx.assertTrue(creationAttempt.future().failed());
 
         // and the next request to create a client for the same key succeeds
         factory.getOrCreateClient(

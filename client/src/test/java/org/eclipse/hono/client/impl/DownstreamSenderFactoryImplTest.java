@@ -36,6 +36,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.ext.unit.TestContext;
@@ -82,8 +83,9 @@ public class DownstreamSenderFactoryImplTest {
     public void testGetTelemetrySenderFailsIfInvokedConcurrently(final TestContext ctx) {
 
         // GIVEN a factory that already tries to create a telemetry sender for "tenant" (and never completes doing so)
-        final Future<ProtonSender> sender = Future.future();
-        when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler())).thenReturn(sender);
+        final Promise<ProtonSender> sender = Promise.promise();
+        when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
+        .thenReturn(sender.future());
         final Future<DownstreamSender> result = factory.getOrCreateTelemetrySender("telemetry/tenant");
         assertFalse(result.isComplete());
 
@@ -105,8 +107,9 @@ public class DownstreamSenderFactoryImplTest {
     public void testGetTelemetrySenderFailsOnConnectionFailure() {
 
         // GIVEN a factory that tries to create a telemetry sender for "tenant"
-        final Future<ProtonSender> sender = Future.future();
-        when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler())).thenReturn(sender);
+        final Promise<ProtonSender> sender = Promise.promise();
+        when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
+        .thenReturn(sender.future());
         @SuppressWarnings("unchecked")
         final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandler = ArgumentCaptor.forClass(DisconnectListener.class);
         verify(connection).addDisconnectListener(disconnectHandler.capture());
