@@ -1237,15 +1237,6 @@ fieldset[disabled] .btn-template-primary.active {
 }
 .customers .owl-item img {
   display: inline-block;
-  filter: grayscale(100%) contrast(50%);
-  /* Firefox 10+, Firefox on Android */
-  filter: gray;
-  /* IE6-9 */
-  -webkit-filter: grayscale(100%) contrast(50%);
-  /* Chrome 19+, Safari 6+, Safari 6+ iOS */
-  -webkit-transition: all 0.2s ease-out;
-  -moz-transition: all 0.2s ease-out;
-  transition: all 0.2s ease-out;
   max-width: 100%;
   height: auto;
 }
@@ -1774,7 +1765,7 @@ section#landing h1,
   border-bottom: solid 1px #999999;
 }
 .bar.background-gray {
-  background: #eeeeee;
+  background: #757575;
 }
 .bar.background-gray-dark {
   background: #555555;
