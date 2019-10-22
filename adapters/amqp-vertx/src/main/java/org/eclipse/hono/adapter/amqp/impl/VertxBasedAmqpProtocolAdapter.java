@@ -72,6 +72,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
@@ -177,12 +178,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
                     }
                     return Future.succeededFuture();
-                }).compose(success -> {
-                    return CompositeFuture.all(bindSecureServer(), bindInsecureServer());
-                }).compose(success -> {
-                    startFuture.complete();
-                }, startFuture);
-
+                })
+                .compose(success -> CompositeFuture.all(bindSecureServer(), bindInsecureServer()))
+                .map(ok -> (Void) null)
+                .setHandler(startFuture);
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -195,22 +194,23 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     @Override
     protected void doStop(final Future<Void> stopFuture) {
         CompositeFuture.all(stopSecureServer(), stopInsecureServer())
-        .compose(ok -> stopFuture.complete(), stopFuture);
+        .map(ok -> (Void) null)
+        .setHandler(stopFuture);
     }
 
     private Future<Void> stopInsecureServer() {
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         if (insecureServer != null) {
             log.info("Shutting down insecure server");
             insecureServer.close(result);
         } else {
             result.complete();
         }
-        return result;
+        return result.future();
     }
 
     private Future<Void> stopSecureServer() {
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         if (secureServer != null) {
 
             log.info("Shutting down secure server");
@@ -219,7 +219,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         } else {
             result.complete();
         }
-        return result;
+        return result.future();
     }
 
     private Future<Void> bindInsecureServer() {
@@ -232,7 +232,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         // set heart beat to half the idle timeout
                         .setHeartbeat(getConfig().getIdleTimeout() >> 1);
 
-            final Future<Void> result = Future.future();
+            final Promise<Void> result = Promise.promise();
             insecureServer = createServer(insecureServer, options);
             insecureServer.connectHandler(this::onConnectRequest).listen(ar -> {
                 if (ar.succeeded()) {
@@ -242,7 +242,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     result.fail(ar.cause());
                 }
             });
-            return result;
+            return result.future();
         } else {
             return Future.succeededFuture();
         }
@@ -261,7 +261,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
 
-            final Future<Void> result = Future.future();
+            final Promise<Void> result = Promise.promise();
             secureServer = createServer(secureServer, options);
             secureServer.connectHandler(this::onConnectRequest).listen(ar -> {
                 if (ar.succeeded()) {
@@ -272,7 +272,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     result.fail(ar.cause());
                 }
             });
-            return result;
+            return result.future();
         } else {
             return Future.succeededFuture();
         }
@@ -352,7 +352,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
         }
 
-        final Future<Void> connectAuthorizationCheck = Future.future();
+        final Promise<Void> connectAuthorizationCheck = Promise.promise();
 
         if (getConfig().isAuthenticationRequired()) {
 
@@ -376,7 +376,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             connectAuthorizationCheck.complete();
         }
 
-        connectAuthorizationCheck
+        connectAuthorizationCheck.future()
         .compose(ok -> sendConnectedEvent(
                 Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
                 authenticatedDevice))
@@ -944,7 +944,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ResourceIdentifier resource,
             final Span currentSpan) {
 
-        final Future<Void> contentTypeCheck = Future.future();
+        final Promise<Void> contentTypeCheck = Promise.promise();
 
         if (isPayloadOfIndicatedType(context.getMessagePayload(), context.getMessageContentType())) {
             contentTypeCheck.complete();
@@ -953,20 +953,21 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     "empty notifications must not contain payload"));
         }
 
-        return contentTypeCheck.compose(ok -> {
-            switch (context.getEndpoint()) {
-            case TELEMETRY:
-                return doUploadMessage(context, resource, getTelemetrySender(resource.getTenantId()), currentSpan);
-            case EVENT:
-                return doUploadMessage(context, resource, getEventSender(resource.getTenantId()), currentSpan);
-            case COMMAND: // for backwards compatibility: support the legacy "control" endpoint (mapped to COMMAND) for command responses
-            case COMMAND_RESPONSE:
-                return doUploadCommandResponseMessage(context, resource, currentSpan);
-            default:
-                return Future
-                        .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unknown endpoint"));
-            }
-        });
+        return contentTypeCheck.future()
+                .compose(ok -> {
+                    switch (context.getEndpoint()) {
+                    case TELEMETRY:
+                        return doUploadMessage(context, resource, getTelemetrySender(resource.getTenantId()), currentSpan);
+                    case EVENT:
+                        return doUploadMessage(context, resource, getEventSender(resource.getTenantId()), currentSpan);
+                    case COMMAND: // for backwards compatibility: support the legacy "control" endpoint (mapped to COMMAND) for command responses
+                    case COMMAND_RESPONSE:
+                        return doUploadCommandResponseMessage(context, resource, currentSpan);
+                    default:
+                        return Future
+                                .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unknown endpoint"));
+                    }
+                });
     }
 
     private Future<ProtonDelivery> doUploadMessage(
@@ -1129,7 +1130,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     Future<AmqpContext> validateEndpoint(final AmqpContext ctx) {
 
-        final Future<AmqpContext> result = Future.future();
+        final Promise<AmqpContext> result = Promise.promise();
         if (ctx.getAddress() == null) {
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
         } else {
@@ -1152,7 +1153,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unsupported endpoint"));
             }
         }
-        return result;
+        return result.future();
     }
 
     private static Future<ResourceIdentifier> getResourceIdentifier(final Source source) {
@@ -1160,7 +1161,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (source == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
         } else {
-            final Future<ResourceIdentifier> result = Future.future();
+            final Promise<ResourceIdentifier> result = Promise.promise();
             try {
                 if (Strings.isNullOrEmpty(source.getAddress())) {
                     result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
@@ -1171,7 +1172,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             } catch (Throwable e) {
                 result.fail(e);
             }
-            return result;
+            return result.future();
         }
     }
 
