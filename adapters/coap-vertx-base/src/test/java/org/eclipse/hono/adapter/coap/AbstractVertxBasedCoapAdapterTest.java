@@ -71,6 +71,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -179,11 +180,11 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
 
         // THEN the onStartupSuccess method has been invoked
         startup.await();
@@ -208,11 +209,11 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
         startup.await();
 
         // THEN the resources have been registered with the server
@@ -248,12 +249,12 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.setResources(Collections.singleton(resource));
 
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertSuccess(s -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
         adapter.init(vertx, context);
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
         startup.await();
 
         // WHEN the resource receives a GET request
@@ -283,11 +284,11 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // WHEN starting the adapter
         final Async startupFailure = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure(s -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertFailure(s -> {
             startupFailure.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
 
         // THEN startup has failed
         startupFailure.await();
@@ -311,11 +312,11 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // WHEN starting the adapter
         final Async startup = ctx.async();
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.asyncAssertFailure(s -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.asyncAssertFailure(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker);
+        adapter.start(startupTracker.future());
 
         // THEN the onStartupSuccess method has been invoked, see ctx.fail
         startup.await();
@@ -374,8 +375,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadEventWaitsForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenAnEventSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenAnEventSenderForOutcome(outcome.future());
         final CoapServer server = getCoapServer(false);
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
@@ -412,8 +413,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadEventFailsForRejectedOutcome() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenAnEventSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenAnEventSenderForOutcome(outcome.future());
         final CoapServer server = getCoapServer(false);
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
@@ -450,8 +451,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadTelemetry() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenATelemetrySender(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenATelemetrySender(outcome.future());
         final CoapServer server = getCoapServer(false);
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
@@ -488,8 +489,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testUploadTelemetryWaitsForAcceptedOutcome() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenATelemetrySenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenATelemetrySenderForOutcome(outcome.future());
         final CoapServer server = getCoapServer(false);
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
@@ -526,8 +527,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testMessageLimitExceededForATelemetryMessage() {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenATelemetrySender(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenATelemetrySender(outcome.future());
 
         final CoapServer server = getCoapServer(false);
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
@@ -565,8 +566,8 @@ public class AbstractVertxBasedCoapAdapterTest {
     public void testMessageLimitExceededForAnEventMessage() {
 
         // GIVEN an adapter with a downstream event consumer attached
-        final Future<ProtonDelivery> outcome = Future.future();
-        givenAnEventSenderForOutcome(outcome);
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        givenAnEventSenderForOutcome(outcome.future());
 
         final CoapServer server = getCoapServer(false);
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
