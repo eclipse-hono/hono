@@ -42,6 +42,7 @@ import org.springframework.stereotype.Service;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -85,15 +86,19 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     @Override
     protected void doStart(final Future<Void> startFuture) {
+
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(startFuture);
+
         if (tokenFactory == null) {
-            startFuture.fail("token factory must be set");
+            result.fail("token factory must be set");
         } else {
             try {
                 loadPermissions();
-                startFuture.complete();
+                result.complete();
             } catch (final IOException e) {
                 log.error("cannot load permissions from resource {}", getConfig().getPermissionsPath(), e);
-                startFuture.fail(e);
+                result.fail(e);
             }
         }
     }

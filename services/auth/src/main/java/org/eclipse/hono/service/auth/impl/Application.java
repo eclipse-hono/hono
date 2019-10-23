@@ -23,6 +23,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 /**
  * A Spring Boot application exposing an AMQP based endpoint for retrieving a JSON Web Token for
@@ -56,7 +57,7 @@ public class Application extends AbstractApplication {
     @Override
     protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         if (authenticationService == null) {
             result.fail("no authentication service implementation configured");
         } else {
@@ -69,7 +70,7 @@ public class Application extends AbstractApplication {
                 }
             });
         }
-        return result;
+        return result.future();
     }
 
     /**
