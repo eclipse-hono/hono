@@ -30,6 +30,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -100,11 +101,11 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             log.debug("creating tenant [{}]", tenantId.orElse("<auto>"));
 
             final Span span = Util.newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
-            final Future<OperationResult<Id>> addResult = Future.future();
+            final Promise<OperationResult<Id>> addResult = Promise.promise();
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
             getService().add(tenantId, payload, span, addResult);
-            return addResult.map(res -> {
+            return addResult.future().map(res -> {
                 final String createdTenantId = Optional.ofNullable(res.getPayload()).map(Id::getId).orElse(null);
                 return res.createResponse(request, JsonObject::mapFrom).setTenant(createdTenantId);
             });
@@ -128,12 +129,12 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         } else if (isValidRequestPayload(payload)) {
             log.debug("updating tenant [{}]", tenantId);
 
-            final Future<OperationResult<Void>> updateResult = Future.future();
+            final Promise<OperationResult<Void>> updateResult = Promise.promise();
             final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
             getService().update(tenantId, payload, resourceVersion, span, updateResult);
-            return updateResult.map(res -> {
+            return updateResult.future().map(res -> {
                 return res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId);
 
             });
@@ -155,11 +156,11 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("deleting tenant [{}]", tenantId);
-            final Future<Result<Void>> removeResult = Future.future();
+            final Promise<Result<Void>> removeResult = Promise.promise();
             final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
             getService().remove(tenantId, resourceVersion, span, removeResult);
-            return removeResult.map(res -> {
+            return removeResult.future().map(res -> {
                 return res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId);
 
             });
@@ -177,11 +178,11 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         } else {
 
             log.debug("retrieving tenant [id: {}]", tenantId);
-            final Future<OperationResult<Tenant>> getResult = Future.future();
+            final Promise<OperationResult<Tenant>> getResult = Promise.promise();
             final Span span = Util.newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
             getService().read(tenantId, span, getResult);
-            return getResult.map(res -> {
+            return getResult.future().map(res -> {
                 return res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId);
             });
         }

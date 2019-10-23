@@ -36,6 +36,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
 
@@ -166,7 +167,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
                 .withTag(TracingHelper.TAG_CREDENTIALS_TYPE.getKey(), deviceCredentials.getType())
                 .start();
 
-        final Future<Device> result = Future.future();
+        final Promise<Device> result = Promise.promise();
         if (!deviceCredentials.getAuthId().equals(credentialsOnRecord.getAuthId())) {
             currentSpan.log(String.format(
                     "Credentials service returned wrong credentials-on-record [auth-id: %s]",
@@ -183,12 +184,13 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
         } else {
             doValidateCredentials(deviceCredentials, credentialsOnRecord).setHandler(result);
         }
-        return result
+        return result.future()
                 .map(device -> {
                     currentSpan.log("validation of credentials succeeded");
                     currentSpan.finish();
                     return device;
-                }).recover(t -> {
+                })
+                .recover(t -> {
                     currentSpan.log("validation of credentials failed");
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();

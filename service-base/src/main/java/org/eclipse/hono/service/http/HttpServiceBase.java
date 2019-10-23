@@ -33,6 +33,7 @@ import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -300,7 +301,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     private Future<HttpServer> bindSecureHttpServer(final Router router) {
 
         if (isSecurePortEnabled()) {
-            final Future<HttpServer> result = Future.future();
+            final Promise<HttpServer> result = Promise.promise();
             final String bindAddress = server == null ? getConfig().getBindAddress() : "?";
             if (server == null) {
                 server = vertx.createHttpServer(getHttpServerOptions());
@@ -319,7 +320,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
                     result.fail(bindAttempt.cause());
                 }
             });
-            return result;
+            return result.future();
         } else {
             return Future.succeededFuture();
         }
@@ -328,7 +329,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     private Future<HttpServer> bindInsecureHttpServer(final Router router) {
 
         if (isInsecurePortEnabled()) {
-            final Future<HttpServer> result = Future.future();
+            final Promise<HttpServer> result = Promise.promise();
             final String bindAddress = insecureServer == null ? getConfig().getInsecurePortBindAddress() : "?";
             if (insecureServer == null) {
                 insecureServer = vertx.createHttpServer(getInsecureHttpServerOptions());
@@ -347,7 +348,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
                     result.fail(bindAttempt.cause());
                 }
             });
-            return result;
+            return result.future();
         } else {
             return Future.succeededFuture();
         }
@@ -355,10 +356,10 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     private Future<Router> startEndpoints() {
 
-        final Future<Router> startFuture = Future.future();
+        final Promise<Router> startPromise = Promise.promise();
         final Router router = createRouter();
         if (router == null) {
-            startFuture.fail("no router configured");
+            startPromise.fail("no router configured");
         } else {
             addEndpointRoutes(router);
             addCustomRoutes(router);
@@ -371,18 +372,18 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             }
             CompositeFuture.all(endpointFutures).setHandler(startup -> {
                 if (startup.succeeded()) {
-                    startFuture.complete(router);
+                    startPromise.complete(router);
                 } else {
-                    startFuture.fail(startup.cause());
+                    startPromise.fail(startup.cause());
                 }
             });
         }
-        return startFuture;
+        return startPromise.future();
     }
 
     private Future<Void> stopEndpoints() {
 
-        final Future<Void> stopFuture = Future.future();
+        final Promise<Void> stopPromise = Promise.promise();
         @SuppressWarnings("rawtypes")
         final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
@@ -392,12 +393,12 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         }
         CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
             if (shutdown.succeeded()) {
-                stopFuture.complete();
+                stopPromise.complete();
             } else {
-                stopFuture.fail(shutdown.cause());
+                stopPromise.fail(shutdown.cause());
             }
         });
-        return stopFuture;
+        return stopPromise.future();
 
     }
 
@@ -413,25 +414,25 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     private Future<Void> stopServer() {
-        final Future<Void> serverStopTracker = Future.future();
+        final Promise<Void> serverStopTracker = Promise.promise();
         if (server != null) {
             log.info("stopping secure HTTP server [{}:{}]", getBindAddress(), getActualPort());
             server.close(serverStopTracker);
         } else {
             serverStopTracker.complete();
         }
-        return serverStopTracker;
+        return serverStopTracker.future();
     }
 
     private Future<Void> stopInsecureServer() {
-        final Future<Void> insecureServerStopTracker = Future.future();
+        final Promise<Void> insecureServerStopTracker = Promise.promise();
         if (insecureServer != null) {
             log.info("stopping insecure HTTP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
             insecureServer.close(insecureServerStopTracker);
         } else {
             insecureServerStopTracker.complete();
         }
-        return insecureServerStopTracker;
+        return insecureServerStopTracker.future();
     }
 
     /**

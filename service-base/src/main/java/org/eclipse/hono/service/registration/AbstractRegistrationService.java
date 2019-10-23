@@ -30,6 +30,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -103,10 +104,11 @@ public abstract class AbstractRegistrationService implements RegistrationService
         Objects.requireNonNull(span);
         Objects.requireNonNull(resultHandler);
 
-        final Future<RegistrationResult> getResultTracker = Future.future();
+        final Promise<RegistrationResult> getResultTracker = Promise.promise();
         getDevice(tenantId, deviceId, span, getResultTracker);
 
-        getResultTracker.compose(result -> {
+        getResultTracker.future()
+        .compose(result -> {
             if (isDeviceEnabled(result)) {
                 final JsonObject deviceData = result.getPayload().getJsonObject(RegistrationConstants.FIELD_DATA);
                 return Future.succeededFuture(createSuccessfulRegistrationResult(tenantId, deviceId, deviceData));
@@ -147,16 +149,17 @@ public abstract class AbstractRegistrationService implements RegistrationService
         Objects.requireNonNull(span);
         Objects.requireNonNull(resultHandler);
 
-        final Future<RegistrationResult> deviceInfoTracker = Future.future();
-        final Future<RegistrationResult> gatewayInfoTracker = Future.future();
+        final Promise<RegistrationResult> deviceInfoTracker = Promise.promise();
+        final Promise<RegistrationResult> gatewayInfoTracker = Promise.promise();
 
         getDevice(tenantId, deviceId, span, deviceInfoTracker);
         getDevice(tenantId, gatewayId, span, gatewayInfoTracker);
 
-        CompositeFuture.all(deviceInfoTracker, gatewayInfoTracker).compose(ok -> {
+        CompositeFuture.all(deviceInfoTracker.future(), gatewayInfoTracker.future())
+        .compose(ok -> {
 
-            final RegistrationResult deviceResult = deviceInfoTracker.result();
-            final RegistrationResult gatewayResult = gatewayInfoTracker.result();
+            final RegistrationResult deviceResult = deviceInfoTracker.future().result();
+            final RegistrationResult gatewayResult = gatewayInfoTracker.future().result();
 
             if (!isDeviceEnabled(deviceResult)) {
                 log.debug("device not enabled");

@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxTestContext;
@@ -76,12 +77,12 @@ public abstract class AbstractTenantServiceTest {
 
         addTenant("tenant")
         .compose(ok -> {
-                    final Future<OperationResult<Id>> result = Future.future();
+                    final Promise<OperationResult<Id>> result = Promise.promise();
                     getTenantManagementService().add(
                     Optional.of("tenant"),
                     buildTenantPayload(), NoopSpan.INSTANCE,
                             result);
-            return result;
+            return result.future();
         })
         .map(r -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_CONFLICT, r.getStatus());
@@ -351,10 +352,10 @@ public abstract class AbstractTenantServiceTest {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
             });
-            final Future<TenantResult<JsonObject>> result = Future.future();
+            final Promise<TenantResult<JsonObject>> result = Promise.promise();
             // WHEN retrieving the tenant using the Tenant API
             getTenantService().get("tenant", null, result);
-            return result;
+            return result.future();
         })
         .setHandler(ctx.succeeding(response -> {
             // THEN the properties of the originally registered tenant
@@ -484,9 +485,9 @@ public abstract class AbstractTenantServiceTest {
         addTenant("tenant")
         .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
         .compose(ok -> {
-            final Future<Result<Void>> result = Future.future();
+            final Promise<Result<Void>> result = Promise.promise();
             getTenantManagementService().remove("tenant", Optional.empty(), NoopSpan.INSTANCE, result);
-            return result;
+            return result.future();
         })
         .compose(s -> {
             ctx.verify(() -> {
@@ -511,7 +512,7 @@ public abstract class AbstractTenantServiceTest {
 
         addTenant("tenant", origPayload)
         .compose(ok -> {
-            final Future<OperationResult<Void>> updateResult = Future.future();
+            final Promise<OperationResult<Void>> updateResult = Promise.promise();
             final JsonObject updatedPayload = origPayload.copy();
             updatedPayload.put(RegistryManagementConstants.FIELD_EXT, extensions);
             getTenantManagementService().update(
@@ -520,14 +521,14 @@ public abstract class AbstractTenantServiceTest {
                     Optional.empty(),
                     NoopSpan.INSTANCE,
                     updateResult);
-            return updateResult;
+            return updateResult.future();
         }).compose(updateResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
             });
-            final Future<TenantResult<JsonObject>> getResult = Future.future();
+            final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
             getTenantService().get("tenant", null, getResult);
-            return getResult;
+            return getResult.future();
         }).setHandler(ctx.succeeding(getResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_OK, getResult.getStatus());
@@ -562,14 +563,14 @@ public abstract class AbstractTenantServiceTest {
         .compose(ok -> {
             // WHEN updating the second tenant to use the same CA as the first tenant
             tenantTwo.setTrustedCertificateAuthorities(List.of(trustedCa));
-            final Future<OperationResult<Void>> result = Future.future();
+            final Promise<OperationResult<Void>> result = Promise.promise();
             getTenantManagementService().update(
                     "tenantTwo",
                     JsonObject.mapFrom(tenantTwo),
                             null,
                             NoopSpan.INSTANCE,
                             result);
-            return result;
+            return result.future();
         })
         .setHandler(ctx.succeeding(s -> {
             ctx.verify(() -> {
@@ -613,9 +614,9 @@ public abstract class AbstractTenantServiceTest {
             final String tenantId,
             final int expectedStatusCode) {
 
-        final Future<OperationResult<Tenant>> result = Future.future();
+        final Promise<OperationResult<Tenant>> result = Promise.promise();
         svc.read(tenantId, NoopSpan.INSTANCE, result);
-        return result.map(r -> {
+        return result.future().map(r -> {
             if (r.getStatus() == expectedStatusCode) {
                 return r;
             } else {
@@ -655,9 +656,9 @@ public abstract class AbstractTenantServiceTest {
      */
     protected Future<OperationResult<Id>> addTenant(final String tenantId, final JsonObject payload) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         getTenantManagementService().add(Optional.ofNullable(tenantId), payload, NoopSpan.INSTANCE, result);
-        return result.map(response -> {
+        return result.future().map(response -> {
             if (response.getStatus() == HttpURLConnection.HTTP_CREATED) {
                 return response;
             } else {

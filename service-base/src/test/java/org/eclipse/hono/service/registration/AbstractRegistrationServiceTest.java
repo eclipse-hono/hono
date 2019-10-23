@@ -43,6 +43,7 @@ import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
@@ -119,23 +120,25 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testDuplicateRegistrationFails(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.map(response -> {
+        result.future()
+        .map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
-        }).compose(ok -> {
-            final Future<OperationResult<Id>> addResult = Future.future();
+        })
+        .compose(ok -> {
+            final Promise<OperationResult<Id>> addResult = Promise.promise();
             getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, addResult);
-            return addResult;
-        }).setHandler(
-                ctx.succeeding(response -> ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_CONFLICT, response.getStatus());
-                    register.flag();
-                })));
+            return addResult.future();
+        })
+        .setHandler(ctx.succeeding(response -> ctx.verify(() -> {
+            assertEquals(HttpURLConnection.HTTP_CONFLICT, response.getStatus());
+            register.flag();
+        })));
     }
 
     /**
@@ -146,19 +149,19 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testGetSucceedsForRegisteredDevice(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> addResult = Future.future();
+        final Promise<OperationResult<Id>> addResult = Promise.promise();
 
         getDeviceManagementService()
                 .createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, addResult);
 
-        addResult
+        addResult.future()
                 .map(r -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
                 }))
                 .compose(ok -> {
-                    final Future<OperationResult<Device>> getResult = Future.future();
+                    final Promise<OperationResult<Device>> getResult = Promise.promise();
                     getDeviceManagementService().readDevice(TENANT, DEVICE, NoopSpan.INSTANCE, getResult);
-                    return getResult;
+                    return getResult.future();
                 })
                 .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
@@ -186,19 +189,19 @@ public abstract class AbstractRegistrationServiceTest {
         final Device device = new Device();
         device.setVia(vias);
 
-        final Future<OperationResult<Id>> addResult = Future.future();
+        final Promise<OperationResult<Id>> addResult = Promise.promise();
 
         getDeviceManagementService()
                 .createDevice(TENANT, Optional.of(deviceId), device, NoopSpan.INSTANCE, addResult);
 
-        addResult
+        addResult.future()
                 .map(r -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
                 }))
                 .compose(ok -> {
-                    final Future<OperationResult<Device>> getResult = Future.future();
+                    final Promise<OperationResult<Device>> getResult = Promise.promise();
                     getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE, getResult);
-                    return getResult;
+                    return getResult.future();
                 })
                 .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
@@ -230,30 +233,30 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testGetReturnsCopyOfOriginalData(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> addResult = Future.future();
-        final Future<OperationResult<Device>> getResult = Future.future();
+        final Promise<OperationResult<Id>> addResult = Promise.promise();
+        final Promise<OperationResult<Device>> getResult = Promise.promise();
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, addResult);
-        addResult
+        addResult.future()
                 .compose(r -> {
                     ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus()));
                     getDeviceManagementService().readDevice(TENANT, DEVICE, NoopSpan.INSTANCE, getResult);
-                    return getResult;
+                    return getResult.future();
                 })
                 .compose(r -> {
                     ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_OK, r.getStatus()));
                     r.getPayload().setExtensions(new HashMap<>());
                     r.getPayload().getExtensions().put("new-prop", true);
 
-                    final Future<OperationResult<Device>> secondGetResult = Future.future();
+                    final Promise<OperationResult<Device>> secondGetResult = Promise.promise();
                     getDeviceManagementService().readDevice(TENANT, DEVICE, NoopSpan.INSTANCE, secondGetResult);
-                    return secondGetResult;
+                    return secondGetResult.future();
                 })
                 .setHandler(ctx.succeeding(secondGetResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_OK, secondGetResult.getStatus());
-                        assertNotNull(getResult.result().getPayload().getExtensions().get("new-prop"));
-                        assertNotEquals(getResult.result().getPayload(), secondGetResult.getPayload());
+                        assertNotNull(getResult.future().result().getPayload().getExtensions().get("new-prop"));
+                        assertNotEquals(getResult.future().result().getPayload(), secondGetResult.getPayload());
                         assertNotNull(secondGetResult.getPayload());
                         assertNotNull(secondGetResult.getPayload().getExtensions());
                         assertTrue(secondGetResult.getPayload().getExtensions().isEmpty());
@@ -270,22 +273,23 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testGetFailsForDeregisteredDevice(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint get = ctx.checkpoint(3);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.compose(response -> {
+        result.future()
+        .compose(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             get.flag();
-            final Future<Result<Void>> deregisterResult = Future.future();
+            final Promise<Result<Void>> deregisterResult = Promise.promise();
             getDeviceManagementService().deleteDevice(TENANT, DEVICE, Optional.empty(), NoopSpan.INSTANCE, deregisterResult);
-            return deregisterResult;
+            return deregisterResult.future();
         }).compose(response -> {
             assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
             get.flag();
-            final Future<OperationResult<Device>> getResult = Future.future();
+            final Promise<OperationResult<Device>> getResult = Promise.promise();
             getDeviceManagementService().readDevice(TENANT, DEVICE, NoopSpan.INSTANCE, getResult);
-            return getResult;
+            return getResult.future();
         }).setHandler(ctx.succeeding(response -> ctx.verify(() -> {
             assertEquals(HttpURLConnection.HTTP_NOT_FOUND, response.getStatus());
             get.flag();
@@ -301,10 +305,11 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testAddSucceedForMissingDeviceId(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
 
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE, result);
-        result.setHandler(ctx.succeeding(response -> ctx.verify(() -> {
+        result.future()
+        .setHandler(ctx.succeeding(response -> ctx.verify(() -> {
             final String deviceId = response.getPayload().getId();
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             assertNotNull(deviceId);
@@ -321,10 +326,11 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testAddSucceedAndContainsResourceVersion(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.setHandler(ctx.succeeding(response -> ctx.verify(() -> {
+        result.future()
+        .setHandler(ctx.succeeding(response -> ctx.verify(() -> {
             final String deviceId = response.getPayload().getId();
             final String resourceVersion = response.getResourceVersion().orElse(null);
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
@@ -342,16 +348,17 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testUpdateFailsWithInvalidResourceVersion(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.map(response -> {
+        result.future()
+        .map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
         }).compose(rr -> {
-            final Future<OperationResult<Id>> update = Future.future();
+            final Promise<OperationResult<Id>> update = Promise.promise();
             final String resourceVersion = rr.getResourceVersion().orElse(null);
 
             getDeviceManagementService().updateDevice(
@@ -359,7 +366,7 @@ public abstract class AbstractRegistrationServiceTest {
                     new JsonObject().put("ext", new JsonObject().put("customKey", "customValue")).mapTo(Device.class),
                     Optional.of(resourceVersion + "abc"), NoopSpan.INSTANCE,
                     update);
-            return update;
+            return update.future();
         }).setHandler(
                 ctx.succeeding(response -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, response.getStatus());
@@ -375,23 +382,24 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testUpdateSucceedWithMissingResourceVersion(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.map(response -> {
+        result.future()
+        .map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
         }).compose(rr -> {
-            final Future<OperationResult<Id>> update = Future.future();
+            final Promise<OperationResult<Id>> update = Promise.promise();
 
             getDeviceManagementService().updateDevice(
                     TENANT, DEVICE,
                     new JsonObject().put("ext", new JsonObject().put("customKey", "customValue")).mapTo(Device.class),
                     Optional.empty(), NoopSpan.INSTANCE,
                     update);
-            return update;
+            return update.future();
         }).setHandler(
                 ctx.succeeding(response -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
@@ -407,17 +415,18 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testUpdateSucceedWithCorrectResourceVersion(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint register = ctx.checkpoint(2);
         final JsonObject version = new JsonObject();
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.map(response -> {
+        result.future()
+        .map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
         }).compose(rr -> {
-            final Future<OperationResult<Id>> update = Future.future();
+            final Promise<OperationResult<Id>> update = Promise.promise();
             final String resourceVersion = rr.getResourceVersion().orElse(null);
             version.put("1", resourceVersion);
 
@@ -426,7 +435,7 @@ public abstract class AbstractRegistrationServiceTest {
                     new JsonObject().put("ext", new JsonObject().put("customKey", "customValue")).mapTo(Device.class),
                     Optional.of(resourceVersion), NoopSpan.INSTANCE,
                     update);
-            return update;
+            return update.future();
         }).setHandler(
                 ctx.succeeding(response -> ctx.verify(() -> {
                     final String secondResourceVersion = response.getResourceVersion().orElse(null);
@@ -445,20 +454,21 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testDeleteSucceedWithMissingResourceVersion(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.map(response -> {
+        result.future()
+        .map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
         }).compose(rr -> {
-            final Future<Result<Void>> update = Future.future();
+            final Promise<Result<Void>> update = Promise.promise();
 
             getDeviceManagementService().deleteDevice(
                     TENANT, DEVICE, Optional.empty(), NoopSpan.INSTANCE, update);
-            return update;
+            return update.future();
         }).setHandler(
                 ctx.succeeding(response -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
@@ -474,21 +484,22 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testDeleteSucceedWithCorrectResourceVersion(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.map(response -> {
+        result.future()
+        .map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
         }).compose(rr -> {
-            final Future<Result<Void>> update = Future.future();
+            final Promise<Result<Void>> update = Promise.promise();
             final String resourceVersion = rr.getResourceVersion().orElse(null);
 
             getDeviceManagementService().deleteDevice(
                     TENANT, DEVICE, Optional.of(resourceVersion), NoopSpan.INSTANCE, update);
-            return update;
+            return update.future();
         }).setHandler(
                 ctx.succeeding(response -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, response.getStatus());
@@ -504,21 +515,22 @@ public abstract class AbstractRegistrationServiceTest {
     @Test
     public void testDeleteFailsWithInvalidResourceVersion(final VertxTestContext ctx) {
 
-        final Future<OperationResult<Id>> result = Future.future();
+        final Promise<OperationResult<Id>> result = Promise.promise();
         final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE, result);
-        result.map(response -> {
+        result.future()
+        .map(response -> {
             assertEquals(HttpURLConnection.HTTP_CREATED, response.getStatus());
             register.flag();
             return response;
         }).compose(rr -> {
-            final Future<Result<Void>> update = Future.future();
+            final Promise<Result<Void>> update = Promise.promise();
             final String resourceVersion = rr.getResourceVersion().orElse(null);
 
             getDeviceManagementService().deleteDevice(
                     TENANT, DEVICE, Optional.of(resourceVersion+10), NoopSpan.INSTANCE, update);
-            return update;
+            return update.future();
         }).setHandler(
                 ctx.succeeding(response -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, response.getStatus());
@@ -535,15 +547,16 @@ public abstract class AbstractRegistrationServiceTest {
      * @return A succeeded future if the device is registered.
      */
     protected final Future<?> assertCanReadDevice(final String tenantId, final String deviceId) {
-        final Future<OperationResult<Device>> result = Future.future();
+        final Promise<OperationResult<Device>> result = Promise.promise();
         getDeviceManagementService().readDevice(tenantId, deviceId, NoopSpan.INSTANCE, result);
-        return result.map(r -> {
-            if (r.getStatus() == HttpURLConnection.HTTP_OK) {
-                return r;
-            } else {
-                throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
-            }
-        });
+        return result.future()
+                .map(r -> {
+                    if (r.getStatus() == HttpURLConnection.HTTP_OK) {
+                        return r;
+                    } else {
+                        throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
+                    }
+                });
     }
 
     /**
@@ -563,12 +576,12 @@ public abstract class AbstractRegistrationServiceTest {
 
         // read management data
 
-        final Future<OperationResult<Device>> f1 = Future.future();
+        final Promise<OperationResult<Device>> f1 = Promise.promise();
         getDeviceManagementService().readDevice(tenant, deviceId, NoopSpan.INSTANCE, f1);
 
         // read adapter data
 
-        final Future<RegistrationResult> f2 = Future.future();
+        final Promise<RegistrationResult> f2 = Promise.promise();
         if (gatewayId.isPresent()) {
             getRegistrationService().assertRegistration(tenant, deviceId, gatewayId.get(), f2);
         } else {
@@ -576,11 +589,11 @@ public abstract class AbstractRegistrationServiceTest {
         }
 
         return CompositeFuture.all(
-                f1.map(r -> {
+                f1.future().map(r -> {
                     managementAssertions.handle(r);
                     return null;
                 }),
-                f2.map(r -> {
+                f2.future().map(r -> {
                     adapterAssertions.handle(r);
                     return null;
                 }));
@@ -665,9 +678,9 @@ public abstract class AbstractRegistrationServiceTest {
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {
 
             current = current.compose(ok -> {
-                final Future<OperationResult<Id>> f = Future.future();
+                final Promise<OperationResult<Id>> f = Promise.promise();
                 getDeviceManagementService().createDevice(TENANT, Optional.of(entry.getKey()), entry.getValue(), NoopSpan.INSTANCE, f);
-                return f.map(r -> {
+                return f.future().map(r -> {
                     assertEquals(HttpURLConnection.HTTP_CREATED, r.getStatus());
                     return null;
                 });

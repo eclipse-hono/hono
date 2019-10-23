@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.dns.DnsClient;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -132,11 +133,15 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
 
     @Override
     protected void doStart(final Future<Void> startFuture) {
+
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(startFuture);
+
         if (factory == null) {
-            startFuture.fail("no connection factory for Authentication service set");
+            result.fail(new IllegalStateException("no connection factory for Authentication service set"));
         } else {
             client = new AuthenticationServerClient(vertx, factory);
-            startFuture.complete();
+            result.complete();
         }
     }
 

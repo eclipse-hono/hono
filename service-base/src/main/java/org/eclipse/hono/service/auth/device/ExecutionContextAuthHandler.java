@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.User;
 
@@ -60,12 +61,12 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
     @Override
     public Future<DeviceUser> authenticateDevice(final T context) {
 
-        final Future<DeviceUser> result = Future.future();
+        final Promise<DeviceUser> result = Promise.promise();
         parseCredentials(context)
                 .compose(authInfo -> {
-                    final Future<User> authResult = Future.future();
+                    final Promise<User> authResult = Promise.promise();
                     getAuthProvider(context).authenticate(authInfo, authResult);
-                    return authResult;
+                    return authResult.future();
                 }).setHandler(authAttempt -> {
                     if (authAttempt.succeeded()) {
                         if (authAttempt.result() instanceof DeviceUser) {
@@ -79,7 +80,7 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
                         result.fail(authAttempt.cause());
                     }
                 });
-        return result;
+        return result.future();
     }
 
     private AuthProvider getAuthProvider(final T ctx) {

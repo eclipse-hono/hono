@@ -212,7 +212,7 @@ public class RequestResponseEndpointTest {
         verify(receiver, never()).close();
         verify(authService).isAuthorized(Constants.PRINCIPAL_ANONYMOUS, resource, "unauthorized");
         // but not forwarded to the service instance
-        verify(eventBus, never()).send(anyString(), any(), any(DeliveryOptions.class), any(Handler.class));
+        verify(eventBus, never()).request(anyString(), any(), any(DeliveryOptions.class), any(Handler.class));
         // and a response is sent to the client with status 403
         verify(sender).send(argThat(m -> hasStatusCode(m, HttpURLConnection.HTTP_FORBIDDEN)));
     }
@@ -259,7 +259,7 @@ public class RequestResponseEndpointTest {
         verify(delivery).disposition(argThat(d -> d instanceof Accepted), booleanThat(is(Boolean.TRUE)));
         // and forwarded to the service instance
         final ArgumentCaptor<Handler<AsyncResult<io.vertx.core.eventbus.Message<Object>>>> replyHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(eventBus).send(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), replyHandler.capture());
+        verify(eventBus).request(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), replyHandler.capture());
 
         // WHEN the service invocation times out
         replyHandler.getValue().handle(Future.failedFuture(error));
@@ -295,7 +295,7 @@ public class RequestResponseEndpointTest {
         verify(delivery).disposition(argThat(d -> d instanceof Accepted), booleanThat(is(Boolean.TRUE)));
 
         // and not forwarded to the service instance
-        verify(eventBus, never()).send(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), any(Handler.class));
+        verify(eventBus, never()).request(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), any(Handler.class));
 
         // and a response with the expected status is sent to the client
         verify(sender).send(argThat(m -> hasStatusCode(m, HttpURLConnection.HTTP_BAD_REQUEST)));
@@ -332,7 +332,7 @@ public class RequestResponseEndpointTest {
         verify(authService).isAuthorized(Constants.PRINCIPAL_ANONYMOUS, resource, "get");
         // and forwarded to the service instance
         final ArgumentCaptor<Handler<AsyncResult<io.vertx.core.eventbus.Message<Object>>>> replyHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(eventBus).send(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), replyHandler.capture());
+        verify(eventBus).request(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), replyHandler.capture());
 
         // WHEN the service implementation sends the response
         final EventBusMessage response = EventBusMessage.forStatusCode(HttpURLConnection.HTTP_ACCEPTED);

@@ -30,6 +30,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -141,21 +142,22 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
         log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         TracingHelper.TAG_AUTH_ID.set(span, authId);
-        final Future<CredentialsResult<JsonObject>> result = Future.future();
+        final Promise<CredentialsResult<JsonObject>> result = Promise.promise();
         getService().get(tenantId, type, authId, payload, span, result);
-        return result.map(res -> {
-            final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
-                    .map(p -> getTypesafeValueForField(String.class, p,
-                            TenantConstants.FIELD_PAYLOAD_DEVICE_ID))
-                    .orElse(null);
-            if (deviceIdFromPayload != null) {
-                span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdFromPayload);
-            }
-            return request.getResponse(res.getStatus())
-                    .setDeviceId(deviceIdFromPayload)
-                    .setJsonPayload(res.getPayload())
-                    .setCacheDirective(res.getCacheDirective());
-        });
+        return result.future()
+                .map(res -> {
+                    final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
+                            .map(p -> getTypesafeValueForField(String.class, p,
+                                    TenantConstants.FIELD_PAYLOAD_DEVICE_ID))
+                            .orElse(null);
+                    if (deviceIdFromPayload != null) {
+                        span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdFromPayload);
+                    }
+                    return request.getResponse(res.getStatus())
+                            .setDeviceId(deviceIdFromPayload)
+                            .setJsonPayload(res.getPayload())
+                            .setCacheDirective(res.getCacheDirective());
+                });
     }
 
     /**

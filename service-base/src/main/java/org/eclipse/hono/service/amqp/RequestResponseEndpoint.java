@@ -41,6 +41,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.ReplyException;
@@ -241,14 +242,14 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             }
         })
         .compose(authorized -> {
-            final Future<io.vertx.core.eventbus.Message<Object>> reply = Future.future();
+            final Promise<io.vertx.core.eventbus.Message<Object>> reply = Promise.promise();
             final DeliveryOptions options = createEventBusMessageDeliveryOptions(currentSpan.context());
-            vertx.eventBus().send(
+            vertx.eventBus().request(
                     getEventBusServiceAddress(),
                     request.result().toJson(),
                     options,
                     reply);
-            return reply;
+            return reply.future();
         })
         .map(reply -> extractResponse(reply))
         .compose(eventBusMessage -> filterResponse(clientPrincipal, eventBusMessage))
@@ -425,7 +426,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
     private Future<ProtonSender> getSenderForConnection(final ProtonConnection con, final String replytoAddress) {
 
-        final Future<ProtonSender> result = Future.future();
+        final Promise<ProtonSender> result = Promise.promise();
         final ProtonSender sender = replyToSenderMap.get(replytoAddress);
         if (sender != null && sender.isOpen() && sender.getSession().getConnection() == con) {
             result.complete(sender);
@@ -434,7 +435,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
                     HttpURLConnection.HTTP_PRECON_FAILED,
                     "must open receiver link for reply-to address first"));
         }
-        return result;
+        return result.future();
     }
 
     private void registerSenderForReplyTo(final String replyTo, final ProtonSender sender) {

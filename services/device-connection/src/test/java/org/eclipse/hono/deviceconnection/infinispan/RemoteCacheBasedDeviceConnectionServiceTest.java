@@ -39,6 +39,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -90,10 +91,10 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
 
-        final Future<Void> startFuture = Future.future();
+        final Promise<Void> startPromise = Promise.promise();
         svc.init(vertx, ctx);
-        svc.start(startFuture);
-        return startFuture;
+        svc.start(startPromise);
+        return startPromise.future();
     }
 
     /**

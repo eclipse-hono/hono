@@ -41,6 +41,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
@@ -251,15 +252,9 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             log.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.start());
         }
-        final Future<Void> startFuture = Future.future();
-        CompositeFuture.all(endpointFutures).setHandler(startup -> {
-            if (startup.succeeded()) {
-                startFuture.complete();
-            } else {
-                startFuture.fail(startup.cause());
-            }
-        });
-        return startFuture;
+        return CompositeFuture.all(endpointFutures)
+                .map(ok -> (Void) null)
+                .recover(t -> Future.failedFuture(t));
     }
 
     private Future<Void> stopEndpoints() {
@@ -271,22 +266,16 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             log.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
-        final Future<Void> stopFuture = Future.future();
-        CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
-            if (shutdown.succeeded()) {
-                stopFuture.complete();
-            } else {
-                stopFuture.fail(shutdown.cause());
-            }
-        });
-        return stopFuture;
+        return CompositeFuture.all(endpointFutures)
+                .map(ok -> (Void) null)
+                .recover(t -> Future.failedFuture(t));
     }
 
     private Future<Void> startInsecureServer() {
 
         if (isInsecurePortEnabled()) {
             final int insecurePort = determineInsecurePort();
-            final Future<Void> result = Future.future();
+            final Promise<Void> result = Promise.promise();
             final ProtonServerOptions options = createInsecureServerOptions();
             insecureServer = createProtonServer(options)
                     .connectHandler(this::onRemoteConnectionOpenInsecurePort)
@@ -304,7 +293,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                             result.fail(bindAttempt.cause());
                         }
                     });
-            return result;
+            return result.future();
         } else {
             log.info("insecure port is not enabled");
             return Future.succeededFuture();
@@ -315,7 +304,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
         if (isSecurePortEnabled()) {
             final int securePort = determineSecurePort();
-            final Future<Void> result = Future.future();
+            final Promise<Void> result = Promise.promise();
             final ProtonServerOptions options = createServerOptions();
             server = createProtonServer(options)
                     .connectHandler(this::onRemoteConnectionOpen)
@@ -333,7 +322,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                             result.fail(bindAttempt.cause());
                         }
                     });
-            return result;
+            return result.future();
         } else {
             log.info("secure port is not enabled");
             return Future.succeededFuture();
@@ -394,7 +383,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     private Future<Void> stopServer() {
 
-        final Future<Void> secureTracker = Future.future();
+        final Promise<Void> secureTracker = Promise.promise();
 
         if (server != null) {
             log.info("stopping secure AMQP server [{}:{}]", getBindAddress(), getActualPort());
@@ -402,12 +391,12 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         } else {
             secureTracker.complete();
         }
-        return secureTracker;
+        return secureTracker.future();
     }
 
     private Future<Void> stopInsecureServer() {
 
-        final Future<Void> insecureTracker = Future.future();
+        final Promise<Void> insecureTracker = Promise.promise();
 
         if (insecureServer != null) {
             log.info("stopping insecure AMQP server [{}:{}]", getInsecurePortBindAddress(), getActualInsecurePort());
@@ -415,7 +404,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         } else {
             insecureTracker.complete();
         }
-        return insecureTracker;
+        return insecureTracker.future();
     }
 
     @Override

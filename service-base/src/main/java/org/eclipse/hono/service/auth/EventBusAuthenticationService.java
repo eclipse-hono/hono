@@ -69,7 +69,7 @@ public final class EventBusAuthenticationService implements AuthenticationServic
     public void authenticate(final JsonObject authRequest, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
 
         final DeliveryOptions options = new DeliveryOptions().setSendTimeout(AUTH_REQUEST_TIMEOUT_MILLIS);
-        vertx.eventBus().send(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authRequest, options, reply -> {
+        vertx.eventBus().request(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authRequest, options, reply -> {
             if (reply.succeeded()) {
                 final JsonObject result = (JsonObject) reply.result().body();
                 final String token = result.getString(AuthenticationConstants.FIELD_TOKEN);

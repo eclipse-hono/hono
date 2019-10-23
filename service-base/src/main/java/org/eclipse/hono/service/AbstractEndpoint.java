@@ -23,6 +23,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -73,13 +74,25 @@ public abstract class AbstractEndpoint implements Endpoint {
 
     @Override
     public final Future<Void> start() {
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         if (vertx == null) {
             result.fail(new IllegalStateException("Vert.x instance must be set"));
         } else {
             doStart(result);
         }
-        return result;
+        return result.future();
+    }
+
+    /**
+     * Subclasses should override this method to create required resources
+     * during startup.
+     * <p>
+     * This default implementation delegates to {@link #doStart(Future)}.
+     * 
+     * @param startPromise Completes if startup succeeded.
+     */
+    protected void doStart(final Promise<Void> startPromise) {
+        doStart(startPromise.future());
     }
 
     /**
@@ -89,16 +102,30 @@ public abstract class AbstractEndpoint implements Endpoint {
      * This implementation always completes the start future.
      * 
      * @param startFuture Completes if startup succeeded.
+     * @deprecated Override {@link #doStart(Promise)} instead.
      */
+    @Deprecated
     protected void doStart(final Future<Void> startFuture) {
         startFuture.complete();
     }
 
     @Override
     public final Future<Void> stop() {
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         doStop(result);
-        return result;
+        return result.future();
+    }
+
+    /**
+     * Subclasses should override this method to release resources
+     * during shutdown.
+     * <p>
+     * This default implementation delegates to {@link #doStop(Future)}.
+     * 
+     * @param stopPromise Completes if shutdown succeeded.
+     */
+    protected void doStop(final Promise<Void> stopPromise) {
+        doStop(stopPromise.future());
     }
 
     /**
@@ -108,7 +135,9 @@ public abstract class AbstractEndpoint implements Endpoint {
      * This implementation always completes the stop future.
      * 
      * @param stopFuture Completes if shutdown succeeded.
+     * @deprecated Override {@link #doStop(Promise)} instead.
      */
+    @Deprecated
     protected void doStop(final Future<Void> stopFuture) {
         stopFuture.complete();
     }

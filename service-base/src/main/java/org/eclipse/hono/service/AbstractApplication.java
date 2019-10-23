@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 /**
  * A base class for implementing Spring Boot applications.
@@ -87,12 +88,12 @@ public class AbstractApplication extends AbstractBaseApplication {
         for (final ObjectFactory<? extends AbstractServiceBase<?>> serviceFactory : serviceFactories) {
 
             for (int i = 1; i <= maxInstances; i++) {
-                final Future<String> deployTracker = Future.future();
+                final Promise<String> deployPromise = Promise.promise();
                 final AbstractServiceBase<?> serviceInstance = serviceFactory.getObject();
                 preDeploy(serviceInstance);
                 log.debug("deploying service instance #{} [type: {}]", i, serviceInstance.getClass().getName());
-                getVertx().deployVerticle(serviceInstance, deployTracker);
-                deploymentTracker.add(deployTracker.map(id -> {
+                getVertx().deployVerticle(serviceInstance, deployPromise);
+                deploymentTracker.add(deployPromise.future().map(id -> {
                     postDeploy(serviceInstance);
                     return id;
                 }));

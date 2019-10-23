@@ -82,6 +82,11 @@ public class Device {
         return this;
     }
 
+    /**
+     * Checks if this device is enabled.
+     * 
+     * @return {@code true} if this device is enabled.
+     */
     public Boolean getEnabled() {
         return enabled;
     }
@@ -112,6 +117,11 @@ public class Device {
         return this;
     }
 
+    /**
+     * Gets the extension properties for this device.
+     * 
+     * @return The extension properties.
+     */
     public Map<String, Object> getExtensions() {
         return this.extensions;
     }
@@ -127,16 +137,26 @@ public class Device {
         return this;
     }
 
+    /**
+     * Gets the default properties for this device.
+     *
+     * @return The default properties.
+     */
     public Map<String, Object> getDefaults() {
         return defaults;
     }
 
+    /**
+     * Gets the identifiers of the gateway devices that this device may connect via.
+     * 
+     * @return The identifiers.
+     */
     public List<String> getVia() {
         return via;
     }
 
     /**
-     * Sets the via property for this device.
+     * Sets the identifiers of the gateway devices that this device may connect via.
      * 
      * @param via The via property to set.
      * @return    a reference to this for fluent use.

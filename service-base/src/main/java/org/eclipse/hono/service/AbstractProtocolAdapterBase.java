@@ -73,6 +73,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -396,7 +397,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     protected final Future<Void> startInternal() {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
 
         if (Strings.isNullOrEmpty(getTypeName())) {
             result.fail(new IllegalStateException("adapter does not define a typeName"));
@@ -431,7 +432,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             });
             doStart(result);
         }
-        return result;
+        return result.future();
+    }
+
+    /**
+     * Invoked after the adapter has started up.
+     * <p>
+     * This default implementation delegates to {@link #doStart(Future)}.
+     * <p>
+     * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
+     *
+     * @param startPromise The promise to complete once start up is complete.
+     */
+    protected void doStart(final Promise<Void> startPromise) {
+        doStart(startPromise.future());
     }
 
     /**
@@ -442,7 +456,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
      *
      * @param startFuture The future to complete once start up is complete.
+     * @deprecated Override {@link #doStart(Promise)} instead.
      */
+    @Deprecated
     protected void doStart(final Future<Void> startFuture) {
         startFuture.complete();
     }
@@ -451,19 +467,18 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<Void> stopInternal() {
 
         log.info("stopping protocol adapter");
-        final Future<Void> result = Future.future();
-        final Future<Void> doStopResult = Future.future();
-        doStop(doStopResult);
-        doStopResult
+        final Promise<Void> result = Promise.promise();
+        doStop(result);
+        return result.future()
                 .compose(s -> closeServiceClients())
                 .recover(t -> {
                     log.info("error while stopping protocol adapter", t);
                     return Future.failedFuture(t);
-                }).compose(s -> {
-                    result.complete();
+                })
+                .map(ok -> {
                     log.info("successfully stopped protocol adapter");
-                }, result);
-        return result;
+                    return null;
+                });
     }
 
     private Future<?> closeServiceClients() {
@@ -479,9 +494,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private Future<Void> disconnectFromService(final ConnectionLifecycle<HonoConnection> connection) {
 
-        final Future<Void> disconnectTracker = Future.future();
+        final Promise<Void> disconnectTracker = Promise.promise();
         connection.disconnect(disconnectTracker);
-        return disconnectTracker;
+        return disconnectTracker.future();
+    }
+
+    /**
+     * Invoked directly before the adapter is shut down.
+     * <p>
+     * This default implementation delegates to {@link #doStop(Future)}.
+     * <p>
+     * Subclasses should override this method to perform any work required before shutting down this protocol adapter.
+     *
+     * @param stopPromise The promise to complete once all work is done and shut down should commence.
+     */
+    protected void doStop(final Promise<Void> stopPromise) {
+        // to be overridden by subclasses
+        doStop(stopPromise.future());
     }
 
     /**
@@ -490,7 +519,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses should override this method to perform any work required before shutting down this protocol adapter.
      *
      * @param stopFuture The future to complete once all work is done and shut down should commence.
+     * @deprecated Override {@link #doStop(Promise)} instead.
      */
+    @Deprecated
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
         stopFuture.complete();
@@ -606,7 +637,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     protected final Future<ResourceIdentifier> validateAddress(final ResourceIdentifier address, final Device authenticatedDevice) {
 
         Objects.requireNonNull(address);
-        final Future<ResourceIdentifier> result = Future.future();
+        final Promise<ResourceIdentifier> result = Promise.promise();
 
         if (authenticatedDevice == null) {
             if (Strings.isNullOrEmpty(address.getTenantId()) || Strings.isNullOrEmpty(address.getResourceId())) {
@@ -630,7 +661,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 result.complete(address);
             }
         }
-        return result.recover(t -> {
+        return result.future().recover(t -> {
             log.debug("validation failed for address [{}], device [{}]: {}", address, authenticatedDevice, t.getMessage());
             return Future.failedFuture(t);
         });
@@ -1005,10 +1036,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty();
     }
 
-    private Future<String> getGatewayId(final String tenantId, final String deviceId,
+    private Future<String> getGatewayId(
+            final String tenantId,
+            final String deviceId,
             final Device authenticatedDevice) {
 
-        final Future<String> result = Future.future();
+        final Promise<String> result = Promise.promise();
         if (authenticatedDevice == null) {
             result.complete(null);
         } else if (tenantId.equals(authenticatedDevice.getTenantId())) {
@@ -1021,7 +1054,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
                     "cannot publish data for device of other tenant"));
         }
-        return result;
+        return result.future();
     }
 
     /**

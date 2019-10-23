@@ -308,7 +308,7 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
             final BiConsumer<Integer, EventBusMessage> responseHandler) {
 
         final DeliveryOptions options = createEventBusMessageDeliveryOptions(TracingHandler.serverSpanContext(ctx));
-        vertx.eventBus().send(getEventBusAddress(), requestMsg, options, invocation -> {
+        vertx.eventBus().request(getEventBusAddress(), requestMsg, options, invocation -> {
             if (invocation.failed()) {
                 HttpUtils.serviceUnavailable(ctx, 2);
             } else {
