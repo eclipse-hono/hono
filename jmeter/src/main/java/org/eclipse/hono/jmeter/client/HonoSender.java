@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -208,8 +209,9 @@ public class HonoSender extends AbstractClient {
 
         final Future<DownstreamSender> senderFuture = getSender(endpoint, tenant);
         final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
-        final Future<ProtonDelivery> deliveryTracker = Future.future();
-        deliveryTracker.setHandler(s -> {
+        final Promise<ProtonDelivery> deliveryTracker = Promise.promise();
+        deliveryTracker.future()
+        .setHandler(s -> {
             if (s.succeeded()) {
                 sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", endpoint, tenant, deviceId));
                 sampleResult.setSentBytes(payload.length);
@@ -279,7 +281,7 @@ public class HonoSender extends AbstractClient {
                 String uncompletedFutureHint = "";
                 if (e instanceof TimeoutException) {
                     uncompletedFutureHint = !senderFuture.isComplete() ? " - timeout waiting for sender link"
-                            : !deliveryTracker.isComplete() ? " - timeout waiting for message delivery" : "";
+                            : !deliveryTracker.future().isComplete() ? " - timeout waiting for message delivery" : "";
                 }
                 sampleResult.setResponseMessage((e.getCause() != null ? e.getCause().getMessage() : e.getClass().getSimpleName()) + uncompletedFutureHint);
                 sampleResult.setResponseCode(String.valueOf(HttpURLConnection.HTTP_INTERNAL_ERROR));
@@ -303,14 +305,17 @@ public class HonoSender extends AbstractClient {
 
         if (running.compareAndSet(true, false)) {
 
-            final Future<Void> honoTracker = Future.future();
+            final Promise<Void> honoTracker = Promise.promise();
             if (downstreamSenderFactory != null) {
                 downstreamSenderFactory.disconnect(honoTracker);
             } else {
                 honoTracker.complete();
             }
 
-            honoTracker.otherwiseEmpty().compose(ok -> closeVertx()).setHandler(done -> shutdown.complete(null));
+            honoTracker.future()
+            .otherwiseEmpty()
+            .compose(ok -> closeVertx())
+            .setHandler(done -> shutdown.complete(null));
         } else {
             LOGGER.debug("sender already stopped");
             shutdown.complete(null);

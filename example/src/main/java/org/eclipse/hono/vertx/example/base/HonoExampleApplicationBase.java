@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -103,9 +104,10 @@ public class HonoExampleApplicationBase {
     protected void consumeData() throws Exception {
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final Future<MessageConsumer> consumerFuture = Future.future();
+        final Promise<MessageConsumer> consumerPromise = Promise.promise();
 
-        consumerFuture.setHandler(result -> {
+        consumerPromise.future()
+        .setHandler(result -> {
             if (!result.succeeded()) {
                 LOG.error("clientFactory could not create downstream consumer for [{}:{}]",
                         HonoExampleConstants.HONO_AMQP_CONSUMER_HOST,
@@ -124,11 +126,11 @@ public class HonoExampleApplicationBase {
             });
             return createConsumer();
         })
-        .setHandler(consumerFuture);
+        .setHandler(consumerPromise);
 
         latch.await();
 
-        if (consumerFuture.succeeded()) {
+        if (consumerPromise.future().succeeded()) {
             System.in.read();
         }
         vertx.close();

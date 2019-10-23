@@ -13,6 +13,7 @@
 package org.eclipse.hono.jmeter.client;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.dns.AddressResolverOptions;
@@ -55,8 +56,8 @@ public abstract class AbstractClient {
      * @return A future that will succeed once the instance is closed.
      */
     protected final Future<Void> closeVertx() {
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         vertx.close(result);
-        return result;
+        return result.future();
     }
 }

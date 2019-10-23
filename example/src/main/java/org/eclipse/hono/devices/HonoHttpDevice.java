@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+O * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,7 @@ import org.eclipse.hono.util.EventConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
@@ -223,8 +224,9 @@ public class HonoHttpDevice {
 
     private Future<Integer> sendCommandResponse(final String contentType, final Buffer payload, final String commandReqId, final int status) {
 
-        final Future<Integer> result = Future.future();
-        final HttpClientRequest req = httpClient.post(String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, commandReqId))
+        final Promise<Integer> result = Promise.promise();
+        final HttpClientRequest req = httpClient
+                .post(String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, commandReqId))
                 .handler(response -> {
                     result.complete(response.statusCode());
                 });
@@ -235,7 +237,7 @@ public class HonoHttpDevice {
         } else {
             req.end(payload);
         }
-        return result;
+        return result.future();
     }
 
     /**
