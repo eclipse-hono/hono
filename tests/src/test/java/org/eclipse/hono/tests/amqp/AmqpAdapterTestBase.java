@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
@@ -97,9 +98,9 @@ public abstract class AmqpAdapterTestBase {
     public static void disconnect(final VertxTestContext ctx) {
         helper.disconnect()
         .compose(ok -> {
-            final Future<Void> closeAttempt = Future.future();
+            final Promise<Void> closeAttempt = Promise.promise();
             VERTX.close(closeAttempt);
-            return closeAttempt;
+            return closeAttempt.future();
         }).setHandler(ctx.completing());
     }
 
@@ -113,7 +114,7 @@ public abstract class AmqpAdapterTestBase {
      */
     protected Future<ProtonSender> createProducer(final String target) {
 
-        final Future<ProtonSender>  result = Future.future();
+        final Promise<ProtonSender>  result = Promise.promise();
         if (context == null) {
             result.fail(new IllegalStateException("not connected"));
         } else {
@@ -142,7 +143,7 @@ public abstract class AmqpAdapterTestBase {
             });
         }
 
-        return result;
+        return result.future();
     }
 
     /**
@@ -155,7 +156,7 @@ public abstract class AmqpAdapterTestBase {
      */
     protected Future<ProtonConnection> connectToAdapter(final String username, final String password) {
 
-        final Future<ProtonConnection> result = Future.future();
+        final Promise<ProtonConnection> result = Promise.promise();
         final ProtonClient client = ProtonClient.create(VERTX);
 
         final ProtonClientOptions options = new ProtonClientOptions(defaultOptions);
@@ -167,7 +168,7 @@ public abstract class AmqpAdapterTestBase {
                 username,
                 password,
                 result);
-        return result.compose(this::handleConnectAttempt);
+        return result.future().compose(this::handleConnectAttempt);
     }
 
     /**
@@ -178,7 +179,7 @@ public abstract class AmqpAdapterTestBase {
      */
     protected Future<ProtonConnection> connectToAdapter(final SelfSignedCertificate clientCertificate) {
 
-        final Future<ProtonConnection> result = Future.future();
+        final Promise<ProtonConnection> result = Promise.promise();
         final ProtonClient client = ProtonClient.create(VERTX);
 
         final ProtonClientOptions secureOptions = new ProtonClientOptions(defaultOptions);
@@ -189,12 +190,12 @@ public abstract class AmqpAdapterTestBase {
                 IntegrationTestSupport.AMQP_HOST,
                 IntegrationTestSupport.AMQPS_PORT,
                 result);
-        return result.compose(this::handleConnectAttempt);
+        return result.future().compose(this::handleConnectAttempt);
     }
 
     private Future<ProtonConnection> handleConnectAttempt(final ProtonConnection unopenedConnection) {
 
-        final Future<ProtonConnection> result = Future.future();
+        final Promise<ProtonConnection> result = Promise.promise();
 
         unopenedConnection.openHandler(result);
         unopenedConnection.closeHandler(remoteClose -> {
@@ -202,7 +203,7 @@ public abstract class AmqpAdapterTestBase {
         });
         unopenedConnection.open();
 
-        return result.map(con -> {
+        return result.future().map(con -> {
             assertThat(unopenedConnection.getRemoteOfferedCapabilities()).contains(Constants.CAP_ANONYMOUS_RELAY);
             this.context = Vertx.currentContext();
             this.connection = unopenedConnection;

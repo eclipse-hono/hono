@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
@@ -125,7 +126,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
 
-        final Future<MultiMap> result = Future.future();
+        final Promise<MultiMap> result = Promise.promise();
 
         context.runOnContext(go -> {
             @SuppressWarnings("deprecation")
@@ -143,7 +144,7 @@ public final class CrudHttpClient {
                 }
                 req.end();
         });
-        return result;
+        return result.future();
     }
 
     /**
@@ -257,7 +258,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
 
-        final Future<MultiMap> result = Future.future();
+        final Promise<MultiMap> result = Promise.promise();
 
         context.runOnContext(go -> {
             @SuppressWarnings("deprecation")
@@ -266,7 +267,7 @@ public final class CrudHttpClient {
                         LOGGER.trace("response status code {}", response.statusCode());
                         if (successPredicate.test(response)) {
                             if (checkCorsHeaders) {
-                                checkCorsHeaders(response, result);
+                                checkCorsHeaders(response, result.future());
                             }
                             result.tryComplete(response.headers());
                         } else {
@@ -286,7 +287,7 @@ public final class CrudHttpClient {
                     req.end(body);
                 }
         });
-        return result;
+        return result.future();
     }
 
     /**
@@ -449,7 +450,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
 
-        final Future<MultiMap> result = Future.future();
+        final Promise<MultiMap> result = Promise.promise();
 
         context.runOnContext(go -> {
             @SuppressWarnings("deprecation")
@@ -457,7 +458,7 @@ public final class CrudHttpClient {
                     .handler(response -> {
                         if (successPredicate.test(response.statusCode())) {
                             if (checkCorsHeaders) {
-                                checkCorsHeaders(response, result);
+                                checkCorsHeaders(response, result.future());
                             }
                             result.tryComplete(response.headers());
                         } else {
@@ -477,7 +478,7 @@ public final class CrudHttpClient {
                     req.end(body);
                 }
         });
-        return result;
+        return result.future();
     }
 
     /**
@@ -510,7 +511,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
 
-        final Future<Buffer> result = Future.future();
+        final Promise<Buffer> result = Promise.promise();
 
         context.runOnContext(go -> {
             @SuppressWarnings("deprecation")
@@ -518,7 +519,7 @@ public final class CrudHttpClient {
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
                     if (response.statusCode() < 400) {
-                        checkCorsHeaders(response, result);
+                        checkCorsHeaders(response, result.future());
                     }
                     response.bodyHandler(body -> result.tryComplete(body));
                 } else {
@@ -529,7 +530,7 @@ public final class CrudHttpClient {
             req.end();
         });
 
-        return result;
+        return result.future();
     }
 
     /**
@@ -561,7 +562,7 @@ public final class CrudHttpClient {
         Objects.requireNonNull(requestOptions);
         Objects.requireNonNull(successPredicate);
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
 
         context.runOnContext(go -> {
             @SuppressWarnings("deprecation")
@@ -569,7 +570,7 @@ public final class CrudHttpClient {
             .handler(response -> {
                 LOGGER.debug("got response [status: {}]", response.statusCode());
                 if (successPredicate.test(response.statusCode())) {
-                    checkCorsHeaders(response, result);
+                    checkCorsHeaders(response, result.future());
                     result.tryComplete();
                 } else {
                     result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
@@ -579,7 +580,7 @@ public final class CrudHttpClient {
             req.end();
         });
 
-        return result;
+        return result.future();
     }
 
     /**

@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.VertxTestContext;
@@ -88,7 +89,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @param attempt The outcome of the attempt to send a PUBLISH message.
      * @param publishResult The overall outcome of publishing the message.
      */
-    protected void handlePublishAttempt(final AsyncResult<Integer> attempt, final Future<?> publishResult) {
+    protected void handlePublishAttempt(final AsyncResult<Integer> attempt, final Promise<?> publishResult) {
 
         if (attempt.failed()) {
             publishResult.fail(attempt.cause());

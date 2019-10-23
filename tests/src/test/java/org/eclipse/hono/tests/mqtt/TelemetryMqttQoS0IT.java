@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -49,7 +50,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
                 useShortTopicName ? TelemetryConstants.TELEMETRY_ENDPOINT_SHORT : TelemetryConstants.TELEMETRY_ENDPOINT,
                 tenantId,
                 deviceId);
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         // throttle sending to allow adapter to be replenished with credits from consumer
         VERTX.setTimer(5, go -> {
             mqttClient.publish(
@@ -66,7 +67,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
                         }
                     });
         });
-        return result;
+        return result.future();
     }
 
     @Override

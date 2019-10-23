@@ -36,6 +36,7 @@ import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonReceiver;
@@ -166,10 +167,10 @@ public class LegacyCommandClientImpl extends AbstractRequestResponseClient<Buffe
 
         final Span currentSpan = newChildSpan(null, command);
 
-        final Future<BufferResult> responseTracker = Future.future();
+        final Promise<BufferResult> responseTracker = Promise.promise();
         createAndSendRequest(command, properties, data, contentType, responseTracker, null, currentSpan);
 
-        return responseTracker
+        return responseTracker.future()
                 .recover(t -> {
                     TracingHelper.logError(currentSpan, t);
                     currentSpan.finish();
@@ -202,7 +203,7 @@ public class LegacyCommandClientImpl extends AbstractRequestResponseClient<Buffe
         final Span currentSpan = newChildSpan(null, command);
 
         if (sender.isOpen()) {
-            final Future<BufferResult> responseTracker = Future.future();
+            final Promise<BufferResult> responseTracker = Promise.promise();
             final Message request = ProtonHelper.message();
 
             AbstractHonoClient.setApplicationProperties(request, properties);
@@ -214,7 +215,7 @@ public class LegacyCommandClientImpl extends AbstractRequestResponseClient<Buffe
             MessageHelper.setPayload(request, contentType, data);
             sendRequest(request, responseTracker, null, currentSpan);
 
-            return responseTracker.recover(t -> {
+            return responseTracker.future().recover(t -> {
                 TracingHelper.logError(currentSpan, t);
                 currentSpan.finish();
                 return Future.failedFuture(t);

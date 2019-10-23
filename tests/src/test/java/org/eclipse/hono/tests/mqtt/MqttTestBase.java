@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.SelfSignedCertificate;
@@ -99,7 +100,7 @@ public abstract class MqttTestBase {
     @AfterEach
     public void postTest(final VertxTestContext ctx) {
 
-        final Future<Void> disconnectHandler = Future.future();
+        final Promise<Void> disconnectHandler = Promise.promise();
         if (context == null) {
             disconnectHandler.complete();
         } else {
@@ -108,7 +109,7 @@ public abstract class MqttTestBase {
             });
         }
         helper.deleteObjects(ctx);
-        disconnectHandler.setHandler(closeAttempt -> {
+        disconnectHandler.future().setHandler(closeAttempt -> {
             LOGGER.info("connection to MQTT adapter closed");
             context = null;
             ctx.completeNow();
@@ -172,7 +173,7 @@ public abstract class MqttTestBase {
             final String username,
             final String password) {
 
-        final Future<MqttConnAckMessage> result = Future.future();
+        final Promise<MqttConnAckMessage> result = Promise.promise();
         VERTX.runOnContext(connect -> {
             final MqttClientOptions options = new MqttClientOptions()
                     .setUsername(username)
@@ -180,7 +181,7 @@ public abstract class MqttTestBase {
             mqttClient = MqttClient.create(VERTX, options);
             mqttClient.connect(IntegrationTestSupport.MQTT_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
-        return result.map(conAck -> {
+        return result.future().map(conAck -> {
             LOGGER.debug(
                     "MQTT connection to adapter [host: {}, port: {}] established",
                     IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT);
@@ -200,7 +201,7 @@ public abstract class MqttTestBase {
     protected final Future<MqttConnAckMessage> connectToAdapter(
             final SelfSignedCertificate cert) {
 
-        final Future<MqttConnAckMessage> result = Future.future();
+        final Promise<MqttConnAckMessage> result = Promise.promise();
         VERTX.runOnContext(connect -> {
             final MqttClientOptions options = new MqttClientOptions()
                     .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
@@ -210,7 +211,7 @@ public abstract class MqttTestBase {
             mqttClient = MqttClient.create(VERTX, options);
             mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
         });
-        return result.map(conAck -> {
+        return result.future().map(conAck -> {
             LOGGER.debug(
                     "MQTTS connection to adapter [host: {}, port: {}] established",
                     IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTTS_PORT);
