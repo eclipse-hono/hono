@@ -35,6 +35,7 @@ import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -141,10 +142,10 @@ public class HonoCommander extends AbstractClient {
      */
     public CompletableFuture<Void> close() {
         final CompletableFuture<Void> shutdownTracker = new CompletableFuture<>();
-        final Future<Void> clientTracker = Future.future();
+        final Promise<Void> clientTracker = Promise.promise();
         LOG.debug("Clean resources...");
         applicationClientFactory.disconnect(clientTracker);
-        clientTracker
+        clientTracker.future()
                 .compose(ok -> closeVertx())
                 .recover(error -> closeVertx())
                 .setHandler(result -> shutdownTracker.complete(null));

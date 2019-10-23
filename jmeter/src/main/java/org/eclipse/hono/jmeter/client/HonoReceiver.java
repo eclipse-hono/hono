@@ -27,6 +27,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -279,9 +280,12 @@ public class HonoReceiver extends AbstractClient {
     public CompletableFuture<Void> close() {
 
         final CompletableFuture<Void> result = new CompletableFuture<>();
-        final Future<Void> clientTracker = Future.future();
+        final Promise<Void> clientTracker = Promise.promise();
         applicationClientFactory.disconnect(clientTracker);
-        clientTracker.otherwiseEmpty().compose(ok -> closeVertx()).setHandler(attempt -> result.complete(null));
+        clientTracker.future()
+        .otherwiseEmpty()
+        .compose(ok -> closeVertx())
+        .setHandler(attempt -> result.complete(null));
         return result;
     }
 }
