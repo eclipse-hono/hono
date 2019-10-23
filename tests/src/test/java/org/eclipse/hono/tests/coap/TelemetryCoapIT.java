@@ -37,6 +37,7 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -101,10 +102,10 @@ public class TelemetryCoapIT extends CoapTestBase {
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(Code.POST, Type.CON, getPostResource(), 0)),
                 count -> {
-            final Future<OptionSet> result = Future.future();
+            final Promise<OptionSet> result = Promise.promise();
             final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), count);
             client.advanced(getHandler(result), request);
-            return result;
+            return result.future();
         });
     }
 

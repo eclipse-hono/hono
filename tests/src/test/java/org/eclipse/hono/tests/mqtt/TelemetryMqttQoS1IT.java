@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 
@@ -48,7 +49,7 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
                 useShortTopicName ? TelemetryConstants.TELEMETRY_ENDPOINT_SHORT : TelemetryConstants.TELEMETRY_ENDPOINT,
                 tenantId,
                 deviceId);
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         mqttClient.publish(
                 topic,
                 payload,
@@ -56,7 +57,7 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
                 false, // is duplicate
                 false, // is retained
                 sendAttempt -> handlePublishAttempt(sendAttempt, result));
-        return result;
+        return result.future();
     }
 
     @Override

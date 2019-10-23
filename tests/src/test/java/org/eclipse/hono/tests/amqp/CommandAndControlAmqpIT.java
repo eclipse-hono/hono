@@ -52,6 +52,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
@@ -117,7 +118,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final String commandTargetDeviceId,
             final ProtonMessageHandler msgHandler) {
 
-        final Future<ProtonReceiver> result = Future.future();
+        final Promise<ProtonReceiver> result = Promise.promise();
         context.runOnContext(go -> {
             final ProtonReceiver recv = connection.createReceiver(endpointConfig.getSubscriptionAddress(tenantId, commandTargetDeviceId));
             recv.setQoS(ProtonQoS.AT_LEAST_ONCE);
@@ -125,7 +126,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             recv.handler(msgHandler);
             recv.open();
         });
-        return result.map(commandConsumer -> {
+        return result.future().map(commandConsumer -> {
             log.debug("created command consumer [{}]", commandConsumer.getSource().getAddress());
             return commandConsumer;
         });

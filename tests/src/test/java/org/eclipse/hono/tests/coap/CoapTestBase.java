@@ -75,6 +75,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -277,7 +278,7 @@ public abstract class CoapTestBase {
     protected final Future<Void> warmUp(final CoapClient client, final Request request) {
 
         logger.debug("sending request to trigger CoAP adapter's downstream message sender");
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         client.advanced(new CoapHandler() {
 
             @Override
@@ -294,7 +295,7 @@ public abstract class CoapTestBase {
                 VERTX.setTimer(1000, tid -> result.complete());
             }
         }, request);
-        return result;
+        return result.future();
     }
 
     private static void assertStatus(final TestContext ctx, final int expectedStatus, final Throwable t) {
@@ -326,10 +327,10 @@ public abstract class CoapTestBase {
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
-                    final Future<OptionSet> result = Future.future();
+                    final Promise<OptionSet> result = Promise.promise();
                     final Request request = createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
                     client.advanced(getHandler(result), request);
-                    return result;
+                    return result.future();
                 });
     }
 
@@ -356,10 +357,10 @@ public abstract class CoapTestBase {
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 count -> {
-                    final Future<OptionSet> result = Future.future();
+                    final Promise<OptionSet> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
                     client.advanced(getHandler(result), request);
-                    return result;
+                    return result.future();
                 });
     }
 
@@ -394,10 +395,10 @@ public abstract class CoapTestBase {
                 () -> warmUp(gatewayOne, createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
                     final CoapClient client = (count.intValue() & 1) == 0 ? gatewayOne : gatewayTwo;
-                    final Future<OptionSet> result = Future.future();
+                    final Promise<OptionSet> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
                     client.advanced(getHandler(result), request);
-                    return result;
+                    return result.future();
                 });
     }
 
@@ -545,9 +546,9 @@ public abstract class CoapTestBase {
         // WHEN a device tries to upload data and authenticate using the PSK
         // identity for which the server has a malformed shared secret only
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-        final Future<OptionSet> result = Future.future();
+        final Promise<OptionSet> result = Promise.promise();
         client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
-        result.setHandler(ctx.asyncAssertFailure(t -> {
+        result.future().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the request fails because the DTLS handshake cannot be completed
             assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
         }));
@@ -570,9 +571,9 @@ public abstract class CoapTestBase {
             // WHEN a device tries to upload data and authenticate using the PSK
             // identity for which the server has a different shared secret on record
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-            final Future<OptionSet> result = Future.future();
+            final Promise<OptionSet> result = Promise.promise();
             client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
-            return result;
+            return result.future();
         }).setHandler(ctx.asyncAssertFailure(t -> {
             // THEN the request fails because the DTLS handshake cannot be completed
             assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
@@ -597,9 +598,9 @@ public abstract class CoapTestBase {
 
                     // WHEN a device that belongs to the tenant uploads a message
                     final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-                    final Future<OptionSet> result = Future.future();
+                    final Promise<OptionSet> result = Promise.promise();
                     client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
-                    return result;
+                    return result.future();
                 }).setHandler(ctx.asyncAssertFailure(t -> {
                     // THEN the request fails with a 403
                     assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
@@ -624,9 +625,9 @@ public abstract class CoapTestBase {
 
             // WHEN the device tries to upload a message
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-            final Future<OptionSet> result = Future.future();
+            final Promise<OptionSet> result = Promise.promise();
             client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
-            return result;
+            return result.future();
         }).setHandler(ctx.asyncAssertFailure(t -> {
 
             // THEN the request fails because the DTLS handshake cannot be completed
@@ -659,10 +660,10 @@ public abstract class CoapTestBase {
         .compose(ok -> {
 
             // WHEN the gateway tries to upload a message for the device
-            final Future<OptionSet> result = Future.future();
+            final Promise<OptionSet> result = Promise.promise();
             final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
             client.advanced(getHandler(result), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
-            return result;
+            return result.future();
 
         }).setHandler(ctx.asyncAssertFailure(t -> {
 
@@ -694,11 +695,11 @@ public abstract class CoapTestBase {
                 .compose(ok -> {
 
                     // WHEN another gateway tries to upload a message for the device
-                    final Future<OptionSet> result = Future.future();
+                    final Promise<OptionSet> result = Promise.promise();
                     final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
                     client.advanced(getHandler(result),
                             createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
-                    return result;
+                    return result.future();
 
                 })
                 .setHandler(ctx.asyncAssertFailure(t -> {

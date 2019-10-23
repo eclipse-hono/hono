@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -85,7 +86,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
     @Override
     public Future<JmsBasedHonoConnection> connect() {
 
-        final Future<JmsBasedHonoConnection> result = Future.future();
+        final Promise<JmsBasedHonoConnection> result = Promise.promise();
         try {
             createContext();
             createSession();
@@ -93,7 +94,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
         } catch (JMSException | NamingException e) {
             result.fail(e);
         }
-        return result;
+        return result.future();
     }
 
     /**
@@ -128,7 +129,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
      */
     @Override
     public void disconnect() {
-        disconnect(Future.future());
+        disconnect(Promise.promise());
     }
 
     /**

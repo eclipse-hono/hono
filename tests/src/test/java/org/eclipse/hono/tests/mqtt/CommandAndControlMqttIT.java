@@ -47,6 +47,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
@@ -121,7 +122,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final MqttCommandEndpointConfiguration endpointConfig,
             final MqttQoS qos) {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         context.runOnContext(go -> {
             mqttClient.publishHandler(msgHandler);
             mqttClient.subscribeCompletionHandler(subAckMsg -> {
@@ -133,7 +134,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             });
             mqttClient.subscribe(endpointConfig.getCommandTopicFilter(commandTargetDeviceId), qos.value());
         });
-        return result;
+        return result.future();
     }
 
     /**

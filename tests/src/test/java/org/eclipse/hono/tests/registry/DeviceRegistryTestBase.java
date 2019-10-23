@@ -19,7 +19,7 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 
@@ -66,13 +66,13 @@ abstract class DeviceRegistryTestBase {
             final Checkpoint checkpoint,
             final ConnectionLifecycle<?> factory) {
 
-        final Future<Void> clientTracker = Future.future();
+        final Promise<Void> clientTracker = Promise.promise();
         if (factory != null) {
             factory.disconnect(clientTracker);
         } else {
             clientTracker.complete();
         }
-        clientTracker.otherwiseEmpty().setHandler(ctx.succeeding(ok -> checkpoint.flag()));
+        clientTracker.future().otherwiseEmpty().setHandler(ctx.succeeding(ok -> checkpoint.flag()));
     }
 
 }

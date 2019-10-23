@@ -45,6 +45,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
@@ -285,7 +286,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             final Message msg = ProtonHelper.message();
             MessageHelper.setPayload(msg, "text/plain", payload.getBytes(StandardCharsets.UTF_8));
             msg.setAddress(getEndpointName());
-            final Future<?> sendingComplete = Future.future();
+            final Promise<?> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
                 replenishedSender.sendQueueDrainHandler(null);
                 switch(senderQoS) {
@@ -312,7 +313,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                     sendMsgHandler.handle(sender);
                 }
             });
-            return sendingComplete;
+            return sendingComplete.future();
         });
     }
 
@@ -431,9 +432,9 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
     private void close(final VertxTestContext ctx) {
 
-        final Future<ProtonConnection> connectionTracker = Future.future();
-        final Future<ProtonSender> senderTracker = Future.future();
-        final Future<Void> receiverTracker = Future.future();
+        final Promise<ProtonConnection> connectionTracker = Promise.promise();
+        final Promise<ProtonSender> senderTracker = Promise.promise();
+        final Promise<Void> receiverTracker = Promise.promise();
 
         if (sender == null) {
             senderTracker.complete();
@@ -459,7 +460,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             });
         }
 
-        CompositeFuture.join(connectionTracker, senderTracker, receiverTracker).setHandler(c -> {
+        CompositeFuture.join(connectionTracker.future(), senderTracker.future(), receiverTracker.future())
+        .setHandler(c -> {
            context = null;
            ctx.completeNow();
         });

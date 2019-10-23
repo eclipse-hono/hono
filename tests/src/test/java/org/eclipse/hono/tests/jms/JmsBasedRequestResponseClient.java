@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
@@ -170,7 +171,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
      */
     protected Future<R> send(final Message message) {
 
-        final Future<R> resultHandler = Future.future();
+        final Promise<R> resultHandler = Promise.promise();
         final String correlationId = UUID.randomUUID().toString();
         handlers.put(correlationId, resultHandler);
 
@@ -201,7 +202,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
             LOGGER.error("cannot send request message", e);
             cancel(correlationId, e);
         }
-        return resultHandler;
+        return resultHandler.future();
     }
 
     private void cancel(final String correlationId, final Exception cause) {

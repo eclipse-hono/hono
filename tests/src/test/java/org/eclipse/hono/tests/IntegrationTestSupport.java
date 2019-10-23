@@ -56,6 +56,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
@@ -670,9 +671,9 @@ public final class IntegrationTestSupport {
      */
     public Future<?> disconnect() {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         applicationClientFactory.disconnect(result);
-        return result.map(ok -> {
+        return result.future().map(ok -> {
             LOGGER.info("connection to AMQP Messaging Network closed");
             return ok;
         });
@@ -749,13 +750,13 @@ public final class IntegrationTestSupport {
      */
     public Future<String> setupGatewayDevice(final String tenantId, final String gatewayId) {
 
-        final Future<String> result = Future.future();
+        final Promise<String> result = Promise.promise();
         final String newDeviceId = getRandomDeviceId(tenantId);
         final Device newDevice = new Device().setVia(List.of(gatewayId));
         registry.addDeviceToTenant(tenantId, newDeviceId, newDevice, "pwd")
                 .map(ok -> newDeviceId)
                 .setHandler(result);
-        return result;
+        return result.future();
     }
 
     /**
@@ -842,7 +843,7 @@ public final class IntegrationTestSupport {
         return applicationClientFactory.getOrCreateCommandClient(tenantId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
-            final Future<BufferResult> result = Future.future();
+            final Promise<BufferResult> result = Promise.promise();
             final Handler<Void> send = s -> {
                 // send the command upstream to the device
                 LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
@@ -862,7 +863,7 @@ public final class IntegrationTestSupport {
             } else {
                 send.handle(null);
             }
-            return result;
+            return result.future();
         });
     }
 
@@ -891,7 +892,7 @@ public final class IntegrationTestSupport {
         return applicationClientFactory.createLegacyCommandClient(tenantId, deviceId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
-            final Future<BufferResult> result = Future.future();
+            final Promise<BufferResult> result = Promise.promise();
             final Handler<Void> send = s -> {
                 // send the command upstream to the device
                 LOGGER.trace("sending legacy command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
@@ -911,7 +912,7 @@ public final class IntegrationTestSupport {
             } else {
                 send.handle(null);
             }
-            return result;
+            return result.future();
         });
     }
 
@@ -999,7 +1000,7 @@ public final class IntegrationTestSupport {
         return applicationClientFactory.getOrCreateCommandClient(tenantId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
-            final Future<Void> result = Future.future();
+            final Promise<Void> result = Promise.promise();
             final Handler<Void> send = s -> {
                 // send the command upstream to the device
                 LOGGER.trace("sending one-way command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
@@ -1018,7 +1019,7 @@ public final class IntegrationTestSupport {
             } else {
                 send.handle(null);
             }
-            return result;
+            return result.future();
         });
     }
 
@@ -1047,7 +1048,7 @@ public final class IntegrationTestSupport {
         return applicationClientFactory.createLegacyCommandClient(tenantId, deviceId).compose(commandClient -> {
 
             commandClient.setRequestTimeout(requestTimeout);
-            final Future<Void> result = Future.future();
+            final Promise<Void> result = Promise.promise();
             final Handler<Void> send = s -> {
                 // send the command upstream to the device
                 LOGGER.trace("sending one-way command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
@@ -1066,7 +1067,7 @@ public final class IntegrationTestSupport {
             } else {
                 send.handle(null);
             }
-            return result;
+            return result.future();
         });
     }
 
@@ -1268,9 +1269,9 @@ public final class IntegrationTestSupport {
     //----------------------------------< private methods >---
     private Future<Buffer> loadFile(final String path) {
 
-        final Future<Buffer> result = Future.future();
+        final Promise<Buffer> result = Promise.promise();
         vertx.fileSystem().readFile(path, result);
-        return result;
+        return result.future();
     }
 
     /**

@@ -33,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -61,14 +62,14 @@ public class EventMqttIT extends MqttPublishTestBase {
             final String deviceId,
             final Buffer payload,
             final boolean useShortTopicName,
-            final BiConsumer<AsyncResult<Integer>, Future<Void>> sendAttemptHandler) {
+            final BiConsumer<AsyncResult<Integer>, Promise<Void>> sendAttemptHandler) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
                 useShortTopicName ? EventConstants.EVENT_ENDPOINT_SHORT : EventConstants.EVENT_ENDPOINT,
                 tenantId,
                 deviceId);
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         mqttClient.publish(
                 topic,
                 payload,
@@ -76,7 +77,7 @@ public class EventMqttIT extends MqttPublishTestBase {
                 false, // is duplicate
                 false, // is retained
                 sendAttempt -> sendAttemptHandler.accept(sendAttempt, result));
-        return result;
+        return result.future();
     }
 
     @Override
@@ -125,17 +126,19 @@ public class EventMqttIT extends MqttPublishTestBase {
             } else {
                 result.fail(sendAttempt.cause());
             }
-        })).compose(ok -> {
-            final Future<MessageConsumer> consumerCreated = Future.future();
+        }))
+        .compose(ok -> {
+            final Promise<MessageConsumer> consumerCreated = Promise.promise();
             VERTX.setTimer(4000, tid -> {
                 LOGGER.info("opening event consumer for tenant [{}]", tenantId);
                 // THEN no messages can be consumed after the TTL has expired
                 createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
-                .compose(c -> consumerCreated.complete(), consumerCreated);
+                .setHandler(consumerCreated);
             });
-            return consumerCreated;
-        }).compose(c -> {
-            final Future<Void> done = Future.future();
+            return consumerCreated.future();
+        })
+        .compose(c -> {
+            final Promise<Void> done = Promise.promise();
             VERTX.setTimer(1000, tid -> {
                 if (receivedMessageCount.get() > 0) {
                     done.fail(new IllegalStateException("should not have received any events after TTL has expired"));
@@ -143,7 +146,7 @@ public class EventMqttIT extends MqttPublishTestBase {
                     done.complete();
                 }
             });
-            return done;
+            return done.future();
         }).setHandler(ctx.completing());
     }
 }

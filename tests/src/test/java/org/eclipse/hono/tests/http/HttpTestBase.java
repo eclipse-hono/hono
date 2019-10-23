@@ -60,6 +60,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClientOptions;
@@ -1091,13 +1092,13 @@ public abstract class HttpTestBase {
                         // HTTP adapter was able to close the command
                         // consumer for the previous request
                         // wait a little and try again
-                        final Future<MultiMap> retryResult = Future.future();
+                        final Promise<MultiMap> retryResult = Promise.promise();
                         VERTX.setTimer(300, retry -> {
                             logger.info("re-trying request [{}], failure was: {}", count, t.getMessage());
                             sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId)
                             .setHandler(retryResult);
                         });
-                        return retryResult;
+                        return retryResult.future();
                     })
                     .map(responseHeaders -> {
                         ctx.verify(() -> {
@@ -1156,7 +1157,7 @@ public abstract class HttpTestBase {
 
     private Future<?> assertHttpResponse(final MultiMap responseHeaders) {
 
-        final Future<?> result = Future.future();
+        final Promise<?> result = Promise.promise();
         final String allowedOrigin = responseHeaders.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN);
         final boolean hasValidOrigin = allowedOrigin != null
                 && (allowedOrigin.equals(ORIGIN_WILDCARD) || allowedOrigin.equals(ORIGIN_URI));
@@ -1166,7 +1167,7 @@ public abstract class HttpTestBase {
         } else {
             result.complete();
         }
-        return result;
+        return result.future();
     }
 
     /**
