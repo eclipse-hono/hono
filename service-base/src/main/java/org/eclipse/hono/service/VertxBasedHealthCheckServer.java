@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import io.vertx.core.CompositeFuture;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
@@ -25,8 +24,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -128,7 +129,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
     private Future<Void> bindInsecureHttpServer() {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
 
         if (Constants.LOOPBACK_DEVICE_ADDRESS.equals(config.getInsecurePortBindAddress())) {
             LOG.info("won't start insecure health checks HTTP server: no bind address configured.");
@@ -157,7 +158,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
                     result.fail(startAttempt.cause());
                 }
             });
-            return result;
+            return result.future();
         }
     }
 
@@ -168,7 +169,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
             return Future.failedFuture("no bind address configured for secure server");
         } else if (config.isSecurePortEnabled()) {
 
-            final Future<Void> result = Future.future();
+            final Promise<Void> result = Promise.promise();
 
             final HttpServerOptions options = new HttpServerOptions()
                     .setPort(config.getPort(DEFAULT_PORT))
@@ -193,7 +194,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
                     result.fail(startAttempt.cause());
                 }
             });
-            return result;
+            return result.future();
         } else {
             LOG.warn("cannot start secure health checks HTTP server: no key material configured");
             return Future.failedFuture("no key material configured for secure server");
@@ -219,7 +220,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      */
     @Override
     public Future<Void> stop() {
-        final Future<Void> serverStopTracker = Future.future();
+        final Promise<Void> serverStopTracker = Promise.promise();
         if (server != null) {
             LOG.info("closing secure health check HTTP server [{}:{}]", config.getBindAddress(), server.actualPort());
             server.close(serverStopTracker);
@@ -227,7 +228,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
             serverStopTracker.complete();
         }
 
-        final Future<Void> insecureServerStopTracker = Future.future();
+        final Promise<Void> insecureServerStopTracker = Promise.promise();
         if (insecureServer != null) {
             LOG.info("closing insecure health check HTTP server [{}:{}]", config.getInsecurePortBindAddress(),
                     insecureServer.actualPort());
@@ -236,11 +237,9 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
             insecureServerStopTracker.complete();
         }
 
-        final Future<Void> result = Future.future();
-        CompositeFuture.all(serverStopTracker, insecureServerStopTracker)
-                .compose(s -> result.complete(), result);
-
-        return result;
+        return CompositeFuture.all(serverStopTracker.future(), insecureServerStopTracker.future())
+                .map(ok -> (Void) null)
+                .recover(t -> Future.failedFuture(t));
     }
 
     int getInsecurePort() {

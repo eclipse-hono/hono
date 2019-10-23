@@ -26,6 +26,7 @@ import io.netty.handler.ssl.OpenSsl;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
@@ -242,7 +243,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
             log.info("Vertx native support: {}", vertx.isNativeTransportEnabled());
         }
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
 
         if (getConfig().getKeyCertOptions() == null) {
             if (getConfig().getPort() >= 0) {
@@ -265,7 +266,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
             result.complete();
         }
 
-        return result;
+        return result.future();
     }
 
     /**

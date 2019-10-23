@@ -32,6 +32,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -130,9 +131,9 @@ public abstract class EventBusTenantAdapter extends EventBusService implements V
     private Future<EventBusMessage> processGetByIdRequest(final EventBusMessage request, final String tenantId,
             final Span span) {
 
-        final Future<TenantResult<JsonObject>> getResult = Future.future();
+        final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
         getService().get(tenantId, span, getResult);
-        return getResult.map(tr -> {
+        return getResult.future().map(tr -> {
             return request.getResponse(tr.getStatus())
                     .setJsonPayload(tr.getPayload())
                     .setTenant(tenantId)
@@ -146,9 +147,9 @@ public abstract class EventBusTenantAdapter extends EventBusService implements V
         try {
             final X500Principal dn = new X500Principal(subjectDn);
             log.debug("retrieving tenant [subject DN: {}]", subjectDn);
-            final Future<TenantResult<JsonObject>> getResult = Future.future();
+            final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
             getService().get(dn, span, getResult);
-            return getResult.map(tr -> {
+            return getResult.future().map(tr -> {
                 final EventBusMessage response = request.getResponse(tr.getStatus())
                         .setJsonPayload(tr.getPayload())
                         .setCacheDirective(tr.getCacheDirective());

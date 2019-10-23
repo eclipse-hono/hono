@@ -23,12 +23,13 @@ import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.Util;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -129,9 +130,9 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
 
         return deviceFuture.compose(device -> {
             log.debug("registering device [{}] for tenant [{}]", deviceId.orElse("<auto>"), tenantId);
-            final Future<OperationResult<Id>> result = Future.future();
+            final Promise<OperationResult<Id>> result = Promise.promise();
             getService().createDevice(tenantId, deviceId, device, span, result);
-            return result.map(res -> {
+            return result.future().map(res -> {
                 final String createdDeviceId = Optional.ofNullable(res.getPayload()).map(Id::getId).orElse(null);
                 return res.createResponse(request, JsonObject::mapFrom).setDeviceId(createdDeviceId);
             });
@@ -152,9 +153,9 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         }
 
         log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-        final Future<OperationResult<Device>> result = Future.future();
+        final Promise<OperationResult<Device>> result = Promise.promise();
         getService().readDevice(tenantId, deviceId, span, result);
-        return result.map(res -> {
+        return result.future().map(res -> {
             return res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId);
         });
 
@@ -178,9 +179,9 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         return deviceFuture.compose(device -> {
 
             log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
-            final Future<OperationResult<Id>> result = Future.future();
+            final Promise<OperationResult<Id>> result = Promise.promise();
             getService().updateDevice(tenantId, deviceId, device, resourceVersion, span, result);
-            return result.map(res -> {
+            return result.future().map(res -> {
                 return res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId);
             });
 
@@ -201,9 +202,9 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         }
 
         log.debug("deleting device [{}] of tenant [{}]", deviceId, tenantId);
-        final Future<Result<Void>> result = Future.future();
+        final Promise<Result<Void>> result = Promise.promise();
         getService().deleteDevice(tenantId, deviceId, resourceVersion, span, result);
-        return result.map(res -> {
+        return result.future().map(res -> {
             return res.createResponse(request, id -> null).setDeviceId(deviceId);
         });
 

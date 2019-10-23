@@ -64,6 +64,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
@@ -609,9 +610,9 @@ public class AbstractProtocolAdapterBaseTest {
             }
 
             @Override
-            protected void doStart(final Future<Void> startFuture) {
+            protected void doStart(final Promise<Void> startPromise) {
                 startupHandler.handle(null);
-                startFuture.complete();
+                startPromise.complete();
             }
 
             @Override

@@ -31,6 +31,7 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -75,20 +76,39 @@ public abstract class EventBusService extends AbstractVerticle {
      * <ol>
      * <li>Registers an event bus consumer for {@linkplain #getEventBusAddress()
      * the service's event bus request address}.</li>
-     * <li>Invokes {@link #doStart(Future)}.</li>
+     * <li>Invokes {@link #doStart(Promise)}.</li>
      * </ol>
      *
-     * @param startFuture The future to complete on successful startup.
+     * @param startPromise The promise to complete on successful startup.
      */
     @Override
-    public final void start(final Future<Void> startFuture) {
-        registerConsumer();
-        final Future<Void> localStart = Future.future();
-        localStart.compose(ok -> {
+    public final void start(final Promise<Void> startPromise) {
+        final Promise<Void> localStart = Promise.promise();
+        localStart.future()
+        .map(ok -> {
             log.info("service started successfully");
-            startFuture.complete();
-        }, startFuture);
+            return ok;
+        })
+        .setHandler(startPromise);
+
+        registerConsumer();
         doStart(localStart);
+    }
+
+    /**
+     * Subclasses should override this method to perform any work required on start-up of this service.
+     * <p>
+     * This default implementation delegates to {@link #doStart(Future)}.
+     * </p>
+     * <p>
+     * This method is invoked by {@link #start()} as part of the {@code Verticle} deployment process.
+     * </p>
+     *
+     * @param startPromise promise to complete once start up has succeeded.
+     */
+    protected void doStart(final Promise<Void> startPromise) {
+        // should be overridden by subclasses
+        doStart(startPromise.future());
     }
 
     /**
@@ -101,7 +121,9 @@ public abstract class EventBusService extends AbstractVerticle {
      * </p>
      *
      * @param startFuture future to invoke once start up is complete.
+     * @deprecated Override {@link #doStart(Promise)} instead.
      */
+    @Deprecated
     protected void doStart(final Future<Void> startFuture) {
         // should be overridden by subclasses
         startFuture.complete();
@@ -115,22 +137,42 @@ public abstract class EventBusService extends AbstractVerticle {
     protected abstract String getEventBusAddress();
 
     /**
-     * Unregisters the registration message consumer from the Vert.x event bus and then invokes {@link #doStop(Future)}.
+     * Unregisters the registration message consumer from the Vert.x event bus and then invokes {@link #doStop(Promise)}.
      *
-     * @param stopFuture the future to invoke once shutdown is complete.
+     * @param stopPromise the promise to complete on successful shutdown.
      */
     @Override
-    public final void stop(final Future<Void> stopFuture) {
+    public final void stop(final Promise<Void> stopPromise) {
+
+        final Promise<Void> localStop = Promise.promise();
+        localStop.future()
+        .map(ok -> {
+            log.info("service stopped successfully");
+            return ok;
+        })
+        .setHandler(stopPromise);
+
         if (requestConsumer != null) {
             requestConsumer.unregister();
             log.info("unregistered request consumer from event bus");
         }
-        final Future<Void> localStop = Future.future();
-        localStop.compose(ok -> {
-            log.info("service stopped successfully");
-            stopFuture.complete();
-        }, stopFuture);
-        doStop(stopFuture);
+        doStop(localStop);
+    }
+
+    /**
+     * Subclasses should override this method to perform any work required before shutting down this service.
+     * <p>
+     * This default implementation delegates to {@link #doStop(Future)}.
+     * </p>
+     * <p>
+     * This method is invoked by {@link #stop()} as part of the Verticle deployment process.
+     * </p>
+     *
+     * @param stopPromise the future to invoke once shutdown is complete.
+     */
+    protected void doStop(final Promise<Void> stopPromise) {
+        // to be overridden by subclasses
+        doStop(stopPromise.future());
     }
 
     /**
@@ -143,7 +185,9 @@ public abstract class EventBusService extends AbstractVerticle {
      * </p>
      *
      * @param stopFuture the future to invoke once shutdown is complete.
+     * @deprecated Override {@link #doStop(Promise)} instead.
      */
+    @Deprecated
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
         stopFuture.complete();

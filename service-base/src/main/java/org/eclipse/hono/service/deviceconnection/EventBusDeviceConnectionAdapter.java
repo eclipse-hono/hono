@@ -29,6 +29,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 
 /**
@@ -97,15 +98,14 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final Future<DeviceConnectionResult> result = Future.future();
+            final Promise<DeviceConnectionResult> result = Promise.promise();
             log.debug("getting last known gateway for tenant [{}], device [{}]", tenantId, deviceId);
             getService().getLastKnownGatewayForDevice(tenantId, deviceId, span, result);
 
-            resultFuture = result.map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setJsonPayload(res.getPayload())
-                        .setCacheDirective(res.getCacheDirective());
-            });
+            resultFuture = result.future()
+                    .map(res -> request.getResponse(res.getStatus())
+                                .setJsonPayload(res.getPayload())
+                                .setCacheDirective(res.getCacheDirective()));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -128,11 +128,11 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             TracingHelper.logError(span, "missing tenant, device and/or gateway");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final Future<DeviceConnectionResult> result = Future.future();
+            final Promise<DeviceConnectionResult> result = Promise.promise();
             log.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
             getService().setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span, result);
 
-            resultFuture = result.map(res -> {
+            resultFuture = result.future().map(res -> {
                 return request.getResponse(res.getStatus())
                         .setJsonPayload(res.getPayload())
                         .setCacheDirective(res.getCacheDirective());

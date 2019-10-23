@@ -31,8 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
@@ -109,8 +109,8 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             LOG.debug("client wants to authenticate using SASL [mechanism: {}, host: {}, state: {}]",
                     chosenMechanism, sasl.getHostname(), sasl.getState().name());
 
-            final Future<HonoUser> authTracker = Future.future();
-            authTracker.setHandler(s -> {
+            final Promise<HonoUser> authTracker = Promise.promise();
+            authTracker.future().setHandler(s -> {
                 final SaslOutcome saslOutcome;
                 if (s.succeeded()) {
 

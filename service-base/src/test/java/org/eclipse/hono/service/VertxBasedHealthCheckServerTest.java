@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.client.WebClient;
@@ -167,7 +168,7 @@ class VertxBasedHealthCheckServerTest {
 
     private Future<WebClient> checkHealth(final VertxTestContext ctx, final WebClient httpClient,
             final String endpoint) {
-        final Future<WebClient> sentHealth = Future.future();
+        final Promise<WebClient> sentHealth = Promise.promise();
         httpClient.get(endpoint)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_OK))
                 .send(result -> {
@@ -177,7 +178,7 @@ class VertxBasedHealthCheckServerTest {
                     sentHealth.complete(httpClient);
                 });
 
-        return sentHealth;
+        return sentHealth.future();
     }
 
     private WebClient getWebClient(final Vertx vertx, final VertxBasedHealthCheckServer server, final boolean secure) {

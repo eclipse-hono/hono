@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 
 
 /**
@@ -67,7 +68,7 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
             throw new IllegalArgumentException("trust anchor list must not be empty");
         }
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
 
         try {
             final PKIXParameters params = new PKIXParameters(trustAnchors);
@@ -89,6 +90,6 @@ public class DeviceCertificateValidator implements X509CertificateChainValidator
                 result.fail(new CertificateException("validation of device certificate failed", e));
             }
         }
-        return result;
+        return result.future();
     }
 }

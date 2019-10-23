@@ -40,6 +40,7 @@ import org.junit.runner.RunWith;
 
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.TestContext;
@@ -116,11 +117,11 @@ public class UsernamePasswordAuthProviderTest {
     @Test
     public void testAuthenticateSucceedsWhenRunningOnVertxContext(final TestContext ctx) {
 
-        final Future<DeviceUser> result = Future.future();
+        final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.setHandler(ctx.asyncAssertSuccess(device -> {
+        result.future().setHandler(ctx.asyncAssertSuccess(device -> {
                 ctx.assertEquals("4711", device.getDeviceId());
                 ctx.assertEquals("DEFAULT_TENANT", device.getTenantId());
             }));
@@ -135,13 +136,13 @@ public class UsernamePasswordAuthProviderTest {
     public void testAuthenticateFailsForWrongCredentials(final TestContext ctx) {
 
         when(pwdEncoder.matches(eq("wrong_pwd"), any(JsonObject.class))).thenReturn(false);
-        final Future<DeviceUser> result = Future.future();
+        final Promise<DeviceUser> result = Promise.promise();
 
         deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "wrong_pwd", false);
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.setHandler(ctx.asyncAssertFailure(e -> {
+        result.future().setHandler(ctx.asyncAssertFailure(e -> {
                 final ClientErrorException error = (ClientErrorException) e;
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, error.getErrorCode());
             }));
@@ -157,11 +158,11 @@ public class UsernamePasswordAuthProviderTest {
     public void testAuthenticateFailsIfNoSecretsAreValidAnymore(final TestContext ctx) {
 
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, null, Instant.now().minusSeconds(120)));
-        final Future<DeviceUser> result = Future.future();
+        final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.setHandler(ctx.asyncAssertFailure(t -> {
+        result.future().setHandler(ctx.asyncAssertFailure(t -> {
                 // THEN authentication fails with a 401 client error
                 ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
             }));
@@ -177,11 +178,11 @@ public class UsernamePasswordAuthProviderTest {
     public void testAuthenticateFailsIfNoSecretsAreValidYet(final TestContext ctx) {
 
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, Instant.now().plusSeconds(120), null));
-        final Future<DeviceUser> result = Future.future();
+        final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.setHandler(ctx.asyncAssertFailure(t -> {
+        result.future().setHandler(ctx.asyncAssertFailure(t -> {
             // THEN authentication fails with a 401 client error
             ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
         }));

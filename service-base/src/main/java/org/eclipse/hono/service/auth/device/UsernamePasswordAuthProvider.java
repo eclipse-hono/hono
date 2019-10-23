@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import io.opentracing.Tracer;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
@@ -112,7 +113,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
         if (currentContext == null) {
             return Future.failedFuture(new IllegalStateException("not running on vert.x Context"));
         } else {
-            final Future<Device> result = Future.future();
+            final Promise<Device> result = Promise.promise();
             currentContext.executeBlocking(blockingCodeHandler -> {
                 log.debug("validating password hash on vert.x worker thread [{}]", Thread.currentThread().getName());
                 final boolean isValid = credentialsOnRecord.getCandidateSecrets().stream()
@@ -123,7 +124,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
                     blockingCodeHandler.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "bad credentials"));
                 }
             }, false, result);
-            return result;
+            return result.future();
         }
     }
 }

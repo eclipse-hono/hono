@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
@@ -45,10 +46,23 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
     private MessageConsumer<JsonObject> authRequestConsumer;
 
     @Override
-    public final void start(final Future<Void> startFuture) {
+    public final void start(final Promise<Void> startPromise) {
         authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, this::processMessage);
         LOG.info("listening on event bus [address: {}] for authentication requests", AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
-        doStart(startFuture);
+        doStart(startPromise);
+    }
+
+    /**
+     * Subclasses should override this method to create required resources
+     * during startup.
+     * <p>
+     * This default implementation delegates to {@link #doStart(Future)}.
+     * 
+     * @param startPromise Completes if startup succeeded.
+     */
+    protected void doStart(final Promise<Void> startPromise) {
+        // should be overridden by subclasses
+        doStart(startPromise.future());
     }
 
     /**
@@ -58,17 +72,33 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
      * This implementation always completes the start future.
      * 
      * @param startFuture Completes if startup succeeded.
+     * @deprecated Override {@link #doStart(Promise)} instead.
      */
+    @Deprecated
     protected void doStart(final Future<Void> startFuture) {
         // should be overridden by subclasses
         startFuture.complete();
     }
 
     @Override
-    public final void stop(final Future<Void> stopFuture) {
+    public final void stop(final Promise<Void> stopPromise) {
         LOG.info("unregistering event bus listener [address: {}]", AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
         authRequestConsumer.unregister();
-        doStop(stopFuture);
+        doStop(stopPromise);
+    }
+
+    /**
+     * Subclasses should override this method to release resources
+     * during shutdown.
+     * <p>
+     * This default implementation delegates to {@link #doStop(Future)}.
+     * 
+     * @param stopPromise Completes if shutdown succeeded.
+     */
+    protected void doStop(final Promise<Void> stopPromise) {
+
+        // to be overridden by subclasses
+        doStop(stopPromise.future());
     }
 
     /**
@@ -78,7 +108,9 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
      * This implementation always completes the stop future.
      * 
      * @param stopFuture Completes if shutdown succeeded.
+     * @deprecated Override {@link #doStop(Promise)} instead.
      */
+    @Deprecated
     protected void doStop(final Future<Void> stopFuture) {
 
         // to be overridden by subclasses

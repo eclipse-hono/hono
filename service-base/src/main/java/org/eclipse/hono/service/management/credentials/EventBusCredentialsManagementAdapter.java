@@ -23,12 +23,13 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Util;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -106,11 +107,11 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
             final Future<List<CommonCredential>> secretsFuture = credentialsFromPayload(request);
 
             final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
-            final Future<OperationResult<Void>> result = Future.future();
+            final Promise<OperationResult<Void>> result = Promise.promise();
 
             return secretsFuture.compose(secrets -> {
                 getService().set(tenantId, deviceId, resourceVersion, secrets, span, result);
-                        return result.map(res -> {
+                        return result.future().map(res -> {
                             return res.createResponse(request, id -> null).setDeviceId(deviceId);
                         });
                     }
@@ -206,11 +207,11 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final SpanContext spanContext = request.getSpanContext();
 
         final Span span = Util.newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
-        final Future<OperationResult<List<CommonCredential>>> result = Future.future();
+        final Promise<OperationResult<List<CommonCredential>>> result = Promise.promise();
 
         getService().get(tenantId, deviceId, span, result);
 
-        return result.map(res -> {
+        return result.future().map(res -> {
             return res.createResponse(request, credentials -> {
                 final JsonObject ret = new JsonObject();
                 final JsonArray credentialsArray = new JsonArray();

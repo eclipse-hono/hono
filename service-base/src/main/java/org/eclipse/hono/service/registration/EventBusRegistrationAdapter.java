@@ -31,6 +31,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -99,7 +100,7 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final Future<RegistrationResult> result = Future.future();
+            final Promise<RegistrationResult> result = Promise.promise();
             if (gatewayId == null) {
                 log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
                 getService().assertRegistration(tenantId, deviceId, span, result);
@@ -108,7 +109,7 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
                         deviceId, tenantId, gatewayId);
                 getService().assertRegistration(tenantId, deviceId, gatewayId, span, result);
             }
-            resultFuture = result.map(res -> {
+            resultFuture = result.future().map(res -> {
                 return request.getResponse(res.getStatus())
                         .setDeviceId(deviceId)
                         .setJsonPayload(res.getPayload())

@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
@@ -270,7 +271,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
     private Future<Long> executeQuery(final String query) {
 
-        final Future<Long> result = Future.future();
+        final Promise<Long> result = Promise.promise();
         log.trace("running query [{}] against Prometheus backend [http://{}:{}{}]",
                 query, config.getHost(), config.getPort(), QUERY_URI);
         client.get(config.getPort(), config.getHost(), QUERY_URI)
@@ -286,7 +287,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 result.fail(sendAttempt.cause());
             }
         });
-        return result;
+        return result.future();
     }
 
     /**

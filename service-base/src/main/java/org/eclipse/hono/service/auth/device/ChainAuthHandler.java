@@ -23,6 +23,7 @@ import org.eclipse.hono.util.ExecutionContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 
@@ -63,9 +64,9 @@ public class ChainAuthHandler<T extends ExecutionContext> extends ExecutionConte
      */
     @Override
     public Future<JsonObject> parseCredentials(final T context) {
-        final Future<JsonObject> result = Future.future();
+        final Promise<JsonObject> result = Promise.promise();
         parseCredentials(0, context, null, result);
-        return result;
+        return result.future();
     }
 
     private void parseCredentials(
