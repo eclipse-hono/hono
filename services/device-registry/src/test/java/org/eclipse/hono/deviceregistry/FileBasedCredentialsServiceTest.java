@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import io.opentracing.noop.NoopSpan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -33,9 +32,9 @@ import java.util.OptionalInt;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -53,11 +52,13 @@ import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -147,24 +148,23 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         }
     }
 
-    private void start(final Future<?> startupTracker) {
+    private void start(final Promise<?> startupTracker) {
 
-        final Future<Void> registrationStartupTracker = Future.future();
-        final Future<Void> credentialsStartupTracker = Future.future();
+        final Promise<Void> registrationStartupTracker = Promise.promise();
+        final Promise<Void> credentialsStartupTracker = Promise.promise();
 
-        this.registrationService.start(registrationStartupTracker);
-        this.credentialsService.start(credentialsStartupTracker);
+        this.registrationService.start(registrationStartupTracker.future());
+        this.credentialsService.start(credentialsStartupTracker.future());
 
-        CompositeFuture
-                .all(registrationStartupTracker, credentialsStartupTracker)
-                .setHandler(result -> {
-                    log.debug("Startup complete", result.cause());
-                    if (result.failed()) {
-                        startupTracker.fail(result.cause());
-                    } else {
-                        startupTracker.complete();
-                    }
-                });
+        CompositeFuture.all(registrationStartupTracker.future(), credentialsStartupTracker.future())
+        .setHandler(result -> {
+            log.debug("Startup complete", result.cause());
+            if (result.failed()) {
+                startupTracker.fail(result.cause());
+            } else {
+                startupTracker.complete();
+            }
+        });
 
     }
 
@@ -208,8 +208,8 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Future<?> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+        final Promise<?> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(started -> ctx.verify(() -> {
             // THEN the file gets created
             verify(fileSystem).createFile(eq(credentialsConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
@@ -240,8 +240,8 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
             return null;
         }).when(fileSystem).createFile(eq(credentialsConfig.getFilename()), any(Handler.class));
 
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.failing(started -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.failing(started -> {
             ctx.completeNow();
         }));
         start(startupTracker);
@@ -276,8 +276,8 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.succeeding(started -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(started -> {
             // THEN startup succeeds
             ctx.completeNow();
         }));
@@ -312,16 +312,16 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Future<Void> startFuture = Future.future();
-        startFuture
+        final Promise<Void> startTracker = Promise.promise();
+        startTracker.future()
                 // THEN the credentials from the file are read in
                 .compose(s -> assertRegistered(svc,
                         Constants.DEFAULT_TENANT, "sensor1",
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
                 .compose(s -> {
-                    final Future<OperationResult<List<CommonCredential>>> result = Future.future();
+                    final Promise<OperationResult<List<CommonCredential>>> result = Promise.promise();
                     getCredentialsManagementService().get(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE, result);
-                    return result.map(r -> {
+                    return result.future().map(r -> {
                         if (r.getStatus() == HttpURLConnection.HTTP_OK) {
                             return null;
                         } else {
@@ -331,7 +331,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                 })
                 .setHandler(ctx.completing());
 
-        start(startFuture);
+        start(startTracker);
     }
 
     /**
@@ -353,13 +353,13 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         when(fileSystem.existsBlocking(registrationConfig.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        final Promise<Void> startTracker = Promise.promise();
+        startTracker.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the credentials from the file are not loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
         })));
-        start(startFuture);
+        start(startTracker);
     }
 
 
@@ -408,7 +408,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                         .compose(ok -> {
 
                             // WHEN saving the registry content to the file
-                            final Future<Void> write = Future.future();
+                            final Promise<Void> write = Promise.promise();
                             doAnswer(invocation -> {
                                 final Handler handler = invocation.getArgument(2);
                                 handler.handle(Future.succeededFuture());
@@ -420,7 +420,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                             svc.saveToFile();
                             // and clearing the registry
                             svc.clear();
-                            return write;
+                            return write.future();
                         })
 
                         .compose(w -> assertNotRegistered(
@@ -441,7 +441,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                         .compose(b -> {
 
                             // THEN the credentials can be loaded back in from the file
-                            final Future<Void> read = Future.future();
+                            final Promise<Void> read = Promise.promise();
                             doAnswer(invocation -> {
                                 final Handler<AsyncResult<Buffer>> handler = invocation.getArgument(1);
                                 handler.handle(Future.succeededFuture(b));
@@ -451,7 +451,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
 
                             svc.loadFromFile();
 
-                            return read;
+                            return read.future();
                         })
 
                         // and the credentials can be looked up again
@@ -484,7 +484,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         // containing a set of credentials
         setCredentials(getCredentialsManagementService(), "tenant", "device", Collections.singletonList(secret))
                 .compose(ok -> {
-                    final Future<OperationResult<Void>> result = Future.future();
+                    final Promise<OperationResult<Void>> result = Promise.promise();
                     // WHEN trying to update the credentials
                     final PasswordCredential newSecret = createPasswordCredential("myId", "baz", OptionalInt.empty());
                     svc.set("tenant", "device",
@@ -492,7 +492,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                             Collections.singletonList(newSecret),
                             NoopSpan.INSTANCE,
                             result);
-                    return result;
+                    return result.future();
                 })
                 .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
                     // THEN the update fails with a 403

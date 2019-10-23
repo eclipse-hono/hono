@@ -15,19 +15,19 @@ package org.eclipse.hono.deviceregistry;
 
 import java.util.LinkedList;
 import java.util.List;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Verticle;
 
 import org.eclipse.hono.service.AbstractBaseApplication;
 import org.eclipse.hono.service.HealthCheckProvider;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Verticle;
 
 /**
  * A Spring Boot application exposing an AMQP based endpoint that implements Hono's device registry.
@@ -74,9 +74,9 @@ public class Application extends AbstractBaseApplication {
 
             for (final Verticle verticle : this.verticles) {
                 log.info("Deploying: {}", verticle);
-                final Future<String> result = Future.future();
+                final Promise<String> result = Promise.promise();
                 getVertx().deployVerticle(verticle, result);
-                futures.add(result);
+                futures.add(result.future());
             }
 
             return CompositeFuture.all(futures);

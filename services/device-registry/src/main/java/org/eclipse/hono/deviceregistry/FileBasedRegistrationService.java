@@ -47,6 +47,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -108,8 +109,11 @@ public class FileBasedRegistrationService extends AbstractVerticle
     @Override
     public void start(final Future<Void> startFuture) {
 
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(startFuture);
+
         if (running) {
-            startFuture.complete();
+            result.complete();
         } else {
 
             if (!getConfig().isModificationEnabled()) {
@@ -119,27 +123,26 @@ public class FileBasedRegistrationService extends AbstractVerticle
             if (getConfig().getFilename() == null) {
                 log.debug("device identity filename is not set, no identity information will be loaded");
                 running = true;
-                startFuture.complete();
+                result.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
-                        .compose(ok -> loadRegistrationData())
-                        .compose(s -> {
-                            if (getConfig().isSaveToFile()) {
-                                log.info("saving device identities to file every 3 seconds");
-                                vertx.setPeriodic(3000, tid -> {
-                                    saveToFile();
-                                });
-                            } else {
-                                log.info("persistence is disabled, will not save device identities to file");
-                            }
-                            running = true;
-                            return Future.succeededFuture();
-                        })
-                        .<Void> mapEmpty()
-                        .setHandler(ar -> {
-                            log.debug("startup complete", ar.cause());
-                            startFuture.handle(ar);
+                .compose(ok -> loadRegistrationData())
+                .map(ok -> {
+                    if (getConfig().isSaveToFile()) {
+                        log.info("saving device identities to file every 3 seconds");
+                        vertx.setPeriodic(3000, tid -> {
+                            saveToFile();
                         });
+                    } else {
+                        log.info("persistence is disabled, will not save device identities to file");
+                    }
+                    running = true;
+                    return ok;
+                })
+                .setHandler(ar -> {
+                    log.debug("startup complete", ar.cause());
+                    result.handle(ar);
+                });
             }
         }
     }
@@ -151,9 +154,9 @@ public class FileBasedRegistrationService extends AbstractVerticle
             return Future.succeededFuture();
         }
 
-        final Future<Buffer> readResult = Future.future();
+        final Promise<Buffer> readResult = Promise.promise();
         vertx.fileSystem().readFile(getConfig().getFilename(), readResult);
-        return readResult
+        return readResult.future()
                 .compose(this::addAll)
                 .recover(t -> {
                     log.debug("cannot load device identities from file [{}]: {}", getConfig().getFilename(),
@@ -164,7 +167,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
     private Future<Void> checkFileExists(final boolean createIfMissing) {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         if (getConfig().getFilename() == null) {
             result.fail("no filename set");
         } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
@@ -175,13 +178,13 @@ public class FileBasedRegistrationService extends AbstractVerticle
             log.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
         }
-        return result;
+        return result.future();
 
     }
 
     private Future<Void> addAll(final Buffer deviceIdentities) {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         try {
             int deviceCount = 0;
             final JsonArray allObjects = deviceIdentities.toJsonArray();
@@ -196,7 +199,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
             log.warn("cannot read malformed JSON from device identity file [{}]", getConfig().getFilename());
             result.fail(e);
         }
-        return result;
+        return result.future();
     }
 
     private int addDevicesForTenant(final JsonObject tenant) {
@@ -245,13 +248,18 @@ public class FileBasedRegistrationService extends AbstractVerticle
     @Override
     public void stop(final Future<Void> stopFuture) {
 
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(stopFuture);
+
         if (running) {
-            saveToFile().compose(s -> {
+            saveToFile()
+            .map(ok -> {
                 running = false;
-                stopFuture.complete();
-            }, stopFuture);
+                return ok;
+            })
+            .setHandler(result);
         } else {
-            stopFuture.complete();
+            result.complete();
         }
     }
 
@@ -284,10 +292,10 @@ public class FileBasedRegistrationService extends AbstractVerticle
                                 .put(ARRAY_DEVICES, devices));
             }
 
-            final Future<Void> writeHandler = Future.future();
+            final Promise<Void> writeHandler = Promise.promise();
             vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()),
                     writeHandler);
-            return writeHandler.map(ok -> {
+            return writeHandler.future().map(ok -> {
                 dirty = false;
                 log.trace("successfully wrote {} device identities to file {}", idCount.get(),
                         getConfig().getFilename());

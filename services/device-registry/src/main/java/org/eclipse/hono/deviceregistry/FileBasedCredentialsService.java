@@ -57,6 +57,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -112,7 +113,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
     private Future<Void> checkFileExists(final boolean createIfMissing) {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         if (getConfig().getFilename() == null) {
             result.fail("no filename set");
         } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
@@ -123,13 +124,17 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             log.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
         }
-        return result;
+        return result.future();
     }
 
     @Override
     public void start(final Future<Void> startFuture) {
+
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(startFuture);
+
         if (running) {
-            startFuture.complete();
+            result.complete();
         } else {
             if (!getConfig().isModificationEnabled()) {
                 log.info("modification of credentials has been disabled");
@@ -138,24 +143,23 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             if (getConfig().getFilename() == null) {
                 log.debug("credentials filename is not set, no credentials will be loaded");
                 running = true;
-                startFuture.complete();
+                result.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
-                        .compose(ok -> loadCredentials())
-                        .compose(s -> {
-                            if (getConfig().isSaveToFile()) {
-                                log.info("saving credentials to file every 3 seconds");
-                                vertx.setPeriodic(3000, saveIdentities -> {
-                                    saveToFile();
-                                });
-                            } else {
-                                log.info("persistence is disabled, will not save credentials to file");
-                            }
-                            running = true;
-                            return Future.succeededFuture();
-                        })
-                        .<Void> mapEmpty()
-                        .setHandler(startFuture);
+                .compose(ok -> loadCredentials())
+                .map(ok -> {
+                    if (getConfig().isSaveToFile()) {
+                        log.info("saving credentials to file every 3 seconds");
+                        vertx.setPeriodic(3000, saveIdentities -> {
+                            saveToFile();
+                        });
+                    } else {
+                        log.info("persistence is disabled, will not save credentials to file");
+                    }
+                    running = true;
+                    return ok;
+                })
+                .setHandler(result);
             }
         }
     }
@@ -167,10 +171,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             log.info("Either filename is null or empty start is set, won't load any credentials");
             return Future.succeededFuture();
         } else {
-            final Future<Buffer> readResult = Future.future();
+            final Promise<Buffer> readResult = Promise.promise();
             log.debug("trying to load credentials from file {}", getConfig().getFilename());
             vertx.fileSystem().readFile(getConfig().getFilename(), readResult);
-            return readResult
+            return readResult.future()
                     .compose(this::addAll)
                     .recover(t -> {
                         log.debug("cannot load credentials from file [{}]: {}", getConfig().getFilename(),
@@ -181,7 +185,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     private Future<Void> addAll(final Buffer credentials) {
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         try {
             int credentialsCount = 0;
             final JsonArray allObjects = credentials.toJsonArray();
@@ -197,7 +201,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             log.warn("cannot read malformed JSON from credentials file [{}]", getConfig().getFilename());
             result.fail(e);
         }
-        return result;
+        return result.future();
     }
 
     int addCredentialsForTenant(final JsonObject tenant) {
@@ -223,13 +227,20 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     @Override
     public void stop(final Future<Void> stopFuture) {
 
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(stopFuture);
+
         if (running) {
-            saveToFile().compose(s -> {
-                running = false;
-                stopFuture.complete();
-            }, stopFuture);
+            saveToFile().setHandler(attempt -> {
+                if (attempt.succeeded()) {
+                    running = false;
+                    result.complete();
+                } else {
+                    result.fail(attempt.cause());
+                }
+            });
         } else {
-            stopFuture.complete();
+            result.complete();
         }
 
     }
@@ -253,12 +264,12 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                                     .put(FIELD_TENANT, entry.getKey())
                                     .put(ARRAY_CREDENTIALS, credentialsArray));
                 }
-                final Future<Void> writeHandler = Future.future();
+                final Promise<Void> writeHandler = Promise.promise();
                 vertx.fileSystem().writeFile(
                         getConfig().getFilename(),
                         Buffer.buffer(tenants.encodePrettily(), StandardCharsets.UTF_8.name()),
                         writeHandler);
-                return writeHandler.map(ok -> {
+                return writeHandler.future().map(ok -> {
                     dirty = false;
                     log.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getFilename());
                     return (Void) null;

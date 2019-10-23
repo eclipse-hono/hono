@@ -48,6 +48,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -94,8 +95,11 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     @Override
     public void start(final Future<Void> startFuture) {
 
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(startFuture);
+
         if (running) {
-            startFuture.complete();
+            result.complete();
         } else {
 
             if (!getConfig().isModificationEnabled()) {
@@ -105,24 +109,28 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             if (getConfig().getFilename() == null) {
                 log.debug("tenant file name is not set, tenant information will not be loaded");
                 running = true;
-                startFuture.complete();
+                result.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
                 .compose(ok -> {
                     return loadTenantData();
                 })
-                .compose(s -> {
-                    if (getConfig().isSaveToFile()) {
-                        log.info("saving tenants to file every 3 seconds");
-                        vertx.setPeriodic(3000, tid -> {
-                            saveToFile();
-                        });
+                .setHandler(attempt -> {
+                    if (attempt.succeeded()) {
+                        if (getConfig().isSaveToFile()) {
+                            log.info("saving tenants to file every 3 seconds");
+                            vertx.setPeriodic(3000, tid -> {
+                                saveToFile();
+                            });
+                        } else {
+                            log.info("persistence is disabled, will not save tenants to file");
+                        }
+                        running = true;
+                        result.complete();
                     } else {
-                        log.info("persistence is disabled, will not save tenants to file");
+                        result.fail(attempt.cause());
                     }
-                    running = true;
-                    startFuture.complete();
-                }, startFuture);
+                });
             }
         }
     }
@@ -133,9 +141,9 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             log.info("Either filename is null or empty start is set, won't load any tenants");
             return Future.succeededFuture();
         } else {
-            final Future<Buffer> readResult = Future.future();
+            final Promise<Buffer> readResult = Promise.promise();
             vertx.fileSystem().readFile(getConfig().getFilename(), readResult);
-            return readResult.compose(buffer -> {
+            return readResult.future().compose(buffer -> {
                 return addAll(buffer);
             }).recover(t -> {
                 log.debug("cannot load tenants from file [{}]: {}", getConfig().getFilename(), t.getMessage());
@@ -146,7 +154,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
     private Future<Void> checkFileExists(final boolean createIfMissing) {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         if (getConfig().getFilename() == null) {
             result.fail("no filename set");
         } else if (vertx.fileSystem().existsBlocking(getConfig().getFilename())) {
@@ -157,12 +165,12 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             log.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
         }
-        return result;
+        return result.future();
     }
 
     private Future<Void> addAll(final Buffer tenantsBuffer) {
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
         try {
             if (tenantsBuffer.length() > 0) {
                 int tenantCount = 0;
@@ -180,7 +188,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             log.warn("cannot read malformed JSON from tenants file [{}]", getConfig().getFilename());
             result.fail(e);
         }
-        return result;
+        return result.future();
     }
 
     private void addTenant(final JsonObject tenantToAdd) {
@@ -202,13 +210,18 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     @Override
     public void stop(final Future<Void> stopFuture) {
 
+        final Promise<Void> result = Promise.promise();
+        result.future().setHandler(stopFuture);
+
         if (running) {
-            saveToFile().compose(s -> {
+            saveToFile()
+            .map(ok -> {
                 running = false;
-                stopFuture.complete();
-            }, stopFuture);
+                return ok;
+            })
+            .setHandler(result);
         } else {
-            stopFuture.complete();
+            result.complete();
         }
     }
 
@@ -226,10 +239,10 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                     tenantsJson.add(json);
                 });
 
-                final Future<Void> writeHandler = Future.future();
+                final Promise<Void> writeHandler = Promise.promise();
                 vertx.fileSystem().writeFile(getConfig().getFilename(),
                         Buffer.factory.buffer(tenantsJson.encodePrettily()), writeHandler);
-                return writeHandler.map(ok -> {
+                return writeHandler.future().map(ok -> {
                     dirty = false;
                     log.trace("successfully wrote {} tenants to file {}", tenantsJson.size(),
                             getConfig().getFilename());
