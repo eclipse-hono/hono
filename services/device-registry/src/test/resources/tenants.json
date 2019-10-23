@@ -1,7 +1,13 @@
 [
   {
     "tenant-id": "DEFAULT_TENANT",
-    "enabled": true
+    "enabled": true,
+    "trusted-ca": {
+      "subject-dn": "CN=test",
+      "public-key": "bm90IGEgcHViaWMga2V5",
+      "not-before": "2019-09-20T00:00:00+02:00",
+      "not-after": "2021-09-20T00:00:00+02:00"
+    }
   },
   {
     "tenant-id": "HTTP_TENANT",

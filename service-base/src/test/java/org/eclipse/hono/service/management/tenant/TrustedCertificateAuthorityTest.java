@@ -14,9 +14,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -75,7 +73,7 @@ class TrustedCertificateAuthorityTest {
                 .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, DateTimeFormatter.ISO_INSTANT.format(notAfter));
 
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
-        assertTrue(authority.isValid());
+        assertThat(authority.isValid()).isTrue();
         assertAuthority(authority);
     }
 
@@ -91,7 +89,7 @@ class TrustedCertificateAuthorityTest {
                 .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded());
 
         final TrustedCertificateAuthority authority = ca.mapTo(TrustedCertificateAuthority.class);
-        assertTrue(authority.isValid());
+        assertThat(authority.isValid()).isTrue();
         assertAuthority(authority);
     }
 
@@ -120,11 +118,11 @@ class TrustedCertificateAuthorityTest {
     }
 
     private void assertAuthority(final TrustedCertificateAuthority authority) {
-        assertTrue(authority.isValid());
-        assertThat(authority.getSubjectDn(), is(certificate.getSubjectX500Principal()));
-        assertThat(authority.getPublicKey(), is(certificate.getPublicKey().getEncoded()));
-        assertThat(authority.getKeyAlgorithm(), is(certificate.getPublicKey().getAlgorithm()));
-        assertThat(authority.getNotBefore(), is(certificate.getNotBefore().toInstant()));
-        assertThat(authority.getNotAfter(), is(certificate.getNotAfter().toInstant()));
+        assertThat(authority.isValid()).isTrue();
+        assertThat(authority.getSubjectDn()).isEqualTo(certificate.getSubjectX500Principal());
+        assertThat(authority.getPublicKey()).isEqualTo(certificate.getPublicKey().getEncoded());
+        assertThat(authority.getKeyAlgorithm()).isEqualTo(certificate.getPublicKey().getAlgorithm());
+        assertThat(authority.getNotBefore()).isEqualTo(certificate.getNotBefore().toInstant());
+        assertThat(authority.getNotAfter()).isEqualTo(certificate.getNotAfter().toInstant());
     }
 }

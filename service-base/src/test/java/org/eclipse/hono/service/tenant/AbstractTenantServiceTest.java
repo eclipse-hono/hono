@@ -482,7 +482,7 @@ public abstract class AbstractTenantServiceTest {
     public void testRemoveTenantSucceeds(final VertxTestContext ctx) {
 
         addTenant("tenant")
-        .compose(ok -> assertTenantExists(getTenantService(), "tenant"))
+        .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
         .compose(ok -> {
             final Future<Result<Void>> result = Future.future();
             getTenantManagementService().remove("tenant", Optional.empty(), NoopSpan.INSTANCE, result);
@@ -492,7 +492,7 @@ public abstract class AbstractTenantServiceTest {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
             });
-            return assertTenantDoesNotExist(getTenantService(), "tenant");
+            return assertTenantDoesNotExist(getTenantManagementService(), "tenant");
         })
         .setHandler(ctx.completing());
 
@@ -583,11 +583,13 @@ public abstract class AbstractTenantServiceTest {
     /**
      * Verifies that a tenant is registered.
      *
-     * @param svc The credentials service to probe.
+     * @param svc The service to probe.
      * @param tenant The tenant.
      * @return A succeeded future if the tenant exists.
      */
-    protected static Future<TenantResult<JsonObject>> assertTenantExists(final TenantService svc, final String tenant) {
+    protected static Future<OperationResult<Tenant>> assertTenantExists(
+            final TenantManagementService svc,
+            final String tenant) {
 
         return assertGet(svc, tenant, HttpURLConnection.HTTP_OK);
     }
@@ -595,24 +597,29 @@ public abstract class AbstractTenantServiceTest {
     /**
      * Verifies that a tenant is not registered.
      *
-     * @param svc The credentials service to probe.
+     * @param svc The service to probe.
      * @param tenant The tenant.
      * @return A succeeded future if the tenant does not exist.
      */
-    protected static Future<TenantResult<JsonObject>> assertTenantDoesNotExist(final TenantService svc, final String tenant) {
+    protected static Future<OperationResult<Tenant>> assertTenantDoesNotExist(
+            final TenantManagementService svc,
+            final String tenant) {
 
         return assertGet(svc, tenant, HttpURLConnection.HTTP_NOT_FOUND);
     }
 
-    private static Future<TenantResult<JsonObject>> assertGet(final TenantService svc, final String tenantId, final int expectedStatusCode) {
+    private static Future<OperationResult<Tenant>> assertGet(
+            final TenantManagementService svc,
+            final String tenantId,
+            final int expectedStatusCode) {
 
-        final Future<TenantResult<JsonObject>> result = Future.future();
-        svc.get(tenantId, result);
+        final Future<OperationResult<Tenant>> result = Future.future();
+        svc.read(tenantId, NoopSpan.INSTANCE, result);
         return result.map(r -> {
             if (r.getStatus() == expectedStatusCode) {
                 return r;
             } else {
-                throw StatusCodeMapper.from(r);
+                throw StatusCodeMapper.from(r.getStatus(), null);
             }
         });
     }

@@ -186,6 +186,10 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     private void addTenant(final JsonObject tenantToAdd) {
 
         try {
+            final Object trustedCas = tenantToAdd.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
+            if (trustedCas instanceof JsonObject) {
+                tenantToAdd.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(trustedCas));
+            }
             final String tenantId = tenantToAdd.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
             final Versioned<Tenant> tenant = new Versioned<>(tenantToAdd.mapTo(Tenant.class));
             log.debug("loading tenant [{}]", tenantId);
