@@ -1,11 +1,15 @@
 [
   {
     "tenant-id": "DEFAULT_TENANT",
-    "trusted-ca": {
-      "subject-dn": "${trusted-ca.subject-dn}",
-      "public-key": "${trusted-ca.public-key}",
-      "algorithm": "${trusted-ca.algorithm}"
-    },
+    "trusted-ca": [
+      {
+        "subject-dn": "${trusted-ca.subject-dn}",
+        "public-key": "${trusted-ca.public-key}",
+        "algorithm": "${trusted-ca.algorithm}",
+        "not-before": "${trusted-ca.not-before}",
+        "not-after": "${trusted-ca.not-after}"
+      }
+    ],
     "enabled": true
   },
   {
