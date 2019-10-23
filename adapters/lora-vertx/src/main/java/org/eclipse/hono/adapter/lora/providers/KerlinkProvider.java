@@ -35,6 +35,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
@@ -164,7 +165,7 @@ public class KerlinkProvider implements LoraProvider {
             final String targetDevice, final String payloadHexa) {
         LOG.debug("Invoking downlink rest api for device '{}'", targetDevice);
 
-        final Future<Void> result = Future.future();
+        final Promise<Void> result = Promise.promise();
 
         final String targetUri = getDownlinkRequestUri(gatewayDevice, targetDevice);
 
@@ -204,7 +205,7 @@ public class KerlinkProvider implements LoraProvider {
                     }
                 });
 
-        return result;
+        return result.future();
     }
 
     private String getDownlinkRequestUri(final JsonObject gatewayDevice, final String targetDevice) {
@@ -270,7 +271,7 @@ public class KerlinkProvider implements LoraProvider {
     }
 
     private Future<JsonObject> requestApiTokenWithSecret(final JsonObject gatewayDevice, final JsonObject secret) {
-        final Future<JsonObject> result = Future.future();
+        final Promise<JsonObject> result = Promise.promise();
 
         final String loginUri = LoraUtils.getNormalizedProviderUrlFromGatewayDevice(gatewayDevice) + API_PATH_GET_TOKEN;
 
@@ -295,7 +296,7 @@ public class KerlinkProvider implements LoraProvider {
                                 response.cause()));
                     }
                 });
-        return result;
+        return result.future();
     }
 
     private String getCachedTokenForGatewayDevice(final JsonObject gatewayDevice) {

@@ -63,6 +63,7 @@ import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpMethod;
@@ -475,7 +476,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private Future<HttpResponse<Buffer>> sendCommandToDevice(final CommandData commandData) {
         LOG.debug("Sending {} to device", commandData.getCommand());
-        final Future<HttpResponse<Buffer>> responseHandler = Future.future();
+        final Promise<HttpResponse<Buffer>> responseHandler = Promise.promise();
 
         final Optional<LoraProvider> providerOptional = loraProviders.stream()
                 .filter(loraProvider -> loraProvider.getProviderName().equals(commandData.getLoraProvider()))
@@ -498,7 +499,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             LOG.error("No lora provider found for [{}]", commandData.getLoraProvider());
             responseHandler.fail("No suitable lora provider found to send command" + commandData.getCommand());
         }
-        return responseHandler;
+        return responseHandler.future();
     }
 
     private void sendResponseToApplication(final Command command, final String loraDeviceId,
