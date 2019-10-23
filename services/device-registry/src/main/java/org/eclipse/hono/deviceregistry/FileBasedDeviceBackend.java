@@ -38,6 +38,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -99,16 +100,17 @@ public class FileBasedDeviceBackend implements DeviceBackend {
     public void deleteDevice(final String tenantId, final String deviceId, final Optional<String> resourceVersion,
             final Span span, final Handler<AsyncResult<Result<Void>>> resultHandler) {
 
-        final Future<Result<Void>> future = Future.future();
-        registrationService.deleteDevice(tenantId, deviceId, resourceVersion, span, future);
+        final Promise<Result<Void>> deleteAttempt = Promise.promise();
+        registrationService.deleteDevice(tenantId, deviceId, resourceVersion, span, deleteAttempt);
 
-        future.compose(r -> {
+        deleteAttempt.future()
+        .compose(r -> {
             if (r.getStatus() != HttpURLConnection.HTTP_NO_CONTENT) {
                 return Future.succeededFuture(r);
             }
 
             // now delete the credentials set
-            final Future<Result<Void>> f = Future.future();
+            final Promise<Result<Void>> f = Promise.promise();
             credentialsService.remove(
                     tenantId,
                     deviceId,
@@ -116,7 +118,7 @@ public class FileBasedDeviceBackend implements DeviceBackend {
                     f);
 
             // pass on the original result
-            return f.map(r);
+            return f.future().map(r);
         })
         .setHandler(resultHandler);
     }
@@ -125,10 +127,10 @@ public class FileBasedDeviceBackend implements DeviceBackend {
     public void createDevice(final String tenantId, final Optional<String> deviceId, final Device device,
            final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
 
-        final Future<OperationResult<Id>> future = Future.future();
-        registrationService.createDevice(tenantId, deviceId, device, span, future);
+        final Promise<OperationResult<Id>> createAttempt = Promise.promise();
+        registrationService.createDevice(tenantId, deviceId, device, span, createAttempt);
 
-        future
+        createAttempt.future()
                 .compose(r -> {
 
                     if (r.getStatus() != HttpURLConnection.HTTP_CREATED) {
@@ -136,7 +138,7 @@ public class FileBasedDeviceBackend implements DeviceBackend {
                     }
 
                     // now create the empty credentials set
-                    final Future<OperationResult<Void>> f = Future.future();
+                    final Promise<OperationResult<Void>> f = Promise.promise();
                     credentialsService.set(
                             tenantId,
                             r.getPayload().getId(),
@@ -146,10 +148,9 @@ public class FileBasedDeviceBackend implements DeviceBackend {
                             f);
 
                     // pass on the original result
-                    return f.map(r);
+                    return f.future().map(r);
 
                 })
-
                 .setHandler(resultHandler);
 
     }
@@ -199,13 +200,14 @@ public class FileBasedDeviceBackend implements DeviceBackend {
     public void get(final String tenantId, final String deviceId, final Span span,
             final Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler) {
 
-        final Future<OperationResult<List<CommonCredential>>> f = Future.future();
+        final Promise<OperationResult<List<CommonCredential>>> f = Promise.promise();
         credentialsService.get(tenantId, deviceId, span, f);
-        f.compose(r -> {
+        f.future()
+        .compose(r -> {
             if (r.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                final Future<OperationResult<Device>> readFuture = Future.future();
-                registrationService.readDevice(tenantId, deviceId, span, readFuture);
-                return readFuture.map(d -> {
+                final Promise<OperationResult<Device>> readAttempt = Promise.promise();
+                registrationService.readDevice(tenantId, deviceId, span, readAttempt);
+                return readAttempt.future().map(d -> {
                     if (d.getStatus() == HttpURLConnection.HTTP_OK) {
                         return OperationResult.ok(HttpURLConnection.HTTP_OK,
                                 Collections.<CommonCredential> emptyList(),

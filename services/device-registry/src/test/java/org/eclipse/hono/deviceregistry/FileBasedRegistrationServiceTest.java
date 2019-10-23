@@ -50,6 +50,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -159,13 +160,13 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(started -> ctx.verify(() -> {
             // THEN the file gets created
             verify(fileSystem).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startupTracker);
+        registrationService.start(startupTracker.future());
     }
 
     /**
@@ -189,12 +190,12 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             return null;
         }).when(fileSystem).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.failing(started -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.failing(started -> {
             // THEN startup has failed
             ctx.completeNow();
         }));
-        registrationService.start(startupTracker);
+        registrationService.start(startupTracker.future());
 
     }
 
@@ -218,12 +219,12 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.succeeding(started -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(started -> {
             // THEN startup succeeds
             ctx.completeNow();
         }));
-        registrationService.start(startupTracker);
+        registrationService.start(startupTracker.future());
 
     }
 
@@ -246,8 +247,8 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Future<Void> startFuture = Future.future();
-        startFuture
+        final Promise<Void> startFuture = Promise.promise();
+        startFuture.future()
                 .compose(ok -> assertCanReadDevice(TENANT, DEVICE))
                 .compose(ok -> assertCanReadDevice(TENANT, GW))
                 .compose(ok -> assertDevice(TENANT, "4712", Optional.of(GW),
@@ -270,7 +271,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
                         })
                 .setHandler(ctx.succeeding(s -> ctx.completeNow())));
 
-        registrationService.start(startFuture);
+        registrationService.start(startFuture.future());
 
     }
 
@@ -316,7 +317,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
 
                 .compose(ok -> {
                     // WHEN saving the registry content to the file
-                    final Future<Void> write = Future.future();
+                    final Promise<Void> write = Promise.promise();
                     doAnswer(invocation -> {
                         final Handler handler = invocation.getArgument(2);
                         handler.handle(Future.succeededFuture());
@@ -328,7 +329,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
                     registrationService.saveToFile();
                     // and clearing the registry
                     registrationService.clear();
-                    return write;
+                    return write.future();
                 })
                 .compose(ok -> assertDevicesNotFound(devices))
 
@@ -379,13 +380,13 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
         when(fileSystem.existsBlocking(registrationConfig.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        final Promise<Void> startFuture = Promise.promise();
+        startFuture.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the device identities from the file are not loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startFuture);
+        registrationService.start(startFuture.future());
 
     }
 
@@ -474,12 +475,12 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             return null;
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.succeeding(done -> ctx.verify(() -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(done -> ctx.verify(() -> {
             verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startupTracker);
+        registrationService.start(startupTracker.future());
     }
 
     /**
@@ -501,20 +502,20 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             return null;
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
-        final Future<Void> startupTracker = Future.future();
-        startupTracker
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future()
         .compose(ok -> {
             // WHEN adding a device
                     registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE);
-            final Future<Void> shutdownTracker = Future.future();
-                    registrationService.stop(shutdownTracker);
-            return shutdownTracker;
+            final Promise<Void> shutdownTracker = Promise.promise();
+                    registrationService.stop(shutdownTracker.future());
+            return shutdownTracker.future();
         })
         .setHandler(ctx.succeeding(shutDown -> ctx.verify(() -> {
             // THEN no data has been written to the file system
                     verify(fileSystem, never()).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startupTracker);
+        registrationService.start(startupTracker.future());
     }
 }

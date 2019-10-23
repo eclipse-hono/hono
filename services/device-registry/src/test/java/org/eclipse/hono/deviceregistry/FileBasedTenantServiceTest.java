@@ -52,6 +52,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -133,13 +134,13 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(started -> ctx.verify(() -> {
             // THEN the file gets created
             verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.start(startupTracker);
+        svc.start(startupTracker.future());
     }
 
     /**
@@ -163,11 +164,11 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
             handler.handle(Future.failedFuture("no access"));
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.failing(started -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.failing(started -> {
             ctx.completeNow();
         }));
-        svc.start(startupTracker);
+        svc.start(startupTracker.future());
     }
 
     /**
@@ -193,11 +194,11 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN starting the service
-        final Future<Void> startupTracker = Future.future();
-        startupTracker.setHandler(ctx.completing(
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.completing(
             // THEN startup succeeds
         ));
-        svc.start(startupTracker);
+        svc.start(startupTracker.future());
     }
 
     /**
@@ -220,8 +221,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Future<Void> startFuture = Future.future();
-        startFuture.compose(ok -> {
+        final Promise<Void> startFuture = Promise.promise();
+        startFuture.future().compose(ok -> {
             // THEN the credentials from the file are loaded
             return assertTenantExists(svc, Constants.DEFAULT_TENANT);
         })
@@ -238,7 +239,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         })
         .setHandler(ctx.completing());
 
-        svc.start(startFuture);
+        svc.start(startFuture.future());
     }
 
     /**
@@ -256,13 +257,13 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Future<Void> startFuture = Future.future();
-        startFuture.setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        final Promise<Void> startFuture = Promise.promise();
+        startFuture.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the credentials from the file are loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.start(startFuture);
+        svc.start(startFuture.future());
     }
 
     /**
