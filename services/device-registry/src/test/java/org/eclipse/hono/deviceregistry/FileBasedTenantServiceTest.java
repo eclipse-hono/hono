@@ -225,6 +225,17 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
             // THEN the credentials from the file are loaded
             return assertTenantExists(svc, Constants.DEFAULT_TENANT);
         })
+        .map(getResult -> {
+            ctx.verify(() -> {
+                final Tenant tenant = getResult.getPayload();
+                assertThat(tenant.getTrustedCertificateAuthorities()).isNotEmpty();
+                final TrustedCertificateAuthority ca = tenant.getTrustedCertificateAuthorities().get(0);
+                assertThat(ca.getPublicKey()).isNotNull();
+                assertThat(ca.getNotBefore()).isNotNull();
+                assertThat(ca.getNotAfter()).isNotNull();
+            });
+            return getResult;
+        })
         .setHandler(ctx.completing());
 
         svc.start(startFuture);
