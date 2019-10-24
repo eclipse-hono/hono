@@ -18,17 +18,20 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+
+import javax.crypto.SecretKey;
 
 import org.eclipse.californium.elements.auth.AdditionalInfo;
 import org.eclipse.californium.elements.auth.PreSharedKeyIdentity;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.dtls.PskPublicInformation;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
+import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -41,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 
 /**
@@ -82,19 +86,22 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * @param credentialsOnRecord The credentials on record as returned by the Credentials service.
      * @return The key or {@code null} if no candidate secret is on record.
      */
-    private static byte[] getCandidateKey(final CredentialsObject credentialsOnRecord) {
+    private static SecretKey getCandidateKey(final CredentialsObject credentialsOnRecord) {
 
-        final List<byte[]> keys = credentialsOnRecord.getCandidateSecrets(candidateSecret -> {
-            return candidateSecret.getBinary(CredentialsConstants.FIELD_SECRETS_KEY, new byte[0]);
-        });
-
-        if (keys.isEmpty()) {
-            return null;
-        } else {
-            return keys.get(0);
-        }
+        return credentialsOnRecord.getCandidateSecrets(candidateSecret -> getKey(candidateSecret))
+                .stream()
+                .findFirst()
+                .orElse(null);
     }
 
+    private static SecretKey getKey(final JsonObject candidateSecret) {
+        try {
+            final byte[] encodedKey = candidateSecret.getBinary(CredentialsConstants.FIELD_SECRETS_KEY);
+            return SecretUtil.create(encodedKey, "AES");
+        } catch (IllegalArgumentException | ClassCastException e) {
+            return null;
+        }
+    }
 
     /**
      * {@inheritDoc}
@@ -134,7 +141,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
     }
 
     @Override
-    public byte[] getKey(final PskPublicInformation identity) {
+    public SecretKey getKey(final PskPublicInformation identity) {
 
         LOG.debug("getting PSK secret for identity [{}]", identity);
         final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(identity.getPublicInfoAsString());
@@ -142,7 +149,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
             return null;
         }
 
-        final CompletableFuture<byte[]> secret = new CompletableFuture<>();
+        final CompletableFuture<SecretKey> secret = new CompletableFuture<>();
         context.runOnContext((v) -> {
             getSharedKeyForDevice(handshakeIdentity)
             .setHandler((getAttempt) -> {
@@ -171,24 +178,19 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * @param handshakeIdentity The identity used by the device.
      * @return A future completed with the key or failed with a {@link ServiceInvocationException}.
      */
-    private Future<byte[]> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity) {
+    private Future<SecretKey> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity) {
 
         return credentialsClientFactory
                 .getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
                 .compose(client -> client.get(handshakeIdentity.getType(), handshakeIdentity.getAuthId()))
-                .compose((credentials) -> {
-                    final byte[] key = getCandidateKey(credentials);
-                    if (key != null) {
-                        return Future.succeededFuture(key);
-                    } else {
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
-                                "no shared key registered for identity"));
-                    }
-                });
+                .compose((credentials) -> Optional.ofNullable(getCandidateKey(credentials))
+                        .map(secret -> Future.succeededFuture(secret))
+                        .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                                "no shared key registered for identity"))));
     }
 
     @Override
-    public byte[] getKey(final ServerNames serverNames, final PskPublicInformation identity) {
+    public SecretKey getKey(final ServerNames serverNames, final PskPublicInformation identity) {
         // for now, don't support serverNames indication
         // maybe extended in the future to provide tenant identity
         return getKey(identity);
