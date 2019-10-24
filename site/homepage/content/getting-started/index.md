@@ -97,6 +97,15 @@ echo $REGISTRY_IP
 
 If this does not print an IP address, check that `minikube tunnel` is running.
 
+{{% note title="Missing DEFAULT_TENANT" %}}
+Due to [a bug in the example device registry](https://github.com/eclipse/hono/issues/1599) you need to
+manually create the `DEFAULT_TENANT` in your local Hono instance before proceeding to the
+next steps. To do so, please run:
+```sh
+curl -i -X POST http://$REGISTRY_IP:28080/v1/tenants/DEFAULT_TENANT -H "content-type: application/json"
+```
+{{% /note %}}
+
 <a name="overview"></a>
 ## Overview of Hono Components
 
