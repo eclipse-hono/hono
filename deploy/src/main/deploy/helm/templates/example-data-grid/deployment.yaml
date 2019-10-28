@@ -26,7 +26,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_LABELS
           value: run=infinispan-server
-        - name: _JAVA_OPTIONS
+        - name: JDK_JAVA_OPTIONS
           value: "-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80"
         - name: APP_USER
           value: hono
