@@ -54,6 +54,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <http.java.options></http.java.options>
     <mqtt.java.options></mqtt.java.options>
     <deviceregistry.image>hono-service-device-registry</deviceregistry.image>
+    <trace.frames>0</trace.frames>
   </properties>
 
   <dependencies>
@@ -933,7 +934,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
             <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
               <environmentVariables>
-                <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                <PN_TRACE_FRM>${trace.frames}</PN_TRACE_FRM>
               </environmentVariables>
               <systemProperties>
                 <auth.host>${auth.ip}</auth.host>
