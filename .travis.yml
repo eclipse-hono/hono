@@ -1,6 +1,8 @@
 dist: bionic
-sudo: required
 language: java
+
+services:
+- docker
 
 jdk:
 - openjdk11
