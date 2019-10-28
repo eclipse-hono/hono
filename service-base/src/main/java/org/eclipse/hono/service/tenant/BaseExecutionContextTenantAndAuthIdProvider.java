@@ -37,7 +37,13 @@ public class BaseExecutionContextTenantAndAuthIdProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseExecutionContextTenantAndAuthIdProvider.class);
 
+    /**
+     * The protocol adapter's configuration properties.
+     */
     protected final ProtocolAdapterProperties config;
+    /**
+     * The factory for creating Tenant service clients.
+     */
     protected final TenantClientFactory tenantClientFactory;
 
     /**

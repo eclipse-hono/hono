@@ -66,12 +66,8 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      *
      * @return The vertx instance.
      */
-    protected Vertx getVertx() {
+    protected final Vertx getVertx() {
         return vertx;
-    }
-
-    protected ApplicationConfigProperties getConfig() {
-        return config;
     }
 
     /**
@@ -86,13 +82,22 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
     }
 
     /**
+     * Gets the application configuration properties used for this service.
+     * 
+     * @return The properties.
+     */
+    protected final ApplicationConfigProperties getConfig() {
+        return config;
+    }
+
+    /**
      * Sets the health check server for this application.
      * 
      * @param healthCheckServer The health check server.
      * @throws NullPointerException if healthCheckServer is {@code null}.
      */
     @Autowired(required = false)
-    public void setHealthCheckServer(final HealthCheckServer healthCheckServer) {
+    public final void setHealthCheckServer(final HealthCheckServer healthCheckServer) {
         this.healthCheckServer = Objects.requireNonNull(healthCheckServer);
     }
 
@@ -140,12 +145,12 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
                     Runtime.getRuntime().availableProcessors());
         }
 
-        final Future<?> future = deployVerticles()
-                .compose(s -> postRegisterServiceVerticles())
-                .compose(s -> healthCheckServer.start());
-
         final CompletableFuture<Void> started = new CompletableFuture<>();
-        future.setHandler(result -> {
+
+        deployVerticles()
+        .compose(s -> postRegisterServiceVerticles())
+        .compose(s -> healthCheckServer.start())
+        .setHandler(result -> {
             if (result.failed()) {
                 started.completeExceptionally(result.cause());
             } else {
