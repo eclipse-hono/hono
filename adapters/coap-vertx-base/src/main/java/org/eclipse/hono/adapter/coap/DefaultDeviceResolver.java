@@ -97,7 +97,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
     private static SecretKey getKey(final JsonObject candidateSecret) {
         try {
             final byte[] encodedKey = candidateSecret.getBinary(CredentialsConstants.FIELD_SECRETS_KEY);
-            return SecretUtil.create(encodedKey, "AES");
+            return SecretUtil.create(encodedKey, "PSK");
         } catch (IllegalArgumentException | ClassCastException e) {
             return null;
         }
