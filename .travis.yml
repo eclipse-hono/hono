@@ -10,7 +10,8 @@ jdk:
 install: true # no need to call 'mvn install'
 
 script:
-  - mvn verify -B -e -Dmsg.count=400 -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+- free -m
+- mvn verify -B -e -Dmsg.count=400 -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
 env:
   global:
