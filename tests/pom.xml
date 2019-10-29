@@ -51,6 +51,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       -DenableForcedCommandRerouting=true
     </default.java.options>
     <amqp.java.options></amqp.java.options>
+    <coap.java.options></coap.java.options>
     <http.java.options></http.java.options>
     <mqtt.java.options></mqtt.java.options>
     <deviceregistry.image>hono-service-device-registry</deviceregistry.image>
@@ -296,12 +297,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <alias>hono-service-auth.hono</alias>
                     </network>
                     <memorySwap>-1</memorySwap>
-                    <memory>268435456</memory>
+                    <memory>205520896</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>authentication-impl,prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
@@ -381,7 +382,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>${default.java.options}</_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
@@ -595,7 +596,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>${default.java.options} ${http.java.options}</_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${default.java.options} ${http.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
@@ -681,7 +682,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>${default.java.options} ${mqtt.java.options}</_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${default.java.options} ${mqtt.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
@@ -759,7 +760,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>${default.java.options} ${amqp.java.options}</_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${default.java.options} ${amqp.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
@@ -829,11 +830,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>prod</SPRING_PROFILES_ACTIVE>
-                      <_JAVA_OPTIONS>
-                        -XX:MinRAMPercentage=80
-                        -XX:MaxRAMPercentage=80
-                        ${http.java.options}
-                      </_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${default.java.options} ${coap.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
