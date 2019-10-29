@@ -50,6 +50,8 @@ The names of Hono's standard components are as follows:
 | HTTP adapter      | `hono-http`         |
 | Kura adapter      | `hono-kura-mqtt`   |
 | MQTT adapter      | `hono-mqtt`         |
+| Lora adapter      | `hono-lora`         |
+| Sigfox adapter    | `hono-sigfox`       |
 
 ### Protocol Adapter Metrics
 
