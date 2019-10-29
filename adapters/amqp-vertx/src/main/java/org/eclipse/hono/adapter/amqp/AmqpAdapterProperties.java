@@ -111,7 +111,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
 
     /**
      * Sets the time to wait for incoming traffic from a device
-     * before the connection should be considered stale and thus being closed.
+     * before the connection should be considered stale and thus be closed.
      * <p>
      * The default value of this property is {@link #DEFAULT_IDLE_TIMEOUT_MILLIS}.
      * 
@@ -128,7 +128,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
 
     /**
      * Gets the time to wait for incoming traffic from a device
-     * before the connection is considered stale and thus being closed.
+     * before the connection is considered stale and thus be closed.
      * <p>
      * The default value of this property is {@link #DEFAULT_IDLE_TIMEOUT_MILLIS}.
      * 
