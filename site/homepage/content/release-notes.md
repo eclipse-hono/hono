@@ -2,6 +2,17 @@
 title = "Release Notes"
 +++
 
+## 1.0.1
+
+### Fixes & Enhancements
+
+* The AMQP protocol adapter now requests devices to send traffic periodically in order
+  to prevent a time out of the connection. This way the adapter is able to detect and
+  close stale connections which is important to reliably close the device's corresponding
+  command consumer. The time period after which the adapter should consider a connection stale
+  can be configured using an environment variable. Please refer to the AMQP adapter's
+  admin guide for details.
+
 ## 1.0.0
 
 ### New Features

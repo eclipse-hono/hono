@@ -228,7 +228,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     new ProtonServerOptions()
                         .setHost(getConfig().getInsecurePortBindAddress())
                         .setPort(determineInsecurePort())
-                        .setMaxFrameSize(getConfig().getMaxFrameSize());
+                        .setMaxFrameSize(getConfig().getMaxFrameSize())
+                        // set heart beat to half the idle timeout
+                        .setHeartbeat(getConfig().getIdleTimeout() >> 1);
 
             final Future<Void> result = Future.future();
             insecureServer = createServer(insecureServer, options);
@@ -252,7 +254,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     new ProtonServerOptions()
                         .setHost(getConfig().getBindAddress())
                         .setPort(determineSecurePort())
-                        .setMaxFrameSize(getConfig().getMaxFrameSize());
+                        .setMaxFrameSize(getConfig().getMaxFrameSize())
+                        // set heart beat to half the idle timeout
+                        .setHeartbeat(getConfig().getIdleTimeout() >> 1);
+
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
 
