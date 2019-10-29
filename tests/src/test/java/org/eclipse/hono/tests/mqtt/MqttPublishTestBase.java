@@ -166,6 +166,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         doTestUploadMessages(
@@ -196,6 +197,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         doTestUploadMessages(
@@ -230,14 +232,15 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         doTestUploadMessages(
-                ctx,
-                tenantId,
-                deviceId,
-                connectToAdapter(deviceCert),
-                false);
+            ctx,
+            tenantId,
+            deviceId,
+            connectToAdapter(deviceCert),
+            false);
     }
 
     private void doTestUploadMessages(
@@ -267,6 +270,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
+            return;
         }
 
         customizeConnectedClient();

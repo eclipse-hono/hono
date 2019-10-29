@@ -391,6 +391,7 @@ public final class IntegrationTestSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
+    private static boolean testEnv = Boolean.parseBoolean(System.getProperty("test.env", "false"));
 
     /**
      * A client for managing tenants/devices/credentials.
@@ -417,6 +418,17 @@ public final class IntegrationTestSupport {
         this.vertx = Objects.requireNonNull(vertx);
         final String gatewayModeFlag = System.getProperty(PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE, "true");
         gatewayModeSupported = Boolean.parseBoolean(gatewayModeFlag);
+    }
+
+    /**
+     * Checks if this method is executed on a test environment.
+     * <p>
+     * Evaluates system property <em>test.env</em>.
+     * 
+     * @return {@code true} if this is a test environment.
+     */
+    public static boolean isTestEnvironment() {
+        return testEnv;
     }
 
     private static ClientConfigProperties getClientConfigProperties(

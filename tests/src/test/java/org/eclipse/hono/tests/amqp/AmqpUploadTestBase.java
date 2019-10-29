@@ -16,7 +16,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -234,7 +233,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
-        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(deviceId + ".iot.eclipse.org");
 
         final VertxTestContext setup = new VertxTestContext();
 

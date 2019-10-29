@@ -96,9 +96,9 @@ public class MqttConnectionIT extends MqttTestBase {
                 .compose(cert -> {
                     final var tenant = Tenants.createTenantForTrustAnchor(cert);
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-                }).compose(ok -> {
-                    return connectToAdapter(deviceCert);
-                }).setHandler(ctx.completing());
+                })
+                .compose(ok -> connectToAdapter(deviceCert))
+                .setHandler(ctx.completing());
     }
 
     /**

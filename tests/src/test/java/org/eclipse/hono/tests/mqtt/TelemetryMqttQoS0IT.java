@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -35,10 +36,6 @@ import io.vertx.junit5.VertxTestContext;
 public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
-
-    private boolean isTestEnvironment() {
-        return Boolean.parseBoolean(System.getProperty("test.env", "false"));
-    }
 
     @Override
     protected Future<Void> send(
@@ -76,7 +73,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
     protected void assertMessageReceivedRatio(final long received, final long sent, final VertxTestContext ctx) {
 
         final int expectedPercentage;
-        if (isTestEnvironment()) {
+        if (IntegrationTestSupport.isTestEnvironment()) {
             LOGGER.info("running on CI test environment, allowing for 100 percent of messages to be lost ...");
             expectedPercentage = 0;
         } else {
@@ -96,7 +93,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
 
     @Override
     protected long getTimeToWait() {
-        if (isTestEnvironment()) {
+        if (IntegrationTestSupport.isTestEnvironment()) {
             return MESSAGES_TO_SEND * 100;
         } else {
             return MESSAGES_TO_SEND * 20;
