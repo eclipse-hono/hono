@@ -809,9 +809,18 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/agent</directory>
+                            <outputDirectory>opt/hono/agent</outputDirectory>
+                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
+                    <runCmds>
+                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
+                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
+                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
+                    </runCmds>
                   </build>
                   <run>
                     <ports>
