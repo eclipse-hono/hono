@@ -23,7 +23,6 @@ import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.CompositeFuture;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 
 /**
@@ -82,23 +81,22 @@ public class AbstractApplication extends AbstractBaseApplication {
      */
     private Future<?> deployServiceVerticles(final int maxInstances) {
 
-        final DeploymentOptions deploymentOptions = new DeploymentOptions();
-        deploymentOptions.setInstances(maxInstances);
-
         @SuppressWarnings("rawtypes")
         final List<Future> deploymentTracker = new ArrayList<>();
 
         for (final ObjectFactory<? extends AbstractServiceBase<?>> serviceFactory : serviceFactories) {
 
-            final Future<String> deployTracker = Future.future();
-            final AbstractServiceBase<?> serviceInstance = serviceFactory.getObject();
-            preDeploy(serviceInstance);
-            log.debug("deploying service instance [type: {}]", serviceInstance.getClass().getName());
-            getVertx().deployVerticle(serviceInstance, deploymentOptions, deployTracker);
-            deploymentTracker.add(deployTracker.map(id -> {
-                postDeploy(serviceInstance);
-                return id;
-            }));
+            for (int i = 1; i <= maxInstances; i++) {
+                final Future<String> deployTracker = Future.future();
+                final AbstractServiceBase<?> serviceInstance = serviceFactory.getObject();
+                preDeploy(serviceInstance);
+                log.debug("deploying service instance #{} [type: {}]", i, serviceInstance.getClass().getName());
+                getVertx().deployVerticle(serviceInstance, deployTracker);
+                deploymentTracker.add(deployTracker.map(id -> {
+                    postDeploy(serviceInstance);
+                    return id;
+                }));
+            }
         }
 
         return CompositeFuture.all(deploymentTracker);
