@@ -61,7 +61,7 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     @Override
     public void onRequest(final HttpServerRequest request, final Span span) {
-        LOG.trace("starting span for request [method: {}, URI: {}", request.method(), request.absoluteURI());
+        LOG.trace("starting span for request [method: {}, URI: {}]", request.method(), request.absoluteURI());
         Tags.HTTP_METHOD.set(span, request.method().toString());
         Tags.HTTP_URL.set(span, request.absoluteURI());
         tags.forEach((key, value) -> {
@@ -71,7 +71,7 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     @Override
     public void onReroute(final HttpServerRequest request, final Span span) {
-        LOG.trace("logging re-routed request [method: {}, URI: {}", request.method(), request.absoluteURI());
+        LOG.trace("logging re-routed request [method: {}, URI: {}]", request.method(), request.absoluteURI());
         final Map<String, String> logs = new HashMap<>(3);
         logs.put(Fields.EVENT, "reroute");
         logs.put(Tags.HTTP_URL.getKey(), request.absoluteURI());
@@ -81,7 +81,8 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     @Override
     public void onResponse(final HttpServerRequest request, final Span span) {
-        LOG.trace("setting status code of response to request [method: {}, URI: {}", request.method(), request.absoluteURI());
+        LOG.trace("setting status code of response to request span [method: {}, URI: {}, status code: {}]",
+                request.method(), request.absoluteURI(), request.response().getStatusCode());
         Tags.HTTP_STATUS.set(span, request.response().getStatusCode());
     }
 
