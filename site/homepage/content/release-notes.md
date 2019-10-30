@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 1.0.1
+## 1.1.0 (not yet released)
 
 ### Fixes & Enhancements
 
@@ -12,6 +12,7 @@ title = "Release Notes"
   command consumer. The time period after which the adapter should consider a connection stale
   can be configured using an environment variable. Please refer to the AMQP adapter's
   admin guide for details.
+* The example deployment using the Helm chart correctly creates the `DEFAULT_TENANT` again.
 
 ## 1.0.0
 
