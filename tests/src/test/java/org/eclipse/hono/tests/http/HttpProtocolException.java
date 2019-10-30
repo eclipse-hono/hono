@@ -73,8 +73,8 @@ public class HttpProtocolException extends ServiceInvocationException {
     /**
      * Wrap a {@link ServiceInvocationException} into an {@link HttpProtocolException}.
      * <p>
-     * Converts any {@link ServiceInvocationException} into a {@link HttpProtocolException} with the same status code.
-     * Any other exception type is left unchanged.
+     * Converts any {@link ServiceInvocationException} into a {@link HttpProtocolException} with the same status code
+     * and message. Any other exception type is left unchanged.
      * <p>
      * Example of usage: <code><pre>
      * helper.registry
@@ -101,7 +101,8 @@ public class HttpProtocolException extends ServiceInvocationException {
      */
     public static <T> Future<T> transformInto(final Throwable t) {
         if (t instanceof ServiceInvocationException) {
-            return Future.failedFuture(new HttpProtocolException(((ServiceInvocationException) t).getErrorCode(), t));
+            return Future.failedFuture(
+                    new HttpProtocolException(((ServiceInvocationException) t).getErrorCode(), t.getMessage(), t));
         }
         return Future.failedFuture(t);
     }
