@@ -845,6 +845,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <log>
                       <prefix>COAP</prefix>
                     </log>
+                    <volumes>
+                      <bind>
+                        <volume>${project.build.directory}/jacoco.result/coap:/opt/hono/jacoco.result:z</volume>
+                      </bind>
+                    </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <http>
@@ -907,6 +912,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <mkdir dir="${project.build.directory}/jacoco.result/auth" />
                     <mkdir dir="${project.build.directory}/jacoco.result/registry" />
                     <mkdir dir="${project.build.directory}/jacoco.result/amqp" />
+                    <mkdir dir="${project.build.directory}/jacoco.result/coap" />
                     <mkdir dir="${project.build.directory}/jacoco.result/http" />
                     <mkdir dir="${project.build.directory}/jacoco.result/mqtt" />
                   </target>
