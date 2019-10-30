@@ -130,6 +130,8 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
                     log.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]", tenantId, deviceId, gatewayId);
                     resultHandler.handle(Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
                 } else {
+                    log.debug("failed to set last known gateway [tenant: {}, device-id: {}, gateway: {}]",
+                            tenantId, deviceId, gatewayId, error);
                     resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error)));
                 }
             });
@@ -153,6 +155,8 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
             .whenComplete((gatewayId, error) -> {
                 final Future<DeviceConnectionResult> result = Future.future();
                 if (error != null) {
+                    log.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
+                            tenantId, deviceId, error);
                     result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error));
                 } else if (gatewayId == null) {
                     log.debug("could not find last known gateway for device [tenant: {}, device-id: {}]", tenantId, deviceId);
