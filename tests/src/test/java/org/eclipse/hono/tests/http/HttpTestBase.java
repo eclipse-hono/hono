@@ -587,7 +587,7 @@ public abstract class HttpTestBase {
         .setHandler(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 403
-            logger.info("could not publish message for disabled tenant [{}]", tenantId);
+            logger.info("could not publish message for disabled tenant [{}]: {}", tenantId, t.getMessage());
             ctx.verify(() -> HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
             ctx.completeNow();
         }));
@@ -626,8 +626,8 @@ public abstract class HttpTestBase {
         .setHandler(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 404
-            logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]",
-                    tenantId, deviceId);
+            logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]: {}",
+                    tenantId, deviceId, t.getMessage());
             ctx.verify(() ->  HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_NOT_FOUND, t));
             ctx.completeNow();
         }));
@@ -671,8 +671,8 @@ public abstract class HttpTestBase {
         .setHandler(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 403
-            logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]",
-                    tenantId, gatewayId);
+            logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]: {}",
+                    tenantId, gatewayId, t.getMessage());
             ctx.verify(() -> HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
             ctx.completeNow();
         }));
@@ -715,8 +715,8 @@ public abstract class HttpTestBase {
         .setHandler(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 403
-            logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
-                    tenantId, gatewayId);
+            logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]: {}",
+                    tenantId, gatewayId, t.getMessage());
             ctx.verify(() -> HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_FORBIDDEN, t));
             ctx.completeNow();
         }));
@@ -1093,8 +1093,7 @@ public abstract class HttpTestBase {
                         // wait a little and try again
                         final Future<MultiMap> retryResult = Future.future();
                         VERTX.setTimer(300, retry -> {
-                            logger.info("re-trying request [{}] which failed with unexpected status code {}",
-                                    count, ServiceInvocationException.extractStatusCode(t));
+                            logger.info("re-trying request [{}], failure was: {}", count, t.getMessage());
                             sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId)
                             .setHandler(retryResult);
                         });

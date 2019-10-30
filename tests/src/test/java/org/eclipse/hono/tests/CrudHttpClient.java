@@ -134,7 +134,7 @@ public final class CrudHttpClient {
                         if (successPredicate.test(response.statusCode())) {
                             result.tryComplete(response.headers());
                         } else {
-                            result.tryFail(newServiceInvocationException(response.statusCode()));
+                            result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
                         }
                     }).exceptionHandler(result::tryFail);
 
@@ -270,7 +270,7 @@ public final class CrudHttpClient {
                             }
                             result.tryComplete(response.headers());
                         } else {
-                            result.tryFail(newServiceInvocationException(response.statusCode()));
+                            result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
                         }
                     }).exceptionHandler(result::tryFail);
 
@@ -461,7 +461,7 @@ public final class CrudHttpClient {
                             }
                             result.tryComplete(response.headers());
                         } else {
-                            result.tryFail(newServiceInvocationException(response.statusCode()));
+                            result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
                         }
                     }).exceptionHandler(result::tryFail);
 
@@ -522,7 +522,7 @@ public final class CrudHttpClient {
                     }
                     response.bodyHandler(body -> result.tryComplete(body));
                 } else {
-                    result.tryFail(newServiceInvocationException(response.statusCode()));
+                    result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
                 }
             }).exceptionHandler(result::tryFail);
             req.headers().add(HttpHeaders.ORIGIN, ORIGIN_URI);
@@ -572,7 +572,7 @@ public final class CrudHttpClient {
                     checkCorsHeaders(response, result);
                     result.tryComplete();
                 } else {
-                    result.tryFail(newServiceInvocationException(response.statusCode()));
+                    result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
                 }
             }).exceptionHandler(result::tryFail);
             req.headers().add(HttpHeaders.ORIGIN, ORIGIN_URI);
@@ -595,9 +595,12 @@ public final class CrudHttpClient {
         }
     }
 
-    private static ServiceInvocationException newServiceInvocationException(final int statusCode) {
-        final int errorCode = statusCode >= 400 ? statusCode : HttpURLConnection.HTTP_PRECON_FAILED;
-        return new ServiceInvocationException(errorCode);
+    private static ServiceInvocationException newUnexpectedResponseStatusException(final int statusCode) {
+        if (statusCode >= 400 && statusCode < 600) {
+            return new ServiceInvocationException(statusCode);
+        }
+        return new ServiceInvocationException(HttpURLConnection.HTTP_PRECON_FAILED,
+                "Unexpected response status " + statusCode);
     }
 
     @Override
