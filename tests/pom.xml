@@ -673,8 +673,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-mqtt-vertx.hono</alias>
                     </network>
-                    <memorySwap>268435456</memorySwap>
-                    <memory>268435456</memory>
+                    <memorySwap>314572800</memorySwap>
+                    <memory>314572800</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
