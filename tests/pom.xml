@@ -294,8 +294,17 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-auth.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
-                    <memory>268435456</memory>
+                    <!-- 
+                      Setting the swap property to the same value as the memory property effectively
+                      prevents the container from swapping at all.
+                      This way we can force the same behavior for running the integration
+                      tests on both a local machine (which usually has swap space available) as
+                      well as on Travis where there is no swap space available on the build job VMs.
+                      We can thus detect OOM problems when running locally as opposed to only
+                      later on Travis.
+                     -->
+                    <memorySwap>205520896</memorySwap>
+                    <memory>205520896</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
@@ -374,8 +383,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-device-registry.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
-                    <memory>268435456</memory>
+                    <memorySwap>314572800</memorySwap>
+                    <memory>314572800</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
@@ -448,6 +457,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-artemis.hono</alias>
                     </network>
+                    <memorySwap>419430400</memorySwap>
+                    <memory>419430400</memory>
                     <env>
                       <ARTEMIS_CONFIGURATION>/etc/hono</ARTEMIS_CONFIGURATION>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
@@ -514,7 +525,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-dispatch-router.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
+                    <memorySwap>268435456</memorySwap>
                     <memory>268435456</memory>
                     <log>
                       <prefix>QPID</prefix>
@@ -588,7 +599,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-http-vertx.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
+                    <memorySwap>268435456</memorySwap>
                     <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -674,7 +685,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-mqtt-vertx.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
+                    <memorySwap>268435456</memorySwap>
                     <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -752,7 +763,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-amqp-vertx.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
+                    <memorySwap>268435456</memorySwap>
                     <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
@@ -822,7 +833,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-adapter-coap-vertx.hono</alias>
                     </network>
-                    <memorySwap>-1</memorySwap>
+                    <memorySwap>268435456</memorySwap>
                     <memory>268435456</memory>
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
