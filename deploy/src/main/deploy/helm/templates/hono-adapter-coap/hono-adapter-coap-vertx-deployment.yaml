@@ -27,7 +27,7 @@ spec:
           protocol: UDP
         - name: coaps
           containerPort: 5684
-          protocol:UDP
+          protocol: UDP
         securityContext:
           privileged: false
         env:
