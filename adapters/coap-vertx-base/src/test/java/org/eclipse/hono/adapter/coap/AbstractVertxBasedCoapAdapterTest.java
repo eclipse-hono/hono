@@ -67,6 +67,7 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -92,7 +93,7 @@ public class AbstractVertxBasedCoapAdapterTest {
      * Global timeout for all test cases.
      */
     @Rule
-    public final Timeout globalTimeout = Timeout.seconds(5);
+    public final Timeout globalTimeout = Timeout.seconds(500);
 
     private CredentialsClientFactory credentialsClientFactory;
     private TenantClientFactory tenantClientFactory;
@@ -120,10 +121,10 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         regClient = mock(RegistrationClient.class);
         final JsonObject result = new JsonObject();
-        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(result));
+        when(regClient.assertRegistration(anyString(), any(), any(SpanContext.class))).thenReturn(Future.succeededFuture(result));
 
         tenantClient = mock(TenantClient.class);
-        when(tenantClient.get(anyString(), any())).thenAnswer(invocation -> {
+        when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
         });
 
@@ -335,7 +336,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         myTenantConfig.addAdapterConfiguration(new JsonObject()
                 .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
                 .put(TenantConstants.FIELD_ENABLED, false));
-        when(tenantClient.get("my-tenant", null)).thenReturn(Future.succeededFuture(myTenantConfig));
+        when(tenantClient.get(eq("my-tenant"), any(SpanContext.class))).thenReturn(Future.succeededFuture(myTenantConfig));
         final CoapServer server = getCoapServer(false);
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
 
@@ -665,7 +666,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private void givenAnEventSenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
+        when(sender.sendAndWaitForOutcome(any(Message.class), any(SpanContext.class))).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
@@ -673,7 +674,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private void givenATelemetrySenderForOutcome(final Future<ProtonDelivery> outcome) {
 
         final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.sendAndWaitForOutcome(any(Message.class))).thenReturn(outcome);
+        when(sender.sendAndWaitForOutcome(any(Message.class), any(SpanContext.class))).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }
@@ -681,7 +682,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private void givenATelemetrySender(final Future<ProtonDelivery> outcome) {
 
         final DownstreamSender sender = mock(DownstreamSender.class);
-        when(sender.send(any(Message.class))).thenReturn(outcome);
+        when(sender.send(any(Message.class), any(SpanContext.class))).thenReturn(outcome);
 
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
     }

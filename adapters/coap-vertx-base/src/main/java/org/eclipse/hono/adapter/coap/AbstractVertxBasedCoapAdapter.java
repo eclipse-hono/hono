@@ -18,10 +18,14 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
+import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapServer;
@@ -37,19 +41,25 @@ import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
+import org.eclipse.californium.scandium.dtls.cipher.CipherSuite;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DownstreamSender;
+import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import io.opentracing.Span;
+import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -118,7 +128,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * 
      * @return The metrics.
      */
-    protected CoapAdapterMetrics getMetrics() {
+    protected final CoapAdapterMetrics getMetrics() {
         return metrics;
     }
 
@@ -194,23 +204,26 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final Future<NetworkConfig> secureConfig = getSecureNetworkConfig();
             final Future<NetworkConfig> insecureConfig = getInsecureNetworkConfig();
 
-            return CompositeFuture
-                    .all(secureConfig, insecureConfig)
+            return CompositeFuture.all(secureConfig, insecureConfig)
                     .map(ok -> {
                         final CoapServer startingServer = server == null ? new CoapServer(insecureConfig.result()) : server;
                         addResources(startingServer);
-                        bindSecureEndpoint(startingServer, secureConfig.result());
-                        bindInsecureEndpoint(startingServer, insecureConfig.result());
-                        startingServer.start();
+                        return startingServer;
+                    })
+                    .compose(server -> bindSecureEndpoint(server, secureConfig.result()))
+                    .compose(server -> bindInsecureEndpoint(server, insecureConfig.result()))
+                    .map(server -> {
+                        server.start();
                         if (secureEndpoint != null) {
                             log.info("coaps/udp endpoint running on {}", secureEndpoint.getAddress());
                         }
                         if (insecureEndpoint != null) {
                             log.info("coap/udp endpoint running on {}", insecureEndpoint.getAddress());
                         }
-                        return ok;
+                        return server;
                     });
-        }).compose(ok -> {
+        })
+        .compose(ok -> {
             try {
                 onStartupSuccess();
                 startFuture.complete();
@@ -226,13 +239,28 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         resourcesToAdd.clear();
     }
 
-    private void bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
+    // currently not used because we do not support certificate based ciphers for the time being
+    @SuppressWarnings("unused")
+    private void addIdentity(final DtlsConnectorConfig.Builder dtlsConfig, final List<CipherSuite> supportedCipherSuites) {
 
-        final ApplicationLevelInfoSupplier deviceResolver = Optional
-                .ofNullable(honoDeviceResolver)
+        final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
+        final PrivateKey pk = keyLoader.getPrivateKey();
+        final Certificate[] certChain = keyLoader.getCertificateChain();
+        if (pk != null && certChain != null) {
+            if (pk.getAlgorithm().equals("EC")) {
+                // Californium's cipher suites support ECC based keys only
+                dtlsConfig.setIdentity(pk, certChain);
+            } else {
+                log.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
+            }
+        }
+    }
+
+    private Future<CoapServer> bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
+
+        final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
                 .orElse(new DefaultDeviceResolver(context, getConfig(), getCredentialsClientFactory()));
-        final PskStore store = Optional
-                .ofNullable(pskStore)
+        final PskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
                     if (deviceResolver instanceof PskStore) {
                         return (PskStore) deviceResolver;
@@ -242,6 +270,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 });
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+        dtlsConfig.setRecommendedCipherSuitesOnly(true);
         dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
         dtlsConfig.setConnectionThreadCount(getConfig().getConnectorThreads());
         dtlsConfig.setAddress(
@@ -250,18 +279,29 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         dtlsConfig.setPskStore(store);
 
         try {
+            final DtlsConnectorConfig dtlsConnectorConfig = dtlsConfig.build();
+            if (log.isInfoEnabled()) {
+                final String ciphers = dtlsConnectorConfig.getSupportedCipherSuites()
+                        .stream()
+                        .map(cipher -> cipher.name())
+                        .collect(Collectors.joining(", "));
+                log.info("adding secure endpoint supporting ciphers: {}", ciphers);
+            }
             final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
             builder.setNetworkConfig(config);
-            builder.setConnector(new DTLSConnector(dtlsConfig.build()));
+            builder.setConnector(new DTLSConnector(dtlsConnectorConfig));
             this.secureEndpoint = builder.build();
             startingServer.addEndpoint(this.secureEndpoint);
+            return Future.succeededFuture(startingServer);
 
         } catch (final IllegalStateException ex) {
             log.warn("failed to create secure endpoint", ex);
+            return Future.failedFuture(ex);
         }
+
     }
 
-    private void bindInsecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
+    private Future<CoapServer> bindInsecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
 
         if (getConfig().isInsecurePortEnabled()) {
             if (getConfig().isAuthenticationRequired()) {
@@ -276,6 +316,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 startingServer.addEndpoint(this.insecureEndpoint);
             }
         }
+        return Future.succeededFuture(startingServer);
     }
 
     /**
@@ -300,52 +341,48 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         // empty
     }
 
+    private NetworkConfig newDefaultNetworkConfig() {
+        final NetworkConfig networkConfig = new NetworkConfig();
+        networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, getConfig().getCoapThreads());
+        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, getConfig().getConnectorThreads());
+        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getConnectorThreads());
+        return networkConfig;
+    }
+
     /**
      * Gets the CoAP network configuration for the secure endpoint.
      * <p>
-     * Creates a CoAP network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
-     * filename in "networkConfig", load that available values from that file overwriting existing values. If the
-     * {@link CoapAdapterProperties} provides a filename in "secureNetworkConfig", load that available values from that
-     * file also overwriting existing values.
+     * <ol>
+     * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
+     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
+     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getSecureNetworkConfig()}.</li>
+     * </ol>
      * 
      * @return The network configuration for the secure endpoint.
      */
     protected Future<NetworkConfig> getSecureNetworkConfig() {
 
-        final Future<NetworkConfig> result = Future.future();
-        final CoapAdapterProperties config = getConfig();
-        final NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, config.getCoapThreads());
-        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
-        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getConnectorThreads());
-        loadNetworkConfig(config.getNetworkConfig(), networkConfig)
-        .compose(c -> loadNetworkConfig(config.getSecureNetworkConfig(), c))
-        .setHandler(result);
-        return result;
+        final NetworkConfig networkConfig = newDefaultNetworkConfig();
+        return loadNetworkConfig(getConfig().getNetworkConfig(), networkConfig)
+                .compose(c -> loadNetworkConfig(getConfig().getSecureNetworkConfig(), c));
     }
 
     /**
      * Gets the CoAP network configuration for the insecure endpoint.
-     * 
-     * Creates a CoAP network configuration setup with defaults. If the {@link CoapAdapterProperties} provides a
-     * filename in "networkConfig", load that available values from that file overwriting existing values. If the
-     * {@link CoapAdapterProperties} provides a filename in "insecureNetworkConfig", load that available values from
-     * that file also overwriting existing values.
+     * <p>
+     * <ol>
+     * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
+     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
+     * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getInsecureNetworkConfig()}.</li>
+     * </ol>
      * 
      * @return The network configuration for the insecure endpoint.
      */
     protected Future<NetworkConfig> getInsecureNetworkConfig() {
 
-        final Future<NetworkConfig> result = Future.future();
-        final CoapAdapterProperties config = getConfig();
-        final NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, config.getCoapThreads());
-        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
-        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getConnectorThreads());
-        loadNetworkConfig(config.getNetworkConfig(), networkConfig)
-        .compose(c -> loadNetworkConfig(config.getInsecureNetworkConfig(), c))
-        .setHandler(result);
-        return result;
+        final NetworkConfig networkConfig = newDefaultNetworkConfig();
+        return loadNetworkConfig(getConfig().getNetworkConfig(), networkConfig)
+                .compose(c -> loadNetworkConfig(getConfig().getInsecureNetworkConfig(), c));
     }
 
     /**
@@ -420,7 +457,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Invoked after the Adapter has been shutdown successfully. May be overridden by sub-classes to provide further
      * shutdown handling.
-     * 
+  )   * 
      * @return A future that has to be completed when this operation is finished.
      */
     protected Future<Void> postShutdown() {
@@ -433,9 +470,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param device The device that the data in the request payload originates from.
      *               If {@code null}, the origin of the data is assumed to be the authenticated device.
      * @param exchange The CoAP exchange with the authenticated device's principal.
-     * @return The device identity.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the authenticated device can be determined from the CoAP exchange,
+     *         otherwise the future will be failed with a {@link ClientErrorException}.
      */
-    protected final Future<ExtendedDevice> getAuthenticatedExtendedDevice(final Device device, final CoapExchange exchange) {
+    protected final Future<ExtendedDevice> getAuthenticatedExtendedDevice(
+            final Device device,
+            final CoapExchange exchange) {
 
         final Future<ExtendedDevice> result = Future.future();
         final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
@@ -470,12 +511,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param originDevice message's origin device
      * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
      *            the sent.
+     * @return A future containing the response code that has been returned to
+     *         the device.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public final void uploadTelemetryMessage(final CoapContext context, final Device authenticatedDevice,
+    public final Future<ResponseCode> uploadTelemetryMessage(final CoapContext context, final Device authenticatedDevice,
             final Device originDevice, final boolean waitForOutcome) {
 
-        doUploadMessage(
+        return doUploadMessage(
                 Objects.requireNonNull(context),
                 Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice),
@@ -492,12 +535,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param originDevice message's origin device
+     * @return A future containing the response code that has been returned to
+     *         the device.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public final void uploadEventMessage(final CoapContext context, final Device authenticatedDevice,
+    public final Future<ResponseCode> uploadEventMessage(final CoapContext context, final Device authenticatedDevice,
             final Device originDevice) {
 
-        doUploadMessage(
+        return doUploadMessage(
                 Objects.requireNonNull(context),
                 Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice),
@@ -535,7 +580,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param senderTracker hono message sender tracker
      * @param endpoint message destination endpoint
      */
-    private void doUploadMessage(
+    private Future<ResponseCode> doUploadMessage(
             final CoapContext context,
             final Device authenticatedDevice,
             final Device device,
@@ -547,20 +592,33 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         if (contentType == null) {
             context.respondWithCode(ResponseCode.NOT_ACCEPTABLE);
+            return Future.succeededFuture(ResponseCode.NOT_ACCEPTABLE);
         } else if (payload == null || payload.length() == 0) {
             context.respondWithCode(ResponseCode.NOT_ACCEPTABLE);
+            return Future.succeededFuture(ResponseCode.NOT_ACCEPTABLE);
         } else {
+
+            final Span currentSpan = TracingHelper
+                    .buildChildSpan(tracer, context.getTracingContext(),
+                            "upload " + endpoint.getCanonicalName())
+                    .ignoreActiveSpan()
+                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                    .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, device.getTenantId())
+                    .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId())
+                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                    .start();
 
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(
                     device.getTenantId(), device.getDeviceId(),
                     authenticatedDevice,
-                    null);
-            final Future<TenantObject> tenantTracker = getTenantConfiguration(device.getTenantId(), null);
+                    currentSpan.context());
+            final Future<TenantObject> tenantTracker = getTenantConfiguration(device.getTenantId(), currentSpan.context());
             final Future<TenantObject> tenantValidationTracker = tenantTracker
                     .compose(tenantObject -> CompositeFuture
                             .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payload.length()))
                             .map(success -> tenantObject));
-            CompositeFuture.all(tokenTracker, senderTracker, tenantValidationTracker).compose(ok -> {
+            return CompositeFuture.all(tokenTracker, senderTracker, tenantValidationTracker).compose(ok -> {
                     final DownstreamSender sender = senderTracker.result();
                     final Message downstreamMessage = newMessage(
                             ResourceIdentifier.from(endpoint.getCanonicalName(), device.getTenantId(), device.getDeviceId()),
@@ -573,9 +631,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     customizeDownstreamMessage(downstreamMessage, context);
                     if (waitForOutcome) {
                         // wait for outcome, ensure message order, if CoAP NSTART-1 is used.
-                        return sender.sendAndWaitForOutcome(downstreamMessage);
+                        return sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context());
                     } else {
-                        return sender.send(downstreamMessage);
+                        return sender.send(downstreamMessage, currentSpan.context());
                     }
             }).map(delivery -> {
                 log.trace("successfully processed message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
@@ -589,8 +647,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         payload.length(),
                         context.getTimer());
                 context.respondWithCode(ResponseCode.CHANGED);
-                return delivery;
-            }).recover(t -> {
+                currentSpan.finish();
+                return ResponseCode.CHANGED;
+            }).otherwise(t -> {
                 log.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName(), t);
                 metrics.reportTelemetry(
@@ -601,8 +660,9 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         waitForOutcome ? MetricsTags.QoS.AT_LEAST_ONCE : MetricsTags.QoS.AT_MOST_ONCE,
                         payload.length(),
                         context.getTimer());
-                CoapErrorResponse.respond(context.getExchange(), t);
-                return Future.failedFuture(t);
+                TracingHelper.logError(currentSpan, t);
+                currentSpan.finish();
+                return CoapErrorResponse.respond(context.getExchange(), t);
             });
         }
     }

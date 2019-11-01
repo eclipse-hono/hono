@@ -19,14 +19,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.eclipse.californium.core.CoapResource;
+import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.coap.AbstractVertxBasedCoapAdapter;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapContext;
-import org.eclipse.hono.adapter.coap.CoapErrorResponse;
 import org.eclipse.hono.adapter.coap.ExtendedDevice;
+import org.eclipse.hono.adapter.coap.TracingSupportingHonoResource;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.util.Constants;
@@ -34,7 +34,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 
-import io.vertx.core.AsyncResult;
+import io.opentracing.Span;
 import io.vertx.core.Future;
 
 /**
@@ -84,79 +84,73 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
     }
 
     /**
-     * Check, if the coap response should be sent waiting for the outcome of sending the message to downstream.
+     * Checks if the CoAP response should be sent waiting for the outcome of sending the message to downstream.
      * 
-     * @param exchange coap exchange.
-     * @return {@code true}, wait for outcome, {@code false} send response after sending the message to downstream.
+     * @param exchange The CoAP exchange.
+     * @return {@code true} if the CoAP request message requires confirmation (CON).
      */
     private boolean useWaitForOutcome(final CoapExchange exchange) {
         return exchange.advanced().getRequest().isConfirmable();
+    }
+
+    private CoapContext newContext(final CoapExchange exchange) {
+        return CoapContext.fromRequest(exchange, getMetrics().startTimer());
     }
 
     @Override
     protected Future<Void> preStartup() {
 
         final Set<Resource> result = new HashSet<>();
-        result.add(new CoapResource(TelemetryConstants.TELEMETRY_ENDPOINT) {
+        result.add(new TracingSupportingHonoResource(tracer, TelemetryConstants.TELEMETRY_ENDPOINT, getTypeName()) {
 
             @Override
-            public Resource getChild(final String name) {
-                return this;
+            public Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
+                return getAuthenticatedExtendedDevice(null, exchange)
+                .compose(extendedDevice -> upload(exchange, extendedDevice, currentSpan));
             }
 
             @Override
-            public void handlePOST(final CoapExchange exchange) {
-                getAuthenticatedExtendedDevice(null, exchange)
-                .setHandler(authAttempt -> upload(exchange, authAttempt));
+            public Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
+                return getExtendedDevice(exchange)
+                .compose(extendedDevice -> upload(exchange, extendedDevice, currentSpan));
             }
 
-            @Override
-            public void handlePUT(final CoapExchange exchange) {
-                getExtendedDevice(exchange)
-                .setHandler(authAttempt -> upload(exchange, authAttempt));
-            }
+            private Future<ResponseCode> upload(final CoapExchange exchange, final ExtendedDevice device, final Span currentSpan) {
 
-            private void upload(final CoapExchange exchange, final AsyncResult<ExtendedDevice> authAttempt) {
-
-                if (authAttempt.succeeded()) {
-                    final boolean waitForOutcome = useWaitForOutcome(exchange);
-                    final ExtendedDevice device = authAttempt.result();
-                    final CoapContext ctx = CoapContext.fromRequest(exchange, getMetrics().startTimer());
-                    uploadTelemetryMessage(ctx, device.authenticatedDevice, device.originDevice,
-                            waitForOutcome);
-                } else {
-                    CoapErrorResponse.respond(exchange, authAttempt.cause());
-                }
+                final CoapContext ctx = newContext(exchange);
+                ctx.setTracingContext(currentSpan.context());
+                return uploadTelemetryMessage(
+                        ctx,
+                        device.authenticatedDevice,
+                        device.originDevice,
+                        useWaitForOutcome(exchange));
             }
         });
 
-        result.add(new CoapResource(EventConstants.EVENT_ENDPOINT) {
+        result.add(new TracingSupportingHonoResource(tracer, EventConstants.EVENT_ENDPOINT, getTypeName()) {
 
             @Override
-            public Resource getChild(final String name) {
-                return this;
+            public Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
+
+                return getAuthenticatedExtendedDevice(null, exchange)
+                .compose(device -> upload(exchange, device, currentSpan));
             }
 
             @Override
-            public void handlePOST(final CoapExchange exchange) {
-                getAuthenticatedExtendedDevice(null, exchange)
-                .setHandler(authAttempt -> upload(exchange, authAttempt));
+            public Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
+
+                return getExtendedDevice(exchange)
+                .compose(device -> upload(exchange, device, currentSpan));
             }
 
-            @Override
-            public void handlePUT(final CoapExchange exchange) {
-                getExtendedDevice(exchange)
-                .setHandler(authAttempt -> upload(exchange, authAttempt));
-            }
+            private Future<ResponseCode> upload(final CoapExchange exchange, final ExtendedDevice device, final Span currentSpan) {
 
-            private void upload(final CoapExchange exchange, final AsyncResult<ExtendedDevice> authAttempt) {
-                if (authAttempt.succeeded()) {
-                    final ExtendedDevice device = authAttempt.result();
-                    final CoapContext ctx = CoapContext.fromRequest(exchange, getMetrics().startTimer());
-                    uploadEventMessage(ctx, device.authenticatedDevice, device.originDevice);
-                } else {
-                    CoapErrorResponse.respond(exchange, authAttempt.cause());
-                }
+                final CoapContext ctx = newContext(exchange);
+                ctx.setTracingContext(currentSpan.context());
+                return uploadEventMessage(
+                        ctx,
+                        device.authenticatedDevice,
+                        device.originDevice);
             }
         });
         setResources(result);
