@@ -1,20 +1,21 @@
-dist: xenial
-sudo: required
+dist: bionic
 language: java
 
+services:
+- docker
+
 jdk:
-  - openjdk11
+- openjdk11
 
 install: true # no need to call 'mvn install'
 
 script:
-  - mvn verify -B -e -Dmsg.count=400 -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+- free -m
+- mvn verify -B -e -Dmsg.count=400 -Dtest.env=true -DcreateJavadoc=true -Ddocker.host=unix:///var/run/docker.sock -Dservice.startup.timeout=600000 -Dmax.event-loop.execute-time=20000 -Pbuild-docker-image,run-tests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
 env:
   global:
   - COMMIT=${TRAVIS_COMMIT::8}
-  - secure: "2M7HGNHONtzRRB7YBnJE+q2pXjmtEUfLtSvPUKBRwAxAyIFBBmsdBghtNx2/BuaKItuBpK5zkua3BLy0lorMVXrpiGLL9Fm7RjIffeGUBH8A+3+1IkB3nNsh4r/ZEPP+XDniq/m8g971VQVp7zPfypT9BdwOORI14Vvw901SXTR67qru2RnQesNqafo7cR+MVD6cFwsw6tGLA/QHmBFA8rll7IEJZ1T/fivQ6p0brD1J6HWtkHMl8d2PZMnox6ciAWa4txoGNhk6mds4AEv8yQ3Ypkm7XfKInp1AYIgB/SW3LsroETcIKJTqGi416vz2r8C5G7gKmw7oH8uFULVXJck5hHrSiMKivtPbu72ZydskvuKvCP31qeCV3tn2ASrmAebwuo83hGuTTHlQN1GH3PlbBVjT8vwlTondZ0EjWUjKbCMI5XUZBXooopSrjG7N4Qwf5fcb4gO9QuQjQ/hEeeLYxKSn13gK0sFAhfe9i2Au6a7JBllwgeTRv0/pW6iXwQOzbGS4CMT9uj7n5PI1b4ixsdoa2dDTUMQc0GGN9cbLx/GV9j2d+LG6rkdpOOqYUcP1BGafJ+X7WSqr6/m/bVhAZZpT1iiukzm9AVqCGVZPLud7xFfxG9GUt9yaT8x2Fpg2pgHToo563QuVR2EnXnD7EHeW+89ybwfvchQKD2U="
-  - secure: "Li3uDU0ariWG7g7zbsScw505jHNBJkNA0o5f9PaG07imv/SYARyQwXF6/bE66EYjxESBj6F52VxyjNAj2F/qQAt5IgbXNbgOAuYaDnobhAiVjU7pxpiVhisURZ7MwhYaTqK/CKaoMVddPN+8vdYAvp5EBSa5AVLFFHkT/ve0d4GhDkvbbXbR+UiBMFsvQi9mMEds/8764ib1GDX3ru7YbmvYlHFK1K+BEekW1Zt4fgguzbXCg++bW8wJvSR6rgSMVTa2T4aKTq9iWgbeW7HjucHDsuyvPEXlEVCS5zEUDjwfK5qhz2Z+J8azAE3kAeiL1h1yi7lYx+YXHcs2YneXxWJngR2Pru1xGNRKoup7Qx1caIICjrWhpaF1f6hj8tI+KUKIDsC2LbPqfhVSIdasEyI+E5jK+4UnYbf8jUQ2pOADK4PsYnr1DFe1YhhPkwPf+YSF5Wfsx2HBsQmZE4HGsXf8wABd1C0SP1pLAXX1Xi4XSFp0CtdXOeAktgMvX9Nig55k8Z2NmZsKra6GLB5iHE2YPAZ9sMFLpNuWW2FO0RpiAEMiLd4bWRzPyFeaz/LzzEdSwrV4t/hSEmpsI9uknkRlvzDOWhlZmd1Qzsgnxx0Vdtm8vRgiR/J5aeg5bmO7mDK/RdTPYoPatlzRX7cvaFoBINDg1yKh0K5rQU6Tov8="
 
 after_script:
 - bash <(curl -s https://codecov.io/bash)
