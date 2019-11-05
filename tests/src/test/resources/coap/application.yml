@@ -10,8 +10,6 @@ hono:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
-    keyPath: /etc/hono/certs/coap-adapter-key.pem
-    certPath: /etc/hono/certs/coap-adapter-cert.pem
   messaging:
     name: 'Hono CoAP Adapter'
     host: ${hono.amqp-network.host}
