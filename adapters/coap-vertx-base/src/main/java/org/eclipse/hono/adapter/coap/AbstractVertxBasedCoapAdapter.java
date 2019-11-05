@@ -18,7 +18,6 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
-import java.security.PrivateKey;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,7 +41,6 @@ import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
@@ -250,17 +248,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
         dtlsConfig.setPskStore(store);
-
-        final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
-        final PrivateKey pk = keyLoader.getPrivateKey();
-        if (pk != null && keyLoader.getCertificateChain() != null) {
-            if (pk.getAlgorithm().equals("EC")) {
-                // Californium's cipher suites support ECC based keys only
-                dtlsConfig.setIdentity(keyLoader.getPrivateKey(), keyLoader.getCertificateChain());
-            } else {
-                log.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
-            }
-        }
 
         try {
             final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
