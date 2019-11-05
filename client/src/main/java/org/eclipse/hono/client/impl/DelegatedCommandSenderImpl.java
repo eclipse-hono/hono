@@ -99,7 +99,8 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
      * Sends an AMQP 1.0 message to the peer this client is configured for and waits for the outcome of the transfer.
      * <p>
      * This method overrides the base implementation to also return a succeeded Future if a delivery update other than
-     * <em>Accepted</em> was received.
+     * <em>Accepted</em> was received. And in contrast to the base implementation it doesn't set a new message id on
+     * the given message.
      *
      * @param message The message to send.
      * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
@@ -123,8 +124,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(currentSpan);
 
         final Future<ProtonDelivery> result = Future.future();
-        final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
-        message.setMessageId(messageId);
+        final String messageId = message.getMessageId() != null ? message.getMessageId().toString() : "";
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
@@ -201,7 +201,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(originalMessage);
         // copy original message
         final Message msg = MessageHelper.getShallowCopy(originalMessage);
-        msg.setReplyTo(replyToAddress);
+        msg.setReplyTo(replyToAddress); // FIXME HERE
         return msg;
     }
 
