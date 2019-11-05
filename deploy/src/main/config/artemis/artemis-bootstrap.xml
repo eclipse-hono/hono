@@ -12,6 +12,7 @@
    
     SPDX-License-Identifier: EPL-2.0
  -->
+<!DOCTYPE broker>
 
 <broker xmlns="http://activemq.org/schema">
 
