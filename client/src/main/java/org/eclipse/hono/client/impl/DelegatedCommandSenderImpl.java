@@ -202,8 +202,6 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         // copy original message
         final Message msg = MessageHelper.getShallowCopy(originalMessage);
         msg.setReplyTo(replyToAddress);
-        // use original message id as correlation id
-        msg.setCorrelationId(originalMessage.getMessageId());
         return msg;
     }
 
