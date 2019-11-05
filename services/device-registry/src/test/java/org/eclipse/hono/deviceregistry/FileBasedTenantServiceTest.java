@@ -140,7 +140,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
             verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.start(startupTracker.future());
+        svc.start(startupTracker);
     }
 
     /**
@@ -168,7 +168,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         startupTracker.future().setHandler(ctx.failing(started -> {
             ctx.completeNow();
         }));
-        svc.start(startupTracker.future());
+        svc.start(startupTracker);
     }
 
     /**
@@ -198,7 +198,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         startupTracker.future().setHandler(ctx.completing(
             // THEN startup succeeds
         ));
-        svc.start(startupTracker.future());
+        svc.start(startupTracker);
     }
 
     /**
@@ -239,7 +239,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         })
         .setHandler(ctx.completing());
 
-        svc.start(startFuture.future());
+        svc.start(startFuture);
     }
 
     /**
@@ -263,7 +263,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.start(startFuture.future());
+        svc.start(startFuture);
     }
 
     /**

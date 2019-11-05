@@ -93,13 +93,10 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void start(final Future<Void> startFuture) {
-
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(startFuture);
+    public void start(final Promise<Void> startPromise) {
 
         if (running) {
-            result.complete();
+            startPromise.complete();
         } else {
 
             if (!getConfig().isModificationEnabled()) {
@@ -109,7 +106,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             if (getConfig().getFilename() == null) {
                 log.debug("tenant file name is not set, tenant information will not be loaded");
                 running = true;
-                result.complete();
+                startPromise.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
                 .compose(ok -> {
@@ -126,9 +123,9 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                             log.info("persistence is disabled, will not save tenants to file");
                         }
                         running = true;
-                        result.complete();
+                        startPromise.complete();
                     } else {
-                        result.fail(attempt.cause());
+                        startPromise.fail(attempt.cause());
                     }
                 });
             }
@@ -208,10 +205,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void stop(final Future<Void> stopFuture) {
-
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(stopFuture);
+    public void stop(final Promise<Void> stopPromise) {
 
         if (running) {
             saveToFile()
@@ -219,9 +213,9 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 running = false;
                 return ok;
             })
-            .setHandler(result);
+            .setHandler(stopPromise);
         } else {
-            result.complete();
+            stopPromise.complete();
         }
     }
 

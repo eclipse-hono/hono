@@ -206,7 +206,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertSuccess(result -> {
             startup.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
 
         // THEN the client provided server is started
         startup.await();
@@ -558,7 +558,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertSuccess(ok -> {
             startup.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
         startup.await();
 
         // to which a device is connected

@@ -35,8 +35,13 @@ public class ValidityBasedTrustOptions implements TrustOptions {
     }
 
     @Override
-    public TrustOptions clone() {
+    public TrustOptions copy() {
         return new ValidityBasedTrustOptions();
+    }
+
+    @Override
+    public TrustOptions clone() {
+        return copy();
     }
 
     @Override

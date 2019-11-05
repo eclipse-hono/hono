@@ -197,7 +197,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     @Override
-    public final void doStart(final Future<Void> startFuture) {
+    public final void doStart(final Promise<Void> startPromise) {
 
         checkPortConfiguration()
         .compose(s -> preStartup())
@@ -235,7 +235,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             }
             return result.future();
         })
-        .setHandler(startFuture);
+        .setHandler(startPromise);
     }
 
     private void addResources(final CoapServer startingServer) {
@@ -430,7 +430,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     @Override
-    public final void doStop(final Future<Void> stopFuture) {
+    public final void doStop(final Promise<Void> stopPromise) {
 
         try {
             preShutdown();
@@ -451,7 +451,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         serverStopTracker.future()
         .compose(v -> postShutdown())
-        .setHandler(stopFuture);
+        .setHandler(stopPromise);
     }
 
     /**

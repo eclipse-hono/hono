@@ -153,35 +153,35 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * {@inheritDoc}
      */
     @Override
-    protected void doStart(final Future<Void> startFuture) {
+    protected void doStart(final Promise<Void> startPromise) {
         checkPortConfiguration()
-                .compose(success -> {
-                    if (tenantObjectWithAuthIdProvider == null) {
-                        tenantObjectWithAuthIdProvider = new AmqpContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory());
-                    }
-                    if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
-                        final ConnectionLimitManager connectionLimitManager = Optional.ofNullable(
-                                getConnectionLimitManager()).orElse(createConnectionLimitManager());
-                        setConnectionLimitManager(connectionLimitManager);
-                        authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
-                                getTenantClientFactory(),
-                                getConfig(),
-                                () -> tracer.buildSpan("open connection")
-                                    .ignoreActiveSpan()
-                                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
-                                    .start(),
-                                connectionLimitManager,
-                                this::checkConnectionLimit,
-                                new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
-                                new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
-                                (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
-                    }
-                    return Future.succeededFuture();
-                })
-                .compose(success -> CompositeFuture.all(bindSecureServer(), bindInsecureServer()))
-                .map(ok -> (Void) null)
-                .setHandler(startFuture);
+        .compose(success -> {
+            if (tenantObjectWithAuthIdProvider == null) {
+                tenantObjectWithAuthIdProvider = new AmqpContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory());
+            }
+            if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
+                final ConnectionLimitManager connectionLimitManager = Optional.ofNullable(
+                        getConnectionLimitManager()).orElse(createConnectionLimitManager());
+                setConnectionLimitManager(connectionLimitManager);
+                authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
+                        getTenantClientFactory(),
+                        getConfig(),
+                        () -> tracer.buildSpan("open connection")
+                            .ignoreActiveSpan()
+                            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                            .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                            .start(),
+                        connectionLimitManager,
+                        this::checkConnectionLimit,
+                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
+                        new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
+                        (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
+            }
+            return Future.succeededFuture();
+        })
+        .compose(success -> CompositeFuture.all(bindSecureServer(), bindInsecureServer()))
+        .map(ok -> (Void) null)
+        .setHandler(startPromise);
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -192,10 +192,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     @Override
-    protected void doStop(final Future<Void> stopFuture) {
+    protected void doStop(final Promise<Void> stopPromise) {
         CompositeFuture.all(stopSecureServer(), stopInsecureServer())
         .map(ok -> (Void) null)
-        .setHandler(stopFuture);
+        .setHandler(stopPromise);
     }
 
     private Future<Void> stopInsecureServer() {

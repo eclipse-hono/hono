@@ -178,7 +178,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     @Override
-    public final void doStart(final Future<Void> startFuture) {
+    public final void doStart(final Promise<Void> startPromise) {
         checkPortConfiguration()
             .compose(s -> preStartup())
             .compose(s -> {
@@ -199,7 +199,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return Future.failedFuture(e);
                 }
             })
-            .setHandler(startFuture);
+            .setHandler(startPromise);
     }
 
     private Sample getMicrometerSample(final RoutingContext ctx) {
@@ -459,7 +459,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     @Override
-    public final void doStop(final Future<Void> stopFuture) {
+    public final void doStop(final Promise<Void> stopPromise) {
 
         try {
             preShutdown();
@@ -483,7 +483,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         CompositeFuture.all(serverStopTracker.future(), insecureServerStopTracker.future())
         .compose(v -> postShutdown())
-        .setHandler(stopFuture);
+        .setHandler(stopPromise);
     }
 
     /**

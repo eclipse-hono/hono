@@ -85,20 +85,17 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     }
 
     @Override
-    protected void doStart(final Future<Void> startFuture) {
-
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(startFuture);
+    protected void doStart(final Promise<Void> startPromise) {
 
         if (tokenFactory == null) {
-            result.fail("token factory must be set");
+            startPromise.fail("token factory must be set");
         } else {
             try {
                 loadPermissions();
-                result.complete();
+                startPromise.complete();
             } catch (final IOException e) {
                 log.error("cannot load permissions from resource {}", getConfig().getPermissionsPath(), e);
-                result.fail(e);
+                startPromise.fail(e);
             }
         }
     }

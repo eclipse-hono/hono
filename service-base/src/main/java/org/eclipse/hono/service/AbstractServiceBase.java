@@ -80,23 +80,21 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     }
 
     /**
-     * Starts up this component.
-     * <ol>
-     * <li>invokes {@link #startInternal()}</li>
-     * </ol>
-     * 
-     * @param startFuture Will be completed if all of the invoked methods return a succeeded Future.
+     * {@inheritDoc}
+     * <p>
+     * Registers this service as a health check provider and then
+     * completes the given promise based on the outcome of {@link #startInternal()}.
      */
     @Override
-    public final void start(final Future<Void> startFuture) {
+    public final void start(final Promise<Void> startPromise) {
         healthCheckServer.registerHealthCheckResources(this);
-        startInternal().setHandler(startFuture);
+        startInternal().setHandler(startPromise);
     }
 
     /**
      * Subclasses should override this method to perform any work required on start-up of this protocol component.
      * <p>
-     * This method is invoked by {@link #start()} as part of the startup process.
+     * This method is invoked by {@link #start(Promise)} as part of the startup process.
      *
      * @return A future indicating the outcome of the startup. If the returned future fails, this component will not start up.
      */
@@ -106,22 +104,19 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     }
 
     /**
-     * Stops this component.
-     * <ol>
-     * <li>invokes {@link #stopInternal()}</li>
-     * </ol>
-     * 
-     * @param stopFuture Will be completed if all of the invoked methods return a succeeded Future.
+     * {@inheritDoc}
+     * <p>
+     * Completes the given promise based on the outcome of {@link #stopInternal()}.
      */
     @Override
-    public final void stop(final Future<Void> stopFuture) {
-        stopInternal().setHandler(stopFuture);
+    public final void stop(final Promise<Void> stopPromise) {
+        stopInternal().setHandler(stopPromise);
     }
 
     /**
      * Subclasses should override this method to perform any work required before shutting down this component.
      * <p>
-     * This method is invoked by {@link #stop()} as part of the shutdown process.
+     * This method is invoked by {@link #stop(Promise)} as part of the shutdown process.
      *
      * @return A future indicating the outcome.
      */

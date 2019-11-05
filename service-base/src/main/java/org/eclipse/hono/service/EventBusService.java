@@ -121,7 +121,7 @@ public abstract class EventBusService extends AbstractVerticle {
      * </p>
      *
      * @param startFuture future to invoke once start up is complete.
-     * @deprecated Override {@link #doStart(Promise)} instead.
+     * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
      */
     @Deprecated
     protected void doStart(final Future<Void> startFuture) {
@@ -185,7 +185,7 @@ public abstract class EventBusService extends AbstractVerticle {
      * </p>
      *
      * @param stopFuture the future to invoke once shutdown is complete.
-     * @deprecated Override {@link #doStop(Promise)} instead.
+     * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
      */
     @Deprecated
     protected void doStop(final Future<Void> stopFuture) {

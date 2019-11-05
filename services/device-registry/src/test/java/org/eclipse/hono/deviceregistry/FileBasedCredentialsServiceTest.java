@@ -154,7 +154,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         final Promise<Void> credentialsStartupTracker = Promise.promise();
 
         this.registrationService.start(registrationStartupTracker.future());
-        this.credentialsService.start(credentialsStartupTracker.future());
+        this.credentialsService.start(credentialsStartupTracker);
 
         CompositeFuture.all(registrationStartupTracker.future(), credentialsStartupTracker.future())
         .setHandler(result -> {

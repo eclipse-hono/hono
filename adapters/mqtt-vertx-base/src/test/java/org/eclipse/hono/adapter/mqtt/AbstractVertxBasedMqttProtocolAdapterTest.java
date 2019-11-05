@@ -244,7 +244,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
 
         startup.await();
 
@@ -388,7 +388,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
         startup.await();
         forceClientMocksToConnected();
         // which already has 1 connection open
