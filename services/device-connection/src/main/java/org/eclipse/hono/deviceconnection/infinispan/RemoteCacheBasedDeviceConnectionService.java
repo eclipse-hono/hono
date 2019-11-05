@@ -67,7 +67,22 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
 
     /**
      * {@inheritDoc}
+     * 
+     * This method currently delegates to the deprecated {@link #doStart(Future)}
+     * method. After its removal, this method will be responsible for all initialization
+     * of this service.
      */
+    @Override
+    protected final void doStart(final Promise<Void> startPromise) {
+        doStart(startPromise.future());
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @deprecated This method will be removed in Hono 2.0.0.
+     */
+    @Deprecated(forRemoval = true)
     @Override
     protected void doStart(final Future<Void> startFuture) {
 
@@ -95,7 +110,22 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
 
     /**
      * {@inheritDoc}
+     * 
+     * This method currently delegates to the deprecated {@link #doStop(Future)}
+     * method. After its removal, this method will be responsible for cleaning up
+     * during shutdown of this service.
      */
+    @Override
+    protected final void doStop(final Promise<Void> stopPromise) {
+        doStop(stopPromise.future());
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @deprecated This method will be removed in Hono 2.0.0.
+     */
+    @Deprecated(forRemoval = true)
     @Override
     protected void doStop(final Future<Void> stopFuture) {
 

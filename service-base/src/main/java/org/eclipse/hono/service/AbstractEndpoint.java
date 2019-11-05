@@ -102,7 +102,7 @@ public abstract class AbstractEndpoint implements Endpoint {
      * This implementation always completes the start future.
      * 
      * @param startFuture Completes if startup succeeded.
-     * @deprecated Override {@link #doStart(Promise)} instead.
+     * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
      */
     @Deprecated
     protected void doStart(final Future<Void> startFuture) {
@@ -135,7 +135,7 @@ public abstract class AbstractEndpoint implements Endpoint {
      * This implementation always completes the stop future.
      * 
      * @param stopFuture Completes if shutdown succeeded.
-     * @deprecated Override {@link #doStop(Promise)} instead.
+     * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
      */
     @Deprecated
     protected void doStop(final Future<Void> stopFuture) {

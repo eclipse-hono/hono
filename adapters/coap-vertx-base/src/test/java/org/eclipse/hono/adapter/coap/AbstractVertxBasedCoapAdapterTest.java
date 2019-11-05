@@ -184,7 +184,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked
         startup.await();
@@ -213,7 +213,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
         startup.await();
 
         // THEN the resources have been registered with the server
@@ -254,7 +254,7 @@ public class AbstractVertxBasedCoapAdapterTest {
             startup.complete();
         }));
         adapter.init(vertx, context);
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
         startup.await();
 
         // WHEN the resource receives a GET request
@@ -288,7 +288,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertFailure(s -> {
             startupFailure.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
 
         // THEN startup has failed
         startupFailure.await();
@@ -316,7 +316,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         startupTracker.future().setHandler(ctx.asyncAssertFailure(s -> {
             startup.complete();
         }));
-        adapter.start(startupTracker.future());
+        adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked, see ctx.fail
         startup.await();

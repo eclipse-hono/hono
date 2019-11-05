@@ -128,13 +128,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void start(final Future<Void> startFuture) {
-
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(startFuture);
+    public void start(final Promise<Void> startPromise) {
 
         if (running) {
-            result.complete();
+            startPromise.complete();
         } else {
             if (!getConfig().isModificationEnabled()) {
                 log.info("modification of credentials has been disabled");
@@ -143,7 +140,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             if (getConfig().getFilename() == null) {
                 log.debug("credentials filename is not set, no credentials will be loaded");
                 running = true;
-                result.complete();
+                startPromise.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
                 .compose(ok -> loadCredentials())
@@ -159,7 +156,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                     running = true;
                     return ok;
                 })
-                .setHandler(result);
+                .setHandler(startPromise);
             }
         }
     }
@@ -225,24 +222,20 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void stop(final Future<Void> stopFuture) {
-
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(stopFuture);
+    public void stop(final Promise<Void> stopPromise) {
 
         if (running) {
             saveToFile().setHandler(attempt -> {
                 if (attempt.succeeded()) {
                     running = false;
-                    result.complete();
+                    stopPromise.complete();
                 } else {
-                    result.fail(attempt.cause());
+                    stopPromise.fail(attempt.cause());
                 }
             });
         } else {
-            result.complete();
+            stopPromise.complete();
         }
-
     }
 
     Future<Void> saveToFile() {

@@ -456,7 +456,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
      *
      * @param startFuture The future to complete once start up is complete.
-     * @deprecated Override {@link #doStart(Promise)} instead.
+     * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
      */
     @Deprecated
     protected void doStart(final Future<Void> startFuture) {
@@ -519,7 +519,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Subclasses should override this method to perform any work required before shutting down this protocol adapter.
      *
      * @param stopFuture The future to complete once all work is done and shut down should commence.
-     * @deprecated Override {@link #doStop(Promise)} instead.
+     * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
      */
     @Deprecated
     protected void doStop(final Future<Void> stopFuture) {
