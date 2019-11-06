@@ -20,6 +20,7 @@ hono:
     trustStorePath: /etc/hono/certs/trusted-certs.pem
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   registration:
     name: 'Hono CoAP Adapter'
     host: ${hono.registration.host}
@@ -28,6 +29,7 @@ hono:
     password: coap-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   credentials:
     name: 'Hono CoAP Adapter'
     host: ${hono.registration.host}
@@ -36,6 +38,7 @@ hono:
     password: coap-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   tenant:
     name: 'Hono CoAP Adapter'
     host: ${hono.registration.host}
@@ -44,6 +47,7 @@ hono:
     password: coap-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   deviceConnection:
     name: 'Hono CoAP Adapter'
     host: ${hono.registration.host}
@@ -52,6 +56,7 @@ hono:
     password: coap-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   command:
     name: 'Hono CoAP Adapter'
     host: ${hono.amqp-network.host}
@@ -62,6 +67,7 @@ hono:
     trustStorePath: /etc/hono/certs/trusted-certs.pem
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
 

@@ -21,6 +21,7 @@ hono:
     trustStorePath: /etc/hono/certs/trusted-certs.pem
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   registration:
     name: 'Hono MQTT Adapter'
     host: ${hono.registration.host}
@@ -29,6 +30,7 @@ hono:
     password: amqp-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   credentials:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.host}
@@ -37,6 +39,7 @@ hono:
     password: amqp-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   tenant:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.host}
@@ -45,6 +48,7 @@ hono:
     password: amqp-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   deviceConnection:
     name: 'Hono AMQP Adapter'
     host: ${hono.registration.host}
@@ -53,6 +57,7 @@ hono:
     password: amqp-secret
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   command:
     name: 'Hono AMQP Adapter'
     host: ${hono.amqp-network.host}
@@ -63,6 +68,7 @@ hono:
     trustStorePath: /etc/hono/certs/trusted-certs.pem
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
 
