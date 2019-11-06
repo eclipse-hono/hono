@@ -83,6 +83,9 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
 
         return registrationClientFactory.getOrCreateRegistrationClient(tenantId).compose(client -> {
             return client.assertRegistration(deviceId, null, span.context());
+        }).recover(t -> {
+            LOG.debug("Error getting registration assertion", t);
+            return Future.failedFuture(t);
         }).compose(registrationAssertionJson -> {
             final Future<String> mappedGatewayFuture = Future.future();
             final Object viaObject = registrationAssertionJson.getValue(RegistrationConstants.FIELD_VIA);
@@ -136,12 +139,12 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
                 span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, result);
                 span.finish();
                 return result;
-            }).recover(t -> {
-                TracingHelper.logError(span, t);
-                Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
-                span.finish();
-                return Future.failedFuture(t);
             });
+        }).recover(t -> {
+            TracingHelper.logError(span, t);
+            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
+            span.finish();
+            return Future.failedFuture(t);
         });
     }
 
