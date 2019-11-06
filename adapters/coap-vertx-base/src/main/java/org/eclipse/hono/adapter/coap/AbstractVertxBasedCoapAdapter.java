@@ -457,7 +457,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Invoked after the Adapter has been shutdown successfully. May be overridden by sub-classes to provide further
      * shutdown handling.
-  )   * 
+     * 
      * @return A future that has to be completed when this operation is finished.
      */
     protected Future<Void> postShutdown() {
@@ -579,6 +579,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param contentType content type of message payload
      * @param senderTracker hono message sender tracker
      * @param endpoint message destination endpoint
+     * @return A succeeded future containing the CoAP status code that has been returned to the device.
      */
     private Future<ResponseCode> doUploadMessage(
             final CoapContext context,

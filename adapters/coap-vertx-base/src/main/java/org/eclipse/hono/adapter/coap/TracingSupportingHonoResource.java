@@ -45,6 +45,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @param tracer The OpenTracing tracer.
      * @param resourceName The resource name.
      * @param adapterName The name of the protocol adapter that this resource is exposed on.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public TracingSupportingHonoResource(final Tracer tracer, final String resourceName, final String adapterName) {
         super(resourceName);
@@ -114,7 +115,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         otherwise the future will be failed with a {@link ServiceInvocationException}.
      */
     protected Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
-        CoapErrorResponse.respond(exchange, "not impleented", ResponseCode.NOT_IMPLEMENTED);
+        CoapErrorResponse.respond(exchange, "not implemented", ResponseCode.NOT_IMPLEMENTED);
         return Future.succeededFuture(ResponseCode.NOT_IMPLEMENTED);
     }
 
@@ -131,7 +132,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         otherwise the future will be failed with a {@link ServiceInvocationException}.
      */
     protected Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
-        CoapErrorResponse.respond(exchange, "not impleented", ResponseCode.NOT_IMPLEMENTED);
+        CoapErrorResponse.respond(exchange, "not implemented", ResponseCode.NOT_IMPLEMENTED);
         return Future.succeededFuture(ResponseCode.NOT_IMPLEMENTED);
     }
 
