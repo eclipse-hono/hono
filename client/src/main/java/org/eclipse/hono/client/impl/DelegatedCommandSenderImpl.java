@@ -201,7 +201,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(originalMessage);
         // copy original message
         final Message msg = MessageHelper.getShallowCopy(originalMessage);
-        msg.setReplyTo(replyToAddress); // FIXME HERE
+        msg.setReplyTo(replyToAddress);
         return msg;
     }
 
