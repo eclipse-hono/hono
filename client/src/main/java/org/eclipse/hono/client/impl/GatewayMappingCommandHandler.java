@@ -91,7 +91,7 @@ public class GatewayMappingCommandHandler implements Handler<CommandContext> {
                     TracingHelper.logError(originalCommandContext.getCurrentSpan(),
                             "no mapped gateway set for device " + originalDeviceId);
                 } else {
-                    LOG.error("error getting mapped gateway for device {}", originalDeviceId, mappedGatewayResult.cause());
+                    LOG.debug("error getting mapped gateway for device {}", originalDeviceId, mappedGatewayResult.cause());
                     TracingHelper.logError(originalCommandContext.getCurrentSpan(),
                             "error getting mapped gateway for device: " + mappedGatewayResult.cause());
                 }
