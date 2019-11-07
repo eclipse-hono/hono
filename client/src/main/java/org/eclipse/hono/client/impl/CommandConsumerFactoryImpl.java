@@ -279,43 +279,6 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                         });
             })
             .setHandler(result);
-
-//            if (!result.isComplete()) {
-//                final Promise<DestinationCommandConsumer> destinationCommandConsumerPromise = Promise.promise();
-//                // create the gateway or device specific destination consumer
-//                destinationCommandConsumerFactory.getOrCreateClient(
-//                        gatewayOrDeviceKey,
-//                        () -> newDestinationCommandConsumer(tenantId, gatewayOrDeviceId),
-//                        destinationCommandConsumerPromise);
-//
-//                // create the device specific consumer to be returned by this method
-//                final Future<MessageConsumer> deviceSpecificConsumerFuture = destinationCommandConsumerPromise.future()
-//                        .compose(consumer -> consumer.addDeviceSpecificCommandHandler(
-//                                deviceId,
-//                                gatewayId,
-//                                commandHandler,
-//                                remoteCloseHandler))
-//                        .map(ok -> new DeviceSpecificCommandConsumer(
-//                                    () -> destinationCommandConsumerFactory.getClient(gatewayOrDeviceKey),
-//                                    deviceId));
-//
-//                // create the tenant-scoped consumer that maps/delegates incoming commands to the right device-scoped handler/consumer
-//                final Future<MessageConsumer> mappingAndDelegatingCommandConsumer = getOrCreateMappingAndDelegatingCommandConsumer(tenantId);
-//
-//                CompositeFuture.all(deviceSpecificConsumerFuture, mappingAndDelegatingCommandConsumer)
-//                .map(ok -> {
-//                    if (checkInterval != null) {
-//                        final DestinationCommandConsumer destinationCommandConsumer = destinationCommandConsumerPromise.future().result();
-//                        registerLivenessCheck(
-//                                tenantId,
-//                                gatewayOrDeviceId,
-//                                () -> destinationCommandConsumer.getCommandHandlers(),
-//                                checkInterval);
-//                    }
-//                    return deviceSpecificConsumerFuture.result();
-//                })
-//                .setHandler(result);
-//            }
         });
     }
 
