@@ -49,9 +49,10 @@ public class CoapErrorResponse {
      * 
      * @param exchange coap exchange to be responded
      * @param cause error cause
+     * @return The response code included in the CoAP response.
      */
-    public static void respond(final CoapExchange exchange, final Throwable cause) {
-        respond(exchange, cause, ResponseCode.INTERNAL_SERVER_ERROR);
+    public static ResponseCode respond(final CoapExchange exchange, final Throwable cause) {
+        return respond(exchange, cause, ResponseCode.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -62,8 +63,9 @@ public class CoapErrorResponse {
      * @param exchange coap exchange to be responded
      * @param cause error cause
      * @param defaultCode default response code, if a more specific response code is not available.
+     * @return The response code included in the CoAP response.
      */
-    public static void respond(final CoapExchange exchange, final Throwable cause, final ResponseCode defaultCode) {
+    public static ResponseCode respond(final CoapExchange exchange, final Throwable cause, final ResponseCode defaultCode) {
 
         final String message = cause == null ? null : cause.getMessage();
         final ResponseCode code = toCoapCode(cause, defaultCode);
@@ -76,6 +78,7 @@ public class CoapErrorResponse {
             break;
         }
         respond(exchange, message, code);
+        return code;
     }
 
     /**

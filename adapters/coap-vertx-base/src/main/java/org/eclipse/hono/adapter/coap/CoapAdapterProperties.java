@@ -211,47 +211,61 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     }
 
     /**
-     * Gets the number of connector threads.
+     * Gets the number of threads used for receiving/sending UDP packets.
+     * <p>
+     * The connector will start the given number of threads for each direction, outbound (sending)
+     * as well as inbound (receiving).
+     * <p>
+     * The default value of this property is 1.
      * 
-     * The connector will start sender and receiver threads, so the resulting number will be doubled!
-     * 
-     * @return The number of threads per connector.
+     * @return The number of threads.
      */
     public final int getConnectorThreads() {
         return connectorThreads;
     }
 
     /**
-     * Sets the number of connector threads.
+     * Gets the number of threads to use for receiving/sending UDP packets.
+     * <p>
+     * The connector will start the given number of threads for each direction, outbound (sending)
+     * as well as inbound (receiving).
+     * <p>
+     * The default value of this property is 1.
      * 
-     * @param threads The number of sender and receiver threads per connector.
+     * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
      */
     public final void setConnectorThreads(final int threads) {
         if (threads < 1) {
-            throw new IllegalArgumentException("connector threads must not be less than one");
+            throw new IllegalArgumentException("connector thread count must be at least 1");
         }
         this.connectorThreads = threads;
     }
 
     /**
-     * Gets the number of coap threads.
+     * Gets the number of threads used for processing CoAP message exchanges at the
+     * protocol layer.
+     * <p>
+     * The default value of this property is 2.
      * 
-     * @return The number of threads for coap stack.
+     * @return The number of threads.
      */
     public final int getCoapThreads() {
         return coapThreads;
     }
 
     /**
-     * Sets the number of coap protocol threads.
+     * Sets the number of threads to be used for processing CoAP message exchanges at the
+     * protocol layer.
+     * <p>
+     * The default value of this property is 2.
      * 
-     * @param threads The number of threads for the coap protocol stack.
+     * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
      */
     public final void setCoapThreads(final int threads) {
         if (threads < 1) {
-            throw new IllegalArgumentException("protocol threads must not be less than one");
+            throw new IllegalArgumentException("protocol thread count must be at least 1");
         }
         this.coapThreads = threads;
     }

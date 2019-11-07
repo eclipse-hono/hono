@@ -143,7 +143,6 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
     @Override
     public SecretKey getKey(final PskPublicInformation identity) {
 
-        LOG.debug("getting PSK secret for identity [{}]", identity);
         final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(identity.getPublicInfoAsString());
         if (handshakeIdentity == null) {
             return null;
@@ -151,6 +150,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
 
         final CompletableFuture<SecretKey> secret = new CompletableFuture<>();
         context.runOnContext((v) -> {
+            LOG.debug("getting PSK secret for identity [{}]", handshakeIdentity.getAuthId());
             getSharedKeyForDevice(handshakeIdentity)
             .setHandler((getAttempt) -> {
                 if (getAttempt.succeeded()) {
@@ -164,7 +164,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
             // credentials client will wait limited time only
             return secret.join();
         } catch (final CompletionException e) {
-            LOG.debug("error retrieving credentials for PSK identity [{}]", identity);
+            LOG.debug("error retrieving credentials for PSK identity [{}]", handshakeIdentity.getAuthId());
             return null;
         }
     }
