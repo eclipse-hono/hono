@@ -4,6 +4,15 @@ title = "Release Notes"
 
 ## 1.1.0 (not yet released)
 
+### New Features
+
+* The Sigfox and LoRaWAN adapters now report metrics analogously to the other protocol
+  adapters.
+* The (experimental) CoAP adapter now supports tracking of request processing using
+  OpenTracing.
+
+## 1.0.1
+
 ### Fixes & Enhancements
 
 * The AMQP protocol adapter now requests devices to send traffic periodically in order
