@@ -41,6 +41,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -81,71 +82,73 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
                 .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
                 .start();
 
-        return registrationClientFactory.getOrCreateRegistrationClient(tenantId).compose(client -> {
-            return client.assertRegistration(deviceId, null, span.context());
-        }).recover(t -> {
-            LOG.debug("Error getting registration assertion", t);
-            return Future.failedFuture(t);
-        }).compose(registrationAssertionJson -> {
-            final Future<String> mappedGatewayFuture = Future.future();
-            final Object viaObject = registrationAssertionJson.getValue(RegistrationConstants.FIELD_VIA);
-            final JsonArray viaArray = viaObject instanceof JsonArray ? (JsonArray) viaObject : null;
-            if (viaArray != null && !viaArray.isEmpty()) {
-                // get last-known gateway
-                deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId).compose(client -> {
-                    return client.getLastKnownGatewayForDevice(deviceId, span.context());
-                }).setHandler(ar -> {
-                    if (ar.succeeded()) {
-                        final JsonObject lastKnownGatewayJson = ar.result();
-                        final String mappedGatewayId = lastKnownGatewayJson.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID);
-                        // check if mappedGatewayId is in 'via' gateways
-                        if (viaArray.contains(mappedGatewayId) || deviceId.equals(mappedGatewayId)) {
-                            LOG.trace("returning mapped gateway [{}] for device [{}]", mappedGatewayId, deviceId);
-                            mappedGatewayFuture.complete(mappedGatewayId);
-                        } else {
-                            LOG.debug("mapped gateway [{}] for device [{}] is not contained in device's 'via' gateways",
-                                    mappedGatewayId, deviceId);
-                            mappedGatewayFuture.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                                    "mapped gateway not found in gateways defined for device"));
-                        }
-                    } else {
-                        // getting the last known gateway failed
-                        if (ar.cause() instanceof ServiceInvocationException
-                                && ((ServiceInvocationException) ar.cause()).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-                            if (viaArray.size() == 1) {
-                                final String singleDefinedGateway = viaArray.getString(0);
-                                LOG.trace("no last known gateway found for device [{}]; returning single defined 'via' gateway [{}]",
-                                        deviceId, singleDefinedGateway);
-                                span.log("no last known gateway found, returning single defined 'via' gateway");
-                                mappedGatewayFuture.complete(singleDefinedGateway);
+        return registrationClientFactory.getOrCreateRegistrationClient(tenantId)
+                .compose(client -> client.assertRegistration(deviceId, null, span.context()))
+            .recover(t -> {
+                LOG.debug("Error getting registration assertion", t);
+                return Future.failedFuture(t);
+            })
+            .compose(registrationAssertionJson -> {
+                final Promise<String> mappedGatewayPromise = Promise.promise();
+                final Object viaObject = registrationAssertionJson.getValue(RegistrationConstants.FIELD_VIA);
+                final JsonArray viaArray = viaObject instanceof JsonArray ? (JsonArray) viaObject : null;
+                if (viaArray != null && !viaArray.isEmpty()) {
+                    // get last-known gateway
+                    deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId).compose(client -> {
+                        return client.getLastKnownGatewayForDevice(deviceId, span.context());
+                    }).setHandler(ar -> {
+                        if (ar.succeeded()) {
+                            final JsonObject lastKnownGatewayJson = ar.result();
+                            final String mappedGatewayId = lastKnownGatewayJson.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID);
+                            // check if mappedGatewayId is in 'via' gateways
+                            if (viaArray.contains(mappedGatewayId) || deviceId.equals(mappedGatewayId)) {
+                                LOG.trace("returning mapped gateway [{}] for device [{}]", mappedGatewayId, deviceId);
+                                mappedGatewayPromise.complete(mappedGatewayId);
                             } else {
-                                LOG.trace("no last known gateway found for device [{}] and device has multiple gateways defined", deviceId);
-                                mappedGatewayFuture.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                                        "no last known gateway found"));
+                                LOG.debug("mapped gateway [{}] for device [{}] is not contained in device's 'via' gateways",
+                                        mappedGatewayId, deviceId);
+                                mappedGatewayPromise.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                        "mapped gateway not found in gateways defined for device"));
                             }
                         } else {
-                            LOG.debug("error getting last known gateway for device [{}]", deviceId, ar.cause());
-                            mappedGatewayFuture.fail(ar.cause() instanceof ServiceInvocationException ? ar.cause()
-                                    : new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
+                            // getting the last known gateway failed
+                            if (ar.cause() instanceof ServiceInvocationException
+                                    && ((ServiceInvocationException) ar.cause()).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+                                if (viaArray.size() == 1) {
+                                    final String singleDefinedGateway = viaArray.getString(0);
+                                    LOG.trace("no last known gateway found for device [{}]; returning single defined 'via' gateway [{}]",
+                                            deviceId, singleDefinedGateway);
+                                    span.log("no last known gateway found, returning single defined 'via' gateway");
+                                    mappedGatewayPromise.complete(singleDefinedGateway);
+                                } else {
+                                    LOG.trace("no last known gateway found for device [{}] and device has multiple gateways defined", deviceId);
+                                    mappedGatewayPromise.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                            "no last known gateway found"));
+                                }
+                            } else {
+                                LOG.debug("error getting last known gateway for device [{}]", deviceId, ar.cause());
+                                mappedGatewayPromise.fail(ar.cause() instanceof ServiceInvocationException ? ar.cause()
+                                        : new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
+                            }
                         }
-                    }
-                });
-            } else {
-                // device has an empty "via" entry => return device id itself
-                LOG.trace("device [{}] has empty 'via' entry", deviceId);
-                mappedGatewayFuture.complete(deviceId);
-            }
-            return mappedGatewayFuture.map(result -> {
-                span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, result);
+                    });
+                } else {
+                    // device has an empty "via" entry => return device id itself
+                    LOG.trace("device [{}] has empty 'via' entry", deviceId);
+                    mappedGatewayPromise.complete(deviceId);
+                }
+                return mappedGatewayPromise.future()
+                        .map(result -> {
+                            span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, result);
+                            span.finish();
+                            return result;
+                        });
+            }).recover(t -> {
+                TracingHelper.logError(span, t);
+                Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
                 span.finish();
-                return result;
+                return Future.failedFuture(t);
             });
-        }).recover(t -> {
-            TracingHelper.logError(span, t);
-            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
-            span.finish();
-            return Future.failedFuture(t);
-        });
     }
 
     // ------------- ConnectionLifecycle methods ------------
@@ -184,11 +187,12 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
 
     @Override
     public void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
-        final Future<Void> registrationDisconnectFuture = Future.future();
-        registrationClientFactory.disconnect(registrationDisconnectFuture);
-        final Future<Void> deviceConnectionDisconnectFuture = Future.future();
-        deviceConnectionClientFactory.disconnect(deviceConnectionDisconnectFuture);
-        CompositeFuture.all(registrationDisconnectFuture, deviceConnectionDisconnectFuture)
-                .map(obj -> deviceConnectionDisconnectFuture.result()).setHandler(completionHandler);
+
+        final Promise<Void> registrationDisconnectPromise = Promise.promise();
+        registrationClientFactory.disconnect(registrationDisconnectPromise);
+        final Promise<Void> deviceConnectionDisconnectPromise = Promise.promise();
+        deviceConnectionClientFactory.disconnect(deviceConnectionDisconnectPromise);
+        CompositeFuture.all(registrationDisconnectPromise.future(), deviceConnectionDisconnectPromise.future())
+                .map(obj -> deviceConnectionDisconnectPromise.future().result()).setHandler(completionHandler);
     }
 }

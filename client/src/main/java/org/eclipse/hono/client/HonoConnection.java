@@ -21,6 +21,7 @@ import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonLink;
@@ -61,7 +62,7 @@ import io.vertx.proton.ProtonSender;
  * registered on the {@code Future}s returned by these methods will be invoked from the stored Context.
  * It is the invoking code's responsibility to either ensure that the connection's methods are always invoked
  * from the same Context or to make sure that the handlers are running on the correct Context, e.g. by using
- * the {@link #executeOrRunOnContext(Handler)} method. 
+ * the {@link #executeOnContext(Handler)} method. 
  */
 public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
 
@@ -228,7 +229,6 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      */
     boolean supportsCapability(Symbol capability);
 
-
     /**
      * Executes some code on the vert.x Context that has been used to establish the
      * connection to the peer.
@@ -240,8 +240,24 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *         thus indicates the outcome of executing the code. The future will
      *         be failed with a {@link ServerErrorException} if the <em>context</em>
      *         property is {@code null}.
+     * @deprecated Use {@link #executeOnContext(Handler)} instead.
      */
+    @Deprecated
     <T> Future<T> executeOrRunOnContext(Handler<Future<T>> codeToRun);
+
+    /**
+     * Executes some code on the vert.x Context that has been used to establish the
+     * connection to the peer.
+     * 
+     * @param <T> The type of the result that the code produces.
+     * @param codeToRun The code to execute. The code is required to either complete or
+     *                  fail the promise that is passed into the handler.
+     * @return The future containing the result of the promise passed in to the handler
+     *         for executing the code. The future thus indicates the outcome of executing
+     *         the code. The future will always be failed with a {@link ServerErrorException}
+     *         if this connection's <em>context</em> property is {@code null}.
+     */
+    <T> Future<T> executeOnContext(Handler<Promise<T>> codeToRun);
 
     /**
      * Creates a sender link.

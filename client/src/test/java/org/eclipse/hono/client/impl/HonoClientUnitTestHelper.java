@@ -32,6 +32,7 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -141,11 +142,11 @@ public final class HonoClientUnitTestHelper {
         when(connection.getVertx()).thenReturn(vertx);
         when(connection.getConfig()).thenReturn(props);
         when(connection.getTracer()).thenReturn(tracer);
-        when(connection.executeOrRunOnContext(VertxMockSupport.anyHandler())).then(invocation -> {
-            final Future<?> result = Future.future();
+        when(connection.executeOnContext(VertxMockSupport.anyHandler())).then(invocation -> {
+            final Promise<?> result = Promise.promise();
             final Handler<Future<?>> handler = invocation.getArgument(0);
-            handler.handle(result);
-            return result;
+            handler.handle(result.future());
+            return result.future();
         });
         return connection;
     }

@@ -51,6 +51,7 @@ import org.mockito.ArgumentCaptor;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -267,7 +268,7 @@ public class CommandConsumerFactoryImplTest {
         .map(consumer -> {
                     verify(vertx).setPeriodic(eq(5000L), VertxMockSupport.anyHandler());
             // WHEN closing the link locally
-            final Future<Void> localCloseHandler = Future.future();
+            final Promise<Void> localCloseHandler = Promise.promise();
             consumer.close(localCloseHandler);
                     final ArgumentCaptor<Handler<Void>> closeHandler = VertxMockSupport.argumentCaptorHandler();
             verify(connection).closeAndFree(eq(deviceSpecificCommandReceiver), closeHandler.capture());
@@ -369,7 +370,7 @@ public class CommandConsumerFactoryImplTest {
                 new CommandConsumerFactoryImpl.LivenessCheckData(10L, () -> Collections.singletonList(commandHandlerWrapper)));
 
         final Handler<Long> livenessCheck = commandConsumerFactory.newLivenessCheck(tenantId, deviceId);
-        final Future<ProtonReceiver> createdReceiver = Future.future();
+        final Promise<ProtonReceiver> createdReceiver = Promise.promise();
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.createReceiver(
                 eq(deviceSpecificCommandAddress),
@@ -377,7 +378,7 @@ public class CommandConsumerFactoryImplTest {
                 any(ProtonMessageHandler.class),
                 anyInt(),
                 anyBoolean(),
-                VertxMockSupport.anyHandler())).thenReturn(createdReceiver);
+                VertxMockSupport.anyHandler())).thenReturn(createdReceiver.future());
 
         // WHEN the liveness check fires
         livenessCheck.handle(10L);

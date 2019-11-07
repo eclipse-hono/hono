@@ -18,8 +18,6 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.UUID;
 
-import io.vertx.proton.ProtonReceiver;
-import io.vertx.proton.ProtonSender;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.ClientErrorException;
@@ -42,8 +40,11 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
  * A Vertx-Proton based client for Hono's Credentials API.
@@ -197,7 +198,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
         Objects.requireNonNull(authId);
         Objects.requireNonNull(clientContext);
 
-        final Future<CredentialsResult<CredentialsObject>> responseTracker = Future.future();
+        final Promise<CredentialsResult<CredentialsObject>> responseTracker = Promise.promise();
         final JsonObject specification = CredentialsConstants
                 .getSearchCriteria(type, authId)
                 .mergeIn(clientContext);
@@ -219,8 +220,9 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
                             responseTracker,
                             key,
                             span);
-                    return responseTracker;
+                    return responseTracker.future();
                 });
+
         return mapResultAndFinishSpan(resultTracker, result -> {
             switch (result.getStatus()) {
             case HttpURLConnection.HTTP_OK:

@@ -46,6 +46,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonSender;
 
@@ -157,7 +158,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
                 logError(span, e);
@@ -250,14 +251,14 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         Objects.requireNonNull(message);
         Objects.requireNonNull(currentSpan);
 
-        final Future<ProtonDelivery> result = Future.future();
+        final Promise<ProtonDelivery> result = Promise.promise();
         final String messageId = String.format("%s-%d", getClass().getSimpleName(), MESSAGE_COUNTER.getAndIncrement());
         message.setMessageId(messageId);
         logMessageIdAndSenderInfo(currentSpan, messageId);
 
         final Long timerId = connection.getConfig().getSendMessageTimeout() > 0
                 ? connection.getVertx().setTimer(connection.getConfig().getSendMessageTimeout(), id -> {
-                    if (!result.isComplete()) {
+                    if (!result.future().isComplete()) {
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after " + connection.getConfig().getSendMessageTimeout() + "ms");
@@ -273,7 +274,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                 connection.getVertx().cancelTimer(timerId);
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
-            if (result.isComplete()) {
+            if (result.future().isComplete()) {
                 log.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
             } else if (deliveryUpdated.remotelySettled()) {
                 logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
@@ -306,17 +307,18 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         });
         log.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
 
-        return result.map(delivery -> {
-            log.trace("message [ID: {}] accepted by peer", messageId);
-            Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
-            currentSpan.finish();
-            return delivery;
-        }).recover(t -> {
-            TracingHelper.logError(currentSpan, t);
-            Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
-            currentSpan.finish();
-            return Future.failedFuture(t);
-        });
+        return result.future()
+                .map(delivery -> {
+                    log.trace("message [ID: {}] accepted by peer", messageId);
+                    Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
+                    currentSpan.finish();
+                    return delivery;
+                }).recover(t -> {
+                    TracingHelper.logError(currentSpan, t);
+                    Tags.HTTP_STATUS.set(currentSpan, ServiceInvocationException.extractStatusCode(t));
+                    currentSpan.finish();
+                    return Future.failedFuture(t);
+                });
     }
 
     /**

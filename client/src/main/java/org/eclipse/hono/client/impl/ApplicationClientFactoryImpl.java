@@ -63,7 +63,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
             final Consumer<Message> messageConsumer,
             final Handler<Void> closeHandler) {
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             consumerFactory.createClient(
                     () -> TelemetryConsumerImpl.create(
                             connection,
@@ -95,7 +95,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
             final BiConsumer<ProtonDelivery, Message> messageConsumer,
             final Handler<Void> closeHandler) {
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             consumerFactory.createClient(
                     () -> EventConsumerImpl.create(
                             connection,
@@ -132,7 +132,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
     private Future<CommandClient> getOrCreateCommandClient(final String tenantId, final String replyId,
             final String cacheKey) {
         log.debug("get or create command client for [tenantId: {}, replyId: {}]", tenantId, replyId);
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             commandClientFactory.getOrCreateClient(
                     cacheKey,
                     () -> CommandClientImpl.create(
@@ -160,7 +160,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
 
         Objects.requireNonNull(tenantId);
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             final String key = String.format("%s/%s", CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId);
             asyncCommandClientFactory.getOrCreateClient(
                     key,
@@ -189,7 +189,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
             final BiConsumer<ProtonDelivery, Message> consumer,
             final Handler<Void> closeHandler) {
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             consumerFactory.createClient(
                     () -> AsyncCommandResponseConsumerImpl.create(
                             connection,

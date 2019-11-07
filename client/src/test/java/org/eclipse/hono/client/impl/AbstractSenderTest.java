@@ -40,6 +40,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -177,7 +178,8 @@ public class AbstractSenderTest {
             @Override
             public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message) {
                 protonSender.send(message);
-                return Future.future();
+                final Promise<ProtonDelivery> result = Promise.promise();
+                return result.future();
             }
 
             @Override

@@ -68,7 +68,7 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
 
         Objects.requireNonNull(tenantId);
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             registrationClientFactory.getOrCreateClient(
                     RegistrationClientImpl.getTargetAddress(tenantId),
                     () -> RegistrationClientImpl.create(

@@ -63,7 +63,7 @@ public class DeviceConnectionClientFactoryImpl extends AbstractHonoClientFactory
 
         Objects.requireNonNull(tenantId);
 
-        return connection.executeOrRunOnContext(result -> {
+        return connection.executeOnContext(result -> {
             deviceConnectionClientFactory.getOrCreateClient(
                     DeviceConnectionClientImpl.getTargetAddress(tenantId),
                     () -> DeviceConnectionClientImpl.create(
