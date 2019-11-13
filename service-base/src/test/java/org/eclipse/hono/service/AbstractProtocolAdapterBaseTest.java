@@ -524,12 +524,14 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN an tenant for which the maximum number of connections has been reached
         final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
         final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
-        when(checks.isConnectionLimitReached(any(TenantObject.class))).thenReturn(Future.succeededFuture(Boolean.TRUE));
-        when(checks.isMessageLimitReached(any(TenantObject.class), anyLong())).thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(checks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(checks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
         adapter.setResourceLimitChecks(checks);
 
         // WHEN a device tries to connect
-        adapter.checkConnectionLimit(tenant).setHandler(ctx.failing(t -> {
+        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
             // THEN the connection limit check fails
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
             ctx.completeNow();
@@ -547,12 +549,14 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN an tenant for which the message limit has been reached
         final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
         final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
-        when(checks.isConnectionLimitReached(any(TenantObject.class))).thenReturn(Future.succeededFuture(Boolean.FALSE));
-        when(checks.isMessageLimitReached(any(TenantObject.class), anyLong())).thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(checks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(checks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
         adapter.setResourceLimitChecks(checks);
 
         // WHEN a device tries to connect
-        adapter.checkConnectionLimit(tenant).setHandler(ctx.failing(t -> {
+        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
             // THEN the connection limit check fails
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
             ctx.completeNow();

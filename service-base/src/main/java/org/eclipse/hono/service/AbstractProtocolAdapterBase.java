@@ -556,9 +556,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * adapters from devices of a particular tenant has been reached.
      * <p>
      * This default implementation uses the
-     * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject)} method
+     * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject, SpanContext)} method
      * to verify if the tenant's overall connection limit across all adapters
-     * has been reached and also invokes {@link #checkMessageLimit(TenantObject, long)}
+     * has been reached and also invokes {@link #checkMessageLimit(TenantObject, long, SpanContext)}
      * to check if the tenant's message limit has been exceeded.
      * 
      * @param tenantConfig The tenant to check the connection limit for.
@@ -567,11 +567,39 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise the future will be failed with a {@link ClientErrorException}
      *         containing the 403 Forbidden status code.
      * @throws NullPointerException if tenant is {@code null}.
+     * @deprecated Use {@link #checkConnectionLimit(TenantObject, SpanContext)} instead.
      */
+    @Deprecated
     protected Future<Void> checkConnectionLimit(final TenantObject tenantConfig) {
+        return checkConnectionLimit(tenantConfig, null);
+    }
+
+    /**
+     * Checks if the maximum number of concurrent connections across all protocol
+     * adapters from devices of a particular tenant has been reached.
+     * <p>
+     * This default implementation uses the
+     * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject, SpanContext)} method
+     * to verify if the tenant's overall connection limit across all adapters
+     * has been reached and also invokes {@link #checkMessageLimit(TenantObject, long, SpanContext)}
+     * to check if the tenant's message limit has been exceeded.
+     *
+     * @param tenantConfig The tenant to check the connection limit for.
+     * @param spanContext The currently active OpenTracing span context that is used to
+     *                    trace the limits verification or {@code null}
+     *                    if no span is currently active.
+     * @return A succeeded future if the connection and message limits have not been reached yet
+     *         or if the limits could not be checked.
+     *         Otherwise the future will be failed with a {@link ClientErrorException}
+     *         containing the 403 Forbidden status code.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    protected Future<Void> checkConnectionLimit(final TenantObject tenantConfig, final SpanContext spanContext) {
 
         Objects.requireNonNull(tenantConfig);
-        final Future<Void> connectionLimitCheckResult = resourceLimitChecks.isConnectionLimitReached(tenantConfig)
+
+        final Future<Void> connectionLimitCheckResult = resourceLimitChecks
+                .isConnectionLimitReached(tenantConfig, spanContext)
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
@@ -580,22 +608,23 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         return Future.succeededFuture();
                     }
                 });
-        final Future<Void> messageLimitCheckResult = checkMessageLimit(tenantConfig, 1)
+        final Future<Void> messageLimitCheckResult = checkMessageLimit(tenantConfig, 1, spanContext)
                 .recover(t -> {
                     if (t instanceof ClientErrorException) {
                         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
                     }
                     return Future.failedFuture(t);
                 });
+
         return CompositeFuture.all(connectionLimitCheckResult, messageLimitCheckResult)
-                .map(ok -> (Void) null);
+                .map(ok -> null);
     }
 
     /**
      * Checks if this adapter may accept another telemetry or event message from a device.
      * <p>
      * This default implementation uses the
-     * {@link ResourceLimitChecks#isMessageLimitReached(TenantObject tenant, long payloadSize)} method
+     * {@link ResourceLimitChecks#isMessageLimitReached(TenantObject, long, SpanContext)} method
      * to verify if the tenant's message limit has been reached.
      *
      * @param tenantConfig The tenant to check the message limit for.
@@ -605,11 +634,37 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise the future will be failed with a {@link ClientErrorException}
      *         containing the 429 Too many requests status code.
      * @throws NullPointerException if tenant is {@code null}.
+     * @deprecated Use {@link #checkMessageLimit(TenantObject, long, SpanContext)} instead.
      */
+    @Deprecated
     protected Future<Void> checkMessageLimit(final TenantObject tenantConfig, final long payloadSize) {
+        return checkMessageLimit(tenantConfig, payloadSize, null);
+    }
+
+    /**
+     * Checks if this adapter may accept another telemetry or event message from a device.
+     * <p>
+     * This default implementation uses the
+     * {@link ResourceLimitChecks#isMessageLimitReached(TenantObject, long, SpanContext)} method
+     * to verify if the tenant's message limit has been reached.
+     *
+     * @param tenantConfig The tenant to check the message limit for.
+     * @param payloadSize  The size of the message payload in bytes.
+     * @param spanContext The currently active OpenTracing span context that is used to
+     *                    trace the limits verification or {@code null}
+     *                    if no span is currently active.
+     * @return A succeeded future if the message limit has not been reached yet
+     *         or if the limits could not be checked.
+     *         Otherwise the future will be failed with a {@link ClientErrorException}
+     *         containing the 429 Too many requests status code.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    protected Future<Void> checkMessageLimit(final TenantObject tenantConfig, final long payloadSize,
+            final SpanContext spanContext) {
 
         Objects.requireNonNull(tenantConfig);
-        return resourceLimitChecks.isMessageLimitReached(tenantConfig, payloadSize)
+
+        return resourceLimitChecks.isMessageLimitReached(tenantConfig, payloadSize, spanContext)
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {

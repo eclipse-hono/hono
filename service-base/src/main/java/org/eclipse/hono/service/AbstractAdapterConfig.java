@@ -535,6 +535,6 @@ public abstract class AbstractAdapterConfig {
     public ResourceLimitChecks resourceLimitChecks() {
         final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
         return new PrometheusBasedResourceLimitChecks(WebClient.create(vertx()), config,
-                newCaffeineCache(config.getCacheMinSize(), config.getCacheMaxSize()));
+                newCaffeineCache(config.getCacheMinSize(), config.getCacheMaxSize()), getTracer());
     }
 }
