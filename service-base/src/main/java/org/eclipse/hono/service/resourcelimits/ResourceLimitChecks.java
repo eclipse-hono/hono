@@ -15,6 +15,7 @@ package org.eclipse.hono.service.resourcelimits;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.TenantObject;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 
 /**
@@ -31,8 +32,27 @@ public interface ResourceLimitChecks {
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException}
      *         if the check could not be performed.
+     * @throws NullPointerException if the tenant object is null.
+     * @deprecated Use {@link #isConnectionLimitReached(TenantObject, SpanContext)} instead.
      */
+    @Deprecated
     Future<Boolean> isConnectionLimitReached(TenantObject tenantObject);
+
+    /**
+     * Checks if the maximum number of connections configured for a tenant
+     * have been reached.
+     *
+     * @param tenantObject The tenant configuration to check the limit against.
+     * @param spanContext The currently active OpenTracing span context that is used to
+     *                    trace the limits verification or {@code null}
+     *                    if no span is currently active.
+     * @return A future indicating the outcome of the check.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException}
+     *         if the check could not be performed.
+     * @throws NullPointerException if the tenant object is null.
+     */
+    Future<Boolean> isConnectionLimitReached(TenantObject tenantObject, SpanContext spanContext);
 
     /**
      * Checks if the maximum limit for the messages configured for a tenant
@@ -44,6 +64,26 @@ public interface ResourceLimitChecks {
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException}
      *         if the check could not be performed.
+     * @throws NullPointerException if the tenant object is null.
+     * @deprecated Use {@link #isMessageLimitReached(TenantObject, long, SpanContext)} instead.
      */
+    @Deprecated
     Future<Boolean> isMessageLimitReached(TenantObject tenantObject, long payloadSize);
+
+    /**
+     * Checks if the maximum limit for the messages configured for a tenant
+     * have been reached.
+     *
+     * @param tenantObject The tenant configuration to check the limit against.
+     * @param payloadSize The message payload size in bytes.
+     * @param spanContext The currently active OpenTracing span context that is used to
+     *                    trace the limits verification or {@code null}
+     *                    if no span is currently active.
+     * @throws NullPointerException if the tenant object is null.
+     * @return A future indicating the outcome of the check.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException}
+     *         if the check could not be performed.
+     */
+    Future<Boolean> isMessageLimitReached(TenantObject tenantObject, long payloadSize, SpanContext spanContext);
 }

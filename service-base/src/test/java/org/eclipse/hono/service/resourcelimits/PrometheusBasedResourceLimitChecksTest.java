@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
+import io.opentracing.noop.NoopTracerFactory;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.util.Constants;
@@ -41,6 +42,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -69,7 +73,9 @@ public class PrometheusBasedResourceLimitChecksTest {
     private HttpRequest<Buffer> request;
     private CacheProvider cacheProvider;
     private ExpiringValueCache<Object, Object> limitsCache;
-
+    private SpanContext spanContext;
+    private Span span;
+    private Tracer tracer;
 
     /**
      * Sets up the fixture.
@@ -90,11 +96,18 @@ public class PrometheusBasedResourceLimitChecksTest {
         cacheProvider = mock(CacheProvider.class);
         when(cacheProvider.getCache(any())).thenReturn(limitsCache);
 
+        spanContext = mock(SpanContext.class);
+
+        span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
+
+        tracer = NoopTracerFactory.create();
+
         final PrometheusBasedResourceLimitChecksConfig config = new PrometheusBasedResourceLimitChecksConfig();
         config.setHost(DEFAULT_HOST);
         config.setPort(DEFAULT_PORT);
 
-        limitChecksImpl = new PrometheusBasedResourceLimitChecks(webClient, config, cacheProvider);
+        limitChecksImpl = new PrometheusBasedResourceLimitChecks(webClient, config, cacheProvider, tracer);
     }
 
     /**
@@ -111,7 +124,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .setResourceLimits(new ResourceLimits()
                         .setMaxConnections(10));
 
-        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).setHandler(
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
@@ -135,7 +148,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                 .setResourceLimits(new ResourceLimits()
                         .setMaxConnections(10));
 
-        limitChecksImpl.isConnectionLimitReached(tenant).setHandler(
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).setHandler(
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
@@ -165,7 +178,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
-        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
                 .setHandler(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
@@ -194,7 +207,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
-        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
                 .setHandler(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
@@ -297,7 +310,7 @@ public class PrometheusBasedResourceLimitChecksTest {
 
         final TenantObject tenant = TenantObject.from("tenant", true);
 
-        limitChecksImpl.isMessageLimitReached(tenant, 10)
+        limitChecksImpl.isMessageLimitReached(tenant, 10, mock(SpanContext.class))
                 .setHandler(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
@@ -326,7 +339,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
-        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, spanContext)
                 .setHandler(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
@@ -356,7 +369,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
-        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize)
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
                 .setHandler(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
