@@ -11,27 +11,28 @@
 #
 # SPDX-License-Identifier: EPL-2.0
 #*******************************************************************************
+# Execution Example
+# ./load-test-mqtt-router.sh /home/hono/apache-jmeter-5.1.1 registry.hono.yourdomain.com router.hono.yourdomain.com mqtt.hono.yourdomain.com 10 2
+#*******************************************************************************
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
-JMETER_HOME=${JMETER_HOME:=~/apache-jmeter-3.3}
-HONO_HOST=$1
-HONO_HOST=${HONO_HOST:=127.0.0.1}
-OUT=$SCRIPTPATH/results
+JMETER_HOME=${1:-~/apache-jmeter-5.1.1}
+REGISTRATION_HOST=${2:-127.0.0.1}
+ROUTER_HOST=${3:-127.0.0.1}
+MQTT_ADAPTER_HOST=${4:-127.0.0.1}
 HONO_HOME=${HONO_HOME:=$SCRIPTPATH/../../..}
-TRUST_STORE_PATH=$HONO_HOME/demo-certs/certs/trusted-certs.pem
 SAMPLE_LOG=load-test-mqtt-router.jtl
 TEST_LOG=load-test-mqtt-router.log
+DEVICE_COUNT=${5:-10}
+CONSUMER_COUNT=${6:-2}
 
-rm -rf $OUT
-rm $SAMPLE_LOG
+rm -f $SAMPLE_LOG
 
-$JMETER_HOME/bin/jmeter -n -f \
--l $SAMPLE_LOG -j $TEST_LOG \
+$JMETER_HOME/bin/jmeter -n -f -l $SAMPLE_LOG -j $TEST_LOG \
 -t $SCRIPTPATH/mqtt_messaging_throughput_test.jmx \
 -Jplugin_dependency_paths=$HONO_HOME/jmeter/target/plugin \
 -Jjmeterengine.stopfail.system.exit=true \
--Jrouter.host=$HONO_HOST -Jrouter.port=15672 \
--Jregistration.host=$HONO_HOST -Jregistration.http.port=28080 \
--Jmqtt.host=$HONO_HOST -Jmqtt.port=1883 \
+-Jrouter.host=$ROUTER_HOST -Jrouter.port=15672 \
+-Jregistration.host=$REGISTRATION_HOST -Jregistration.port=28080 \
+-Jmqtt.host=$MQTT_ADAPTER_HOST -Jmqtt.port=1883 \
 -Lorg.eclipse.hono.client.impl=INFO -Lorg.eclipse.hono.jmeter=INFO \
--JdeviceCount=10 -JconsumerCount=2
-
+-JdeviceCount=$DEVICE_COUNT -JconsumerCount=$CONSUMER_COUNT
