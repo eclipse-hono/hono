@@ -10,6 +10,7 @@ title = "Release Notes"
   adapters.
 * The (experimental) CoAP adapter now supports tracking of request processing using
   OpenTracing.
+* A lorawan provider has been added for the loriot network provider.
 
 ## 1.0.1
 

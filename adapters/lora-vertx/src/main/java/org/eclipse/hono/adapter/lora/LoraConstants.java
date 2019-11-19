@@ -44,6 +44,7 @@ public class LoraConstants {
     public static final String APP_PROPERTY_CHANNEL = "channel";
     public static final String APP_PROPERTY_SUB_BAND = "sub_band";
     public static final String APP_PROPERTY_SPREADING_FACTOR = "spreading_factor";
+    public static final String APP_PROPERTY_BANDWIDTH = "bandwidth";
     public static final String APP_PROPERTY_SNR = "snr";
     public static final String APP_PROPERTY_FUNCTION_PORT = "function_port";
     public static final String APP_PROPERTY_FUNCTION_LATITUDE = "latitude";
