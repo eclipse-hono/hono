@@ -46,6 +46,7 @@ public class FireflyProvider implements LoraProvider {
     private static final String FIELD_FIREFLY_FREQUENCY ="freq";
     private static final String FIELD_FIREFLY_PARSED_PACKET = "parsed_packet";
     private static final String FIELD_FIREFLY_FRAME_COUNT = "fcnt";
+    private static final String FIELD_FIREFLY_BANDWIDTH = "bandwidth";
 
     @Override
     public String getProviderName() {
@@ -82,6 +83,9 @@ public class FireflyProvider implements LoraProvider {
         final Map<String, Object> returnMap = new HashMap<>();
         if (loraMessage.containsKey(FIELD_FIREFLY_SPREADING_FACTOR)) {
             returnMap.put(LoraConstants.APP_PROPERTY_SPREADING_FACTOR, loraMessage.getInteger(FIELD_FIREFLY_SPREADING_FACTOR));
+        }
+        if (loraMessage.containsKey(FIELD_FIREFLY_BANDWIDTH)) {
+            returnMap.put(LoraConstants.APP_PROPERTY_BANDWIDTH, loraMessage.getInteger(FIELD_FIREFLY_BANDWIDTH));
         }
         if (loraMessage.containsKey(FIELD_FIREFLY_FUNCTION_PORT)) {
             returnMap.put(LoraConstants.APP_PROPERTY_FUNCTION_PORT, loraMessage.getInteger(FIELD_FIREFLY_FUNCTION_PORT));
