@@ -597,14 +597,19 @@ public class HonoConnectionImpl implements HonoConnection {
      *
      * @param link The link to close. If {@code null}, the given handler is invoked immediately.
      * @param closeHandler The handler to notify once the link has been closed.
-     * @throws NullPointerException if context or close handler are {@code null}.
+     * @throws NullPointerException if close handler is {@code null}.
      */
     @Override
     public void closeAndFree(
             final ProtonLink<?> link,
             final Handler<Void> closeHandler) {
 
-        HonoProtonHelper.closeAndFree(context, link, closeHandler);
+        if (context == null) {
+            // this means that the connection to the peer is not established (yet)
+            closeHandler.handle(null);
+        } else {
+            HonoProtonHelper.closeAndFree(context, link, closeHandler);
+        }
     }
 
     /**
@@ -619,7 +624,12 @@ public class HonoConnectionImpl implements HonoConnection {
             final long detachTimeOut,
             final Handler<Void> closeHandler) {
 
-        HonoProtonHelper.closeAndFree(context, link, detachTimeOut, closeHandler);
+        if (context == null) {
+            // this means that the connection to the peer is not established (yet)
+            closeHandler.handle(null);
+        } else {
+            HonoProtonHelper.closeAndFree(context, link, detachTimeOut, closeHandler);
+        }
     }
 
     /**

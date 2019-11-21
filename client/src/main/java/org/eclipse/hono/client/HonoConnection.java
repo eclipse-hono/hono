@@ -353,10 +353,12 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * <p>
      * This method is equivalent to {@link #closeAndFree(ProtonLink, long, Handler)}
      * but will use an implementation specific default time-out value.
+     * <p>
+     * If this connection is not established, the given handler is invoked immediately.
      *
      * @param link The link to close. If {@code null}, the given handler is invoked immediately.
      * @param closeHandler The handler to notify once the link has been closed.
-     * @throws NullPointerException if context or close handler are {@code null}.
+     * @throws NullPointerException if close handler is {@code null}.
      */
     void closeAndFree(ProtonLink<?> link, Handler<Void> closeHandler);
 
@@ -369,13 +371,15 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * <li>the given number of milliseconds have passed</li>
      * </ul>
      * Afterwards the link's resources are freed up.
+     * <p>
+     * If this connection is not established, the given handler is invoked immediately.
      *
      * @param link The link to close. If {@code null}, the given handler is invoked immediately.
      * @param detachTimeOut The maximum number of milliseconds to wait for the peer's
      *                      detach frame or 0, if this method should wait indefinitely
      *                      for the peer's detach frame.
      * @param closeHandler The handler to notify once the link has been closed.
-     * @throws NullPointerException if context or close handler are {@code null}.
+     * @throws NullPointerException if close handler is {@code null}.
      * @throws IllegalArgumentException if detach time-out is &lt; 0.
      */
     void closeAndFree(
