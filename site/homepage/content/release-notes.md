@@ -2,6 +2,12 @@
 title = "Release Notes"
 +++
 
+## 1.0.2 (not yet released)
+
+### Fixes & Enhancements
+
+* The example deployment now also works with Kubernetes 1.16 using Helm 2.15 and later.
+
 ## 1.0.1
 
 ### Fixes & Enhancements
