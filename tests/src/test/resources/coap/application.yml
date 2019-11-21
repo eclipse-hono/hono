@@ -10,6 +10,7 @@ hono:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
+    maxPayloadSize: 2048
   messaging:
     name: 'Hono CoAP Adapter'
     host: ${hono.amqp-network.host}

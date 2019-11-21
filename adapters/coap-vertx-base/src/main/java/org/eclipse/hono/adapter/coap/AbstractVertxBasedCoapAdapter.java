@@ -350,6 +350,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, getConfig().getCoapThreads());
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, getConfig().getConnectorThreads());
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getConnectorThreads());
+        networkConfig.setInt(NetworkConfig.Keys.MAX_RESOURCE_BODY_SIZE, getConfig().getMaxPayloadSize());
         return networkConfig;
     }
 

@@ -914,9 +914,28 @@ public abstract class CoapTestBase {
             final Type type,
             final String resource,
             final int msgNo) {
+
+        final String payload = "hello " + msgNo;
+        return createCoapsRequest(code, type, resource, payload.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Creates a CoAP request using the <em>coaps</em> scheme.
+     * 
+     * @param code The CoAP request code.
+     * @param type The message type.
+     * @param resource the resource path.
+     * @param payload The payload to send in the request body.
+     * @return The request to send.
+     */
+    protected Request createCoapsRequest(
+            final Code code,
+            final Type type,
+            final String resource,
+            final byte[] payload) {
         final Request request = new Request(code, type);
         request.setURI(getCoapsRequestUri(resource));
-        request.setPayload("hello " + msgNo);
+        request.setPayload(payload);
         request.getOptions().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         return request;
     }

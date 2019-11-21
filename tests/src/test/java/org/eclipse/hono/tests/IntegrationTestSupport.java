@@ -24,6 +24,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -496,6 +497,17 @@ public final class IntegrationTestSupport {
         return props;
     }
 
+    /**
+     * Gets payload of a particular size.
+     * 
+     * @param size The number of bytes that the payload should contain.
+     * @return The payload.
+     */
+    public static byte[] getPayload(final int size) {
+        final byte[] payload = new byte[size];
+        Arrays.fill(payload, (byte) 0x66);
+        return payload;
+    }
 
     /**
      * Connects to the AMQP 1.0 Messaging Network.

@@ -13,16 +13,23 @@
 
 package org.eclipse.hono.tests.coap;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.IOException;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapClient;
+import org.eclipse.californium.core.CoapResponse;
 import org.eclipse.californium.core.coap.CoAP.Code;
+import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
+import org.eclipse.californium.elements.exception.ConnectorException;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.Rule;
 import org.junit.Test;
@@ -100,4 +107,30 @@ public class TelemetryCoapIT extends CoapTestBase {
             return result;
         });
     }
+
+    /**
+     * Verifies that the upload of a telemetry message containing a payload that
+     * exceeds the CoAP adapter's configured max payload size fails with a 4.13
+     * response code.
+     * 
+     * @param ctx The test context.
+     * @throws IOException if the CoAP request cannot be sent to the adapter.
+     * @throws ConnectorException  if the CoAP request cannot be sent to the adapter.
+     */
+    @Test
+    public void testUploadLargePayloadFails(final TestContext ctx) throws ConnectorException, IOException {
+
+        final Async setup = ctx.async();
+        final Tenant tenant = new Tenant();
+
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        setup.await();
+
+        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+        final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), IntegrationTestSupport.getPayload(4096));
+        final CoapResponse response = client.advanced(request);
+        assertThat(response.getCode()).isEqualTo(ResponseCode.REQUEST_ENTITY_TOO_LARGE);
+    }
+
 }
