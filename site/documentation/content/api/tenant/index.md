@@ -177,6 +177,7 @@ The table below provides an overview of the members of a JSON object representin
 | *subject-dn*             | *yes*      | *string*      | `-`           | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
 | *public-key*             | *yes*      | *string*      | `-`           | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
 | *algorithm*              | *no*       | *string*      | `RSA`         | The name of the public key algorithm. Supported values are `RSA` and `EC`. |
+| *auto-provisioning-enabled* | *no*    | *boolean*     | `false`       | If set to `true`, protocol adapters MAY request auto-provisioning of devices that authenticate with a client certificate issued by this CA. Otherwise, protocol adapters MUST NOT request auto-provisioning. |
 
 **NB** CAs of the *same* tenant MAY share the same subject DN, e.g. allowing for the definition of overlapping validity periods.
 However, CAs of *different* tenants MUST NOT share the same subject DN in order to allow for the unique look-up of a tenant by
@@ -185,7 +186,8 @@ the subject DN of one of its trusted CAs.
 **Examples**
 
 Below is an example payload for a response to a *get* request for tenant `TEST_TENANT`.
-The tenant is configured with two trusted certificate authorities, each using a different public key algorithm.
+The tenant is configured with two trusted certificate authorities, each using a different public key algorithm. 
+Only one of them is configured to be used for auto-provisioning.
 
 ~~~json
 {
@@ -194,10 +196,12 @@ The tenant is configured with two trusted certificate authorities, each using a 
   "trusted-ca": [{
     "subject-dn": "CN=ca,OU=Hono,O=Eclipse",
     "public-key": "PublicKey==",
+    "auto-provisioning-enabled": false,
     "algorithm":  "RSA"
   }, {
     "subject-dn": "CN=ca,OU=Hono,O=ACME Inc.",
     "public-key": "ECKey==",
+    "auto-provisioning-enabled": true,
     "algorithm":  "EC"
   }]
 }

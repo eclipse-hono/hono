@@ -99,7 +99,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             return Future.failedFuture(new IllegalStateException("Credentials API client is not set"));
         } else {
             return getCredentialsClient(deviceCredentials.getTenantId()).compose(client ->
-                client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(), new JsonObject(), spanContext));
+                client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(), deviceCredentials.getClientContext(), spanContext));
         }
     }
 

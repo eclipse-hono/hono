@@ -581,10 +581,20 @@ components:
                   a certificate but then extract all relevant data and store
                   it in the properties described above.
                   Either this property or `public-key` must be set.
+            "auto-provisioning-enabled":
+               type: boolean
+               default: false
+               description: |
+                  Indicates whether this trusted certificate may be used for automatically provisioning devices.
+                  If it is *true* and the feature is supported by the device registry, the device registry
+                  automatically provisions unregistered devices that authenticate with a client certificate
+                  issued by this CA (i.e. creates registration and credentials).
+
          example:
             subject-dn: "CN=devices,OU=iot,O=ACME"
             public-key: "Tk9UIEEgUFVCTElDIEtFWQ=="
             algorithm: "EC"
+            auto-provisioning-enabled: false
             not-before: "2019-10-03T13:45:16+02:00"
             not-after: "2021-10-03T00:00:00Z"
 

@@ -61,6 +61,9 @@ public class TrustedCertificateAuthority {
     @HonoTimestamp
     private Instant notAfter;
 
+    @JsonProperty(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED)
+    private boolean autoProvisioningEnabled;
+
     /**
      * Checks if this object contains all required data.
      * 
@@ -240,5 +243,25 @@ public class TrustedCertificateAuthority {
         return Optional.ofNullable(cert)
                 .map(cert -> cert.getNotAfter().toInstant())
                 .orElse(notAfter);
+    }
+
+    /**
+     * Gets whether auto-provisioning of devices is enabled for this CA.
+     *
+     * @return {@code true} if auto-provisioning is enabled.
+     */
+    public final boolean isAutoProvisioningEnabled() {
+        return autoProvisioningEnabled;
+    }
+
+    /**
+     * Sets whether auto-provisioning of devices should be enabled for this CA.
+     *
+     * @param enabled {@code true} if auto-provisioning should be enabled.
+     * @return A reference to this for fluent use.
+     */
+    public final TrustedCertificateAuthority setAutoProvisioningEnabled(final boolean enabled) {
+        this.autoProvisioningEnabled = enabled;
+        return this;
     }
 }

@@ -226,6 +226,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
         return mapResultAndFinishSpan(resultTracker, result -> {
             switch (result.getStatus()) {
             case HttpURLConnection.HTTP_OK:
+            case HttpURLConnection.HTTP_CREATED:
                 return result.getPayload();
             case HttpURLConnection.HTTP_NOT_FOUND:
                 throw new ClientErrorException(result.getStatus(), "no such credentials");

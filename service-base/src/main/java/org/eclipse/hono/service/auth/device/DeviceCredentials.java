@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  *******************************************************************************/
 
 package org.eclipse.hono.service.auth.device;
+
+import io.vertx.core.json.JsonObject;
 
 /**
  * A wrapper around credentials provided by a device for authentication.
@@ -39,4 +41,17 @@ public interface DeviceCredentials {
      * @return The tenant.
      */
     String getTenantId();
+
+    /**
+     * Gets additional properties of the device.
+     * <p>
+     * An implementation can return a JSON object containing arbitrary properties.
+     * <p>
+     * The default implementation returns a new, empty JSON object.
+     *
+     * @return The properties representing the client context.
+     */
+    default JsonObject getClientContext() {
+        return new JsonObject();
+    }
 }

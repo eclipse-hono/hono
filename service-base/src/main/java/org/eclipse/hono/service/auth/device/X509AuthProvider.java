@@ -60,6 +60,9 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * If the <em>singleTenant</em> service config property is {@code false}, then the
      * object is also required to contain a <em>tenant-id</em> property, otherwise
      * the default tenant is used.
+     * <p>
+     * Any additional properties that might be present in the JSON object 
+     * are copied into the client context of the returned credentials.
      * 
      * @param authInfo The authentication information provided by the device.
      * @return The credentials or {@code null} if the authentication information
@@ -83,9 +86,14 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
             if (tenantId == null || subjectDn == null) {
                 return null;
             } else {
-                return SubjectDnCredentials.create(tenantId, subjectDn);
+                final JsonObject clientContext = authInfo.copy();
+                // credentials object already contains tenant ID and subject DN, so remove them from the client context
+                clientContext.remove(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
+                clientContext.remove(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN);
+                return SubjectDnCredentials.create(tenantId, subjectDn, clientContext);
             }
-        } catch (ClassCastException e) {
+        } catch (ClassCastException | IllegalArgumentException e) {
+            log.warn("Reading authInfo failed", e);
             return null;
         }
     }
