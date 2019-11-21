@@ -439,7 +439,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         final JsonArray expectedAuthorities = new JsonArray().add(new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test.org")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOT_A_PUBLIC_KEY".getBytes())
-                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC"));
+                .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC")
+                .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false));
 
         final JsonObject target = FileBasedTenantService.convertTenant("4711", source, true);
 

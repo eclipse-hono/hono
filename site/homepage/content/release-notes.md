@@ -16,6 +16,11 @@ title = "Release Notes"
   to allow devices to establish a TLS connection with adapters using a tenant specific
   server certificate and host name. Please refer to the *Secure Communication* admin
   guide for details.
+* Hono now supports *auto-provisioning* of devices that authenticate with X.509 client certificates. 
+  For more information please refer to the [Device Provisioning]({{% doclink "/concepts/provisioning/" %}})
+  concept and for details to the [Tenant API]({{% doclink "/api/tenant/#trusted-ca-format" %}})
+  and the [Credentials API]({{% doclink "/api/credentials/#get-credentials" %}}).
+  **NB**: the example device registry does not yet support this feature. 
 
 ### Fixes & Enhancements
 

@@ -50,6 +50,10 @@ The body of the request MUST consist of a single *Data* section containing a UTF
 | :--------------- | :-------: | :--------- | :---------- |
 | *type*           | *yes*     | *string*   | The type of credentials to look up. Potential values include (but are not limited to) `psk`, `x509-cert`, `hashed-password` etc. |
 | *auth-id*        | *yes*     | *string*   | The authentication identifier to look up credentials for. |
+| *client-certificate* | *no*  | *string*   | The client certificate the device authenticated with. If present, it MUST be the DER encoding of the (validated) X.509 client certificate as a Base64 encoded byte array and it's subject DN MUST match the *auth-id*. |
+
+The *client-certificate* property MAY be used by the service implementation for auto-provisioning of devices. 
+To do so, the device registry needs to create credentials (and registration data) for the device if they do not already exist. 
 
 Additionally, the body MAY contain arbitrary properties that service implementations can use to determine a device's identity.
 
@@ -59,6 +63,16 @@ The following request payload may be used to look up the hashed password for a d
 {
   "type": "hashed-password",
   "auth-id": "sensor1"
+}
+~~~
+
+The following request payload may be used to look up *or create* `x509-cert` credentials for a device with the authentication identifier `CN=device-1,O=ACME Corporation`:
+
+~~~json
+{
+  "type": "x509-cert",
+  "auth-id": "CN=device-1,O=ACME Corporation",
+  "client-certificate": "DeviceCert=="
 }
 ~~~
 
@@ -74,14 +88,15 @@ A response to a *get credentials* request contains the following properties:
 | *cache_control*  | no        | *application-properties* | *string*     | Contains an [RFC 2616](https://tools.ietf.org/html/rfc2616#section-14.9) compliant <em>cache directive</em>. The directive contained in the property MUST be obeyed by clients that are caching responses. |
 
 
-The response message payload MUST contain credential information as defined in [Credentials Format]({{< relref "#credentials-format" >}}) if the *status* is `200`.
+The response message payload MUST contain credential information as defined in [Credentials Format]({{< relref "#credentials-format" >}}) if the *status* is `200` or `201`.
 
 The response message's *status* property may contain the following codes:
 
 | Code  | Description |
 | :---- | :---------- |
 | *200* | OK, the payload contains the credentials for the authentication identifier. |
-| *400* | Bad Request, the request message did not contain all mandatory properties.
+| *201* | Created, the payload contains the newly created credentials for the authentication identifier. |
+| *400* | Bad Request, the request message did not contain all mandatory properties or the subject DN of the certificate does not match the authentication identifier. |
 | *404* | Not Found, there are no credentials registered matching the criteria. |
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.

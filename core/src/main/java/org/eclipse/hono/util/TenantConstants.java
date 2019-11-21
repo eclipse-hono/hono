@@ -57,6 +57,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
+     * The name of the property that indicates whether a CA cert can be used to
+     * automatically provision new devices. 
+     */
+    public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
+    /**
      * The name of the property that contains the configuration options for the data volume.
      */
     public static final String FIELD_DATA_VOLUME = "data-volume";

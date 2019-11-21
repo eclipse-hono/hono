@@ -16,6 +16,7 @@ package org.eclipse.hono.service.auth.device;
 
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -128,6 +129,10 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      *           "tenant-id": [identifier of the tenant that the device belongs to]
      *         }
      *         </pre>
+     *
+     *         If auto-provisioning is enabled for the trust anchor being used, the JSON object may optionally contain
+     *         the DER encoding of the (validated) client certificate as a Base64 encoded byte array in the
+     *         client-certificate property.
      * @throws NullPointerException if certificate path is {@code null}.
      */
     @Override
@@ -201,16 +206,17 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     /**
      * Gets the authentication information for a device's client certificate.
      * <p>
-     * This default implementation returns a JSON object that contains two properties:
+     * This returns a JSON object that contains the following properties:
      * <ul>
      * <li>{@link RequestResponseApiConstants#FIELD_PAYLOAD_SUBJECT_DN} -
-     * the subject DN from the certificate</li>
+     * the subject DN from the certificate (<em>mandatory</em>)</li>
      * <li>{@link RequestResponseApiConstants#FIELD_PAYLOAD_TENANT_ID} -
-     * the identifier of the tenant that the device belongs to</li>
+     * the identifier of the tenant that the device belongs to (<em>mandatory</em>)</li>
+     * <li>{@link CredentialsConstants#FIELD_CLIENT_CERT} -
+     * the client certificate that the device used for authenticating as Base64  encoded
+     * byte array as returned by {@link java.security.cert.X509Certificate#getEncoded()}
+     * (<em>optional: only present if auto-provisioning is enabled for the used trust anchor</em>)</li>
      * </ul>
-     * <p>
-     * Subclasses may override this method in order to extract additional or other
-     * information to be verified by e.g. a custom authentication provider.
      * 
      * @param clientCertPath The validated client certificate path that the device has
      *                   presented during the TLS handshake. The device's end certificate
@@ -222,12 +228,25 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      */
     protected Future<JsonObject> getCredentials(final List<X509Certificate> clientCertPath, final TenantObject tenant) {
 
-        final String subjectDn = clientCertPath.get(0).getSubjectX500Principal().getName(X500Principal.RFC2253);
+        final X509Certificate deviceCert = clientCertPath.get(0);
+        final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
         log.debug("authenticating device of tenant [{}] using X509 certificate [subject DN: {}]",
                 tenant.getTenantId(), subjectDn);
-        return Future.succeededFuture(new JsonObject()
+
+        final JsonObject authInfo = new JsonObject()
                 .put(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn)
-                .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenant.getTenantId()));
+                .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenant.getTenantId());
+
+        final String issuerDn = deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253);
+        if (tenant.isAutoProvisioningEnabled(issuerDn)) {
+            try {
+                authInfo.put(CredentialsConstants.FIELD_CLIENT_CERT, deviceCert.getEncoded());
+            } catch (CertificateEncodingException e) {
+                log.error("Encoding of device certificate failed [subject DN: {}]", subjectDn, e);
+                return Future.failedFuture(e);
+            }
+        }
+        return Future.succeededFuture(authInfo);
     }
 
 }

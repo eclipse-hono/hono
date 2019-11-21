@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.time.OffsetDateTime;
@@ -42,6 +43,7 @@ import org.junit.Test;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 
 
 /**
@@ -137,6 +139,7 @@ public class TenantObjectTest {
                         new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
+                        .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, true)
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm())));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
@@ -144,6 +147,7 @@ public class TenantObjectTest {
         final TrustAnchor ca = tenant.getTrustAnchors().iterator().next();
         assertThat(ca.getCA(), is(trustedCaCert.getSubjectX500Principal()));
         assertThat(ca.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
+        assertTrue(tenant.isAutoProvisioningEnabled(ca.getCAName()));
     }
 
     /**
@@ -198,6 +202,56 @@ public class TenantObjectTest {
         final TrustAnchor trustAnchor = obj.getTrustAnchors().iterator().next();
         assertThat(trustAnchor.getCA(), is(trustedCaCert.getSubjectX500Principal()));
         assertThat(trustAnchor.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
+    }
+
+    /**
+     * Verifies that trust anchors are added correctly.
+     * 
+     * @throws GeneralSecurityException if certificates cannot be created.
+     * @throws IOException if certificates can not be created.
+     */
+    @Test
+    public void testAddTrustAnchor() throws GeneralSecurityException, IOException {
+
+        final String caName1 = "eclipse.org";
+        final String caName2 = "acme.com";
+        final X509Certificate caCert1 = createCaCertificate(caName1);
+        final X509Certificate caCert2 = createCaCertificate(caName2);
+
+        final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
+                .addTrustAnchor(caCert1.getPublicKey(), caCert1.getSubjectX500Principal(), true)
+                .addTrustAnchor(caCert2.getPublicKey(), caCert2.getSubjectX500Principal(), false);
+
+        assertEquals(3, obj.getTrustAnchors().size());
+
+        obj.getTrustAnchors().forEach(trustAnchor -> {
+            switch (trustAnchor.getCAName()) {
+            case "CN=" + caName1:
+                assertThat(trustAnchor.getCA(), is(caCert1.getSubjectX500Principal()));
+                assertThat(trustAnchor.getCAPublicKey(), is(caCert1.getPublicKey()));
+                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName()), is(true));
+                break;
+            case "CN=" + caName2:
+                assertThat(trustAnchor.getCA(), is(caCert2.getSubjectX500Principal()));
+                assertThat(trustAnchor.getCAPublicKey(), is(caCert2.getPublicKey()));
+                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName()), is(false));
+                break;
+            default:
+                assertThat(trustAnchor.getCA(), is(trustedCaCert.getSubjectX500Principal()));
+                assertThat(trustAnchor.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
+                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName()), is(false));
+            }
+        });
+    }
+
+    private X509Certificate createCaCertificate(final String fqdn) throws GeneralSecurityException, IOException {
+
+        final SelfSignedCertificate ssc = SelfSignedCertificate.create(fqdn);
+        try (InputStream is = new FileInputStream(ssc.certificatePath())) {
+            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            return (X509Certificate) factory.generateCertificate(is);
+        }
     }
 
     /**

@@ -115,11 +115,14 @@ public final class TenantObject extends JsonBackedValueObject {
     /**
      * Sets the trusted certificate authority to use for authenticating
      * devices of this tenant.
+     * <p>
+     * This method removes all existing trust anchors.
      * 
      * @param publicKey The CA's public key.
      * @param subjectDn The CA's subject DN.
      * @return This tenant for command chaining.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see #addTrustAnchor(PublicKey, X500Principal, Boolean)
      */
     @JsonIgnore
     public TenantObject setTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn) {
@@ -127,12 +130,35 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
 
+        setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray());
+        return addTrustAnchor(publicKey, subjectDn, false);
+    }
+
+    /**
+     * Adds a trusted certificate authority to use for authenticating devices of this tenant.
+     *
+     * @param publicKey The CA's public key.
+     * @param subjectDn The CA's subject DN.
+     * @param autoProvisioningEnabled A flag indicating whether this CA may be used for automatic provisioning.
+     * @return This tenant for command chaining.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    @JsonIgnore
+    public TenantObject addTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn,
+            final Boolean autoProvisioningEnabled) {
+
+        Objects.requireNonNull(publicKey);
+        Objects.requireNonNull(subjectDn);
+        Objects.requireNonNull(autoProvisioningEnabled);
+
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey.getEncoded());
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKey.getAlgorithm());
+        trustedCa.put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, autoProvisioningEnabled);
+        final JsonArray cas = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray());
         trustAnchors = null;
-        return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(trustedCa));
+        return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, cas.add(trustedCa));
     }
 
     /**
@@ -205,6 +231,23 @@ public final class TenantObject extends JsonBackedValueObject {
                 }
             }
         }
+    }
+
+    /**
+     * Checks whether auto-provisioning is enabled for a CA.
+     * 
+     * @param subjectDn The subject DN of the CA to check.
+     * @return {@code true} if auto-provisioning is enabled.
+     */
+    @JsonIgnore
+    public boolean isAutoProvisioningEnabled(final String subjectDn) {
+        return getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray())
+                .stream()
+                .filter(obj -> obj instanceof JsonObject)
+                .map(obj -> (JsonObject) obj)
+                .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
+                .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, Boolean.class))
+                .findFirst().orElse(false);
     }
 
     /**

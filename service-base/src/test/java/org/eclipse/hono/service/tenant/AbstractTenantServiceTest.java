@@ -420,7 +420,8 @@ public abstract class AbstractTenantServiceTest {
 
         final JsonArray expectedCaList = new JsonArray().add(new JsonObject()
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8)));
+                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8))
+                .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false));
 
         final Tenant tenant = new Tenant()
                 .setTrustedCertificateAuthorities(List.of(new TrustedCertificateAuthority()

@@ -1001,7 +1001,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <li>if the response does not contain any cache directive and the response's status code is
      * one of the codes defined by <a href="https://tools.ietf.org/html/rfc2616#section-13.4">
      * RFC 2616, Section 13.4 Response Cacheability</a>, the response is put to the cache using
-     * the default timeout returned by {@link #getResponseCacheDefaultTimeout()}<li>
+     * the default timeout returned by {@link #getResponseCacheDefaultTimeout()}</li>
      * <li>else if the response contains a <em>max-age</em> directive, the response
      * is put to the cache using the max age from the directive.</li>
      * <li>else if the response contains a <em>no-cache</em> directive, the response

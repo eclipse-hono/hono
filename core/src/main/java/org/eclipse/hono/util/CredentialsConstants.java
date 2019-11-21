@@ -71,6 +71,10 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      */
     public static final String FIELD_SECRETS_NOT_AFTER           = "not-after";
     /**
+     * The name of the field that contains the client certificate that is used for authentication.
+     */
+    public static final String FIELD_CLIENT_CERT                 = "client-certificate";
+    /**
      * The Credential service's endpoint name.
      */
     public static final String CREDENTIALS_ENDPOINT              = "credentials";

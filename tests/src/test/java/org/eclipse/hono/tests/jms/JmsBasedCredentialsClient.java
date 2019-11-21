@@ -134,6 +134,7 @@ public class JmsBasedCredentialsClient extends JmsBasedRequestResponseClient<Cre
             return send(request).map(credentialsResult -> {
                 switch(credentialsResult.getStatus()) {
                 case HttpURLConnection.HTTP_OK:
+                case HttpURLConnection.HTTP_CREATED:
                     return credentialsResult.getPayload();
                 case HttpURLConnection.HTTP_NOT_FOUND:
                     throw new ClientErrorException(credentialsResult.getStatus(), "no such credentials");

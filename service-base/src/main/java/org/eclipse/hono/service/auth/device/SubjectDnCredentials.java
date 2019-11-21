@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,8 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.CredentialsConstants;
 
+import io.vertx.core.json.JsonObject;
+
 
 /**
  * Helper class to generate an authentication ID for an X.509 certificate provided by
@@ -30,8 +32,8 @@ import org.eclipse.hono.util.CredentialsConstants;
  */
 public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
-    private SubjectDnCredentials(final String tenantId, final String authId) {
-        super(tenantId, authId);
+    private SubjectDnCredentials(final String tenantId, final String authId, final JsonObject clientContext) {
+        super(tenantId, authId, clientContext);
     }
 
     /**
@@ -46,7 +48,25 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(subjectDn);
-        return create(tenantId, new X500Principal(subjectDn));
+        return create(tenantId, subjectDn, new JsonObject());
+    }
+
+    /**
+     * Creates credentials for a tenant and subject DN.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param subjectDn The subject DN of the device's client certificate.
+     * @param clientContext The client context that can be used to get credentials from the Credentials API.
+     * @return The credentials.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static SubjectDnCredentials create(final String tenantId, final String subjectDn,
+            final JsonObject clientContext) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(subjectDn);
+        Objects.requireNonNull(clientContext);
+        return create(tenantId, new X500Principal(subjectDn), clientContext);
     }
 
     /**
@@ -61,7 +81,25 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(subjectDn);
-        return new SubjectDnCredentials(tenantId, subjectDn.getName(X500Principal.RFC2253));
+        return create(tenantId, subjectDn, new JsonObject());
+    }
+
+    /**
+     * Creates credentials for a tenant and subject DN.
+     * 
+     * @param tenantId The tenant that the device belongs to.
+     * @param subjectDn The subject DN of the device's client certificate.
+     * @param clientContext The client context that can be used to get credentials from the Credentials API.
+     * @return The credentials.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static SubjectDnCredentials create(final String tenantId, final X500Principal subjectDn,
+            final JsonObject clientContext) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(subjectDn);
+        Objects.requireNonNull(clientContext);
+        return new SubjectDnCredentials(tenantId, subjectDn.getName(X500Principal.RFC2253), clientContext);
     }
 
     /**

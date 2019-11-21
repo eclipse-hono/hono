@@ -38,7 +38,7 @@ public interface CredentialsClient extends RequestResponseClient {
      * @param authId The authentication identifier used in the credentials to retrieve.
      * @return A future indicating the result of the operation.
      *         <p>
-     *         The future will succeed if a response with status 200 has been received from the
+     *         The future will succeed if a response with status 2xx has been received from the
      *         credentials service. The JSON object will then contain values as defined in
      *         <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
      *         Get Credentials</a>.
@@ -58,7 +58,7 @@ public interface CredentialsClient extends RequestResponseClient {
      * @param clientContext Optional bag of properties that can be used to identify the device
      * @return A future indicating the result of the operation.
      *         <p>
-     *         The future will succeed if a response with status 200 has been received from the
+     *         The future will succeed if a response with status 2xx has been received from the
      *         credentials service. The JSON object will then contain values as defined in
      *         <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
      *         Get Credentials</a>.
@@ -83,7 +83,7 @@ public interface CredentialsClient extends RequestResponseClient {
      *                    the execution of this operation.
      * @return A future indicating the result of the operation.
      *         <p>
-     *         The future will succeed if a response with status 200 has been received from the
+     *         The future will succeed if a response with status 2xx has been received from the
      *         credentials service. The JSON object will then contain values as defined in
      *         <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
      *         Get Credentials</a>.
