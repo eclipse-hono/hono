@@ -777,6 +777,18 @@ prometheus:
 grafana:
   enabled: true
   adminPassword: admin
+
+  # labels to be added to the Grafana Deployment
+  labels:
+    app.kubernetes.io/name: eclipse-hono
+    app.kubernetes.io/component: dashboard
+
+  # labels to be added to the Grafana Pod(s)
+  podLabels:
+    app.kubernetes.io/name: eclipse-hono
+    app.kubernetes.io/component: dashboard
+
+  
   ## Expose the grafana service to be accessed from outside the cluster (LoadBalancer service).
   ## or access it from within the cluster (ClusterIP service). Set the service type and the port to serve it.
   ## ref: http://kubernetes.io/docs/user-guide/services/
