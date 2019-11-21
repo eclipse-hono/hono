@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,9 +22,12 @@ import java.util.Objects;
  */
 public class ServiceConfigProperties extends ServerConfig {
 
+    /**
+     * The default number of credits to flow to a client.
+     */
+    public static final int DEFAULT_RECEIVER_LINK_CREDITS = 100;
 
     private static final int MIN_PAYLOAD_SIZE  = 128; // bytes
-    private static final int DEFAULT_RECEIVER_LINK_CREDITS = 100;
 
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
@@ -35,7 +38,9 @@ public class ServiceConfigProperties extends ServerConfig {
 
     /**
      * Sets the maximum size of a message payload this server accepts from clients.
-     *
+     * <p>
+     * The default value of this property is 2048 (bytes).
+     * 
      * @param bytes The maximum number of bytes.
      * @throws IllegalArgumentException if bytes is &lt; 128.
      */
@@ -48,6 +53,8 @@ public class ServiceConfigProperties extends ServerConfig {
 
     /**
      * Gets the maximum size of a message payload this server accepts from clients.
+     * <p>
+     * The default value of this property is 2048 (bytes).
      *
      * @return The maximum number of bytes.
      */
@@ -142,7 +149,9 @@ public class ServiceConfigProperties extends ServerConfig {
     /**
      * Gets the number of AMQP message credits this service flows to a client
      * when the client opens a sender link to this service.
-     *
+     * <p>
+     * The default value of this property is {@link #DEFAULT_RECEIVER_LINK_CREDITS}.
+     * 
      * @return The number of credits.
      */
     public final int getReceiverLinkCredit() {
@@ -155,6 +164,8 @@ public class ServiceConfigProperties extends ServerConfig {
      * <p>
      * The credits are replenished automatically with each message being processed
      * successfully by this service.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_RECEIVER_LINK_CREDITS}.
 
      * @param receiverLinkCredit The number of credits.
      * @throws IllegalArgumentException if the credit is &lt;= 0.
