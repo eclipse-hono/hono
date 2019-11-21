@@ -12,6 +12,10 @@ title = "Release Notes"
   OpenTracing.
 * A lorawan provider has been added for the loriot network provider.
 
+### Fixes & Enhancements
+
+* The example deployment now also works with Kubernetes 1.16 using Helm 2.15 and later.
+
 ## 1.0.1
 
 ### Fixes & Enhancements

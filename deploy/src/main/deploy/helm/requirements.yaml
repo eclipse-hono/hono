@@ -1,9 +1,9 @@
 dependencies:
   - name: prometheus
-    version: ~8.15.0
+    version: ~9.3.0
     repository: "@stable"
     condition: prometheus.createInstance
   - name: grafana
-    version: ~3.7.3
+    version: ~3.8.15
     repository: "@stable"
     condition: grafana.enabled
