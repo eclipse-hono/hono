@@ -27,12 +27,17 @@ spec:
     spec:
       containers:
       - command:
-        - /opt/artemis/bin/artemis
-        - run
-        - xml:/etc/hono/artemis-bootstrap.xml
+        - /opt/apache-artemis/bin/launch.sh
+        - start
         env:
-        - name: ARTEMIS_CONFIGURATION
-          value: /etc/hono
+        - name: AMQ_NAME
+          value: custom
+        - name: HOME
+          value: /var/run/artemis/
+        - name: JAVA_INITIAL_MEM_RATIO
+          value: "30"
+        - name: JAVA_MAX_MEM_RATIO
+          value: "70"
         - name: KUBERNETES_NAMESPACE
           valueFrom:
             fieldRef:
@@ -64,7 +69,7 @@ spec:
         securityContext:
           privileged: false
         volumeMounts:
-        - mountPath: /etc/hono
+        - mountPath: /opt/apache-artemis/conf
           name: config
           readOnly: true
       volumes:

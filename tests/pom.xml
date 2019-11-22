@@ -402,11 +402,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <port>5671</port>
                     </ports>
                     <entryPoint>
-                      <shell>/opt/artemis/bin/artemis run xml:/etc/hono/artemis-bootstrap.xml</shell>
+                      <shell>/opt/apache-artemis/bin/launch.sh start</shell>
                     </entryPoint>
                     <assembly>
                       <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
+                      <basedir>/opt/apache-artemis/conf</basedir>
                       <inline>
                         <id>config</id>
                         <fileSets>
@@ -441,7 +441,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <memorySwap>419430400</memorySwap>
                     <memory>419430400</memory>
                     <env>
-                      <ARTEMIS_CONFIGURATION>/etc/hono</ARTEMIS_CONFIGURATION>
+                      <AMQ_NAME>custom</AMQ_NAME>
+                      <HOME>/var/run/artemis/</HOME>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
