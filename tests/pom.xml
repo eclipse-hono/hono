@@ -401,25 +401,33 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <ports>
                       <port>5671</port>
                     </ports>
-                    <entryPoint>
-                      <shell>/opt/artemis/bin/artemis run xml:/etc/hono/artemis-bootstrap.xml</shell>
-                    </entryPoint>
+                    <cmd>
+                      <shell>/var/lib/hono-artemis/bin/artemis run</shell>
+                    </cmd>
                     <assembly>
                       <mode>dir</mode>
-                      <basedir>/etc/hono</basedir>
+                      <basedir>/var/lib/hono-artemis</basedir>
                       <inline>
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.build.directory}/resources/artemis</directory>
-                            <outputDirectory>.</outputDirectory>
+                            <directory>${project.build.directory}/resources/artemis/hono-artemis/bin</directory>
+                            <outputDirectory>bin</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                            <fileMode>755</fileMode>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/artemis/hono-artemis/etc</directory>
+                            <outputDirectory>etc</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>.</outputDirectory>
+                            <outputDirectory>etc</outputDirectory>
                             <includes>
                               <include>artemisKeyStore.p12</include>
                               <include>trustStore.jks</include>

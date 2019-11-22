@@ -65,8 +65,8 @@
     "host": "hono-artemis.hono",
     "port": 5671,
     "role": "route-container",
-    "saslUsername": "artemis",
-    "saslPassword": "artemis"
+    "saslUsername": "admin",
+    "saslPassword": "admin"
   }],
 
   ["linkRoute", {
