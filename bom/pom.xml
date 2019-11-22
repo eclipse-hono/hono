@@ -57,7 +57,7 @@
     <opentracing-resolver.version>0.1.5</opentracing-resolver.version>
     <opentracing-vertx-web.version>0.1.0</opentracing-vertx-web.version>
     <proton.version>0.33.2</proton.version>
-    <qpid-jms.version>0.42.0</qpid-jms.version>
+    <qpid-jms.version>0.47.0</qpid-jms.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.23</snakeyaml.version>
     <spring.version>5.1.9.RELEASE</spring.version>
