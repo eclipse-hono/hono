@@ -28,10 +28,10 @@
   <description>A &quot;bill-of-materials&quot; for Hono.</description>
 
   <properties>
-    <artemis.image.name>enmasseproject/activemq-artemis:2.2.0-4</artemis.image.name>
+    <artemis.image.name>quay.io/enmasse/artemis-base:2.10.1</artemis.image.name>
     <assertj-core.version>3.13.2</assertj-core.version>
     <californium.version>2.0.0</californium.version>
-    <dispatch-router.image.name>quay.io/enmasse/qdrouterd-base:1.7.0</dispatch-router.image.name>
+    <dispatch-router.image.name>quay.io/enmasse/qdrouterd-base:1.8.0</dispatch-router.image.name>
     <guava.version>28.0-jre</guava.version>
     <caffeine.version>2.6.2</caffeine.version>
     <hamcrest-core.version>2.1</hamcrest-core.version>

@@ -94,7 +94,7 @@
 
          <!-- AMQP Acceptor.  Listens on default AMQP port for AMQP traffic.-->
          <!--<acceptor name="amqp">tcp://0.0.0.0:5672?protocols=AMQP</acceptor>-->
-         <acceptor name="amqps">tcp://0.0.0.0:5671?protocols=AMQP;sslEnabled=true;keyStorePath=file:/etc/hono/artemisKeyStore.p12;keyStorePassword=artemiskeys;needClientAuth=true;trustStorePath=file:/etc/hono/trustStore.jks;trustStorePassword=honotrust</acceptor>
+         <acceptor name="amqps">tcp://0.0.0.0:5671?protocols=AMQP;sslEnabled=true;keyStorePath=file:/var/run/artemis/custom/etc/artemisKeyStore.p12;keyStorePassword=artemiskeys;needClientAuth=true;trustStorePath=file:/var/run/artemis/custom/etc/trustStore.jks;trustStorePassword=honotrust</acceptor>
 
       </acceptors>
 
