@@ -61,8 +61,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 
@@ -515,39 +513,6 @@ public final class IntegrationTestSupport {
      * <p>
      * Also creates an HTTP client for accessing the Device Registry.
      * 
-     * @param ctx The vert.x test context.
-     */
-    public void init(final TestContext ctx) {
-
-        init(ctx, getMessagingNetworkProperties());
-    }
-
-    /**
-     * Connects to the AMQP 1.0 Messaging Network.
-     * <p>
-     * Also creates an HTTP client for accessing the Device Registry.
-     * 
-     * @param ctx The vert.x test context.
-     * @param downstreamProps The properties for connecting to the AMQP Messaging
-     *                           Network.
-     */
-    public void init(final TestContext ctx, final ClientConfigProperties downstreamProps) {
-
-        initRegistryClient();
-        final Async amqpNetworkConnection = ctx.async();
-        applicationClientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
-        applicationClientFactory.connect().setHandler(ctx.asyncAssertSuccess(ok -> {
-            LOGGER.info("connected to AMQP Messaging Network [{}:{}]", downstreamProps.getHost(), downstreamProps.getPort());
-            amqpNetworkConnection.complete();
-        }));
-        amqpNetworkConnection.await();
-    }
-
-    /**
-     * Connects to the AMQP 1.0 Messaging Network.
-     * <p>
-     * Also creates an HTTP client for accessing the Device Registry.
-     * 
      * @return A future indicating the outcome of the operation.
      */
     public Future<?> init() {
@@ -601,31 +566,6 @@ public final class IntegrationTestSupport {
      * 
      * @param ctx The vert.x context.
      */
-    public void deleteObjects(final TestContext ctx) {
-
-        devicesToDelete.forEach((tenantId, devices) -> {
-            devices.forEach(deviceId -> {
-                final Async deletion = ctx.async();
-                registry.deregisterDevice(tenantId, deviceId).setHandler(ok -> deletion.complete());
-                deletion.await(1000);
-            });
-        });
-        devicesToDelete.clear();
-
-        tenantsToDelete.forEach(tenantId -> {
-            final Async deletion = ctx.async();
-            registry.removeTenant(tenantId).setHandler(ok -> deletion.complete());
-            deletion.await(1000);
-        });
-        tenantsToDelete.clear();
-    }
-
-    /**
-     * Deletes all temporary objects from the Device Registry which
-     * have been created during the last test execution.
-     * 
-     * @param ctx The vert.x context.
-     */
     public void deleteObjects(final VertxTestContext ctx) {
 
         if (!devicesToDelete.isEmpty()) {
@@ -652,21 +592,6 @@ public final class IntegrationTestSupport {
     /**
      * Closes the connections to the AMQP 1.0 Messaging Network.
      * 
-     * @param ctx The vert.x test context.
-     */
-    public void disconnect(final TestContext ctx) {
-
-        final Async shutdown = ctx.async();
-        applicationClientFactory.disconnect(ctx.asyncAssertSuccess(ok -> {
-            LOGGER.info("connection to AMQP Messaging Network closed");
-            shutdown.complete();
-        }));
-        shutdown.await();
-    }
-
-    /**
-     * Closes the connections to the AMQP 1.0 Messaging Network.
-     * 
      * @return A future indicating the outcome of the operation.
      */
     public Future<?> disconnect() {
@@ -684,7 +609,7 @@ public final class IntegrationTestSupport {
      * of tenants to be deleted after the current test has finished.
      * 
      * @return The identifier.
-     * @see #deleteObjects(TestContext)
+     * @see #deleteObjects(VertxTestContext)
      */
     public String getRandomTenantId() {
         final String tenantId = UUID.randomUUID().toString();
@@ -698,7 +623,7 @@ public final class IntegrationTestSupport {
      * 
      * @param tenantId The tenant that he device belongs to.
      * @return The identifier.
-     * @see #deleteObjects(TestContext)
+     * @see #deleteObjects(VertxTestContext)
      */
     public String getRandomDeviceId(final String tenantId) {
         final String deviceId = UUID.randomUUID().toString();

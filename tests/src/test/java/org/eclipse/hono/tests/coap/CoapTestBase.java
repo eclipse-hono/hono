@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.tests.coap;
 
-import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
@@ -51,24 +50,18 @@ import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.hono.client.MessageConsumer;
-
-import org.eclipse.hono.service.management.credentials.GenericCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,8 +70,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Base class for CoAP adapter integration tests.
@@ -106,17 +99,6 @@ public abstract class CoapTestBase {
     private static final int MESSAGES_TO_SEND = 60;
 
     /**
-     * Time out each test after 20 seconds.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.millis(TEST_TIMEOUT_MILLIS);
-    /**
-     * Provide test name to unit tests.
-     */
-    @Rule
-    public final TestName testName = new TestName();
-
-    /**
      * A logger to be shared with subclasses.
      */
     protected final Logger logger = LoggerFactory.getLogger(getClass());
@@ -139,22 +121,23 @@ public abstract class CoapTestBase {
      * 
      * @param ctx The vert.x test context.
      */
-    @BeforeClass
-    public static void init(final TestContext ctx) {
+    @BeforeAll
+    public static void init(final VertxTestContext ctx) {
 
         helper = new IntegrationTestSupport(VERTX);
-        helper.init(ctx);
+        helper.init().setHandler(ctx.completing());
     }
 
     /**
      * Sets up the fixture.
      * 
+     * @param testInfo The test meta data.
      * @throws UnknownHostException if the CoAP adapter's host name cannot be resolved.
      */
-    @Before
-    public void setUp() throws UnknownHostException {
+    @BeforeEach
+    public void setUp(final TestInfo testInfo) throws UnknownHostException {
 
-        logger.info("running {}", testName.getMethodName());
+        logger.info("running {}", testInfo.getDisplayName());
         logger.info("using CoAP adapter [host: {}, coap port: {}, coaps port: {}]",
                 IntegrationTestSupport.COAP_HOST,
                 IntegrationTestSupport.COAP_PORT,
@@ -171,8 +154,8 @@ public abstract class CoapTestBase {
      * 
      * @param ctx The vert.x context.
      */
-    @After
-    public void deleteObjects(final TestContext ctx) {
+    @AfterEach
+    public void deleteObjects(final VertxTestContext ctx) {
 
         helper.deleteObjects(ctx);
     }
@@ -182,10 +165,10 @@ public abstract class CoapTestBase {
      * 
      * @param ctx The vert.x test context.
      */
-    @AfterClass
-    public static void disconnect(final TestContext ctx) {
+    @AfterAll
+    public static void disconnect(final VertxTestContext ctx) {
 
-        helper.disconnect(ctx);
+        helper.disconnect().setHandler(ctx.completing());
     }
 
     /**
@@ -298,11 +281,18 @@ public abstract class CoapTestBase {
         return result.future();
     }
 
-    private static void assertStatus(final TestContext ctx, final int expectedStatus, final Throwable t) {
-        ctx.verify(v -> {
-            assertThat(t, instanceOf(CoapResultException.class));
+    /**
+     * Asserts the status code of a failed CoAP request.
+     * 
+     * @param ctx The test context to verify the status for.
+     * @param expectedStatus The expected status.
+     * @param t The exception to verify.
+     */
+    protected static void assertStatus(final VertxTestContext ctx, final int expectedStatus, final Throwable t) {
+        ctx.verify(() -> {
+            assertThat(t).isInstanceOf(CoapResultException.class);
+            assertThat(((CoapResultException) t).getErrorCode()).isEqualTo(expectedStatus);
         });
-        ctx.assertEquals(expectedStatus, ((CoapResultException) t).getErrorCode());
     }
 
     /**
@@ -313,15 +303,14 @@ public abstract class CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesAnonymously(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesAnonymously(final VertxTestContext ctx) throws InterruptedException {
 
-        final Async setup = ctx.async();
         final Tenant tenant = new Tenant();
 
-        helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-            .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+        .setHandler(setup.completing());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapClient();
         testUploadMessages(ctx, tenantId,
@@ -342,15 +331,14 @@ public abstract class CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesUsingPsk(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesUsingPsk(final VertxTestContext ctx) throws InterruptedException {
 
-        final Async setup = ctx.async();
         final Tenant tenant = new Tenant();
 
-        helper.registry
-                .addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-                .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+        .setHandler(setup.completing());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
 
@@ -372,7 +360,7 @@ public abstract class CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadMessagesViaGateway(final TestContext ctx) throws InterruptedException {
+    public void testUploadMessagesViaGateway(final VertxTestContext ctx) throws InterruptedException {
 
         // GIVEN a device that is connected via two gateways
         final Tenant tenant = new Tenant();
@@ -381,12 +369,12 @@ public abstract class CoapTestBase {
         final Device deviceData = new Device();
         deviceData.setVia(Arrays.asList(gatewayOneId, gatewayTwoId));
 
-        final Async setup = ctx.async();
+        final VertxTestContext setup = new VertxTestContext();
         helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayOneId, SECRET)
         .compose(ok -> helper.registry.addPskDeviceToTenant(tenantId, gatewayTwoId, SECRET))
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        .setHandler(setup.completing());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient gatewayOne = getCoapsClient(gatewayOneId, tenantId, SECRET);
         final CoapClient gatewayTwo = getCoapsClient(gatewayTwoId, tenantId, SECRET);
@@ -415,7 +403,7 @@ public abstract class CoapTestBase {
      *              has finished.
      */
     protected void testUploadMessages(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final String tenantId,
             final Supplier<Future<?>> warmUp,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
@@ -436,7 +424,7 @@ public abstract class CoapTestBase {
      *              has finished.
      */
     protected void testUploadMessages(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final String tenantId,
             final Supplier<Future<?>> warmUp,
             final Consumer<Message> messageConsumer,
@@ -457,7 +445,7 @@ public abstract class CoapTestBase {
      * @throws InterruptedException if the test is interrupted before it has finished.
      */
     protected void testUploadMessages(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final String tenantId,
             final Supplier<Future<?>> warmUp,
             final Consumer<Message> messageConsumer,
@@ -465,8 +453,8 @@ public abstract class CoapTestBase {
             final int numberOfMessages) throws InterruptedException {
 
         final CountDownLatch received = new CountDownLatch(numberOfMessages);
-        final Async setup = ctx.async();
 
+        final VertxTestContext setup = new VertxTestContext();
         createConsumer(tenantId, msg -> {
             logger.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
@@ -478,16 +466,16 @@ public abstract class CoapTestBase {
                 logger.info("messages received: {}", numberOfMessages - received.getCount());
             }
         })
-                .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElse(Future.succeededFuture()))
-                .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
+        .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElse(Future.succeededFuture()))
+        .setHandler(setup.completing());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
-        setup.await();
         final long start = System.currentTimeMillis();
         final AtomicInteger messageCount = new AtomicInteger(0);
 
         while (messageCount.get() < numberOfMessages) {
 
-            final Async sending = ctx.async();
+            final CountDownLatch sending = new CountDownLatch(1);
             requestSender.apply(messageCount.getAndIncrement()).compose(this::assertCoapResponse)
                     .setHandler(attempt -> {
                         if (attempt.succeeded()) {
@@ -495,9 +483,9 @@ public abstract class CoapTestBase {
                         } else {
                             logger.info("failed to send message {}: {}", messageCount.get(),
                                     attempt.cause().getMessage());
-                            ctx.fail(attempt.cause());
+                            ctx.failNow(attempt.cause());
                         }
-                        sending.complete();
+                        sending.countDown();;
                     });
 
             if (messageCount.get() % 20 == 0) {
@@ -507,51 +495,15 @@ public abstract class CoapTestBase {
         }
 
         final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 1000, Math.round(numberOfMessages * 20));
-        if (!received.await(timeToWait, TimeUnit.MILLISECONDS)) {
+        if (received.await(timeToWait, TimeUnit.MILLISECONDS)) {
             logger.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
-            ctx.fail("did not receive all messages sent");
+            ctx.completeNow();
         } else {
             logger.info("sent {} and received {} messages after {} milliseconds",
                     messageCount, numberOfMessages - received.getCount(), System.currentTimeMillis() - start);
+            ctx.failNow(new AssertionError("did not receive all messages sent"));
         }
-    }
-
-    /**
-     * Verifies that the adapter fails to authorize a device using TLS_PSK
-     * if the shared key that is registered for the device cannot be decoded
-     * into a byte array.
-     * 
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    @Ignore("No possibility to add a malfored key anymore")
-    public void testUploadFailsForMalformedSharedSecret(final TestContext ctx) {
-
-        final Async setup = ctx.async();
-        final Tenant tenant = new Tenant();
-
-        // GIVEN a device for which an invalid shared key has been configured
-        final GenericCredential credential = new GenericCredential();
-        credential.setAuthId(deviceId);
-        credential.setType(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY);
-        credential.getAdditionalProperties().put(CredentialsConstants.FIELD_SECRETS_KEY, "notBase64");
-
-        helper.registry.addTenant(tenantId, tenant)
-        .compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
-                .compose(ok -> helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(credential)))
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
-
-        // WHEN a device tries to upload data and authenticate using the PSK
-        // identity for which the server has a malformed shared secret only
-        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-        final Promise<OptionSet> result = Promise.promise();
-        client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
-        result.future().setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the request fails because the DTLS handshake cannot be completed
-            assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
-        }));
     }
 
     /**
@@ -561,7 +513,8 @@ public abstract class CoapTestBase {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadFailsForNonMatchingSharedKey(final TestContext ctx) {
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadFailsForNonMatchingSharedKey(final VertxTestContext ctx) {
 
         final Tenant tenant = new Tenant();
 
@@ -574,9 +527,11 @@ public abstract class CoapTestBase {
             final Promise<OptionSet> result = Promise.promise();
             client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
-        }).setHandler(ctx.asyncAssertFailure(t -> {
+        })
+        .setHandler(ctx.failing(t -> {
             // THEN the request fails because the DTLS handshake cannot be completed
             assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
+            ctx.completeNow();
         }));
     }
 
@@ -587,24 +542,27 @@ public abstract class CoapTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testUploadMessageFailsForDisabledTenant(final TestContext ctx) {
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessageFailsForDisabledTenant(final VertxTestContext ctx) {
 
         // GIVEN a tenant for which the CoAP adapter is disabled
         final Tenant tenant = new Tenant();
         tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP).setEnabled(false));
 
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-                .compose(ok -> {
+        .compose(ok -> {
 
-                    // WHEN a device that belongs to the tenant uploads a message
-                    final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-                    final Promise<OptionSet> result = Promise.promise();
-                    client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
-                    return result.future();
-                }).setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the request fails with a 403
-                    assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
-                }));
+            // WHEN a device that belongs to the tenant uploads a message
+            final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+            final Promise<OptionSet> result = Promise.promise();
+            client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
+            return result.future();
+        })
+        .setHandler(ctx.failing(t -> {
+            // THEN the request fails with a 403
+            assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -613,7 +571,8 @@ public abstract class CoapTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testUploadMessageFailsForDisabledDevice(final TestContext ctx) {
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessageFailsForDisabledDevice(final VertxTestContext ctx) {
 
         // GIVEN a disabled device
         final Tenant tenant = new Tenant();
@@ -628,13 +587,15 @@ public abstract class CoapTestBase {
             final Promise<OptionSet> result = Promise.promise();
             client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
-        }).setHandler(ctx.asyncAssertFailure(t -> {
+        })
+        .setHandler(ctx.failing(t -> {
 
             // THEN the request fails because the DTLS handshake cannot be completed
             logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]",
                     tenantId, deviceId);
-                    ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((CoapResultException) t).getErrorCode());
-                    assertStatus(ctx, HttpURLConnection.HTTP_NOT_FOUND, t);
+            ctx.verify(() -> assertThat(((CoapResultException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+            assertStatus(ctx, HttpURLConnection.HTTP_NOT_FOUND, t);
+            ctx.completeNow();
         }));
     }
 
@@ -645,7 +606,8 @@ public abstract class CoapTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testUploadMessageFailsForDisabledGateway(final TestContext ctx) {
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessageFailsForDisabledGateway(final VertxTestContext ctx) {
 
         // GIVEN a device that is connected via a disabled gateway
         final Tenant tenant = new Tenant();
@@ -665,12 +627,14 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
 
-        }).setHandler(ctx.asyncAssertFailure(t -> {
+        })
+        .setHandler(ctx.failing(t -> {
 
             // THEN the message gets rejected by the CoAP adapter with a 403
             logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]",
                     tenantId, gatewayId);
-                    assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
+            assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
+            ctx.completeNow();
         }));
     }
 
@@ -681,7 +645,8 @@ public abstract class CoapTestBase {
      * @param ctx The test context
      */
     @Test
-    public void testUploadMessageFailsForUnauthorizedGateway(final TestContext ctx) {
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessageFailsForUnauthorizedGateway(final VertxTestContext ctx) {
 
         // GIVEN a device that is connected via gateway "not-the-created-gateway"
         final Tenant tenant = new Tenant();
@@ -689,33 +654,35 @@ public abstract class CoapTestBase {
         final Device deviceData = new Device();
         deviceData.setVia(Collections.singletonList("not-the-created-gateway"));
 
-        helper.registry
-                .addPskDeviceForTenant(tenantId, tenant, gatewayId, SECRET)
-                .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
-                .compose(ok -> {
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayId, SECRET)
+        .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
+        .compose(ok -> {
 
-                    // WHEN another gateway tries to upload a message for the device
-                    final Promise<OptionSet> result = Promise.promise();
-                    final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
-                    client.advanced(getHandler(result),
-                            createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
-                    return result.future();
+            // WHEN another gateway tries to upload a message for the device
+            final Promise<OptionSet> result = Promise.promise();
+            final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
+            client.advanced(getHandler(result),
+                    createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
+            return result.future();
+        })
+        .setHandler(ctx.failing(t -> {
 
-                })
-                .setHandler(ctx.asyncAssertFailure(t -> {
-
-                    // THEN the message gets rejected by the HTTP adapter with a 403
-                    logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
-                            tenantId, gatewayId);
-                    assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
-                }));
+            // THEN the message gets rejected by the HTTP adapter with a 403
+            logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
+                    tenantId, gatewayId);
+            assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
+            ctx.completeNow();
+        }));
     }
 
-    private void assertMessageProperties(final TestContext ctx, final Message msg) {
-        ctx.assertNotNull(MessageHelper.getDeviceId(msg));
-        ctx.assertNotNull(MessageHelper.getTenantIdAnnotation(msg));
-        ctx.assertNotNull(MessageHelper.getDeviceIdAnnotation(msg));
-        ctx.assertNull(MessageHelper.getRegistrationAssertion(msg));
+    private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
+
+        ctx.verify(() -> {
+            assertThat(MessageHelper.getDeviceId(msg)).isNotNull();
+            assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
+            assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
+            assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
+        });
         assertAdditionalMessageProperties(ctx, msg);
     }
 
@@ -728,7 +695,7 @@ public abstract class CoapTestBase {
      * @param ctx The test context.
      * @param msg The message to perform checks on.
      */
-    protected void assertAdditionalMessageProperties(final TestContext ctx, final Message msg) {
+    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
         // empty
     }
 

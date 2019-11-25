@@ -12,8 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import static org.hamcrest.Matchers.arrayWithSize;
-import static org.junit.Assert.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.GenericCredential;
@@ -36,16 +36,13 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import io.vertx.core.Vertx;
@@ -53,15 +50,16 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying the Device Registry component by making HTTP requests to its
  * Credentials HTTP endpoint and validating the corresponding responses.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class CredentialsHttpIT {
 
     private static final String HTTP_HEADER_ETAG = HttpHeaders.ETAG.toString();
@@ -78,12 +76,6 @@ public class CredentialsHttpIT {
         ORIG_BCRYPT_PWD = encoder.encode("thePassword");
     }
 
-    /**
-     * Time out each test after 5 secs.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.seconds(5);
-
     private String deviceId;
     private String authId;
     private PasswordCredential hashedPasswordCredential;
@@ -91,11 +83,9 @@ public class CredentialsHttpIT {
 
     /**
      * Creates the HTTP client for accessing the registry.
-     * 
-     * @param ctx The vert.x test context.
      */
-    @BeforeClass
-    public static void setUpClient(final TestContext ctx) {
+    @BeforeAll
+    public static void setUpClient() {
 
         registry = new DeviceRegistryHttpClient(
                 vertx,
@@ -109,22 +99,15 @@ public class CredentialsHttpIT {
      * 
      * @param ctx The test context.
      */
-    @Before
-    public void setUp(final TestContext ctx) {
+    @BeforeEach
+    public void setUp(final VertxTestContext ctx) {
+
         deviceId = UUID.randomUUID().toString();
         authId = getRandomAuthId(TEST_AUTH_ID);
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
         pskCredentials = newPskCredentials(authId);
-        final Async creation = ctx.async();
-        registry
-                .registerDevice(Constants.DEFAULT_TENANT, deviceId)
-                .otherwise(t -> {
-                    ctx.fail(t);
-                    return null;
-                })
-                .setHandler(attempt -> creation.complete());
-
-        creation.await();
+        registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -132,13 +115,10 @@ public class CredentialsHttpIT {
      * 
      * @param ctx The vert.x test context.
      */
-    @After
-    public void removeCredentials(final TestContext ctx) {
-        final Async deletion = ctx.async();
-        registry
-                .deregisterDevice(TENANT, deviceId)
-                .setHandler(attempt -> deletion.complete());
-        deletion.await();
+    @AfterEach
+    public void removeCredentials(final VertxTestContext ctx) {
+
+        registry.deregisterDevice(TENANT, deviceId).setHandler(ctx.completing());
     }
 
     /**
@@ -146,9 +126,9 @@ public class CredentialsHttpIT {
      * 
      * @param context The vert.x test context.
      */
-    @AfterClass
-    public static void tearDown(final TestContext context) {
-        vertx.close(context.asyncAssertSuccess());
+    @AfterAll
+    public static void tearDown(final VertxTestContext context) {
+        vertx.close(context.completing());
     }
 
     /**
@@ -157,12 +137,12 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsSucceeds(final TestContext context)  {
+    public void testAddCredentialsSucceeds(final VertxTestContext context)  {
 
         registry
                 .updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                         HttpURLConnection.HTTP_NO_CONTENT)
-                .setHandler(context.asyncAssertSuccess());
+                .setHandler(context.completing());
     }
 
     /**
@@ -171,16 +151,17 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testNewDeviceReturnsEmptyCredentials(final TestContext context) {
+    public void testNewDeviceReturnsEmptyCredentials(final VertxTestContext context) {
 
         registry
                 .getCredentials(TENANT, deviceId)
-                .setHandler(context.asyncAssertSuccess(ok2 -> {
-                    context.verify(v -> {
+                .setHandler(context.succeeding(ok2 -> {
+                    context.verify(() -> {
                         final CommonCredential[] credentials = Json.decodeValue(ok2,
                                 CommonCredential[].class);
-                        Assert.assertThat(credentials, arrayWithSize(0));
+                        assertThat(credentials).hasSize(0);
                     });
+                    context.completeNow();
                 }));
 
     }
@@ -191,22 +172,26 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsSucceedsForAdditionalProperties(final TestContext context) {
+    public void testAddCredentialsSucceedsForAdditionalProperties(final VertxTestContext context) {
 
         final PasswordCredential credential = IntegrationTestSupport.createPasswordCredential(authId, "thePassword");
         credential.getExtensions().put("client-id", "MQTT-client-2384236854");
 
         registry.addCredentials(TENANT, deviceId, Collections.singleton(credential))
                 .compose(createAttempt -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.asyncAssertSuccess(b -> {
-                    context.assertEquals(1, b.toJsonArray().size());
-                    final JsonObject credentialObject = b.toJsonArray().getJsonObject(0);
-                    final var ext = credentialObject.getJsonObject(RegistryManagementConstants.FIELD_EXT);
-                    context.assertNotNull(ext);
-                    context.assertEquals("MQTT-client-2384236854", ext.getString("client-id"));
+                .setHandler(context.succeeding(b -> {
+                    context.verify(() -> {
+                        final JsonArray response = b.toJsonArray();
+                        assertThat(response.size()).isEqualTo(1);
+                        final JsonObject credentialObject = response.getJsonObject(0);
+                        final var ext = credentialObject.getJsonObject(RegistryManagementConstants.FIELD_EXT);
+                        assertThat(ext).isNotNull();
+                        assertThat(ext.getString("client-id")).isEqualTo("MQTT-client-2384236854");
 
-                    // the device-id must not be part of the "ext" section
-                    context.assertNull(ext.getString("device-id"));
+                        // the device-id must not be part of the "ext" section
+                        assertThat(ext.getString("device-id")).isNull();;
+                    });
+                    context.completeNow();
                 }));
     }
 
@@ -217,7 +202,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsFailsForWrongContentType(final TestContext context) {
+    public void testAddCredentialsFailsForWrongContentType(final VertxTestContext context) {
 
         registry
                 .updateCredentials(
@@ -226,7 +211,7 @@ public class CredentialsHttpIT {
                         Collections.singleton(hashedPasswordCredential),
                         "application/x-www-form-urlencoded",
                         HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.asyncAssertSuccess());
+                .setHandler(context.completing());
 
     }
 
@@ -237,7 +222,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialsWithOutdatedResourceVersionFails(final TestContext context) {
+    public void testUpdateCredentialsWithOutdatedResourceVersionFails(final VertxTestContext context) {
 
         registry
                 .updateCredentials(
@@ -245,12 +230,12 @@ public class CredentialsHttpIT {
                         HttpURLConnection.HTTP_NO_CONTENT)
                 .compose(ar -> {
                     final var etag = ar.get(HTTP_HEADER_ETAG);
-                    assertNotNull("missing etag header", etag);
-                    // now try to update credentials with the same version
+                    context.verify(() -> assertThat(etag).as("missing etag header").isNotNull());
+                    // now try to update credentials with other version
                     return registry.updateCredentialsWithVersion(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
-                            etag+10, HttpURLConnection.HTTP_PRECON_FAILED);
+                            etag + 10, HttpURLConnection.HTTP_PRECON_FAILED);
                 })
-                .setHandler(context.asyncAssertSuccess());
+                .setHandler(context.completing());
 
     }
 
@@ -261,7 +246,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsFailsForBCryptWithTooManyIterations(final TestContext context)  {
+    public void testAddCredentialsFailsForBCryptWithTooManyIterations(final VertxTestContext context)  {
 
         // GIVEN a hashed password using bcrypt with more than the configured max iterations
         final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS + 1);
@@ -282,7 +267,7 @@ public class CredentialsHttpIT {
                         Collections.singleton(credential),
                         // THEN the request fails with 400
                         HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.asyncAssertSuccess());
+                .setHandler(context.completing());
     }
 
     /**
@@ -291,11 +276,11 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsFailsForEmptyBody(final TestContext context) {
+    public void testAddCredentialsFailsForEmptyBody(final VertxTestContext context) {
 
         registry.updateCredentialsRaw(TENANT, deviceId, null, CrudHttpClient.CONTENT_TYPE_JSON,
                 HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.asyncAssertSuccess());
+                .setHandler(context.completing());
 
     }
 
@@ -307,7 +292,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsFailsForMissingType(final TestContext context) {
+    public void testAddCredentialsFailsForMissingType(final VertxTestContext context) {
         testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_TYPE);
     }
 
@@ -319,11 +304,11 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddCredentialsFailsForMissingAuthId(final TestContext context) {
+    public void testAddCredentialsFailsForMissingAuthId(final VertxTestContext context) {
         testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_AUTH_ID);
     }
 
-    private void testAddCredentialsWithMissingPayloadParts(final TestContext context, final String fieldMissing) {
+    private void testAddCredentialsWithMissingPayloadParts(final VertxTestContext context, final String fieldMissing) {
 
         final JsonObject json = JsonObject.mapFrom(hashedPasswordCredential);
         json.remove(fieldMissing);
@@ -333,7 +318,7 @@ public class CredentialsHttpIT {
         registry
                 .updateCredentialsRaw(TENANT, deviceId, payload.toBuffer(),
                         CrudHttpClient.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.asyncAssertSuccess());
+                .setHandler(context.completing());
     }
 
     /**
@@ -342,7 +327,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialsSucceeds(final TestContext context) {
+    public void testUpdateCredentialsSucceeds(final VertxTestContext context) {
 
         final PasswordCredential altered = JsonObject
                 .mapFrom(hashedPasswordCredential)
@@ -354,9 +339,10 @@ public class CredentialsHttpIT {
                 .compose(ar -> registry.updateCredentials(TENANT, deviceId, Collections.singleton(altered),
                         HttpURLConnection.HTTP_NO_CONTENT))
             .compose(ur -> registry.getCredentials(TENANT, deviceId))
-            .setHandler(context.asyncAssertSuccess(gr -> {
+            .setHandler(context.succeeding(gr -> {
                 final JsonObject retrievedSecret = gr.toJsonArray().getJsonObject(0).getJsonArray("secrets").getJsonObject(0);
-                context.assertEquals("test", retrievedSecret.getString("comment"));
+                context.verify(() -> assertThat(retrievedSecret.getString("comment")).isEqualTo("test"));
+                context.completeNow();
             }));
     }
 
@@ -366,20 +352,24 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    @Ignore("Requires support for clear text passwords")
-    public void testUpdateCredentialsSucceedsForClearTextPassword(final TestContext context) {
+    @Disabled("Requires support for clear text passwords")
+    public void testUpdateCredentialsSucceedsForClearTextPassword(final VertxTestContext context) {
 
         final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(authId, "newPassword");
 
         registry.addCredentials(TENANT, deviceId, Collections.<CommonCredential> singleton(hashedPasswordCredential))
                 .compose(ar -> registry.updateCredentials(TENANT, deviceId, secret))
                 .compose(ur -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.asyncAssertSuccess(gr -> {
+                .setHandler(context.succeeding(gr -> {
                     final CredentialsObject o = extractFirstCredential(gr.toJsonObject())
                             .mapTo(CredentialsObject.class);
-                    context.assertEquals(authId, o.getAuthId());
-                    context.assertFalse(o.getCandidateSecrets(s -> CredentialsConstants.getPasswordHash(s))
-                            .stream().anyMatch(hash -> ORIG_BCRYPT_PWD.equals(hash)));
+                    context.verify(() -> {
+                        assertThat(o.getAuthId()).isEqualTo(authId);
+                        assertThat(o.getCandidateSecrets(s -> CredentialsConstants.getPasswordHash(s))
+                                .stream().anyMatch(hash -> ORIG_BCRYPT_PWD.equals(hash)))
+                        .isFalse();
+                    });
+                    context.completeNow();
                 }));
     }
 
@@ -389,7 +379,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialsFailsForNonExistingCredentials(final TestContext context) {
+    public void testUpdateCredentialsFailsForNonExistingCredentials(final VertxTestContext context) {
         registry
                 .updateCredentialsWithVersion(
                         TENANT,
@@ -397,7 +387,7 @@ public class CredentialsHttpIT {
                         Collections.singleton(hashedPasswordCredential),
                         "3",
                         HttpURLConnection.HTTP_PRECON_FAILED)
-                .setHandler(context.asyncAssertSuccess());
+                .setHandler(context.completing());
     }
 
     /**
@@ -407,16 +397,15 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testGetAddedCredentials(final TestContext context) {
+    public void testGetAddedCredentials(final VertxTestContext context) {
 
         registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
                 .compose(ar -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.asyncAssertSuccess(b -> {
-                    context.assertEquals(
-                            new JsonArray()
-                                    .add(JsonObject.mapFrom(hashedPasswordCredential)),
-                            b.toJsonArray());
+                .setHandler(context.succeeding(b -> {
+                    context.verify(() -> assertThat(b.toJsonArray())
+                            .isEqualTo(new JsonArray().add(JsonObject.mapFrom(hashedPasswordCredential))));
+                    context.completeNow();
                 }));
 
     }
@@ -427,13 +416,14 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddedCredentialsContainsEtag(final TestContext context)  {
+    public void testAddedCredentialsContainsEtag(final VertxTestContext context)  {
 
         registry
                 .updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                         HttpURLConnection.HTTP_NO_CONTENT)
-                .setHandler(context.asyncAssertSuccess(res -> {
-                    context.assertNotNull("etag header missing", res.get(HTTP_HEADER_ETAG));
+                .setHandler(context.succeeding(res -> {
+                    context.verify(() -> assertThat(res.get(HTTP_HEADER_ETAG)).as("etag header missing").isNotNull());
+                    context.completeNow();
                 }));
     }
 
@@ -444,7 +434,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testGetAddedCredentialsMultipleTypesSingleRequests(final TestContext context) {
+    public void testGetAddedCredentialsMultipleTypesSingleRequests(final VertxTestContext context) {
 
         final List<CommonCredential> credentialsListToAdd = new ArrayList<>();
         credentialsListToAdd.add(hashedPasswordCredential);
@@ -454,21 +444,22 @@ public class CredentialsHttpIT {
                 .addCredentials(TENANT, deviceId, credentialsListToAdd)
 
                 .compose(ar -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.asyncAssertSuccess(b -> {
+                .setHandler(context.succeeding(b -> {
                     assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
+                    context.completeNow();
         }));
     }
 
     /**
      * Verifies that the service returns all credentials registered for a given device regardless of authentication identifier.
      * <p>
-     * The returned JsonArray must consist exactly the same credentials as originaly added.
+     * The returned JsonArray must consist exactly the same credentials as originally added.
      * 
      * @param context The vert.x test context.
      * @throws InterruptedException if registration of credentials is interrupted.
      */
     @Test
-    public void testGetAllCredentialsForDeviceSucceeds(final TestContext context) throws InterruptedException {
+    public void testGetAllCredentialsForDeviceSucceeds(final VertxTestContext context) throws InterruptedException {
 
         final List<CommonCredential> credentialsListToAdd = new ArrayList<>();
         credentialsListToAdd.add(newPskCredentials("auth"));
@@ -476,8 +467,9 @@ public class CredentialsHttpIT {
 
         registry.addCredentials(TENANT, deviceId, credentialsListToAdd)
             .compose(ar -> registry.getCredentials(TENANT, deviceId))
-            .setHandler(context.asyncAssertSuccess(b -> {
+            .setHandler(context.succeeding(b -> {
                 assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
+                context.completeNow();
             }));
     }
 
@@ -490,7 +482,7 @@ public class CredentialsHttpIT {
      * @throws InterruptedException if registration of credentials is interrupted.
      */
     @Test
-    public void testGetCredentialsForDeviceRegardlessOfType(final TestContext context) throws InterruptedException {
+    public void testGetCredentialsForDeviceRegardlessOfType(final VertxTestContext context) throws InterruptedException {
 
         final String pskAuthId = getRandomAuthId(TEST_AUTH_ID);
         final List<CommonCredential> credentialsToAdd = new ArrayList<>();
@@ -508,8 +500,9 @@ public class CredentialsHttpIT {
 
         registry.addCredentials(TENANT, deviceId, credentialsToAdd)
             .compose(ar -> registry.getCredentials(TENANT, deviceId))
-            .setHandler(context.asyncAssertSuccess(b -> {
+            .setHandler(context.succeeding(b -> {
                 assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsToAdd);
+                context.completeNow();
             }));
     }
 
@@ -519,12 +512,12 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testGetAddedCredentialsButWithWrongType(final TestContext context)  {
+    public void testGetAddedCredentialsButWithWrongType(final VertxTestContext context)  {
 
         registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
             .compose(ar -> registry.getCredentials(TENANT, authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
-            .setHandler(context.asyncAssertSuccess());
+            .setHandler(context.completing());
     }
 
     /**
@@ -533,7 +526,7 @@ public class CredentialsHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testGetAddedCredentialsButWithWrongAuthId(final TestContext context)  {
+    public void testGetAddedCredentialsButWithWrongAuthId(final VertxTestContext context)  {
 
         registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
@@ -542,15 +535,15 @@ public class CredentialsHttpIT {
                     "wrong-auth-id",
                     CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                     HttpURLConnection.HTTP_NOT_FOUND))
-            .setHandler(context.asyncAssertSuccess());
+            .setHandler(context.completing());
     }
 
-    private static void assertResponseBodyContainsAllCredentials(final TestContext context, final JsonArray responseBody,
+    private static void assertResponseBodyContainsAllCredentials(final VertxTestContext context, final JsonArray responseBody,
             final List<CommonCredential> expected) {
 
         final JsonArray expectedArray = new JsonArray();
         expected.stream().forEach(credential -> expectedArray.add(JsonObject.mapFrom(credential)));
-        context.assertEquals(expectedArray, responseBody);
+        context.verify(() -> assertThat(responseBody).isEqualTo(expectedArray));
     }
 
     private static String getRandomAuthId(final String authIdPrefix) {

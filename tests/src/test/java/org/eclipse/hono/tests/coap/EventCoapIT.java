@@ -19,17 +19,17 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.util.EventConstants;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
 
 
 /**
  * Integration tests for uploading telemetry data to the CoAP adapter.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class EventCoapIT extends CoapTestBase {
 
     private static final String POST_URI = "/" + EventConstants.EVENT_ENDPOINT;

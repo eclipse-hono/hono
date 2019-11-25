@@ -12,40 +12,39 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
-import org.assertj.core.api.Assertions;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying the Device Registry component by making HTTP requests to its
  * device registration HTTP endpoint and validating the corresponding responses.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class DeviceRegistrationHttpIT {
 
     private static final String TENANT = Constants.DEFAULT_TENANT;
@@ -53,22 +52,13 @@ public class DeviceRegistrationHttpIT {
     private static Vertx vertx = Vertx.vertx();
     private static DeviceRegistryHttpClient registry;
 
-    /**
-     * Set the timeout for all test methods by using a JUnit Rule (instead of providing the timeout at every @Test annotation).
-     * See {@link Test#timeout} for details about improved thread safety regarding the @After annotation for each test.
-     */
-    @Rule
-    public final Timeout timeoutForAllMethods = Timeout.seconds(5);
-
     private String deviceId;
 
     /**
      * Creates the HTTP client for accessing the registry.
-     * 
-     * @param ctx The vert.x test context.
      */
-    @BeforeClass
-    public static void setUpClient(final TestContext ctx) {
+    @BeforeAll
+    public static void setUpClient() {
 
         registry = new DeviceRegistryHttpClient(
                 vertx,
@@ -79,7 +69,7 @@ public class DeviceRegistrationHttpIT {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         deviceId = UUID.randomUUID().toString();
     }
@@ -89,11 +79,10 @@ public class DeviceRegistrationHttpIT {
      * 
      * @param ctx The vert.x test context.
      */
-    @After
-    public void removeDevice(final TestContext ctx) {
-        final Async deletion = ctx.async();
-        registry.deregisterDevice(TENANT, deviceId).setHandler(attempt -> deletion.complete());
-        deletion.await();
+    @AfterEach
+    public void removeDevice(final VertxTestContext ctx) {
+        registry.deregisterDevice(TENANT, deviceId)
+        .setHandler(s -> ctx.completeNow());
     }
 
     /**
@@ -101,9 +90,9 @@ public class DeviceRegistrationHttpIT {
      * 
      * @param ctx The vert.x test context.
      */
-    @AfterClass
-    public static void tearDown(final TestContext ctx) {
-        vertx.close(ctx.asyncAssertSuccess());
+    @AfterAll
+    public static void tearDown(final VertxTestContext ctx) {
+        vertx.close(ctx.completing());
     }
 
     /**
@@ -112,12 +101,12 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context
      */
     @Test
-    public void testAddDeviceSucceeds(final TestContext ctx) {
+    public void testAddDeviceSucceeds(final VertxTestContext ctx) {
 
         final Device device = new Device();
         device.putExtension("test", "test");
 
-        registry.registerDevice(TENANT, deviceId, device).setHandler(ctx.asyncAssertSuccess());
+        registry.registerDevice(TENANT, deviceId, device).setHandler(ctx.completing());
     }
 
     /**
@@ -126,21 +115,24 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context
      */
     @Test
-    public void testAddDeviceSucceedsWithoutDeviceId(final TestContext ctx) {
+    public void testAddDeviceSucceedsWithoutDeviceId(final VertxTestContext ctx) {
 
         final Device device = new Device();
         device.putExtension("test", "test");
 
         registry.registerDevice(TENANT, null, device)
-                .setHandler(ctx.asyncAssertSuccess(s -> ctx.verify(v -> {
-                    final List<String> locations = s.getAll("location");
-                    assertNotNull(locations);
-                    assertEquals(1, locations.size());
-                    final String location = locations.get(0);
-                    assertNotNull(location);
-                    final String[] toks = location.split("/");
-                    assertEquals(4, toks.length);
-                })));
+                .setHandler(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        final List<String> locations = s.getAll("location");
+                        assertThat(locations).isNotNull();
+                        assertThat(locations).hasSize(1);
+                        final String location = locations.get(0);
+                        assertThat(location).isNotNull();
+                        final String[] toks = location.split("/");
+                        assertThat(toks).hasSize(4);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -149,15 +141,16 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddDeviceFailsForDuplicateDevice(final TestContext ctx) {
+    public void testAddDeviceFailsForDuplicateDevice(final VertxTestContext ctx) {
 
         final Device device = new Device();
         // add the device
-        registry.registerDevice(TENANT, deviceId, device).setHandler(ctx.asyncAssertSuccess(s -> {
+        registry.registerDevice(TENANT, deviceId, device)
+        .compose(ok -> {
             // now try to add the device again
-            registry.registerDevice(TENANT, deviceId, device, HttpURLConnection.HTTP_CONFLICT)
-                    .setHandler(ctx.asyncAssertSuccess());
-        }));
+            return registry.registerDevice(TENANT, deviceId, device, HttpURLConnection.HTTP_CONFLICT);
+        })
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -166,7 +159,7 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context
      */
     @Test
-    public void testAddDeviceFailsForMissingContentType(final TestContext ctx) {
+    public void testAddDeviceFailsForMissingContentType(final VertxTestContext ctx) {
 
         final Device device = new Device();
         device.putExtension("test", "testAddDeviceFailsForMissingContentType");
@@ -175,7 +168,7 @@ public class DeviceRegistrationHttpIT {
                 .registerDevice(
                         TENANT, deviceId, device, null,
                         HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(ctx.asyncAssertSuccess());
+                .setHandler(ctx.completing());
     }
 
     /**
@@ -185,9 +178,9 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context
      */
     @Test
-    public void testAddDeviceSucceedsForEmptyBody(final TestContext ctx) {
+    public void testAddDeviceSucceedsForEmptyBody(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.asyncAssertSuccess());
+        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.completing());
     }
 
     /**
@@ -197,9 +190,9 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context
      */
     @Test
-    public void testAddDeviceSucceedsForEmptyBodyAndContentType(final TestContext ctx) {
+    public void testAddDeviceSucceedsForEmptyBodyAndContentType(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.asyncAssertSuccess());
+        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.completing());
     }
 
     /**
@@ -210,7 +203,7 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetDeviceContainsRegisteredInfo(final TestContext ctx) {
+    public void testGetDeviceContainsRegisteredInfo(final VertxTestContext ctx) {
 
         final Device device = new Device();
         device.putExtension("testString", "testValue");
@@ -222,7 +215,7 @@ public class DeviceRegistrationHttpIT {
             .compose(info -> {
                     assertRegistrationInformation(ctx, info.toJsonObject().mapTo(Device.class), deviceId, device);
                 return Future.succeededFuture();
-            }).setHandler(ctx.asyncAssertSuccess());
+            }).setHandler(ctx.completing());
     }
 
     /**
@@ -232,10 +225,12 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testGetDeviceFailsForNonExistingDevice(final TestContext ctx) {
+    public void testGetDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        registry.getRegistrationInfo(TENANT, "non-existing-device").setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+        registry.getRegistrationInfo(TENANT, "non-existing-device")
+        .setHandler(ctx.failing(t -> {
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+            ctx.completeNow();
         }));
     }
 
@@ -246,7 +241,7 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceSucceeds(final TestContext ctx) {
+    public void testUpdateDeviceSucceeds(final VertxTestContext ctx) {
 
         final JsonObject originalData = new JsonObject()
                 .put("ext", new JsonObject()
@@ -265,7 +260,7 @@ public class DeviceRegistrationHttpIT {
                     assertRegistrationInformation(ctx, info.toJsonObject().mapTo(Device.class), deviceId,
                             updatedData.mapTo(Device.class));
                 return Future.succeededFuture();
-            }).setHandler(ctx.asyncAssertSuccess());
+            }).setHandler(ctx.completing());
     }
 
     /**
@@ -274,12 +269,12 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceFailsForNonExistingDevice(final TestContext ctx) {
+    public void testUpdateDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        registry.updateDevice(TENANT, "non-existing-device",
-                new JsonObject().put("ext", new JsonObject().put("test", "test")))
-                .setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+        registry.updateDevice(TENANT, "non-existing-device", new JsonObject().put("ext", new JsonObject().put("test", "test")))
+        .setHandler(ctx.failing(t -> {
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+            ctx.completeNow();
         }));
 
     }
@@ -290,7 +285,7 @@ public class DeviceRegistrationHttpIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceFailsForMissingContentType(final TestContext context) {
+    public void testUpdateDeviceFailsForMissingContentType(final VertxTestContext context) {
 
         registry.registerDevice(TENANT, deviceId, new Device())
             .compose(ok -> {
@@ -300,7 +295,7 @@ public class DeviceRegistrationHttpIT {
                                     .put("test", "testUpdateDeviceFailsForMissingContentType")
                                     .put("newKey1", "newValue1"));
                 return registry.updateDevice(TENANT, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
-            }).setHandler(context.asyncAssertSuccess());
+            }).setHandler(context.completing());
     }
 
     /**
@@ -310,18 +305,21 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeregisterDeviceSucceeds(final TestContext ctx) {
+    public void testDeregisterDeviceSucceeds(final VertxTestContext ctx) {
 
         registry.registerDevice(TENANT, deviceId, new Device())
-            .compose(ok -> registry.deregisterDevice(TENANT, deviceId))
-            .compose(ok -> {
-                return registry.getRegistrationInfo(TENANT, deviceId)
-                        .compose(info -> Future.failedFuture("get registration info should have failed"))
-                        .recover(t -> {
-                            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
-                            return Future.succeededFuture();
-                        });
-            }).setHandler(ctx.asyncAssertSuccess());
+        .compose(ok -> registry.deregisterDevice(TENANT, deviceId))
+        .compose(ok -> registry.getRegistrationInfo(TENANT, deviceId))
+        .setHandler(getAttempt -> {
+            if (getAttempt.succeeded()) {
+                ctx.failNow(new AssertionError("should not have found registration"));
+            } else {
+                ctx.verify(() -> {
+                    assertThat(((ServiceInvocationException) getAttempt.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                });
+                ctx.completeNow();
+            }
+        });
     }
 
     /**
@@ -330,19 +328,20 @@ public class DeviceRegistrationHttpIT {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeregisterDeviceFailsForNonExistingDevice(final TestContext ctx) {
+    public void testDeregisterDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        registry.deregisterDevice(TENANT, "non-existing-device").setHandler(ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
+        registry.deregisterDevice(TENANT, "non-existing-device").setHandler(ctx.failing(t -> {
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+            ctx.completeNow();
         }));
     }
 
     private static void assertRegistrationInformation(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final Device response,
             final String expectedDeviceId,
             final Device expectedData) {
 
-        Assertions.assertThat(response).usingRecursiveComparison().isEqualTo(expectedData);
+        assertThat(response).usingRecursiveComparison().isEqualTo(expectedData);
     }
 }

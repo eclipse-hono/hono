@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.tests.registry;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
@@ -176,7 +175,7 @@ public class TenantJmsIT extends TenantApiTests {
         allTenantClient
         .get(unsupportedSearchCriteria.toBuffer())
         .setHandler(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_BAD_REQUEST)));
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
             ctx.completeNow();
         }));
     }
@@ -194,7 +193,7 @@ public class TenantJmsIT extends TenantApiTests {
         allTenantClient
         .get(Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 })) // not JSON
         .setHandler(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_BAD_REQUEST)));
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
             ctx.completeNow();
         }));
     }
@@ -213,7 +212,7 @@ public class TenantJmsIT extends TenantApiTests {
         .sendRequest(null, new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "tenant").toBuffer())
         .setHandler(ctx.failing(t -> {
             ctx.verify(() -> {
-                assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_BAD_REQUEST));
+                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
             });
             ctx.completeNow();
         }));
@@ -235,7 +234,7 @@ public class TenantJmsIT extends TenantApiTests {
                 new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "tenant").toBuffer())
         .setHandler(ctx.failing(t -> {
             ctx.verify(() -> {
-                assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_BAD_REQUEST));
+                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
             });
             ctx.completeNow();
         }));

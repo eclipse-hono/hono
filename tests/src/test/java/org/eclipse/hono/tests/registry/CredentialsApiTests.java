@@ -15,8 +15,6 @@
 package org.eclipse.hono.tests.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -257,13 +255,13 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
             final String expectedType,
             final int expectedNumberOfSecrets) {
 
-        assertNotNull(credentials);
+        assertThat(credentials).isNotNull();
         // only enabled credentials must be returned
-        assertTrue(credentials.isEnabled());
+        assertThat(credentials.isEnabled()).isTrue();
         assertThat(credentials.getDeviceId()).isEqualTo(expectedDeviceId);
         assertThat(credentials.getAuthId()).isEqualTo(expectedAuthId);
         assertThat(credentials.getType()).isEqualTo(expectedType);
-        assertNotNull(credentials.getSecrets());
+        assertThat(credentials.getSecrets()).isNotNull();
         assertThat(credentials.getSecrets()).hasSize(expectedNumberOfSecrets);
 
     }

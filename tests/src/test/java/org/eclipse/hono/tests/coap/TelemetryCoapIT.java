@@ -16,13 +16,13 @@ package org.eclipse.hono.tests.coap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapClient;
-import org.eclipse.californium.core.CoapResponse;
 import org.eclipse.californium.core.coap.CoAP.Code;
-import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
@@ -31,33 +31,25 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Integration tests for uploading telemetry data to the CoAP adapter.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class TelemetryCoapIT extends CoapTestBase {
 
     private static final String POST_URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;
     private static final String PUT_URI_TEMPLATE = POST_URI + "/%s/%s";
-
-    /**
-     * Time out each test after 20 seconds.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.millis(TEST_TIMEOUT_MILLIS);
 
     @Override
     protected Future<MessageConsumer> createConsumer(final String tenantId, final Consumer<Message> messageConsumer) {
@@ -88,14 +80,14 @@ public class TelemetryCoapIT extends CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    public void testUploadUsingQoS1(final TestContext ctx) throws InterruptedException {
+    public void testUploadUsingQoS1(final VertxTestContext ctx) throws InterruptedException {
 
-        final Async setup = ctx.async();
         final Tenant tenant = new Tenant();
 
+        final VertxTestContext setup = new VertxTestContext();
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
+        .setHandler(setup.completing());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
 
@@ -119,19 +111,22 @@ public class TelemetryCoapIT extends CoapTestBase {
      * @throws ConnectorException  if the CoAP request cannot be sent to the adapter.
      */
     @Test
-    public void testUploadLargePayloadFails(final TestContext ctx) throws ConnectorException, IOException {
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadFailsForLargePayload(final VertxTestContext ctx) throws ConnectorException, IOException {
 
-        final Async setup = ctx.async();
         final Tenant tenant = new Tenant();
 
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .setHandler(ctx.asyncAssertSuccess(ok -> setup.complete()));
-        setup.await();
-
-        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-        final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), IntegrationTestSupport.getPayload(4096));
-        final CoapResponse response = client.advanced(request);
-        assertThat(response.getCode()).isEqualTo(ResponseCode.REQUEST_ENTITY_TOO_LARGE);
+        .compose(ok -> {
+            final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+            final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), IntegrationTestSupport.getPayload(4096));
+            final Promise<OptionSet> result = Promise.promise();
+            client.advanced(getHandler(result), request);
+            return result.future();
+        })
+        .setHandler(ctx.failing(t -> {
+            assertStatus(ctx, HttpURLConnection.HTTP_ENTITY_TOO_LARGE, t);
+            ctx.completeNow();
+        }));
     }
-
 }
