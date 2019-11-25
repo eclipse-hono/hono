@@ -267,7 +267,7 @@ public final class CrudHttpClient {
                         LOGGER.trace("response status code {}", response.statusCode());
                         if (successPredicate.test(response)) {
                             if (checkCorsHeaders) {
-                                checkCorsHeaders(response, result.future());
+                                checkCorsHeaders(response, result);
                             }
                             result.tryComplete(response.headers());
                         } else {
@@ -458,7 +458,7 @@ public final class CrudHttpClient {
                     .handler(response -> {
                         if (successPredicate.test(response.statusCode())) {
                             if (checkCorsHeaders) {
-                                checkCorsHeaders(response, result.future());
+                                checkCorsHeaders(response, result);
                             }
                             result.tryComplete(response.headers());
                         } else {
@@ -519,7 +519,7 @@ public final class CrudHttpClient {
             .handler(response -> {
                 if (successPredicate.test(response.statusCode())) {
                     if (response.statusCode() < 400) {
-                        checkCorsHeaders(response, result.future());
+                        checkCorsHeaders(response, result);
                     }
                     response.bodyHandler(body -> result.tryComplete(body));
                 } else {
@@ -570,7 +570,7 @@ public final class CrudHttpClient {
             .handler(response -> {
                 LOGGER.debug("got response [status: {}]", response.statusCode());
                 if (successPredicate.test(response.statusCode())) {
-                    checkCorsHeaders(response, result.future());
+                    checkCorsHeaders(response, result);
                     result.tryComplete();
                 } else {
                     result.tryFail(newUnexpectedResponseStatusException(response.statusCode()));
@@ -589,7 +589,7 @@ public final class CrudHttpClient {
      * @param response The response to check.
      * @param result the result will fail in case headers are not set
      */
-    private void checkCorsHeaders(final HttpClientResponse response, final Future result) {
+    private void checkCorsHeaders(final HttpClientResponse response, final Promise<?> result) {
         final MultiMap headers = response.headers();
         if (!"*".equals(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN))) {
             result.fail("Response does not contain proper Access-Control-Allow-Origin header");
