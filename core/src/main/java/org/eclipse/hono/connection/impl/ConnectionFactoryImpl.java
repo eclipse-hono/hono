@@ -300,12 +300,10 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
 
             final boolean isOpenSslAvailable = OpenSsl.isAvailable();
             final boolean supportsKeyManagerFactory =  OpenSsl.supportsKeyManagerFactory();
-            final boolean supportsHostnameValidation = OpenSsl.supportsHostnameValidation();
-            final boolean useOpenSsl = isOpenSslAvailable && supportsKeyManagerFactory &&
-                    (supportsHostnameValidation || !config.isHostnameVerificationRequired());
+            final boolean useOpenSsl = isOpenSslAvailable && supportsKeyManagerFactory;
 
-            logger.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}, supports Hostname validation: {}]",
-                    isOpenSslAvailable, supportsKeyManagerFactory, supportsHostnameValidation);
+            logger.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}]",
+                    isOpenSslAvailable, supportsKeyManagerFactory);
 
             if (useOpenSsl) {
                 logger.debug("using OpenSSL [version: {}] instead of JDK's default SSL engine",
