@@ -432,6 +432,9 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
                 log.info("enabling secure protocol [{}]", protocol);
                 serverOptions.addEnabledSecureTransportProtocol(protocol);
             });
+
+            serverOptions.setSni(getConfig().isSni());
+            log.info("Service supports TLS ServerNameIndication: {}", getConfig().isSni());
         }
     }
 }
