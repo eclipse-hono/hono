@@ -305,6 +305,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return result.future();
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * This method currently delegates to {@link #doStart(Future)}.
+     */
+    @Override
+    protected final void doStart(final Promise<Void> startPromise) {
+        doStart(startPromise.future());
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @deprecated This method will be removed in a future version of Hono.
+     */
+    @Deprecated(forRemoval = true)
     @Override
     public void doStart(final Future<Void> startFuture) {
 
@@ -337,6 +353,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 () -> metrics.getNumberOfConnections(), getConfig());
     }
 
+    /**
+     * {@inheritDoc}
+     * 
+     * This method currently delegates to {@link #doStop(Future)}.
+     */
+    @Override
+    protected final void doStop(final Promise<Void> stopPromise) {
+        doStop(stopPromise.future());
+    }
+
+    /**
+     * {@inheritDoc}
+     * 
+     * @deprecated This method will be removed in a future version of Hono.
+     */
+    @Deprecated(forRemoval = true)
     @Override
     public void doStop(final Future<Void> stopFuture) {
 

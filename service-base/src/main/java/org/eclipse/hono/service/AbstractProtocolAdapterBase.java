@@ -458,7 +458,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param startFuture The future to complete once start up is complete.
      * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     protected void doStart(final Future<Void> startFuture) {
         startFuture.complete();
     }
@@ -521,7 +521,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param stopFuture The future to complete once all work is done and shut down should commence.
      * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     protected void doStop(final Future<Void> stopFuture) {
         // to be overridden by subclasses
         stopFuture.complete();
