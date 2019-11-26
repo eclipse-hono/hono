@@ -15,6 +15,7 @@ package org.eclipse.hono.service.auth;
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -78,11 +79,11 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         LOG.debug("initializing SASL authenticator");
         this.protonConnection = protonConnection;
         this.sasl = transport.sasl();
-        // TODO determine supported mechanisms dynamically based on registered AuthenticationService implementations
         sasl.server();
         sasl.allowSkip(false);
-        sasl.setMechanisms(AuthenticationConstants.MECHANISM_EXTERNAL, AuthenticationConstants.MECHANISM_PLAIN);
-        if (socket.isSsl()) {
+        sasl.setMechanisms(authenticationService.getSupportedSaslMechanisms());
+        if (socket.isSsl() && Arrays.asList(authenticationService.getSupportedSaslMechanisms())
+                .contains(AuthenticationConstants.MECHANISM_EXTERNAL)) {
             LOG.debug("client connected using TLS, extracting client certificate chain");
             try {
                 final Certificate cert = socket.sslSession().getPeerCertificates()[0];

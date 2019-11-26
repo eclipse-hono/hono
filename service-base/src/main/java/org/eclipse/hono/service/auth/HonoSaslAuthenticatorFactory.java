@@ -37,13 +37,33 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      * Verifies credentials by means of sending authentication requests to address
      * {@link AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN} on the Vert.x
      * Event Bus.
-     * 
+     *
+     * @param vertx the Vertx environment to run the factory in.
+     * @param validator The object to use for validating auth tokens.
+     * @param actualAuthenticationService The authentication service that will handle the authentication requests sent
+     *            on the Vert.x event bus. Used for determining the supported SASL mechanisms.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    @Autowired
+    public HonoSaslAuthenticatorFactory(final Vertx vertx,
+            @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final AuthTokenHelper validator,
+            final AuthenticationService actualAuthenticationService) {
+        this(new EventBusAuthenticationService(vertx, validator,
+                actualAuthenticationService.getSupportedSaslMechanisms()));
+    }
+
+    /**
+     * Creates a new factory for a Vertx environment.
+     * <p>
+     * Verifies credentials by means of sending authentication requests to address
+     * {@link AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN} on the Vert.x
+     * Event Bus.
+     *
      * @param vertx the Vertx environment to run the factory in.
      * @param validator The object to use for validating auth tokens.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    @Autowired
-    public HonoSaslAuthenticatorFactory(final Vertx vertx, @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final AuthTokenHelper validator) {
+    public HonoSaslAuthenticatorFactory(final Vertx vertx, final AuthTokenHelper validator) {
         this(new EventBusAuthenticationService(vertx, validator));
     }
 
