@@ -127,6 +127,44 @@ In order to address this problem, the Netty networking library that is used in H
 
 The tcnative module comes in several flavors, corresponding to the way that the OpenSSL library has been linked in. The statically linked versions include a specific version of OpenSSL (or [BoringSSL](https://boringssl.googlesource.com/) for that matter) and is therefore most easy to use on supported platforms, regardless of whether another version of OpenSSL is already installed or not. In contrast, the dynamically linked variants depend on a particular version of OpenSSL being already installed on the operating system. Both approaches have their pros and cons and Hono therefore does not include tcnative in its Docker images by default, i.e. Hono's services will use the JVM's default SSL engine by default.
 
+## Server Name Indication (SNI)
+
+How Hono project is aimed to connect large number of devices in a secure way using primarily TLS. SNI, [TLS extension: server_name](https://tools.ietf.org/html/rfc6066#section-3), can be used to highly scale TLS connections.
+
+The most interesting use cases are Hono protocols adapters, please refer to their TLS specific configuration. 
+The use cases, when we need to serve multiple certificates can be differs, for example some of them: 
+
+* To ensure scalability on connecting large number of devices, Hono platform can be accessible via different DNS domains or subdomains.
+* Public Key Infrastructure(PKI) for your IoT devices can have many trust stores.
+* Specific tenant TLS requirements.           
+
+Assuming that you have one of use cases that require SNI, the following steps are necessary to enable on Hono protocols adapters TLS SNI:
+
+* Certificate generation 
+
+Specific Hono protocol adapter should be configured to use key store, for example for MQTT adapter we have `--hono.mqtt.keyStorePath` for more info please refer to the specific protocol adapter configuration. 
+The key store can be only JKS or P12 format. Please note, that PEM format is not a key store and in this case PEM format will not work.
+The Common Name (CN) or SAN DNS (Subject Alternative Name with DNS), of yours certificate that are stored in key store should to do an exact match or a wildcard name match with SNI name requested by the IoT device,
+for more info please refer to [Vert.x Server name Indication (SNI)](https://vertx.io/docs/vertx-core/java/#_server_name_indication_sni) documentation.  
+In the most of the cases (CN) or SAN DNS in the certificate are the hosts names for which the certificate have been issued and IoT devices request SNI name as the host name on which they connecting.
+
+* Enable SNI for Hono Services
+
+To enable a Hono service for TLS with SNI we need turn `sni` boolean configuration option to `true`. For example in case of MQTT adapter the option will be `--hono.mqttp.sni=true`, 
+for more info refer to the specific protocol adapter configuration.
+
+* Testing and validation of SNI 
+
+For testing we need to be sure that your IoT device use a TLS implementation that support SNI but for simple TLS check can be used [openssl](https://www.openssl.org/):
+    
+   
+   ```sh 
+   openssl s_client -connect <Hono protocol adapter URL>:<adapter TLS port> -servername <requested SNI name>
+   ``` 
+ 
+
+    
+
 ### Configuring Containers
 
 When starting up any of Hono's Docker images as a container, the JVM will look for additional jar files to include in its classpath in the container's `/opt/hono/extensions` folder. Thus, using a specific variant of tcnative is just a matter of configuring the container to mount a volume or binding a host folder at that location and putting the desired variant of tcnative into the corresponding volume or host folder.r

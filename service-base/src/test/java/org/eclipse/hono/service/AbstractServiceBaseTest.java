@@ -289,5 +289,29 @@ public class AbstractServiceBaseTest {
         assertTrue(options.getEnabledSecureTransportProtocols().size() == 2);
         assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1"));
         assertTrue(options.getEnabledSecureTransportProtocols().contains("TLSv1.1"));
+
+    }
+
+    /**
+     * Verifies that SNI TLS is enabled.
+     *
+     */
+    @Test
+    public void testSNIEnable() {
+
+        // GIVEN a default TLS configuration
+        final ServiceConfigProperties config = new ServiceConfigProperties();
+        config.setKeyStorePath(PREFIX_KEY_PATH + "/authServerKeyStore.p12");
+        config.setSecureProtocols(Arrays.asList("TLSv1.1"));
+        config.setSni(true);
+
+        // WHEN configuring a service using the configuration
+        final AbstractServiceBase<ServiceConfigProperties> service = createService(config);
+        final NetServerOptions options = new NetServerOptions();
+        service.addTlsKeyCertOptions(options);
+
+        // THEN SSL is enabled and also SNI is enabled
+        assertTrue(options.isSsl());
+        assertTrue(options.isSni());
     }
 }

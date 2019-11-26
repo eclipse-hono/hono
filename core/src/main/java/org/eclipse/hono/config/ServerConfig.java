@@ -28,6 +28,7 @@ public class ServerConfig extends AbstractConfig {
     private boolean insecurePortEnabled = false;
     private String insecurePortBindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
+    private boolean sni;
 
     /**
      * Gets the host name or literal IP address of the network interface that this server's secure port is configured to
@@ -216,5 +217,23 @@ public class ServerConfig extends AbstractConfig {
         } else {
             throw new IllegalArgumentException("invalid port number");
         }
+    }
+
+    /**
+     * Sets whether the server should support Server Name Indication for TLS connections.
+     *
+     * @param sni If the server should use SNI.
+     */
+    public final void setSni(final boolean sni) {
+        this.sni = sni;
+    }
+
+    /**
+     * Whether the server supports Server Name Indication for TLS connections.
+     *
+     * @return {@code true} If the server support SNI.
+     */
+    public final boolean isSni() {
+        return this.sni;
     }
 }
