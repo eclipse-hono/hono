@@ -14,6 +14,7 @@ package org.eclipse.hono.service.auth;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Objects;
 
 import javax.security.auth.login.CredentialException;
@@ -38,9 +39,42 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthenticationService<T> {
 
     /**
+     * The default supported SASL mechanisms.
+     */
+    public static final String[] DEFAULT_SASL_MECHANISMS = { AuthenticationConstants.MECHANISM_EXTERNAL,
+            AuthenticationConstants.MECHANISM_PLAIN };
+
+    /**
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This default implementation returns the EXTERNAL and PLAIN mechanisms (in that order).
+     * <p>
+     * Subclasses should override this method if only one of these mechanisms is supported or
+     * if the mechanisms should be returned in a different order.
+     *
+     * @return The supported SASL mechanisms.
+     */
+    @Override
+    public String[] getSupportedSaslMechanisms() {
+        return DEFAULT_SASL_MECHANISMS;
+    }
+
+    /**
+     * Checks whether the given SASL mechanism is compatible with what this base class supports, i.e. whether it is
+     * either EXTERNAL or PLAIN.
+     *
+     * @param mechanism The mechanism to check.
+     * @return {@code true} if the given mechanism is either EXTERNAL or PLAIN.
+     */
+    public static boolean isCompatibleSaslMechanism(final String mechanism) {
+        return AuthenticationConstants.MECHANISM_EXTERNAL.equals(mechanism)
+                || AuthenticationConstants.MECHANISM_PLAIN.equals(mechanism);
+    }
 
     /**
      * The authentication request is required to contain the SASL mechanism in property {@link AuthenticationConstants#FIELD_MECHANISM}
@@ -64,7 +98,8 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
         final String mechanism = Objects.requireNonNull(authRequest).getString(AuthenticationConstants.FIELD_MECHANISM);
         log.debug("received authentication request [mechanism: {}]", mechanism);
 
-        if (AuthenticationConstants.MECHANISM_PLAIN.equals(mechanism)) {
+        final boolean isSupportedMechanism = Arrays.asList(getSupportedSaslMechanisms()).contains(mechanism);
+        if (isSupportedMechanism && AuthenticationConstants.MECHANISM_PLAIN.equals(mechanism)) {
 
             final byte[] saslResponse = authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE, new byte[0]);
 
@@ -80,7 +115,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
                 resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e)));
             }
 
-        } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(mechanism)) {
+        } else if (isSupportedMechanism && AuthenticationConstants.MECHANISM_EXTERNAL.equals(mechanism)) {
 
             final String authzid = new String(authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE), StandardCharsets.UTF_8);
             final String subject = authRequest.getString(AuthenticationConstants.FIELD_SUBJECT_DN);

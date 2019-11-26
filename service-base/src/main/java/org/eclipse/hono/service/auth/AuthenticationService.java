@@ -67,4 +67,11 @@ public interface AuthenticationService {
      *                                    {@code ServiceInvocationException} indicates the error status.
      */
     void authenticate(JsonObject authRequest, Handler<AsyncResult<HonoUser>> authenticationResultHandler);
+
+    /**
+     * Gets the SASL mechanisms supported by this service.
+     *
+     * @return The supported SASL mechanisms.
+     */
+    String[] getSupportedSaslMechanisms();
 }
