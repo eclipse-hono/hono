@@ -198,6 +198,17 @@ credentials:
   {{- required ".Values.adapters.credentialsSpec MUST be set if example Device Registry is disabled" .dot.Values.adapters.credentialsSpec | toYaml | nindent 2 }}
 {{- end }}
 deviceConnection:
+{{- if .dot.Values.dataGridSpec }}
+  {{- .dot.Values.dataGridSpec | toYaml | nindent 2 }}
+{{- else }}
+{{- if .dot.Values.dataGridExample.enabled }}
+  {{- $serverName := printf "%s-data-grid" .dot.Release.Name }}
+  serverList: {{ printf "%s:11222" $serverName | quote }}
+  authServerName: {{ $serverName | quote }}
+  authUsername: {{ .dot.Values.dataGridExample.authUsername | quote }}
+  authPassword: {{ .dot.Values.dataGridExample.authPassword | quote }}
+  maxRetries: 100
+{{- else }}
 {{- if .dot.Values.adapters.deviceConnectionSpec }}
   {{- range $key, $value := .dot.Values.adapters.deviceConnectionSpec }}
   {{ $key }}: {{ $value }}
@@ -217,6 +228,8 @@ deviceConnection:
   credentialsPath: /etc/hono/adapter.credentials
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 

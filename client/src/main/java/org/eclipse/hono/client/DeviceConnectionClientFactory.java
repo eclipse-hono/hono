@@ -16,13 +16,11 @@ package org.eclipse.hono.client;
 
 import org.eclipse.hono.client.impl.DeviceConnectionClientFactoryImpl;
 
-import io.vertx.core.Future;
-
 /**
  * A factory for creating clients for Hono's Device Connection API.
  *
  */
-public interface DeviceConnectionClientFactory extends ConnectionLifecycle<HonoConnection> {
+public interface DeviceConnectionClientFactory extends BasicDeviceConnectionClientFactory, ConnectionLifecycle<HonoConnection> {
 
     /**
      * Creates a new factory for an existing connection.
@@ -34,15 +32,4 @@ public interface DeviceConnectionClientFactory extends ConnectionLifecycle<HonoC
     static DeviceConnectionClientFactory create(final HonoConnection connection) {
         return new DeviceConnectionClientFactoryImpl(connection);
     }
-
-    /**
-     * Gets a client for invoking operations on a service implementing Hono's <em>Device Connection</em> API.
-     *
-     * @param tenantId The tenant to manage device connection data for.
-     * @return A future that will complete with the device connection client (if successful) or fail if the client
-     *         cannot be created, e.g. because the underlying connection is not established or if a concurrent
-     *         request to create a client for the same tenant is already being executed.
-     * @throws NullPointerException if the tenant is {@code null}.
-     */
-    Future<DeviceConnectionClient> getOrCreateDeviceConnectionClient(String tenantId);
 }

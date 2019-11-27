@@ -228,6 +228,33 @@ public final class HonoProtonHelper {
     }
 
     /**
+     * Makes sure that the outcome of a promise is processed on a given vert.x Context.
+     * 
+     * @param <T> The type of outcome to process.
+     * @param outcome The outcome to process.
+     * @param context The Context to process the outcome on or {@code null} if the outcome
+     *                should be processes on the current thread.
+     * @return A future that will be completed with the given outcome on the given context.
+     * @throws NullPointerException if outcome is {@code null}.
+     */
+    public static <T> Future<T> handleOnContext(final Promise<T> outcome, final Context context) {
+
+        Objects.requireNonNull(outcome);
+
+        final Promise<T> adapter = Promise.promise();
+        outcome.future().setHandler(s -> {
+            if (context == null) {
+                adapter.handle(s);
+            } else {
+                context.runOnContext(go -> {
+                    adapter.handle(s);
+                });
+            }
+        });
+        return adapter.future();
+    }
+
+    /**
      * Closes an AMQP link and frees up its allocated resources.
      * <p>
      * This method simply invokes {@link #closeAndFree(Context, ProtonLink, long, Handler)} with

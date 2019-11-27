@@ -56,6 +56,25 @@ dataGridExample:
   # authPassword contains the secret of the user that is authorized to connect to the example data grid
   authPassword: "hono-secret"
 
+# dataGridSpec contains properties for configuring the Infinispan Hotrod connection
+# to the existing data grid (i.e. not the example grid) that should be used for storing
+# the device connection data.
+# This property MUST be set if "deviceConnectionService.enabled" is set to true
+# and "dataGridExample.enabled" is set to false (the default).
+# Please refer to https://docs.jboss.org/infinispan/9.4/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description
+# for a list of configuration properties.
+dataGridSpec:
+  # serverList contains the hostname:port of the data grid node(s)
+  # This property only needs to be set when using an existing data grid other than the
+  # example grid.
+  #serverList: my-grid.example.com:11222
+  # authServerName contains the name that Hotrod clients need to use for establishing a
+  # connection to the data grid.
+  #authServerName:
+  # authUsername contains the name of the user that is authorized to connect to the data grid.
+  #authUsername:
+  # authPassword contains the secret of the user that is authorized to connect to the data grid
+  #authPassword:
 
 jaegerBackendExample:
 
@@ -712,6 +731,7 @@ deviceConnectionService:
       #  insecurePortEnabled: true
       #  insecurePortBindAddress: "0.0.0.0"
 
+      # DEPRECATED use the dataGridSpec property instead
       # remote contains properties for configuring the Infinispan Hotrod connection
       # to the data grid that should be used for storing the device connection data.
       # This property MUST be set if "deviceConnectionService.enabled" is set to true

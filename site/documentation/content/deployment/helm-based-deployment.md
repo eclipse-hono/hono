@@ -334,8 +334,18 @@ helm install --dep-up --name hono --namespace hono -f customRegistry.yaml eclips
 
 ## Using the Device Connection Service
 
-Hono's example Device Registry component contains a simple in-memory implementation of the [Device Connection API]({{< relref "/api/device-connection" >}}).
+Hono's protocol adapters need a place where they can store information about the connection status of devices.
+In particular, this includes maintaining a mapping of devices to the gateway(s) they connect via.
+
+The [Device Connection API]({{< relref "/api/device-connection" >}}) defines a service interface that protocol adapters
+can use to store, update and retrieve such information dynamically during runtime.
+
+### Example Implementation
+
+Hono's example Device Registry component contains a simple in-memory implementation of the Device Connection API.
 This example implementation is used by default when the example registry is deployed.
+
+### Data Grid based Implementation
 
 Hono also contains a production ready, data grid based implementation of the Device Connection API which can be deployed and used instead of
 the example implementation. The component can be deployed by means of setting the *deviceConnectionService.enabled* property to `true` when
@@ -353,10 +363,12 @@ or Helm 2:
 helm install --dep-up --name hono --namespace hono --set deviceConnectionService.enabled=true eclipse-hono/
 ~~~
 
-This will deploy the Device Connection service and configure all protocol adapters to use it instead of the example Device Registry implementation.
-However, the service requires a connection to a data grid in order to store the device connection data.
+This will deploy the data grid based Device Connection service and configure all protocol adapters to use it instead of
+the example Device Registry implementation.
+
+The service requires a connection to a data grid which it can use to store the device connection data.
 The Helm chart supports deployment of a simple data grid which can be used for experimenting by means of setting the
-*dataGridDeployExample* property to `true` when running Helm 3:
+*dataGridDeployExample* property to `true` when running Helm 3
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
@@ -375,6 +387,48 @@ This will deploy the data grid and configure the Device Connection service to us
 The Device Connection service can also be configured to connect to an already existing data grid. Please refer to the
 [admin guide]({{< relref "/admin-guide/device-connection-config.md" >}}) for details regarding the corresponding configuration properties.
 
+### Direct Connection to Data Grid
+
+Hono's protocol adapters can also be configured to directly connect to a data grid in order to store and retrieve device connection information.
+This has the advantage of eliminating the extra network hop via the Device Connection service implementation, thus reducing latency involved in
+accessing the data in the grid.
+The disadvantage of this approach is that there is no (easy) way of restricting a protocol adapter's access to data of certain tenants only.
+All protocol adapters have access to all device connection information of all tenants using this approach.
+
+It is also possible to use a mixed approach, i.e. let all of Hono's (standard) protocol adapters connect directly to the data grid while
+custom protocol adapters can access the data only via the data grid based Device Connection service implementation.
+
+In order to configure Hono's standard protocol adapters to directly connect to the data grid, the connection parameters for the grid
+need to be set. This can be done either by deploying the example data grid as described in the previous section or by means of
+setting the `dataGridSpec` property in a YAML file like this:
+
+```yaml
+dataGridSpec:
+  # serverList contains the hostname:port of the data grid node(s)
+  serverList: my-grid.example.com:11222
+  # authServerName contains the name that Hotrod clients need to use for establishing a
+  # connection to the data grid.
+  authServerName: my-grid.example.com
+  # authUsername contains the name of the user that is authorized to connect to the data grid.
+  authUsername: my-grid-user
+  # authPassword contains the secret of the user that is authorized to connect to the data grid
+  authPassword: my-grid-secret
+```
+
+Assuming that the file is named `customDataGrid.yaml`, the configuration can then be passed to the `helm install` command
+as follows using Helm 3
+
+```sh
+# in directory: eclipse-hono-$VERSION
+helm install hono eclipse-hono/ --dependency-update --namespace hono -f customDataGrid.yaml
+```
+
+or Helm 2
+
+```sh
+# in directory: eclipse-hono-$VERSION
+helm install --dep-up --name hono --namespace hono -f customDataGrid.yaml eclipse-hono/
+```
 
 ## Deploying optional Adapters
 
@@ -401,7 +455,6 @@ or Helm 2
 # in directory: eclipse-hono-$VERSION
 helm install --dep-up --name hono --namespace hono --set adapters.lora.enabled=true eclipse-hono/
 ~~~
-
 
 ## Deploying custom Container Images
 

@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.deviceconnection.infinispan;
+package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Map;
 
@@ -23,10 +23,7 @@ import org.infinispan.client.hotrod.impl.ConfigurationProperties;
 /**
  * Configuration properties for a Hotrod connection to a remote cache.
  *
- * @deprecated Use {@link org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties}
- *             instead.
  */
-@Deprecated(forRemoval = true)
 public class InfinispanRemoteConfigurationProperties extends ConfigurationProperties {
 
     /**

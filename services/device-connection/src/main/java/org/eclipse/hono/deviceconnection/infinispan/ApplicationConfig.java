@@ -19,6 +19,7 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.deviceconnection.infinispan.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;

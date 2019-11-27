@@ -15,6 +15,8 @@ package org.eclipse.hono.service;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -23,6 +25,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
@@ -106,7 +109,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private DownstreamSenderFactory downstreamSenderFactory;
     private RegistrationClientFactory registrationClientFactory;
     private TenantClientFactory tenantClientFactory;
-    private DeviceConnectionClientFactory deviceConnectionClientFactory;
+    private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
     private CommandConsumerFactory commandConsumerFactory;
     private ConnectionLimitManager connectionLimitManager;
@@ -197,7 +200,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
     @Autowired
-    public final void setDeviceConnectionClientFactory(final DeviceConnectionClientFactory factory) {
+    public final void setDeviceConnectionClientFactory(final BasicDeviceConnectionClientFactory factory) {
         this.deviceConnectionClientFactory = Objects.requireNonNull(factory);
     }
 
@@ -205,9 +208,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Gets the factory used for creating a client for the Device Connection service.
      *
      * @return The factory.
+     * @deprecated Use {@link #getDeviceConnectionClient(String)} in order to access
+     *             device connection information.
      */
+    @Deprecated(forRemoval = true)
     public final DeviceConnectionClientFactory getDeviceConnectionClientFactory() {
-        return deviceConnectionClientFactory;
+        if (deviceConnectionClientFactory instanceof DeviceConnectionClientFactory) {
+            return (DeviceConnectionClientFactory) deviceConnectionClientFactory;
+        } else {
+             return null;
+        }
     }
 
     /**
@@ -215,9 +225,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param tenantId The tenant that the client is scoped to.
      * @return The client.
+     * @throws IllegalStateException if no client factory is set.
      */
     protected final Future<DeviceConnectionClient> getDeviceConnectionClient(final String tenantId) {
-        return getDeviceConnectionClientFactory().getOrCreateDeviceConnectionClient(tenantId);
+
+        if (deviceConnectionClientFactory == null) {
+            throw new IllegalStateException("Device Connection client factory is not set");
+        }
+        return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId);
     }
 
     /**
@@ -417,7 +432,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             connectToService(downstreamSenderFactory, "AMQP Messaging Network");
             connectToService(registrationClientFactory, "Device Registration service");
             connectToService(credentialsClientFactory, "Credentials service");
-            connectToService(deviceConnectionClientFactory, "Device Connection service");
+            if (deviceConnectionClientFactory instanceof DeviceConnectionClientFactory) {
+                connectToService((DeviceConnectionClientFactory) deviceConnectionClientFactory, "Device Connection service");
+            }
 
             connectToService(
                     commandConsumerFactory,
@@ -482,19 +499,27 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     private Future<?> closeServiceClients() {
 
-        return CompositeFuture.all(
-                disconnectFromService(downstreamSenderFactory),
-                disconnectFromService(tenantClientFactory),
-                disconnectFromService(registrationClientFactory),
-                disconnectFromService(credentialsClientFactory),
-                disconnectFromService(deviceConnectionClientFactory),
-                disconnectFromService(commandConsumerFactory));
+        @SuppressWarnings("rawtypes")
+        final List<Future> results = new ArrayList<>();
+        results.add(disconnectFromService(downstreamSenderFactory));
+        results.add(disconnectFromService(tenantClientFactory));
+        results.add(disconnectFromService(registrationClientFactory));
+        results.add(disconnectFromService(credentialsClientFactory));
+        results.add(disconnectFromService(commandConsumerFactory));
+        if (deviceConnectionClientFactory instanceof DeviceConnectionClientFactory) {
+            results.add(disconnectFromService((DeviceConnectionClientFactory) deviceConnectionClientFactory));
+        }
+        return CompositeFuture.all(results);
     }
 
     private Future<Void> disconnectFromService(final ConnectionLifecycle<HonoConnection> connection) {
 
         final Promise<Void> disconnectTracker = Promise.promise();
-        connection.disconnect(disconnectTracker);
+        if (connection == null) {
+            disconnectTracker.complete();
+        } else {
+            connection.disconnect(disconnectTracker);
+        }
         return disconnectTracker.future();
     }
 
@@ -855,33 +880,36 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected Future<Void> isConnected() {
 
-        final Future<Void> tenantCheck = Optional.ofNullable(tenantClientFactory)
+        @SuppressWarnings("rawtypes")
+        final List<Future> connections = new ArrayList<>();
+        connections.add(Optional.ofNullable(tenantClientFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Tenant client factory is not set")));
-        final Future<Void> registrationCheck = Optional.ofNullable(registrationClientFactory)
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Tenant client factory is not set"))));
+        connections.add(Optional.ofNullable(registrationClientFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future
                         .failedFuture(new ServerErrorException(
-                                HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration client factory is not set")));
-        final Future<Void> credentialsCheck = Optional.ofNullable(credentialsClientFactory)
+                                HttpURLConnection.HTTP_UNAVAILABLE, "Device Registration client factory is not set"))));
+        connections.add(Optional.ofNullable(credentialsClientFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set")));
-        final Future<Void> messagingCheck = Optional.ofNullable(downstreamSenderFactory)
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Credentials client factory is not set"))));
+        connections.add(Optional.ofNullable(downstreamSenderFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set")));
-        final Future<Void> commandCheck = Optional.ofNullable(commandConsumerFactory)
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Messaging client is not set"))));
+        connections.add(Optional.ofNullable(commandConsumerFactory)
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set")));
-        final Future<Void> deviceConnectionCheck = Optional.ofNullable(deviceConnectionClientFactory)
-                .map(client -> client.isConnected())
-                .orElse(Future.failedFuture(new ServerErrorException(
-                        HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set")));
-        return CompositeFuture.all(tenantCheck, registrationCheck, credentialsCheck, messagingCheck, commandCheck,
-                deviceConnectionCheck).mapEmpty();
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set"))));
+        if (deviceConnectionClientFactory instanceof DeviceConnectionClientFactory) {
+            connections.add(Optional.ofNullable(deviceConnectionClientFactory)
+                    .map(client -> ((DeviceConnectionClientFactory) client).isConnected())
+                    .orElse(Future.failedFuture(new ServerErrorException(
+                            HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set"))));
+        }
+        return CompositeFuture.all(connections).mapEmpty();
     }
 
     /**

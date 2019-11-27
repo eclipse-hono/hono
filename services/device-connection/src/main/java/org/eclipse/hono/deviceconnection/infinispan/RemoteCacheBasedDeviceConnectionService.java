@@ -18,15 +18,15 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfoCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodBasedDeviceConnectionInfoCache;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.deviceconnection.EventBusDeviceConnectionAdapter;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.commons.api.BasicCache;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
@@ -34,7 +34,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 
@@ -45,9 +44,8 @@ import io.vertx.ext.healthchecks.Status;
  */
 public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConnectionAdapter implements DeviceConnectionService, HealthCheckProvider {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RemoteCacheBasedDeviceConnectionService.class);
     private RemoteCacheContainer cacheManager;
-    private BasicCache<String, String> cache;
+    private DeviceConnectionInfoCache cache;
 
     /**
      * Sets the cache manager to use for retrieving a cache.
@@ -61,7 +59,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         log.info("using cache manager [{}]", cacheManager.getClass().getName());
     }
 
-    void setCache(final BasicCache<String, String> cache) {
+    void setCache(final DeviceConnectionInfoCache cache) {
         this.cache = cache;
     }
 
@@ -89,19 +87,22 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         final Promise<Void> result = Promise.promise();
         result.future().setHandler(startFuture);
 
-        if (cacheManager == null) {
+        if (cache != null) {
+            result.complete();
+        } else if (cacheManager == null) {
             result.fail(new IllegalStateException("cache manager is not set"));
         } else {
             context.executeBlocking(r -> {
                 cacheManager.start();
-                cache = cacheManager.getCache("device-connection");
-                cache.start();
+                final BasicCache<String, String> remoteCache = cacheManager.getCache("device-connection");
+                remoteCache.start();
+                cache = new HotrodBasedDeviceConnectionInfoCache(remoteCache);
                 r.complete(cacheManager);
             }, attempt -> {
                 if (attempt.succeeded()) {
-                    LOG.info("successfully connected to remote cache");
+                    log.info("successfully connected to remote cache");
                 } else {
-                    LOG.info("failed to connect to remote cache", attempt.cause());
+                    log.info("failed to connect to remote cache", attempt.cause());
                 }
             });
             result.complete();
@@ -139,9 +140,9 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
             r.complete();
         }, stopAttempt -> {
             if (stopAttempt.succeeded()) {
-                LOG.info("connection(s) to remote cache stopped successfully");
+                log.info("connection(s) to remote cache stopped successfully");
             } else {
-                LOG.info("error trying to stop connection(s) to remote cache", stopAttempt.cause());
+                log.info("error trying to stop connection(s) to remote cache", stopAttempt.cause());
             }
             result.complete();
         });
@@ -161,18 +162,9 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         if (cache == null) {
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to remote cache")));
         } else {
-            cache
-            .putAsync(getKey(tenantId, deviceId), gatewayId)
-            .whenComplete((replacedValue, error) -> {
-                if (error == null) {
-                    log.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]", tenantId, deviceId, gatewayId);
-                    resultHandler.handle(Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
-                } else {
-                    log.debug("failed to set last known gateway [tenant: {}, device-id: {}, gateway: {}]",
-                            tenantId, deviceId, gatewayId, error);
-                    resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error)));
-                }
-            });
+            cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span.context())
+            .map(ok -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
+            .setHandler(resultHandler);
         }
     }
 
@@ -189,41 +181,11 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         if (cache == null) {
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to remote cache")));
         } else {
-            cache.getAsync(getKey(tenantId, deviceId))
-            .whenComplete((gatewayId, error) -> {
-                final Promise<DeviceConnectionResult> result = Promise.promise();
-                if (error != null) {
-                    log.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
-                            tenantId, deviceId, error);
-                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error));
-                } else if (gatewayId == null) {
-                    log.debug("could not find last known gateway for device [tenant: {}, device-id: {}]", tenantId, deviceId);
-                    result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-                } else {
-                    log.debug("found last known gateway for device [tenant: {}, device-id: {}]: {}", tenantId, deviceId, gatewayId);
-                    result.complete(DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, getResult(gatewayId)));
-                }
-                resultHandler.handle(result.future());
-            });
+            cache.getLastKnownGatewayForDevice(tenantId, deviceId, span.context())
+            .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
+            .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)))
+            .setHandler(resultHandler);
         }
-    }
-
-    private static JsonObject getResult(final String gatewayId) {
-        return new JsonObject().put(DeviceConnectionConstants.FIELD_GATEWAY_ID, gatewayId);
-    }
-
-    /**
-     * Gets the key to use for a mapping.
-     * <p>
-     * The key returned by this default implementation consists of concatenation
-     * of the tenant ID, {@code @@} and the device ID.
-     * 
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
-     * @return The key.
-     */
-    private String getKey(final String tenantId, final String deviceId) {
-        return String.format("%s@@%s", tenantId, deviceId);
     }
 
     /**
