@@ -32,6 +32,7 @@ import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.test.HonoUnitTestHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.junit.Before;
@@ -64,7 +65,7 @@ public class GatewayMapperImplTest {
         final SpanContext spanContext = mock(SpanContext.class);
         span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
+        final Tracer.SpanBuilder spanBuilder = HonoUnitTestHelper.mockSpanBuilder(span);
         final Tracer tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 

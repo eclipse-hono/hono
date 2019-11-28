@@ -31,6 +31,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.test.HonoUnitTestHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -81,7 +82,7 @@ public class RegistrationClientImplTest {
 
         span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
-        final SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
+        final SpanBuilder spanBuilder = HonoUnitTestHelper.mockSpanBuilder(span);
 
         tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);

@@ -29,6 +29,7 @@ import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.test.HonoUnitTestHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -68,7 +69,7 @@ public class GatewayMappingCommandHandlerTest {
         final SpanContext spanContext = mock(SpanContext.class);
         final Span span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
+        final Tracer.SpanBuilder spanBuilder = HonoUnitTestHelper.mockSpanBuilder(span);
         final Tracer tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 

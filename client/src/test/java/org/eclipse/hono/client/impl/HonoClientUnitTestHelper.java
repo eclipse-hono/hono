@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -23,11 +20,8 @@ import static org.mockito.Mockito.when;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.mockito.Mockito;
 
-import io.opentracing.Span;
 import io.opentracing.Tracer;
-import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -91,26 +85,6 @@ public final class HonoClientUnitTestHelper {
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
 
         return receiver;
-    }
-
-    /**
-     * Creates a mocked OpenTracing SpanBuilder for creating a given Span.
-     * <p>
-     * All invocations on the mock are stubbed to return the builder by default.
-     * 
-     * @param spanToCreate The object that the <em>start</em> method of the
-     *                     returned builder should produce.
-     * @return The builder.
-     */
-    public static SpanBuilder mockSpanBuilder(final Span spanToCreate) {
-        final SpanBuilder spanBuilder = mock(SpanBuilder.class, Mockito.RETURNS_SMART_NULLS);
-        when(spanBuilder.addReference(anyString(), any())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), anyString())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
-        when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
-        when(spanBuilder.start()).thenReturn(spanToCreate);
-        return spanBuilder;
     }
 
     /**

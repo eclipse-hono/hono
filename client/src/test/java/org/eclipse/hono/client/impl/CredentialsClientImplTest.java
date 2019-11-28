@@ -24,13 +24,13 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 
-import io.vertx.core.Future;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.test.HonoUnitTestHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
@@ -47,6 +47,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -80,7 +81,7 @@ public class CredentialsClientImplTest {
 
         span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
-        final Tracer.SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
+        final Tracer.SpanBuilder spanBuilder = HonoUnitTestHelper.mockSpanBuilder(span);
 
         tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
