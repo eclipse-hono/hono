@@ -51,14 +51,14 @@ public class ApplicationConfigProperties {
      * <p>
      * The number is calculated as follows:
      * <ol>
-     * <li>if 0 &lt; <em>maxInstances</em> &lt; #processors, then return <em>maxInstances</em></li>
+     * <li>if 0 &lt; <em>maxInstances</em>, then return <em>maxInstances</em></li>
      * <li>else return {@code Runtime.getRuntime().availableProcessors()}</li>
      * </ol>
      *
      * @return the number of verticles to deploy.
      */
     public final int getMaxInstances() {
-        if (maxInstances > 0 && maxInstances < Runtime.getRuntime().availableProcessors()) {
+        if (maxInstances > 0) {
             return maxInstances;
         } else {
             return Runtime.getRuntime().availableProcessors();
