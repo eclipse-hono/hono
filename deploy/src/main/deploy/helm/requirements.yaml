@@ -13,9 +13,9 @@
 dependencies:
   - name: prometheus
     version: ~9.3.0
-    repository: "@stable"
+    repository: "https://kubernetes-charts.storage.googleapis.com/"
     condition: prometheus.createInstance
   - name: grafana
     version: ~3.8.15
-    repository: "@stable"
+    repository: "https://kubernetes-charts.storage.googleapis.com/"
     condition: grafana.enabled
