@@ -28,8 +28,8 @@ running Hono on another version, please try to deploy to 1.15.4 before raising a
 
 Helm is a tool for managing Kubernetes applications. In this guide, Helm is used to deploy Hono to the cluster.
 [Helm's installation instructions](https://helm.sh/docs/install/) provide more details.
-The Hono chart has been written for Helm version 2. It has not been tested (yet) with the recently released
-Helm 3 version.
+The Hono chart has been written for Helm version 2 but it can also be deployed using Helm 3.
+In fact, using Helm 3 is the recommended way of deploying Hono.
 
 #### Kubectl
 
@@ -48,33 +48,45 @@ The command line client requires a Java 11 runtime environment to run.
 
 ## Deploying Hono
 
-The recommended way of deploying Hono is by means of using Helm's *Tiller* service running on the Kubernetes cluster:
+Hono can be deployed using Helm versions 2 (2.15 or later) or 3.
+HOwever, Helm 3 is recommended because it doesn't require installation
+of any additional components to the cluster like Helm 2 did (with the
+*Tiller* component).
+
+At first, the target name space needs to be created if it doesn't exist already.
+The following command creates name space `hono` in the Kubernetes cluster:
+
+~~~sh
+kubectl create namespace hono
+~~~
+
+### Helm 3
+
+The following command deploys Hono to the target name space using Helm 3
+
+~~~sh
+# in directory: eclipse-hono-$VERSION
+helm install hono eclipse-hono/ --dependency-update --namespace hono
+~~~
+
+### Helm 2
+
+The following command deploys Hono to the target name space using Helm 2
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
 helm install --dep-up --name hono --namespace hono eclipse-hono/
 ~~~
 
-This will create namespace `hono` in the cluster and install all the components to that namespace. The name of the Helm release will be `hono`.
-
-The status of the deployment can be checked using any of the following commands:
-
-~~~sh
-helm list
-helm status hono
-helm get hono
-~~~
-
 {{% note title="Kubernetes 1.16" %}}
-Deploying the Hono chart to Kubernetes 1.16 or later requires Helm version 2.15 or later. Earlier versions [lack the ability to install
-the Tiller component to Kubernetes 1.16](https://github.com/helm/helm/issues/6374). Note that deploying the Hono chart using the recently
-release Helm 3 has not been tested yet.
+Deploying the Hono chart to Kubernetes 1.16 or later requires Helm version 2.15 or later.
+Earlier versions [lack the ability to install the Tiller component to Kubernetes 1.16]
+(https://github.com/helm/helm/issues/6374).
 
-If using a recent version of Helm 2 is not an option, a workaround is to either deploy to an earlier version of Kubernetes
+If using a recent version of Helm 2 or Helm 3 (recommended) is not an option,
+a workaround is to either deploy to an earlier version of Kubernetes
 or deploy using the *kubectl* command as described in the next section.
 {{% /note %}}
-
-### Deploying Hono using kubectl
 
 In cases where installation of Helm's Tiller service into the cluster is not an option, the Kubernetes resource descriptors created by Helm can be deployed manually using the `kubectl` command line tool.
 
@@ -91,7 +103,6 @@ This will create a `resources/eclipse-hono` folder containing all the resource d
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
-kubectl create namespace hono
 kubectl config set-context $(kubectl config current-context) --namespace=hono
 kubectl apply -f ./resources -R
 ~~~
@@ -158,6 +169,16 @@ kubectl port-forward service/hono-grafana 3000 -n hono
 Then the dashboard can be opened by pointing your browser to `http://localhost:3000` using credentials `admin:admin`.
 
 ## Undeploying Hono
+
+### Helm 3
+
+A Hono instance that has been deployed using Helm 3 can be undeployed by running
+
+~~~sh
+helm uninstall hono -n hono
+~~~
+
+### Helm 2
 
 A Hono instance that has been deployed using Helm's Tiller service can be undeployed by running
 

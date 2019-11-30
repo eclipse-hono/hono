@@ -7,6 +7,9 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The example deployment now also works with Kubernetes 1.16 using Helm 2.15 and later.
+* The Hono chart can now also be deployed using the recently released Helm 3. In fact,
+  Helm 3 is now the recommended way for deploying Hono as it doesn't require installation
+  of any Helm specific components to the Kubernetes cluster.
 
 ## 1.0.1
 
