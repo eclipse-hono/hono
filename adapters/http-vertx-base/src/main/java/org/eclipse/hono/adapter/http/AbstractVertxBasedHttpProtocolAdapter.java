@@ -650,7 +650,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, currentSpan.context());
         final Future<TenantObject> tenantValidationTracker = tenantTracker
                 .compose(tenantObject -> CompositeFuture
-                        .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payloadSize))
+                        .all(isAdapterEnabled(tenantObject),
+                                checkMessageLimit(tenantObject, payloadSize, currentSpan.context()))
                         .map(success -> tenantObject));
 
         // we only need to consider TTD if the device and tenant are enabled and the adapter
@@ -981,7 +982,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (isCommandValid(command, currentSpan)) {
 
                 if (requestProcessed.compareAndSet(false, true)) {
-                    checkMessageLimit(tenantObject, command.getPayloadSize())
+                    checkMessageLimit(tenantObject, command.getPayloadSize(), currentSpan.context())
                     .setHandler(result -> {
                         if (result.succeeded()) {
                             addMicrometerSample(commandContext, commandSample);
@@ -1204,7 +1205,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             currentSpan.context());
                     final Future<Void> tenantValidationTracker = CompositeFuture
                             .all(isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), payload.length()))
+                                    checkMessageLimit(tenantTracker.result(), payload.length(), currentSpan.context()))
                             .map(ok -> null);
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)

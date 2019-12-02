@@ -183,7 +183,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
         resourceLimitChecks = mock(ResourceLimitChecks.class);
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
     }
 
@@ -831,7 +831,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final RoutingContext routingContext = newRoutingContext(payload);
 
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device that belongs to "my-tenant" publishes a telemetry message
         adapter.uploadTelemetryMessage(routingContext, "my-tenant", "the-device", payload, "application/text");
@@ -868,7 +868,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final RoutingContext routingContext = newRoutingContext(payload);
 
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device that belongs to "my-tenant" publishes an event message
         adapter.uploadEventMessage(routingContext, "my-tenant", "the-device", payload, "application/text");
@@ -902,7 +902,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         givenACommandResponseSenderForOutcome(outcome.future());
 
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device publishes a command response
         final Buffer payload = Buffer.buffer("some payload");
