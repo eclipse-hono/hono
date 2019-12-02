@@ -39,6 +39,10 @@ dataGridExample:
   # imageName contains the name (including tag)
   # of the container image to use for the example data grid.
   imageName: ${infinispan.image.name}
+  # authUsername contains the name of the user that is authorized to connect to the example data grid.
+  authUsername: "hono"
+  # authPassword contains the secret of the user that is authorized to connect to the example data grid
+  authPassword: "hono-secret"
 
 
 jaegerBackendExample:

@@ -29,9 +29,9 @@ spec:
         - name: JDK_JAVA_OPTIONS
           value: "-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80"
         - name: APP_USER
-          value: hono
+          value: {{ .Values.dataGridExample.authUsername | quote }}
         - name: APP_PASS
-          value: hono-secret
+          value: {{ .Values.dataGridExample.authPassword | quote }}
         image: {{ default "jboss/infinispan-server:9.4.11.Final" .Values.dataGridExample.imageName | quote }}
         imagePullPolicy: IfNotPresent
         name: hono-data-grid
