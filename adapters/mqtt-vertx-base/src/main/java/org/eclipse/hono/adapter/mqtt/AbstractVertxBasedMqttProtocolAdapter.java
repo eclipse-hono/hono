@@ -514,7 +514,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         getTenantConfiguration(authenticatedDevice.getTenantId(), currentSpan.context())
                             .compose(tenantObj -> CompositeFuture.all(
                                     isAdapterEnabled(tenantObj),
-                                    checkConnectionLimit(tenantObj))),
+                                    checkConnectionLimit(tenantObj, currentSpan.context()))),
                         checkDeviceRegistration(authenticatedDevice, currentSpan.context()))
                         .map(ok -> authenticatedDevice))
                 .compose(authenticatedDevice -> createLinks(authenticatedDevice, currentSpan))
@@ -778,11 +778,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                             "malformed command message"));
                 }
-                return checkMessageLimit(tenantObject, command.getPayloadSize());
+                return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
             }).compose(success -> {
                 addMicrometerSample(commandContext, timer);
-                onCommandReceived(tenantTracker.result(), mqttEndpoint, sub, commandContext,
-                        cmdHandler);
+                onCommandReceived(tenantTracker.result(), mqttEndpoint, sub, commandContext, cmdHandler);
                 return Future.succeededFuture();
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
@@ -1095,7 +1094,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
             final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
                                     isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), ctx.message().payload().length()))
+                                    checkMessageLimit(tenantTracker.result(), ctx.message().payload().length(), currentSpan.context()))
                                     .map(success -> tenantTracker.result());
 
         return CompositeFuture.all(tenantTracker, commandResponseTracker)
@@ -1159,7 +1158,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 ctx.authenticatedDevice(), currentSpan.context());
         final Future<?> tenantValidationTracker = CompositeFuture.all(
                 isAdapterEnabled(tenantObject),
-                checkMessageLimit(tenantObject, payload.length()));
+                checkMessageLimit(tenantObject, payload.length(), currentSpan.context()));
 
         return CompositeFuture.all(tokenTracker, tenantValidationTracker, senderTracker).compose(ok -> {
 

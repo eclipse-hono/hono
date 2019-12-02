@@ -190,9 +190,9 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         authHandler = mock(AuthHandler.class);
         resourceLimitChecks = mock(ResourceLimitChecks.class);
-        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class)))
+        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
 
         tenantObjectWithAuthIdProvider = mock(ExecutionContextTenantAndAuthIdProvider.class);
@@ -1102,7 +1102,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         // WHEN a device tries to establish a connection
         when(authHandler.authenticateDevice(any(MqttContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
-        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class)))
+        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
@@ -1126,7 +1126,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 getMqttServer(false));
         forceClientMocksToConnected();
 
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final DownstreamSender sender = mock(DownstreamSender.class);
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString()))
@@ -1171,7 +1171,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 getMqttServer(false));
         forceClientMocksToConnected();
 
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final DownstreamSender sender = mock(DownstreamSender.class);
         when(downstreamSenderFactory.getOrCreateEventSender(anyString()))
@@ -1217,7 +1217,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         forceClientMocksToConnected();
 
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
 
         // WHEN a device of "tenant" publishes a command response message
