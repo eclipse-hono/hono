@@ -172,7 +172,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             .withTag(Tags.COMPONENT.getKey(), getTypeName())
                             .start(),
                         connectionLimitManager,
-                        this::checkConnectionLimit,
+                        (tenantConfig, spanContext) -> checkConnectionLimit(tenantConfig, spanContext),
                         new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
                         new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
                         (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
@@ -800,7 +800,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                             "sender link is not open"));
                 }
-                return checkMessageLimit(tenantObject, command.getPayloadSize());
+                return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
             }).compose(success -> {
                 onCommandReceived(tenantTracker.result(), sender, commandContext);
                 return Future.succeededFuture();
@@ -983,10 +983,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Future<TenantObject> tenantTracker = getTenantConfiguration(resource.getTenantId(),
                 currentSpan.context());
         final Future<TenantObject> tenantValidationTracker = tenantTracker
-                        .compose(tenantObject -> CompositeFuture
-                                .all(isAdapterEnabled(tenantObject),
-                                        checkMessageLimit(tenantObject, context.getPayloadSize()))
-                                .map(success -> tenantObject));
+                .compose(tenantObject -> CompositeFuture
+                        .all(isAdapterEnabled(tenantObject),
+                                checkMessageLimit(tenantObject, context.getPayloadSize(), currentSpan.context()))
+                        .map(success -> tenantObject));
 
         return CompositeFuture.all(tenantValidationTracker, tokenFuture, senderFuture)
                 .compose(ok -> {
@@ -1073,7 +1073,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             resource.getResourceId(), context.getAuthenticatedDevice(), currentSpan.context());
                     final Future<TenantObject> tenantValidationTracker = CompositeFuture
                             .all(isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), context.getPayloadSize()))
+                                    checkMessageLimit(tenantTracker.result(), context.getPayloadSize(),
+                                            currentSpan.context()))
                             .map(success -> tenantTracker.result());
 
                     return CompositeFuture.all(tenantValidationTracker, tokenFuture)
