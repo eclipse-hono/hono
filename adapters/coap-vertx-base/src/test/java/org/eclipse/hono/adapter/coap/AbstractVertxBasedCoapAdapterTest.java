@@ -151,7 +151,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
     }
 
@@ -534,7 +534,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
 
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
 
         // WHEN a device publishes a telemetry message
@@ -573,7 +573,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
 
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
 
         // WHEN a device publishes an event message

@@ -625,7 +625,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             final Future<TenantObject> tenantTracker = getTenantConfiguration(device.getTenantId(), currentSpan.context());
             final Future<TenantObject> tenantValidationTracker = tenantTracker
                     .compose(tenantObject -> CompositeFuture
-                            .all(isAdapterEnabled(tenantObject), checkMessageLimit(tenantObject, payload.length()))
+                            .all(isAdapterEnabled(tenantObject),
+                                    checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
                             .map(success -> tenantObject));
             return CompositeFuture.all(tokenTracker, senderTracker, tenantValidationTracker).compose(ok -> {
                     final DownstreamSender sender = senderTracker.result();
