@@ -179,7 +179,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
 
         config = new AmqpAdapterProperties();
@@ -864,7 +864,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
@@ -909,7 +909,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device uploads telemetry data to the adapter (and wants to be notified of failure)
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
@@ -955,7 +955,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // which is enabled for a tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
         // WHEN the message limit exceeds
-        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong()))
+        when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device uploads a command response to the adapter
         final String replyToAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID,

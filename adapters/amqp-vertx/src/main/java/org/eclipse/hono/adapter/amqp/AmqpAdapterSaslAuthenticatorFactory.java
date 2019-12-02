@@ -31,6 +31,7 @@ import javax.net.ssl.SSLSession;
 import javax.security.auth.login.CredentialException;
 import javax.security.auth.x500.X500Principal;
 
+import io.opentracing.SpanContext;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
@@ -80,11 +81,51 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     private final TenantClientFactory tenantClientFactory;
     private final Supplier<Span> spanFactory;
     private final ConnectionLimitManager adapterConnectionLimit;
-    private final Function<TenantObject, Future<Void>> tenantConnectionLimit;
+    private final BiFunction<TenantObject, SpanContext, Future<Void>> tenantConnectionLimit;
     private final DeviceCertificateValidator certValidator;
     private final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
     private final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler;
+
+    /**
+     * Creates a new SASL authenticator factory for authentication providers.
+     *
+     * @param tenantClientFactory The factory to use for creating a Tenant service client.
+     * @param config The protocol adapter configuration object.
+     * @param spanFactory The factory to use for creating and starting an OpenTracing span to
+     *                    trace the authentication of the device.
+     * @param adapterConnectionLimit The adapter level connection limit to enforce.
+     * @param tenantConnectionLimit The tenant level connection limit to enforce. The function must return
+     *                              a succeeded future if the connection limit has not been reached yet.
+     * @param usernamePasswordAuthProvider The authentication provider to use for validating device credentials.
+     *                                     The given provider should support validation of credentials with a
+     *                                     username containing the device's tenant ({@code auth-id@TENANT}) if the
+     *                                     protocol adapter configuration's <em>isSingleTenant</em> method returns
+     *                                     {@code false}.
+     * @param clientCertAuthProvider The authentication provider to use for validating client certificates.
+     * @param preAuthenticationHandler An optional handler that will be invoked after the SASL response has been
+     *                                 received and before credentials get verified. May be {@code null}.
+     * @throws NullPointerException if any of the parameters other than the authentication providers are {@code null}.
+     * @deprecated Use {@link #AmqpAdapterSaslAuthenticatorFactory(TenantClientFactory, ProtocolAdapterProperties,
+     *                         Supplier, ConnectionLimitManager, BiFunction, HonoClientBasedAuthProvider,
+     *                         HonoClientBasedAuthProvider, BiFunction)} instead.
+     */
+    @Deprecated
+    public AmqpAdapterSaslAuthenticatorFactory(
+            final TenantClientFactory tenantClientFactory,
+            final ProtocolAdapterProperties config,
+            final Supplier<Span> spanFactory,
+            final ConnectionLimitManager adapterConnectionLimit,
+            final Function<TenantObject, Future<Void>> tenantConnectionLimit,
+            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider,
+            final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider,
+            final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler) {
+
+        this(tenantClientFactory, config, spanFactory, adapterConnectionLimit,
+                (tenantObject, spanContext) -> Objects.requireNonNull(tenantConnectionLimit).apply(tenantObject),
+                usernamePasswordAuthProvider,
+                clientCertAuthProvider, preAuthenticationHandler);
+    }
 
     /**
      * Creates a new SASL authenticator factory for authentication providers.
@@ -111,7 +152,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             final ProtocolAdapterProperties config,
             final Supplier<Span> spanFactory,
             final ConnectionLimitManager adapterConnectionLimit,
-            final Function<TenantObject, Future<Void>> tenantConnectionLimit,
+            final BiFunction<TenantObject, SpanContext, Future<Void>> tenantConnectionLimit,
             final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider,
             final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider,
             final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler) {
@@ -126,7 +167,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
         this.clientCertAuthProvider = clientCertAuthProvider;
         this.preAuthenticationHandler = preAuthenticationHandler;
     }
-
     @Override
     public ProtonSaslAuthenticator create() {
         return new AmqpAdapterSaslAuthenticator(spanFactory.get());
@@ -306,7 +346,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             return getTenantObject(credentials.getTenantId())
                     .compose(tenant -> CompositeFuture.all(
                                 checkTenantIsEnabled(tenant),
-                                tenantConnectionLimit.apply(tenant)))
+                                tenantConnectionLimit.apply(tenant, currentSpan.context())))
                     .compose(ok -> {
                         final Promise<DeviceUser> authResult = Promise.promise();
                         usernamePasswordAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
@@ -331,7 +371,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             return getTenantObject(deviceCert.getIssuerX500Principal())
                     .compose(tenant -> CompositeFuture.all(
                             checkTenantIsEnabled(tenant),
-                            tenantConnectionLimit.apply(tenant)).map(ok -> tenant))
+                            tenantConnectionLimit.apply(tenant, currentSpan.context())).map(ok -> tenant))
                     .compose(tenant -> {
                         final Set<TrustAnchor> trustAnchors = tenant.getTrustAnchors();
                         if (trustAnchors.isEmpty()) {

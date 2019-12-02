@@ -23,7 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.engine.Record;
@@ -135,8 +135,10 @@ public class AmqpAdapterSaslAuthenticatorFactoryTest {
     public void testHandshakeFailsIfTenantLevelConnectionLimitIsExceeded() {
 
         // GIVEN a device belonging to a tenant for which the connection limit has been reached
-        final Function<TenantObject, Future<Void>> tenantConnectionLimit = tenant -> Future.failedFuture(
-                new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "maximum number of connections exceeded"));
+        final BiFunction<TenantObject, SpanContext, Future<Void>> tenantConnectionLimit = (tenant,
+                spanContext) -> Future.failedFuture(
+                        new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                                "maximum number of connections exceeded"));
         final Buffer credentials = getPlainCredentials("sensor1@tenant", "secret");
 
         // WHEN the device starts a SASL PLAIN handshake
@@ -178,7 +180,8 @@ public class AmqpAdapterSaslAuthenticatorFactoryTest {
         // WHEN the device starts a SASL PLAIN handshake with an adapter
         // whose connection limit has been reached
         when(adapterConnectionLimit.isLimitExceeded()).thenReturn(Boolean.TRUE);
-        final Function<TenantObject, Future<Void>> tenantConnectionLimit = tenant -> Future.succeededFuture();
+        final BiFunction<TenantObject, SpanContext, Future<Void>> tenantConnectionLimit = (tenant,
+                spanContext) -> Future.succeededFuture();
         final AmqpAdapterSaslAuthenticatorFactory factory = new AmqpAdapterSaslAuthenticatorFactory(
                 tenantClientFactory,
                 props,
