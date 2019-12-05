@@ -222,16 +222,16 @@ public class ServerConfig extends AbstractConfig {
     /**
      * Sets whether the server should support Server Name Indication for TLS connections.
      *
-     * @param sni If the server should use SNI.
+     * @param sni {@code true} if the server should support SNI.
      */
     public final void setSni(final boolean sni) {
         this.sni = sni;
     }
 
     /**
-     * Whether the server supports Server Name Indication for TLS connections.
+     * Checks if the server supports Server Name Indication for TLS connections.
      *
-     * @return {@code true} If the server support SNI.
+     * @return {@code true} if the server supports SNI.
      */
     public final boolean isSni() {
         return this.sni;

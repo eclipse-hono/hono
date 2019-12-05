@@ -127,44 +127,6 @@ In order to address this problem, the Netty networking library that is used in H
 
 The tcnative module comes in several flavors, corresponding to the way that the OpenSSL library has been linked in. The statically linked versions include a specific version of OpenSSL (or [BoringSSL](https://boringssl.googlesource.com/) for that matter) and is therefore most easy to use on supported platforms, regardless of whether another version of OpenSSL is already installed or not. In contrast, the dynamically linked variants depend on a particular version of OpenSSL being already installed on the operating system. Both approaches have their pros and cons and Hono therefore does not include tcnative in its Docker images by default, i.e. Hono's services will use the JVM's default SSL engine by default.
 
-## Server Name Indication (SNI)
-
-How Hono project is aimed to connect large number of devices in a secure way using primarily TLS. SNI, [TLS extension: server_name](https://tools.ietf.org/html/rfc6066#section-3), can be used to highly scale TLS connections.
-
-The most interesting use cases are Hono protocols adapters, please refer to their TLS specific configuration. 
-The use cases, when we need to serve multiple certificates can be differs, for example some of them: 
-
-* To ensure scalability on connecting large number of devices, Hono platform can be accessible via different DNS domains or subdomains.
-* Public Key Infrastructure(PKI) for your IoT devices can have many trust stores.
-* Specific tenant TLS requirements.           
-
-Assuming that you have one of use cases that require SNI, the following steps are necessary to enable on Hono protocols adapters TLS SNI:
-
-* Certificate generation 
-
-Specific Hono protocol adapter should be configured to use key store, for example for MQTT adapter we have `--hono.mqtt.keyStorePath` for more info please refer to the specific protocol adapter configuration. 
-The key store can be only JKS or P12 format. Please note, that PEM format is not a key store and in this case PEM format will not work.
-The Common Name (CN) or SAN DNS (Subject Alternative Name with DNS), of yours certificate that are stored in key store should to do an exact match or a wildcard name match with SNI name requested by the IoT device,
-for more info please refer to [Vert.x Server name Indication (SNI)](https://vertx.io/docs/vertx-core/java/#_server_name_indication_sni) documentation.  
-In the most of the cases (CN) or SAN DNS in the certificate are the hosts names for which the certificate have been issued and IoT devices request SNI name as the host name on which they connecting.
-
-* Enable SNI for Hono Services
-
-To enable a Hono service for TLS with SNI we need turn `sni` boolean configuration option to `true`. For example in case of MQTT adapter the option will be `--hono.mqttp.sni=true`, 
-for more info refer to the specific protocol adapter configuration.
-
-* Testing and validation of SNI 
-
-For testing we need to be sure that your IoT device use a TLS implementation that support SNI but for simple TLS check can be used [openssl](https://www.openssl.org/):
-    
-   
-   ```sh 
-   openssl s_client -connect <Hono protocol adapter URL>:<adapter TLS port> -servername <requested SNI name>
-   ``` 
- 
-
-    
-
 ### Configuring Containers
 
 When starting up any of Hono's Docker images as a container, the JVM will look for additional jar files to include in its classpath in the container's `/opt/hono/extensions` folder. Thus, using a specific variant of tcnative is just a matter of configuring the container to mount a volume or binding a host folder at that location and putting the desired variant of tcnative into the corresponding volume or host folder.r
@@ -174,12 +136,56 @@ Assuming that the Auth Server should be run with the statically linked, BoringSS
 2. Put the jar file to a folder on the Docker host, e.g. `/tmp/tcnative`.
 3. Start the Auth Server Docker image mounting the host folder:
 
-    ```sh
-    docker run --name hono-auth-server --mount type=bind,src=/tmp/tcnative,dst=/opt/hono/extensions,ro ... eclipse/hono-service-auth
-    ```
+```sh
+docker run --name hono-auth-server --mount type=bind,src=/tmp/tcnative,dst=/opt/hono/extensions,ro ... eclipse/hono-service-auth
+```
 
 Note that the command given above does not contain the environment variables and secrets that are usually required to configure the service properly.
 
 When the Auth Server starts up, it will look for a working variant of tcnative on its classpath and (if found) use it for establishing TLS connections. The service's log file will indicate whether the JVM's default SSL engine or OpenSSL is used.
 
 Using a Docker *volume* instead of a *bind mount* works the same way but requires the use of `volume` as the *type* of the `--mount` parameter. Please refer to the [Docker reference documentation](https://docs.docker.com/edge/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems) for details.
+
+## Server Name Indication (SNI)
+
+[Server Name Indication](https://tools.ietf.org/html/rfc6066#section-3) can be used to indicate to a server the host name that the client wants to
+connect to as part of the TLS handshake. This is useful in order to be able to host multiple *virtual* servers on a single network address.
+In particular, SNI allows server components to select a server certificate that matches the domain name indicated by the client using SNI.
+
+Hono's protocol adapters support *virtual* servers by means of SNI as described above. Devices can then connect to a protocol adapter using any one
+of the configured *virtual* domain names.
+
+The following steps a re necessary in order to configure the protocol adapters with multiple *virtual* servers:
+
+1. Create Server Certificate(s)
+
+   When a device establishes a connection to one of Hono's protocol adapters using one of its *virtual* domain names, then it includes the domain name in
+   its TLS *hello* message by means of the SNI extension. The server can then use this information to determine the matching server certificate and
+   corresponding private key that is required to perform the TLS handshake.
+
+   It is therefore necessary to create a private key and certificate for each *virtual* server to be hosted.
+   The *virtual* server's domain name needs to be added to the certificate's *Subject Alternative Name* (SAN) list in order for Hono to be able to
+   determine the key/certificate pair to use for the TLS handshake with the device.
+   Please refer to the [vert.x SNI guide](https://vertx.io/docs/vertx-core/java/#_server_name_indication_sni) for details on how this works under the hood.
+
+   Hono's protocol adapters then need to be configured with the server certificates and keys. In order to do so, the certificates and corresponding private
+   keys need to be added to a *key store*. Hono supports the *JKS* and *PKCS12* key store formats for that purpose.
+   Once the key store has been created, Hono's protocol adapters need to be configured with the path to the key store by means of the adapters'
+   `KEY_STORE_PATH` configuration variable. Please refer to the [protocol adapter admin guides]({{< relref "admin-guide" >}}) for details on how to
+   configure the key store path.
+
+2. Enable SNI for Hono's Protocol Adapters
+
+   Hono's protocol adapters can be configured to support SNI by means of the `SNI` configuration variable. Please refer to the
+   [protocol adapter admin guides]({{< relref "admin-guide" >}}) for details on how to set this variable.
+
+3. Verify Configuration
+
+   The setup can be verified by means of the command line tools that are part of [OpenSSL](https://www.openssl.org/).
+   Assuming that the MQTT protocol adapter's IP address is `10.100.84.23`, its secure endpoint is bound to port 31884 and it has
+   been configured with a certificate using domain name *my-hono.eclipse.org*, then the following command can be used to test
+   if a TLS secured connection with the adapter using that virtual host name can be established successfully:
+
+   ```sh 
+   openssl s_client -connect 10.100.84.23:31884 -servername my-hono.eclipse.org
+   ```
