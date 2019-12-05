@@ -11,6 +11,10 @@ title = "Release Notes"
 * The (experimental) CoAP adapter now supports tracking of request processing using
   OpenTracing.
 * A lorawan provider has been added for the loriot network provider.
+* Hono's protocol adapters now support Server Name Indication in order
+  to allow devices to establish a TLS connection with adapters using a tenant specific
+  server certificate and host name. Please refer to the *Secure Communication* admin
+  guide for details.
 
 ### Fixes & Enhancements
 
