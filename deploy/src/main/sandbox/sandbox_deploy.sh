@@ -74,7 +74,7 @@ docker service create $CREATE_OPTIONS --name grafana -p 3000:3000 \
   --env GF_AUTH_DISABLE_LOGIN_FORM=true \
   --env GF_AUTH_ANONYMOUS_ENABLED=true \
   --env GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer \
-  grafana/grafana:${grafana.version}
+  grafana/grafana:6.3.5
 echo ... done
 
 echo
