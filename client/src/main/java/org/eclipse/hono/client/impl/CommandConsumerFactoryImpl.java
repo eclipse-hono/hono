@@ -378,7 +378,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                     }
                     final Command command = Command.from(message, tenantId, deviceId);
                     final SpanContext spanContext = TracingHelper.extractSpanContext(connection.getTracer(), message);
-                    final Span currentSpan = CommandConsumer.createSpan("delegate and send command", tenantId, deviceId, connection.getTracer(), spanContext);
+                    final Span currentSpan = CommandConsumer.createSpan("delegate and send command", tenantId, deviceId, null, connection.getTracer(), spanContext);
                     CommandConsumer.logReceivedCommandToSpan(command, currentSpan);
                     final CommandContext commandContext = CommandContext.from(command, originalMessageDelivery, receiverRefHolder.get(), currentSpan);
                     if (command.isValid()) {

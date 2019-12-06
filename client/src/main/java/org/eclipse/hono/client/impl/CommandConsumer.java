@@ -49,21 +49,26 @@ public abstract class CommandConsumer extends AbstractConsumer {
      * @param operationName The name of the operation.
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
+     * @param gatewayId The identifier of the gateway that shall receive commands for the device
+     *                  or {@code null} if no gateway is involved.
      * @param tracer The tracer instance.
      * @param spanContext Existing span context.
      * @return The created and started span.
      */
-    public static Span createSpan(final String operationName, final String tenantId,
-            final String deviceId, final Tracer tracer, final SpanContext spanContext) {
+    public static Span createSpan(final String operationName, final String tenantId, final String deviceId,
+            final String gatewayId, final Tracer tracer, final SpanContext spanContext) {
         // we set the component tag to the class name because we have no access to
         // the name of the enclosing component we are running in
-        return TracingHelper.buildChildSpan(tracer, spanContext, operationName)
+        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), CommandConsumer.class.getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
-                .start();
+                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        if (gatewayId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+        }
+        return spanBuilder.start();
     }
 
     /**
@@ -77,6 +82,7 @@ public abstract class CommandConsumer extends AbstractConsumer {
             final Map<String, String> items = new HashMap<>(4);
             items.put(Fields.EVENT, "received command message");
             TracingHelper.TAG_CORRELATION_ID.set(span, command.getCorrelationId());
+            items.put("to", command.getCommandMessage().getAddress());
             items.put("reply-to", command.getCommandMessage().getReplyTo());
             items.put("name", command.getName());
             items.put("content-type", command.getContentType());
