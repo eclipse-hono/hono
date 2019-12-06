@@ -46,7 +46,7 @@ docker service create $CREATE_OPTIONS --name ${prometheus.service} \
   --limit-memory 256m \
   --secret prometheus.yml \
   --entrypoint "/bin/prometheus" \
-  prom/prometheus:v2.3.1 \
+  prom/prometheus:v2.13.1 \
   --config.file=/run/secrets/prometheus.yml \
   --storage.tsdb.path=/prometheus \
   --storage.tsdb.retention=2h
