@@ -356,7 +356,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Gets the CoAP network configuration for the secure endpoint.
-     * <p>
      * <ol>
      * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
@@ -374,7 +373,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Gets the CoAP network configuration for the insecure endpoint.
-     * <p>
      * <ol>
      * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
