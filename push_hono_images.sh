@@ -14,15 +14,16 @@
 
 TAG=$1
 CR=$2
-IMAGES="hono-adapter-http-vertx \
-       hono-adapter-mqtt-vertx \
-       hono-adapter-kura \
-       hono-adapter-amqp-vertx \
-       hono-adapter-lora-vertx \
-       hono-adapter-sigfox-vertx \
-       hono-service-auth \
-       hono-service-device-connection \
-       hono-service-device-registry"
+IMAGES="hono-adapter-amqp-vertx \
+        hono-adapter-coap-vertx \
+        hono-adapter-http-vertx \
+        hono-adapter-kura \
+        hono-adapter-lora-vertx \
+        hono-adapter-mqtt-vertx \
+        hono-adapter-sigfox-vertx \
+        hono-service-auth \
+        hono-service-device-connection \
+        hono-service-device-registry"
 
 if [ -n "$TAG" ]
 then
