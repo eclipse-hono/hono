@@ -75,8 +75,6 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(rawMessage);
 
         final Span span = startSpan(parent, rawMessage);
-        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, MessageHelper.getTenantId(rawMessage));
-        span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
 
         return runSendAndWaitForOutcomeOnContext(rawMessage, span);
@@ -180,8 +178,20 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(command);
         final String replyToAddress = command.isOneWay() ? null
                 : String.format("%s/%s/%s", command.getReplyToEndpoint(), command.getTenant(), command.getReplyToId());
-        return sendAndWaitForOutcome(createDelegatedCommandMessage(command.getCommandMessage(), replyToAddress),
-                spanContext);
+
+        final Message rawMessage = createDelegatedCommandMessage(command.getCommandMessage(), replyToAddress);
+
+        final Span span = startSpan(spanContext, rawMessage);
+        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant());
+        if (command.isTargetedAtGateway()) {
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getOriginalDeviceId());
+            span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, command.getDeviceId());
+        } else {
+            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getDeviceId());
+        }
+        TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
+
+        return runSendAndWaitForOutcomeOnContext(rawMessage, span);
     }
 
     /**

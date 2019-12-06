@@ -144,7 +144,7 @@ public final class DestinationCommandConsumer extends CommandConsumer {
         return receiver.isOpen() && !closedCalled.get();
     }
 
-    private void handleCommandMessage(final Message msg,  final ProtonDelivery delivery) {
+    private void handleCommandMessage(final Message msg, final ProtonDelivery delivery) {
         // command could have been mapped to a gateway, but the original address stays the same in the message address in that case
         // (the case of the address being null means that the message was sent by an application to the legacy control endpoint)
         final String originalDeviceId = msg.getAddress() != null
@@ -157,8 +157,10 @@ public final class DestinationCommandConsumer extends CommandConsumer {
             final Tracer tracer = connection.getTracer();
             // try to extract Span context from incoming message
             final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
-            final Span currentSpan = createSpan("send command", tenantId, gatewayOrDeviceId,
-                    tracer, spanContext);
+            final String targetDeviceId = originalDeviceId != null ? originalDeviceId : gatewayOrDeviceId;
+            final String gatewayId = gatewayOrDeviceId.equals(targetDeviceId) ? null : gatewayOrDeviceId;
+            final Span currentSpan = createSpan("send command", tenantId, targetDeviceId,
+                    gatewayId, tracer, spanContext);
             logReceivedCommandToSpan(command, currentSpan);
             commandHandler.handleCommand(CommandContext.from(command, delivery, this.receiver, currentSpan));
         } else {
