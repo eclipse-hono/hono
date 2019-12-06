@@ -275,7 +275,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         dtlsConfig.setServerOnly(true);
         dtlsConfig.setRecommendedCipherSuitesOnly(true);
         dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
-        dtlsConfig.setConnectionThreadCount(getConfig().getConnectorThreads());
         dtlsConfig.setAddress(
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
@@ -294,9 +293,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         .collect(Collectors.joining(", "));
                 log.info("adding secure endpoint supporting ciphers: {}", ciphers);
             }
+            final DTLSConnector dtlsConnector = new DTLSConnector(dtlsConnectorConfig);
             final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
             builder.setNetworkConfig(config);
-            builder.setConnector(new DTLSConnector(dtlsConnectorConfig));
+            builder.setConnector(dtlsConnector);
             this.secureEndpoint = builder.build();
             startingServer.addEndpoint(this.secureEndpoint);
             return Future.succeededFuture(startingServer);
