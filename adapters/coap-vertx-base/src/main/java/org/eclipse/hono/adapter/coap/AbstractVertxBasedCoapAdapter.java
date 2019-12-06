@@ -21,7 +21,6 @@ import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -41,7 +40,6 @@ import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
-import org.eclipse.californium.scandium.dtls.cipher.CipherSuite;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -243,9 +241,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         resourcesToAdd.clear();
     }
 
-    // currently not used because we do not support certificate based ciphers for the time being
-    @SuppressWarnings("unused")
-    private void addIdentity(final DtlsConnectorConfig.Builder dtlsConfig, final List<CipherSuite> supportedCipherSuites) {
+    private void addIdentity(final DtlsConnectorConfig.Builder dtlsConfig) {
 
         final KeyLoader keyLoader = KeyLoader.fromFiles(vertx, getConfig().getKeyPath(), getConfig().getCertPath());
         final PrivateKey pk = keyLoader.getPrivateKey();
@@ -253,6 +249,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         if (pk != null && certChain != null) {
             if (pk.getAlgorithm().equals("EC")) {
                 // Californium's cipher suites support ECC based keys only
+                log.info("using private key [{}] and certificate [{}] as server identity",
+                        getConfig().getKeyPath(), getConfig().getCertPath());
                 dtlsConfig.setIdentity(pk, certChain);
             } else {
                 log.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
@@ -274,6 +272,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 });
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+        dtlsConfig.setServerOnly(true);
         dtlsConfig.setRecommendedCipherSuitesOnly(true);
         dtlsConfig.setClientAuthenticationRequired(getConfig().isAuthenticationRequired());
         dtlsConfig.setConnectionThreadCount(getConfig().getConnectorThreads());
@@ -281,6 +280,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
         dtlsConfig.setPskStore(store);
+        if (getConfig().getMaxConnections() > 0) {
+            dtlsConfig.setMaxConnections(getConfig().getMaxConnections());
+        }
+        addIdentity(dtlsConfig);
 
         try {
             final DtlsConnectorConfig dtlsConnectorConfig = dtlsConfig.build();
