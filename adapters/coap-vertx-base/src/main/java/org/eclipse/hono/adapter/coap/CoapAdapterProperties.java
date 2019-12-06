@@ -26,14 +26,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The default regular expression to split the identity into authority and tenant.
      */
     public static final String DEFAULT_ID_SPLIT_REGEX = "@";
-    /**
-     * The default minimum size of device cache.
-     */
-    public static final int DEFAULT_DEVICE_CACHE_MIN_SIZE = 2000;
-    /**
-     * The default maximum size of device cache.
-     */
-    public static final long DEFAULT_DEVICE_CACHE_MAX_SIZE = 1000000L;
 
     private String idSplitRegex = DEFAULT_ID_SPLIT_REGEX;
     private String networkConfig = null;
@@ -41,8 +33,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private String insecureNetworkConfig = null;
     private int connectorThreads = 1;
     private int coapThreads = 2;
-    private int deviceCacheMinSize = DEFAULT_DEVICE_CACHE_MIN_SIZE;
-    private long deviceCacheMaxSize = DEFAULT_DEVICE_CACHE_MAX_SIZE;
 
     /**
      * Gets the regular expression used for splitting up
@@ -149,65 +139,6 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      */
     public final void setInsecureNetworkConfig(final String path) {
         this.insecureNetworkConfig = Objects.requireNonNull(path);
-    }
-
-    /**
-     * Gets the minimum size of the device cache.
-     * <p>
-     * The cache will be initialized with this size upon creation.
-     * <p>
-     * The default value is {@link #DEFAULT_DEVICE_CACHE_MIN_SIZE}.
-     * 
-     * @return The minimum number of results to keep in the cache.
-     */
-    public final int getDeviceCacheMinSize() {
-        return deviceCacheMinSize;
-    }
-
-    /**
-     * Sets the minimum size of the device cache.
-     * 
-     * @param size The minimum number of results to keep in the cache.
-     * @throws IllegalArgumentException if size is &lt; 0.
-     */
-    public final void setDeviceCacheMinSize(final int size) {
-        if (size < 0) {
-            throw new IllegalArgumentException("minimum cache size must not be negative");
-        }
-        this.deviceCacheMinSize = size;
-    }
-
-    /**
-     * Gets the maximum size of the device cache.
-     * <p>
-     * Once the maximum number of entries is reached, the cache applies an implementation specific policy for handling
-     * new entries that are put to the cache.
-     * <p>
-     * The default value is {@link #DEFAULT_DEVICE_CACHE_MAX_SIZE}.
-     * 
-     * @return The maximum number of results to keep in the cache.
-     */
-    public final long getDeviceCacheMaxSize() {
-        return deviceCacheMaxSize;
-    }
-
-    /**
-     * Sets the maximum size of the device cache.
-     * <p>
-     * Once the maximum number of entries is reached, the cache applies an implementation specific policy for handling
-     * new entries that are put to the cache.
-     * <p>
-     * Setting this property to 0 disables caching.
-     * <p>
-     * 
-     * @param size The maximum number of results to keep in the cache.
-     * @throws IllegalArgumentException if size is &lt; 0.
-     */
-    public final void setDeviceCacheMaxSize(final long size) {
-        if (size < 0) {
-            throw new IllegalArgumentException("maximum cache size must not be negative");
-        }
-        this.deviceCacheMaxSize = size;
     }
 
     /**
