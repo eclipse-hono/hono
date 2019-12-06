@@ -135,8 +135,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Gets the Micrometer used to track the processing
-     * of a command message.
+     * Gets the timer used to track the processing of a command message.
      *
      * @param ctx The command context to extract the sample from.
      * @return The sample or {@code null} if the context does not
@@ -173,7 +172,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory used for creating a client for the Tenant service.
+     * Gets the factory used for creating a client for the Tenant service.
      *
      * @return The factory.
      */
@@ -203,7 +202,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory used for creating a client for the Device Connection service.
+     * Gets the factory used for creating a client for the Device Connection service.
      *
      * @return The factory.
      */
@@ -234,7 +233,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the factory used for creating a client for the AMQP Messaging Network.
+     * Gets the factory used for creating a client for the AMQP Messaging Network.
      *
      * @return The factory.
      */
@@ -1190,7 +1189,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets Hono specific properties on an AMQP 1.0 message.
+     * Adds Hono specific properties to an AMQP 1.0 message.
      * <p>
      * This method simply delegates to {@link #addProperties(Message, ResourceIdentifier, String, TenantObject, JsonObject, Integer, Duration)}.
      * 
@@ -1226,7 +1225,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets Hono specific properties on an AMQP 1.0 message.
+     * Adds Hono specific properties to an AMQP 1.0 message.
      * <p>
      * This method simply delegates to {@link MessageHelper#addProperties(Message, ResourceIdentifier,
      * String, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}.
@@ -1299,10 +1298,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Register a liveness check procedure which succeeds if
+     * Registers a liveness check which succeeds if
      * the vert.x event loop of this protocol adapter is not blocked.
      *
-     * @param handler The health check handler to register the checks with.
      * @see #registerEventLoopBlockedCheck(HealthCheckHandler)
      */
     @Override
@@ -1311,13 +1309,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Trigger the creation of a <em>connected</em> event.
+     * Triggers the creation of a <em>connected</em> event.
      * 
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
      * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
      *         event.
-     * @see ConnectionEventProducer
      * @see ConnectionEventProducer#connected(ConnectionEventProducer.Context, String, String, Device, JsonObject)
      */
     protected Future<?> sendConnectedEvent(final String remoteId, final Device authenticatedDevice) {
@@ -1330,13 +1327,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Trigger the creation of a <em>disconnected</em> event.
+     * Triggers the creation of a <em>disconnected</em> event.
      *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
      * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
      *         event.
-     * @see ConnectionEventProducer
      * @see ConnectionEventProducer#disconnected(ConnectionEventProducer.Context, String, String, Device, JsonObject)
      */
     protected Future<?> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice) {
@@ -1469,8 +1465,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * This method may be set as the close handler of the command consumer.
      * <p>
-     * The implementation only logs that the link was closed and does not try to reopen it. Any other functionality must be
-     * implemented by overwriting the method in a subclass.
+     * This default implementation simply logs that the link was closed and does
+     * not try to reopen it.
      *
      * @param tenant The tenant of the device for that a command may be received.
      * @param deviceId The id of the device for that a command may be received.
@@ -1486,25 +1482,30 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Registers a health check procedure which tries to run an action on the protocol adapter context.
+     * Registers a health check which tries to run an action on the protocol adapter context.
+     * <p>
      * If the protocol adapter vert.x event loop is blocked, the health check procedure will not complete
      * with OK status within the defined timeout.
      *
      * @param handler The health check handler to register the checks with.
      */
     protected void registerEventLoopBlockedCheck(final HealthCheckHandler handler) {
-        handler.register("event-loop-blocked-check", getConfig().getEventLoopBlockedCheckTimeout(), procedure -> {
-            final Context currentContext = Vertx.currentContext();
 
-            if (currentContext != context) {
-                context.runOnContext(action -> {
-                    procedure.complete(Status.OK());
+        handler.register(
+                "event-loop-blocked-check",
+                getConfig().getEventLoopBlockedCheckTimeout(),
+                procedure -> {
+                    final Context currentContext = Vertx.currentContext();
+
+                    if (currentContext != context) {
+                        context.runOnContext(action -> {
+                            procedure.complete(Status.OK());
+                        });
+                    } else {
+                        log.debug("Protocol Adapter - HealthCheck Server context match. Assume protocol adapter is alive.");
+                        procedure.complete(Status.OK());
+                    }
                 });
-            } else {
-                log.info("Protocol Adapter - HealthCheck Server context match. Assume protocol adapter is alive.");
-                procedure.complete(Status.OK());
-            }
-        });
     }
 
     /**
@@ -1555,6 +1556,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
     /**
      * Gets the manager to use for connection limits.
+     * 
      * @return The manager. May be {@code null}.
      */
     public final ConnectionLimitManager getConnectionLimitManager() {
@@ -1563,6 +1565,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the manager to use for connection limits.
+     * 
      * @param connectionLimitManager The implementation that manages the connection limit.
      */
     public final void setConnectionLimitManager(final ConnectionLimitManager connectionLimitManager) {
