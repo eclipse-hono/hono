@@ -676,7 +676,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         responseReady,
                         currentSpan));
 
-        CompositeFuture.all(senderTracker, commandConsumerTracker)
+        // "join" used here to make sure that the "commandConsumerTracker" is completed when handling
+        // a failed "senderTracker" below, allowing a contained command consumer to be closed there.
+        CompositeFuture.join(senderTracker, commandConsumerTracker)
         .compose(ok -> {
 
             final DownstreamSender sender = senderTracker.result();
