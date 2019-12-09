@@ -676,4 +676,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             });
         }
     }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Marked as final since overriding this method doesn't make sense here (command &amp; control is not
+     * supported for now).
+     */
+    @Override
+    protected final Future<Boolean> isGatewayMappingEnabled(final String tenantId, final String deviceId,
+            final Device authenticatedDevice) {
+        return Future.succeededFuture(true);
+    }
 }

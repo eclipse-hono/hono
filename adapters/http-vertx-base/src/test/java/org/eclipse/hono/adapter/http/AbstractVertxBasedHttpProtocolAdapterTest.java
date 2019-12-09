@@ -32,12 +32,14 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
+import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
@@ -61,6 +63,7 @@ import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.Before;
@@ -69,6 +72,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -83,6 +87,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -788,6 +793,116 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
+     * Verifies the behaviour of the {@link AbstractVertxBasedHttpProtocolAdapter#isGatewayMappingEnabled(String, String, Device)}
+     * method.
+     */
+    @Test
+    public void testIsGatewayMappingEnabled() {
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        final String tenantId = "tenant";
+        final String deviceId = "device";
+        final DeviceUser deviceUser = new DeviceUser(tenantId, deviceId);
+
+        // assert that gateway mapping is enabled for a tenant with standard configuration
+        assertThat(adapter.isGatewayMappingEnabled(tenantId, deviceId, deviceUser).result(), is(true));
+
+        // assert that gateway mapping is disabled for a tenant having the 'support-concurrent-gateway-device-command-requests' option set
+        givenATenantWithSupportConcurrentGatewayDeviceCommandRequestsSet();
+        assertThat(adapter.isGatewayMappingEnabled(tenantId, deviceId, deviceUser).result(), is(false));
+    }
+
+    /**
+     * Verifies that the adapter has gateway mapping disabled for a tenant with
+     * 'support-concurrent-gateway-device-command-requests' set to {@code true}.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadTelemetryWithDisabledGatewayMapping() {
+
+        // FIRST verify command consumer creation with a tenant without special configuration:
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+        givenATelemetrySenderForOutcome(Future.succeededFuture());
+
+        final DeviceConnectionClient devConClient = mock(DeviceConnectionClient.class);
+        when(devConClient.setLastKnownGatewayForDevice(anyString(), any(), any())).thenReturn(Future.succeededFuture());
+        when(deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(anyString())).thenReturn(Future.succeededFuture(devConClient));
+
+        final String tenantId = "tenant";
+        final String deviceId = "device";
+        final String gatewayId = "gw-1";
+        final DeviceUser deviceUser = new DeviceUser(tenantId, gatewayId);
+
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(gatewayId), any(Handler.class), any(Handler.class)))
+                .thenReturn(Future.succeededFuture(commandConsumer));
+
+        // and a device with a 'via' property
+        final JsonObject assertRegistrationResult = new JsonObject();
+        assertRegistrationResult.put(RegistrationConstants.FIELD_VIA, new JsonArray().add(gatewayId));
+        when(regClient.assertRegistration(anyString(), any(), any())).thenReturn(Future.succeededFuture(assertRegistrationResult));
+
+        // WHEN a device publishes a telemetry message with a TTD
+        final Buffer payload1 = Buffer.buffer("some payload");
+        final HttpServerResponse response1 = mock(HttpServerResponse.class);
+        final HttpServerRequest request1 = mock(HttpServerRequest.class);
+        when(request1.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
+        final RoutingContext ctx1 = newRoutingContext(payload1, "text/plain", request1, response1);
+        when(ctx1.user()).thenReturn(deviceUser);
+        when(ctx1.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+
+        adapter.uploadTelemetryMessage(ctx1, tenantId, deviceId);
+
+        // THEN the device receives a 202 response immediately
+        verify(response1).setStatusCode(202);
+        verify(response1).end();
+        // and the last known gateway has been set to the gateway
+        verify(devConClient).setLastKnownGatewayForDevice(eq(deviceId), eq(gatewayId), any());
+
+        // and the command consumer has been created with the gateway id, not using the method variant without the gateway id
+        verify(commandConsumerFactory).createCommandConsumer(eq(tenantId), eq(deviceId), eq(gatewayId), any(Handler.class), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class));
+
+        Mockito.clearInvocations(devConClient, commandConsumerFactory);
+        // --------------------
+        // THEN verify different command consumer creation with a tenant having the 'support-concurrent-gateway-device-command-requests' option set:
+
+        // GIVEN the adapter and device from above
+        // and a tenant for which the "support-concurrent-gateway-device-command-requests" flag is set
+        givenATenantWithSupportConcurrentGatewayDeviceCommandRequestsSet();
+
+        final Buffer payload2 = Buffer.buffer("some payload");
+        final HttpServerResponse response2 = mock(HttpServerResponse.class);
+        final HttpServerRequest request2 = mock(HttpServerRequest.class);
+        when(request2.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
+        final RoutingContext ctx2 = newRoutingContext(payload2, "text/plain", request2, response2);
+        when(ctx2.user()).thenReturn(deviceUser);
+        when(ctx2.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+
+        adapter.uploadTelemetryMessage(ctx2, tenantId, deviceId);
+
+        // THEN the device receives a 202 response immediately
+        verify(response2).setStatusCode(202);
+        verify(response2).end();
+        // and the last known gateway has been set to the device itself
+        verify(devConClient).setLastKnownGatewayForDevice(eq(deviceId), eq(deviceId), any());
+
+        // and the command consumer has been created without a gateway id, not using the method variant with the gateway id
+        verify(commandConsumerFactory).createCommandConsumer(eq(tenantId), eq(deviceId), any(Handler.class), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class), any(Handler.class));
+    }
+
+    /**
      * Verifies that the adapter does not forward an empty notification if the Command consumer
      * for the device is already in use.
      */
@@ -1114,6 +1229,22 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         return sender;
+    }
+
+    private void givenATenantWithSupportConcurrentGatewayDeviceCommandRequestsSet() {
+        when(tenantClient.get(anyString(), any())).thenAnswer(invocation -> {
+            final TenantObject tenantObject = TenantObject.from(invocation.getArgument(0), true);
+
+            final JsonObject adapterConfig = new JsonObject();
+            adapterConfig.put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE);
+            adapterConfig.put(TenantConstants.FIELD_ENABLED, true);
+            final JsonObject extConfig = new JsonObject();
+            extConfig.put(AbstractVertxBasedHttpProtocolAdapter.FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS, true);
+            adapterConfig.put(TenantConstants.FIELD_EXT, extConfig);
+
+            tenantObject.addAdapterConfiguration(adapterConfig);
+            return Future.succeededFuture(tenantObject);
+        });
     }
 
     private static void assertContextFailedWithClientError(final RoutingContext ctx, final int statusCode) {
