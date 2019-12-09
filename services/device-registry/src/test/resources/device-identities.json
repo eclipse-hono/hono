@@ -39,11 +39,51 @@
         }
       },
       {
+        "device-id": "4714",
+        "data": {
+          "enabled": true,
+          "comment": [
+            "this device connects only via the gateway indicated by the 'via' property",
+            "therefore, no credentials are registered for the device"
+          ],
+          "via": ["gw-1", "group-1"]
+        }
+      },
+      {
+        "device-id": "4715",
+        "data": {
+          "enabled": true,
+          "comment": [
+            "this device connects only via the gateway indicated by the 'via' property",
+            "therefore, no credentials are registered for the device"
+          ],
+          "via": "group-2"
+        }
+      },
+      {
         "device-id": "gw-1",
         "data": {
           "enabled": true,
           "comment": "this device is authorized to publish data on behalf of device 4712"
         }
+      },
+      {
+        "device-id": "gw-2",
+        "data": {
+          "enabled": true,
+          "comment": "this device is authorized to publish data on behalf of device 4714 and 4715"
+        },
+        "memberOf": [
+          "group-1", "group-2"
+        ]
+      },
+      {
+        "device-id": "gw-3",
+        "data": {
+          "enabled": true,
+          "comment": "this device is authorized to publish data on behalf of device 4714"
+        },
+        "memberOf": "group-1"
       }
     ]
   }

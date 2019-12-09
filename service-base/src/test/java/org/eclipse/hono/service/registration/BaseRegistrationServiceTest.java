@@ -158,6 +158,79 @@ public class BaseRegistrationServiceTest {
     }
 
     /**
+     * Verifies that a device's status cannot be asserted by a gateway that does not
+     * match the device's configured gateway group.
+     *
+     * @param ctx The vert.x unit test context.
+     */
+    @Test
+    public void testAssertDeviceRegistrationFailsForWrongGatewayGroup(final VertxTestContext ctx) {
+
+        // GIVEN a registry that contains an enabled device and two gateways:
+        // 1. the gateway that is member of the group the device is configured for.
+        // 2. another gateway which is not member of that group
+        final AbstractRegistrationService registrationService = newRegistrationService();
+
+        // WHEN trying to assert the device's registration status for the wrong gateway group
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-2", ctx.succeeding(result -> ctx.verify(() -> {
+            // THEN the assertion fails with a 403 status
+            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+            // and the response payload is empty
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
+    }
+
+
+    /**
+     * Verifies that a device's status which use a gateway group cannot be asserted by a gateway that does not
+     * have any group membership configured.
+     *
+     * @param ctx The vert.x unit test context.
+     */
+    @Test
+    public void testAssertDeviceRegistrationFailsForGatewayWithNoGroup(final VertxTestContext ctx) {
+
+        // GIVEN a registry that contains an enabled device and two gateways:
+        // 1. the gateway that is member of the group the device is configured for.
+        // 2. another gateway which is not member of that group
+        final AbstractRegistrationService registrationService = newRegistrationService();
+
+        // WHEN trying to assert the device's registration status for the wrong gateway group
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-3", ctx.succeeding(result -> ctx.verify(() -> {
+            // THEN the assertion fails with a 403 status
+            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+            // and the response payload is empty
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
+    }
+
+    /**
+     * Verifies that a device's status which use a gateway group cannot be asserted by a gateway that does not
+     * have any group membership configured.
+     *
+     * @param ctx The vert.x unit test context.
+     */
+    @Test
+    public void testAssertDeviceRegistrationFailsWithNoVia(final VertxTestContext ctx) {
+
+        // GIVEN a registry that contains an enabled device and two gateways:
+        // 1. the gateway that is member of the group the device is configured for.
+        // 2. another gateway which is not member of that group
+        final AbstractRegistrationService registrationService = newRegistrationService();
+
+        // WHEN trying to assert the device's registration status for the wrong gateway group
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4716", "gw-4", ctx.succeeding(result -> ctx.verify(() -> {
+            // THEN the assertion fails with a 403 status
+            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+            // and the response payload is empty
+            assertNull(result.getPayload());
+            ctx.completeNow();
+        })));
+    }
+
+    /**
      * Verifies that the getDevice method returns "not implemented" if the base
      * {@link AbstractRegistrationService#getDevice(String, String, Span, Handler)} implementation is used.
      *
@@ -207,6 +280,48 @@ public class BaseRegistrationServiceTest {
     }
 
     /**
+     * Verifies that a device's status can be asserted by any existing member of gateway group
+     * where the device has been configured to connect via.
+     *
+     * @param ctx The vert.x unit test context.
+     */
+    @Test
+    public void testAssertDeviceRegistrationSucceedsForExistingGroup(final VertxTestContext ctx) {
+
+        // GIVEN a registry that contains an enabled device that is configured to
+        // connect via any of two enabled gateways.
+        final AbstractRegistrationService registrationService = newRegistrationService();
+
+        final Checkpoint assertion = ctx.checkpoint(2);
+
+
+
+        // WHEN trying to assert the device's registration status for gateway 1
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-5", ctx.succeeding(result -> ctx.verify(() -> {
+            // THEN the response contains a 200 status
+            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+            final JsonObject payload = result.getPayload();
+            assertNotNull(payload);
+            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+            assertNotNull(via);
+            assertEquals(via, new JsonArray().add("gw-5").add("gw-6"));
+            assertion.flag();
+        })));
+
+        // WHEN trying to assert the device's registration status for gateway 4
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-6", ctx.succeeding(result -> ctx.verify(() -> {
+            // THEN the response contains a 200 status
+            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+            final JsonObject payload = result.getPayload();
+            assertNotNull(payload);
+            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+            assertNotNull(via);
+            assertEquals(via, new JsonArray().add("gw-5").add("gw-6"));
+            assertion.flag();
+        })));
+    }
+
+    /**
      * Verifies that a device's status can be asserted by any existing gateway
      * it has been configured to connect via.
      *
@@ -227,6 +342,9 @@ public class BaseRegistrationServiceTest {
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
+            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+            assertNotNull(via);
+            assertEquals(via, new JsonArray().add("gw-1").add("gw-4"));
             assertion.flag();
         })));
 
@@ -236,6 +354,9 @@ public class BaseRegistrationServiceTest {
             assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
             final JsonObject payload = result.getPayload();
             assertNotNull(payload);
+            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+            assertNotNull(via);
+            assertEquals(via, new JsonArray().add("gw-1").add("gw-4"));
             assertion.flag();
         })));
     }
@@ -246,11 +367,11 @@ public class BaseRegistrationServiceTest {
      * @return New BaseRegistrationService instance.
      */
     private AbstractRegistrationService newRegistrationService() {
-        return newRegistrationService(this::getDevice);
+        return newRegistrationService(this::getDevice, this::resolveGatewayGroup);
     }
 
     private AbstractRegistrationService newRegistrationService(
-            final Function<String, Future<RegistrationResult>> devices) {
+            final Function<String, Future<RegistrationResult>> devices, final Function<JsonArray, Future<JsonArray>> resolveGatewayGroups) {
 
         return new AbstractRegistrationService() {
 
@@ -260,11 +381,17 @@ public class BaseRegistrationServiceTest {
                 devices.apply(deviceId).setHandler(resultHandler);
             }
 
+            @Override
+            protected void resolveGroupMembers(final String tenantId, final JsonArray via, final Span span, final Handler<AsyncResult<JsonArray>> resultHandler) {
+                resolveGatewayGroups.apply(via).setHandler(resultHandler);
+            }
+
+
         };
     }
 
     /**
-     * Create a BaseRegistrationService where the <em>getDevice</em> method is not implemented.
+     * Create a BaseRegistrationService where the <em>getDevice</em> and resolveGroupMembers methods are not implemented.
      *
      * @return New BaseRegistrationService instance.
      */
@@ -277,6 +404,13 @@ public class BaseRegistrationServiceTest {
                     final Handler<AsyncResult<RegistrationResult>> resultHandler) {
                 resultHandler.handle(
                         Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
+            }
+
+            @Override
+            protected void resolveGroupMembers(final String tenantId, final JsonArray via, final Span span, final Handler<AsyncResult<JsonArray>> resultHandler) {
+                resultHandler.handle(
+                        Future.succeededFuture(new JsonArray())
+                );
             }
         };
     }
@@ -328,6 +462,20 @@ public class BaseRegistrationServiceTest {
                                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
                         .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw-1").add("gw-4")));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
+        } else if ("4715".equals(deviceId)) {
+            final JsonObject responsePayload = getResultPayload(
+                    "4715",
+                    new JsonObject()
+                            .put(RegistrationConstants.FIELD_ENABLED, true)
+                            .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
+                                    .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
+                            .put(RegistrationConstants.FIELD_VIA, "group-1"));
+            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
+        } else if ("4716".equals(deviceId)) {
+            final JsonObject responsePayload = getResultPayload(
+                    "4716",
+                    new JsonObject().put(RegistrationConstants.FIELD_ENABLED, true));
+            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("gw-1".equals(deviceId)) {
             final JsonObject responsePayload = getResultPayload(
                     "gw-1",
@@ -336,7 +484,9 @@ public class BaseRegistrationServiceTest {
         } else if ("gw-2".equals(deviceId)) {
             final JsonObject responsePayload = getResultPayload(
                     "gw-2",
-                    new JsonObject().put(RegistrationConstants.FIELD_ENABLED, true));
+                    new JsonObject()
+                            .put(RegistrationConstants.FIELD_ENABLED, true)
+                            .put(RegistrationConstants.FIELD_MEMBER_OF, "group-2"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("gw-3".equals(deviceId)) {
             final JsonObject responsePayload = getResultPayload(
@@ -348,8 +498,34 @@ public class BaseRegistrationServiceTest {
                     "gw-4",
                     new JsonObject().put(RegistrationConstants.FIELD_ENABLED, true));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
+        } else if ("gw-5".equals(deviceId)) {
+            final JsonObject responsePayload = getResultPayload(
+                    "gw-5",
+                    new JsonObject()
+                            .put(RegistrationConstants.FIELD_ENABLED, true)
+                            .put(RegistrationConstants.FIELD_MEMBER_OF, "group-1"));
+            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
+        } else if ("gw-6".equals(deviceId)) {
+            final JsonObject responsePayload = getResultPayload(
+                    "gw-6",
+                    new JsonObject()
+                            .put(RegistrationConstants.FIELD_ENABLED, true)
+                            .put(RegistrationConstants.FIELD_MEMBER_OF, new JsonArray().add("group-1").add(("group-2"))));
+            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else {
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
         }
+    }
+
+    private Future<JsonArray> resolveGatewayGroup(final JsonArray via) {
+        if (new JsonArray().add("group-1").equals(via)) {
+            return Future.succeededFuture(new JsonArray().add("gw-5").add("gw-6"));
+        } else {
+            return Future.succeededFuture(via);
+        }
+
+
+
+
     }
 }

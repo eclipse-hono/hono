@@ -13,16 +13,16 @@
 
 package org.eclipse.hono.service.management.device;
 
-import static org.junit.Assert.assertThat;
-
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import org.hamcrest.collection.IsEmptyIterable;
-import org.junit.jupiter.api.Test;
-
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.hamcrest.collection.IsEmptyIterable;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 
 /**
  * Verifies {@link Device}.
@@ -110,6 +110,19 @@ public class DeviceTest {
         assertThat(json, notNullValue());
         assertThat(json.getBoolean("enabled"), is(false));
         assertThat(json.getJsonObject("ext"), nullValue());
+    }
+
+    /**
+     * Test set 'via' and 'memberOf' can not be set at the same time.
+     */
+    @Test
+    public void testSetViaAndMemberOf() {
+        final var device = new Device();
+        device.setVia(Arrays.asList(new String[]{"gw-1"}));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            device.setMemberOf(Arrays.asList(new String[]{"group-1"}));
+        });
+
     }
 
 }

@@ -76,6 +76,27 @@ public abstract class AbstractRegistrationService implements RegistrationService
             Span span,
             Handler<AsyncResult<RegistrationResult>> resultHandler);
 
+
+    /**
+     * Takes the via list of a device and resolve all occurrences of a group id with the ids of the devices that are
+     * a member of that group.
+     *
+     * @param tenantId The tenant the device belongs to.
+     * @param via The via list of a device. This list may contain the ids of devices and groups.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @param resultHandler The handler to invoke with the result of the operation.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     *
+     */
+    protected abstract void resolveGroupMembers(
+            String tenantId,
+            JsonArray via,
+            Span span,
+            Handler<AsyncResult<JsonArray>> resultHandler);
+
+
     @Override
     public final void assertRegistration(
             final String tenantId,
@@ -216,20 +237,47 @@ public abstract class AbstractRegistrationService implements RegistrationService
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(deviceData);
 
-        final Object obj = deviceData.getValue(RegistrationConstants.FIELD_VIA);
-        if (obj instanceof JsonArray) {
-            // get the first matching entry
-            return ((JsonArray) obj)
-                    .stream()
-                    .filter(String.class::isInstance)
-                    .anyMatch(gatewayId::equals);
-        } else if (obj instanceof String) {
-            // compare the string directly
-            return gatewayId.equals(obj);
+        final Object via = deviceData.getValue(RegistrationConstants.FIELD_VIA);
+        final Object memberOf = gatewayData.getValue(RegistrationConstants.FIELD_MEMBER_OF);
+
+        if (via instanceof JsonArray && memberOf instanceof JsonArray) {
+            return isGatewayInVia(gatewayId, (JsonArray) via) ||
+                    isGatewayGroupInVia((JsonArray) memberOf, (JsonArray) via);
+        } else if (via instanceof String && memberOf instanceof JsonArray) {
+            return gatewayId.equals(via) || ((JsonArray) memberOf).contains(via);
+        } else if (via instanceof JsonArray && memberOf instanceof String) {
+            return isGatewayInVia(gatewayId, (JsonArray) via) || isGatewayGroupInVia((String) memberOf, (JsonArray) via);
+        } else if (via instanceof String && memberOf instanceof String) {
+            return gatewayId.equals(via) || memberOf.equals(via);
+        } else if (via instanceof JsonArray && memberOf == null) {
+            return isGatewayInVia(gatewayId, (JsonArray) via);
+        } else if (via instanceof String && memberOf == null) {
+            return gatewayId.equals(via);
         } else {
             // wrong type -> not authorized
             return false;
         }
+    }
+
+    private boolean isGatewayInVia(final String gatewayId, final JsonArray via) {
+        return via
+                .stream()
+                .filter(String.class::isInstance)
+                .anyMatch(gatewayId::equals);
+    }
+
+    private boolean isGatewayGroupInVia(final JsonArray gatewayMemberOf, final JsonArray via) {
+        return via
+                .stream()
+                .filter(String.class::isInstance)
+                .anyMatch(gatewayMemberOf::contains);
+    }
+
+    private boolean isGatewayGroupInVia(final String gatewayMemberOf, final JsonArray via) {
+        return via
+                .stream()
+                .filter(String.class::isInstance)
+                .anyMatch(gatewayMemberOf::equals);
     }
 
     private RegistrationResult createSuccessfulRegistrationResult(
@@ -332,7 +380,13 @@ public abstract class AbstractRegistrationService implements RegistrationService
         if (viaObj instanceof String) {
             viaObj = new JsonArray().add(viaObj);
         }
-        return viaObj instanceof JsonArray ? (JsonArray) viaObj : new JsonArray(Collections.emptyList());
+
+        if (viaObj instanceof JsonArray) {
+            final Promise<JsonArray> resolveGroupMembersTracker = Promise.promise();
+            resolveGroupMembers(tenantId, (JsonArray) viaObj, NoopSpan.INSTANCE, resolveGroupMembersTracker);
+            return resolveGroupMembersTracker.future().result();
+        }
+        return new JsonArray(Collections.emptyList());
     }
 
 }

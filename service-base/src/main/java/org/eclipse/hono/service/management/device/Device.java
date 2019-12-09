@@ -46,6 +46,10 @@ public class Device {
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> via = new LinkedList<>();
 
+    @JsonInclude(value = Include.NON_EMPTY)
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+    private List<String> memberOf = new LinkedList<>();
+
     /**
      * Creates a new Device instance.
      */
@@ -68,6 +72,9 @@ public class Device {
         }
         if (other.via != null) {
             this.via = new ArrayList<>(other.via);
+        }
+        if (other.memberOf != null) {
+            this.memberOf = new ArrayList<>(other.memberOf);
         }
     }
 
@@ -162,7 +169,34 @@ public class Device {
      * @return    a reference to this for fluent use.
      */
     public Device setVia(final List<String> via) {
+        if (memberOf != null && memberOf.size() > 0) {
+            throw new IllegalArgumentException("A device must not have via and memberOf property set at the same time.");
+        }
         this.via = via;
         return this;
     }
+
+    /**
+     * Gets the identifiers of the gateway groups in which the device is a member.
+     *
+     * @return The identifiers.
+     */
+    public List<String> getMemberOf() {
+        return memberOf;
+    }
+
+    /**
+     * Sets the identifiers of the gateway groups in which the device is a member.
+     *
+     * @param memberOf The memberOf property to set.
+     * @return    a reference to this for fluent use.
+     */
+    public Device setMemberOf(final List<String> memberOf) {
+        if (via != null && via.size() > 0) {
+            throw new IllegalArgumentException("A device must not have via and memberOf property set at the same time.");
+        }
+        this.memberOf = memberOf;
+        return this;
+    }
+
 }

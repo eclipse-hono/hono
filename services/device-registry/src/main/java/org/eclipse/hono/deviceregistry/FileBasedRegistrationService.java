@@ -95,6 +95,11 @@ public class FileBasedRegistrationService extends AbstractVerticle
                 final Handler<AsyncResult<RegistrationResult>> resultHandler) {
             FileBasedRegistrationService.this.getDevice(tenantId, deviceId, resultHandler);
         }
+
+        @Override
+        public void resolveGroupMembers(final String tenantId, final JsonArray via, final Span span, final Handler<AsyncResult<JsonArray>> resultHandler) {
+            FileBasedRegistrationService.this.resolveGroupMembers(tenantId, via, resultHandler);
+        }
     };
 
     @Autowired
@@ -330,6 +335,42 @@ public class FileBasedRegistrationService extends AbstractVerticle
         Objects.requireNonNull(resultHandler);
 
         resultHandler.handle(Future.succeededFuture(convertResult(deviceId, readDevice(tenantId, deviceId, NoopSpan.INSTANCE))));
+    }
+
+    private void resolveGroupMembers(final String tenantId, final JsonArray via, final Handler<AsyncResult<JsonArray>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(via);
+        Objects.requireNonNull(resultHandler);
+
+        final JsonArray gateways = new JsonArray();
+        final JsonArray groups = new JsonArray();
+        final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
+
+        //filter all groups (which are not a device)
+        for (Object item : via) {
+            if (item instanceof String) {
+                if (devices.keySet().contains(item)) {
+                    gateways.add(item);
+                } else {
+                    groups.add(item);
+                }
+            } else {
+                gateways.add(item);
+            }
+        }
+
+        //find all devices whose group membership matches one of the groups in the 'via' property
+        for (Map.Entry<String, Versioned<Device>> deviceEntry : devices.entrySet()) {
+            final Device device = deviceEntry.getValue().getValue();
+            final String deviceId = deviceEntry.getKey();
+            for (Object group : groups) {
+                if (!gateways.contains(deviceId) && device.getMemberOf().contains(group)) {
+                    gateways.add(deviceId);
+                }
+            }
+        }
+
+        resultHandler.handle(Future.succeededFuture(gateways));
     }
 
     private RegistrationResult convertResult(final String deviceId, final OperationResult<Device> result) {
