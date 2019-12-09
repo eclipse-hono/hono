@@ -8,8 +8,9 @@ title = "Release Notes"
 
 * The Sigfox and LoRaWAN adapters now report metrics analogously to the other protocol
   adapters.
-* The (experimental) CoAP adapter now supports tracking of request processing using
-  OpenTracing.
+* With the release of [Eclipse Californium](https://www.eclipse.org/californium) 2.0.0,
+  the CoAP adapter becomes an official part of the Hono release. The adapter now supports
+  tracking of request processing using OpenTracing but is still considered *experimental*.
 * A lorawan provider has been added for the loriot network provider.
 * Hono's protocol adapters now support Server Name Indication in order
   to allow devices to establish a TLS connection with adapters using a tenant specific
