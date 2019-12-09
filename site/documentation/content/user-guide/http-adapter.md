@@ -232,6 +232,11 @@ This resource can be used by *gateway* components to publish data *on behalf of*
 
 The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "/admin-guide/http-adapter-config#device-registration-service-connection-configuration" >}}).
 
+{{% note %}}
+When sending requests with the `hono-ttd` header in order to receive a command for a specific device connected to the gateway, it has to be noted that multiple concurrent such requests for the same gateway but different devices may lead to some commands not getting forwarded to the gateway.
+To resolve such potential issues, the corresponding tenant can be configured with a `support-concurrent-gateway-device-command-requests` option set to `true` in the `ext` field of an `adapters` entry of type `hono-http`. Note that with this option it is not supported for the authenticated gateway to send _one_ message with a `hono-ttd` header and no device id to receive commands for *any* device that has last sent a telemetry or event message via this gateway.
+{{% /note %}}
+
 **Examples**
 
 Publish some JSON data for device `4712`:
@@ -397,6 +402,11 @@ content-length: 0
 This resource can be used by *gateway* components to publish data *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
 
 The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "/admin-guide/http-adapter-config#device-registration-service-connection-configuration" >}}).
+
+{{% note %}}
+When sending requests with the `hono-ttd` header in order to receive a command for a specific device connected to the gateway, it has to be noted that multiple concurrent such requests for the same gateway but different devices may lead to some commands not getting forwarded to the gateway.
+To resolve such potential issues, the corresponding tenant can be configured with a `support-concurrent-gateway-device-command-requests` option set to `true` in the `ext` field of an `adapters` entry of type `hono-http`. Note that with this option it is not supported for the authenticated gateway to send _one_ message with a `hono-ttd` header and no device id to receive commands for *any* device that has last sent a telemetry or event message via this gateway.
+{{% /note %}}
 
 **Examples**
 

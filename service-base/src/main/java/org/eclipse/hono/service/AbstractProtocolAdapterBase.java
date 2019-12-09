@@ -1076,13 +1076,35 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return Future.succeededFuture(registrationAssertion);
         }
 
-        final Future<String> gatewayId = getGatewayId(tenantId, deviceId, authenticatedDevice);
+        final Future<String> gatewayId = isGatewayMappingEnabled(tenantId, deviceId, authenticatedDevice)
+                .compose(enabled -> enabled ? getGatewayId(tenantId, deviceId, authenticatedDevice)
+                        : Future.succeededFuture(deviceId));
 
         return gatewayId
                 .compose(gwId -> getDeviceConnectionClient(tenantId))
                 .compose(client -> client.setLastKnownGatewayForDevice(deviceId,
                         Optional.ofNullable(gatewayId.result()).orElse(deviceId), context))
                 .map(registrationAssertion);
+    }
+
+    /**
+     * Checks whether this adapter supports mapping of incoming command messages to the gateway that the target device
+     * is connected to. If not, the {@link #updateLastGateway(JsonObject, String, String, Device, SpanContext)} method
+     * will associate the device id with itself instead of with the gateway, causing the mapping to be disabled.
+     * <p>
+     * This default implementation returns a succeeded future with {@code true} as value here.
+     * <p>
+     * May be overridden by sub-classes to disable the gateway mapping for this adapter.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device to update the last known gateway for.
+     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
+     * @return A succeeded future indicating the outcome of the operation. Its value will be {@code true} if gateway
+     *         mapping is enabled for this adapter.
+     */
+    protected Future<Boolean> isGatewayMappingEnabled(final String tenantId, final String deviceId,
+            final Device authenticatedDevice) {
+        return Future.succeededFuture(true);
     }
 
     private boolean isGatewaySupportedForDevice(final JsonObject registrationAssertion) {

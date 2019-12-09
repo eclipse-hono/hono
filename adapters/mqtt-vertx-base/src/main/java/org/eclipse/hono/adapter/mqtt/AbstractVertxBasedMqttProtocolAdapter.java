@@ -677,6 +677,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         });
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Marked as final since the way command handling is implemented here requires the
+     * gateway mapping to be enabled.
+     */
+    @Override
+    protected final Future<Boolean> isGatewayMappingEnabled(final String tenantId, final String deviceId,
+            final Device authenticatedDevice) {
+        return Future.succeededFuture(true);
+    }
+
     private Span newSpan(final String operationName, final MqttEndpoint endpoint, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
         final Span span = tracer.buildSpan(operationName)
