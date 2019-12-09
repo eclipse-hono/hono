@@ -122,7 +122,7 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * can be configured by means of the <em>connectAttempts</em> property of the 
      * {@code ClientConfigProperties} passed in to the {@link #newConnection(Vertx, ClientConfigProperties)}
      * method. The client will perform a new DNS lookup of the peer's hostname with each attempt to 
-     * establish the AMQP connection. 
+     * establish the AMQP connection.
      * <p>
      * When an established connection to the peer fails, the client will automatically try to re-connect
      * to the peer using the same options and behavior as used for establishing the initial connection.
@@ -133,7 +133,7 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *         <ul>
      *         <li>authentication of the client failed, or</li>
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
-     *         established.</li>
+     *         established, or</li>
      *         <li>the maximum number of (unsuccessful) connection attempts have been made.</li>
      *         </ul>
      */
