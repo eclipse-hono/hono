@@ -120,6 +120,43 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the registry succeeds a request to assert the registration status of a device that connects via an
+     * gateway that is authorized through its group membership.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testAssertRegistrationSucceedsForDeviceViaGatewayGroup(final VertxTestContext ctx) {
+
+        final String gatewayId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+        final String deviceId = getHelper().getRandomDeviceId(Constants.DEFAULT_TENANT);
+
+        final List<String> viaGroups = Arrays.asList("group");
+        final Device device = new Device();
+        device.setViaGroups(viaGroups);
+
+        final Device gateway = new Device();
+        final List<String> memberOf = Arrays.asList("group");
+        gateway.setMemberOf(memberOf);
+
+        getHelper().registry
+                .registerDevice(Constants.DEFAULT_TENANT, gatewayId, gateway)
+                .compose(ok -> getHelper().registry.registerDevice(
+                        Constants.DEFAULT_TENANT,
+                        deviceId, device))
+                .compose(ok -> getClient(Constants.DEFAULT_TENANT))
+                .compose(client -> client.assertRegistration(deviceId, gatewayId))
+                .setHandler(ctx.succeeding(resp -> {
+                    ctx.verify(() -> {
+                        assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
+                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactly(gatewayId);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that the registry fails to assert a non-existing device's
      * registration status with a 404 error code.
      *
