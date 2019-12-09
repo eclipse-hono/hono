@@ -46,6 +46,7 @@ import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ResourceConflictException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -732,6 +733,57 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), (SpanContext) any());
         assertNull(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()));
+    }
+
+    /**
+     * Verifies that the adapter closes the command consumer created as part of
+     * handling a request with a TTD parameter if creation of the telemetry
+     * message sender failed.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadTelemetryWithTtdClosesCommandConsumerIfSenderCreationFailed() {
+
+        // GIVEN an adapter with a downstream telemetry consumer attached
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes a telemetry message with a TTD
+        final Buffer payload = Buffer.buffer("some payload");
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
+        final RoutingContext ctx = newRoutingContext(payload, "text/plain", request, response);
+        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+        // and the creation of the telemetry message sender fails immediately
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.failedFuture(
+                new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
+        // and the creation of the command consumer completes at a later point
+        final Promise<MessageConsumer> commandConsumerPromise = Promise.promise();
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
+                .thenReturn(commandConsumerPromise.future());
+
+        adapter.uploadTelemetryMessage(ctx, "tenant", "device");
+        commandConsumerPromise.complete(commandConsumer);
+
+        // THEN the request fails immediately
+        verify(ctx).fail(any());
+        // the message has been reported
+        verify(metrics).reportTelemetry(
+                eq(EndpointType.TELEMETRY),
+                eq("tenant"),
+                any(),
+                eq(ProcessingOutcome.UNDELIVERABLE),
+                eq(QoS.AT_MOST_ONCE),
+                eq(payload.length()),
+                eq(TtdStatus.NONE),
+                any());
+        // and the command consumer is closed
+        verify(commandConsumer).close(any());
     }
 
     /**
