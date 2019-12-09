@@ -12,6 +12,9 @@ title = "Release Notes"
   of any Helm specific components to the Kubernetes cluster.
 * The example data grid which can be deployed using the Hono Helm chart can now be scaled
   out to more than one node.
+* Under rare circumstances an HTTP adapter instance might have gotten into a state where
+  a device's requests to receive commands could no longer be processed successfully
+  anymore until the adapter instance had been restarted. This has been fixed.
 
 ## 1.0.1
 
