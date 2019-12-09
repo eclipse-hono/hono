@@ -13,6 +13,9 @@
 package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -93,6 +97,11 @@ public class FileBasedRegistrationService extends AbstractVerticle
         public void getDevice(final String tenantId, final String deviceId, final Span span,
                 final Handler<AsyncResult<RegistrationResult>> resultHandler) {
             FileBasedRegistrationService.this.getDevice(tenantId, deviceId, resultHandler);
+        }
+
+        @Override
+        public void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span, final Handler<AsyncResult<JsonArray>> resultHandler) {
+            FileBasedRegistrationService.this.resolveGroupMembers(tenantId, viaGroups, resultHandler);
         }
     };
 
@@ -329,6 +338,20 @@ public class FileBasedRegistrationService extends AbstractVerticle
         Objects.requireNonNull(resultHandler);
 
         resultHandler.handle(Future.succeededFuture(convertResult(deviceId, readDevice(tenantId, deviceId, NoopSpan.INSTANCE))));
+    }
+
+    private void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Handler<AsyncResult<JsonArray>> resultHandler) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(viaGroups);
+        Objects.requireNonNull(resultHandler);
+
+        final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
+        final List<String> gatewaySet = devices.entrySet().stream()
+                .filter(entry -> entry.getValue().getValue().getMemberOf().stream().anyMatch(group -> viaGroups.contains(group)))
+                .map(Entry::getKey)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        resultHandler.handle(Future.succeededFuture(new JsonArray(gatewaySet)));
     }
 
     private RegistrationResult convertResult(final String deviceId, final OperationResult<Device> result) {

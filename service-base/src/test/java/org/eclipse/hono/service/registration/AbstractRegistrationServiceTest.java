@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -185,9 +186,11 @@ public abstract class AbstractRegistrationServiceTest {
     public void testGetSucceedsForRegisteredDeviceWithData(final VertxTestContext ctx) {
 
         final List<String> vias = Collections.unmodifiableList(Arrays.asList("a", "b", "c"));
+        final List<String> viaGroups = Collections.unmodifiableList(Arrays.asList("group1", "group2"));
         final String deviceId = UUID.randomUUID().toString();
         final Device device = new Device();
         device.setVia(vias);
+        device.setViaGroups(viaGroups);
 
         final Promise<OperationResult<Id>> addResult = Promise.promise();
 
@@ -208,7 +211,7 @@ public abstract class AbstractRegistrationServiceTest {
 
                     assertNotNull(s.getPayload());
                     assertEquals(vias, s.getPayload().getVia());
-
+                    assertEquals(viaGroups, s.getPayload().getViaGroups());
                     getRegistrationService().assertRegistration(TENANT, deviceId, ctx.succeeding(s2 -> {
                         assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
                         assertNotNull(s2.getPayload());
@@ -217,6 +220,243 @@ public abstract class AbstractRegistrationServiceTest {
                         final JsonArray viaJson = s2.getPayload().getJsonArray("via");
                         assertNotNull(viaJson);
                         assertEquals(vias, viaJson.stream().map(Object::toString).collect(Collectors.toList()));
+
+                        ctx.completeNow();
+                    }));
+                })));
+    }
+
+    /**
+     * Verifies that the registry returns 200 when getting an existing device for an assertion.
+     * Further the test verifies, that the assertion resolves gateways groups to the device ids of
+     * the devices that are member of the respective group.
+     * Further, the test verifies that registered devices are contained in the response of the assertion.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAssertDeviceWithRegisteredGateway(final VertxTestContext ctx) {
+        final Map<String, Device> devices = new HashMap<>();
+        final String gatewayId = "b";
+
+        final List<String> vias = Collections.unmodifiableList(Arrays.asList("a", "b", "c"));
+        final String deviceId = UUID.randomUUID().toString();
+        final Device device = new Device();
+        device.setVia(vias);
+
+        final Device gateway = new Device();
+        devices.put(deviceId, device);
+        devices.put("b", gateway);
+        devices.put("c", gateway);
+
+        createDevices(devices)
+                .compose(ok -> {
+                    final Promise<OperationResult<Device>> getResult = Promise.promise();
+                    getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE, getResult);
+                    return getResult.future();
+                })
+                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                    assertNotNull(s.getPayload());
+                    assertEquals(vias, s.getPayload().getVia());
+
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
+                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                        assertNotNull(s2.getPayload());
+
+                        // assert "via"
+                        final JsonArray viaJson = s2.getPayload().getJsonArray("via");
+                        assertNotNull(viaJson);
+                        assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
+
+                        ctx.completeNow();
+                    }));
+
+                })));
+    }
+
+
+    /**
+     * Verifies that the registry returns 200 when getting an existing device.
+     * Further the test verifies, that the assertion resolves gateways groups to the device ids of
+     * the devices that are member of the respective group.
+     * Further the test verifies that the assertion is successful for a gateway that is mentioned in the 'via' property
+     * of the device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAssertDeviceWithRegisteredGatewayAndGatewayGroup(final VertxTestContext ctx) {
+        final Map<String, Device> devices = new HashMap<>();
+        final String gatewayId = "b";
+
+        final List<String> vias = Collections.unmodifiableList(Arrays.asList("a", "b"));
+        final List<String> viaGroups = Collections.unmodifiableList(Arrays.asList("group1"));
+        final String deviceId = UUID.randomUUID().toString();
+        final Device device = new Device();
+        device.setVia(vias);
+        device.setViaGroups(viaGroups);
+        devices.put(deviceId, device);
+
+        final Device gatewayA = new Device();
+        devices.put("a", gatewayA);
+
+        final Device gatewayB = new Device();
+        final List<String> memberOfB = new ArrayList<>();
+        memberOfB.add("group1");
+        gatewayB.setMemberOf(memberOfB);
+        devices.put("b", gatewayB);
+
+        final Device gatewayC = new Device();
+        final List<String> memberOfC = new ArrayList<>();
+        memberOfC.add("group1");
+        memberOfC.add("group2");
+        gatewayC.setMemberOf(memberOfC);
+        devices.put("c", gatewayC);
+
+        createDevices(devices)
+                .compose(ok -> {
+                    final Promise<OperationResult<Device>> getResult = Promise.promise();
+                    getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE, getResult);
+                    return getResult.future();
+                })
+                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                    assertNotNull(s.getPayload());
+                    assertEquals(vias, s.getPayload().getVia());
+
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
+                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                        assertNotNull(s2.getPayload());
+
+                        // assert "via"
+                        final JsonArray viaJson = s2.getPayload().getJsonArray("via");
+                        assertNotNull(viaJson);
+                        assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
+
+                        ctx.completeNow();
+                    }));
+
+                })));
+    }
+
+    /**
+     * Verifies that the registry returns 200 when getting an existing device.
+     * Further the test verifies, that the assertion resolves gateways groups to the device ids of
+     * the devices that are member of the respective group.
+     * Further the test verifies that the assertion is successful for a gateway that is not mentioned in the 'via' property
+     * of the device but part of a group mentioned in the 'viaGroups' property.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAssertDeviceWithRegisteredGatewayGroupGateway(final VertxTestContext ctx) {
+        final Map<String, Device> devices = new HashMap<>();
+        final String gatewayId = "c";
+
+        final List<String> vias = Collections.unmodifiableList(Arrays.asList("a"));
+        final List<String> viaGroups = Collections.unmodifiableList(Arrays.asList("group1"));
+        final String deviceId = UUID.randomUUID().toString();
+        final Device device = new Device();
+        device.setVia(vias);
+        device.setViaGroups(viaGroups);
+        devices.put(deviceId, device);
+
+        final Device gatewayA = new Device();
+        devices.put("a", gatewayA);
+
+        final Device gatewayB = new Device();
+        final List<String> memberOfB = new ArrayList<>();
+        memberOfB.add("group1");
+        gatewayB.setMemberOf(memberOfB);
+        devices.put("b", gatewayB);
+
+        final Device gatewayC = new Device();
+        final List<String> memberOfC = new ArrayList<>();
+        memberOfC.add("group1");
+        memberOfC.add("group2");
+        gatewayC.setMemberOf(memberOfC);
+        devices.put("c", gatewayC);
+
+        createDevices(devices)
+                .compose(ok -> {
+                    final Promise<OperationResult<Device>> getResult = Promise.promise();
+                    getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE, getResult);
+                    return getResult.future();
+                })
+                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                    assertNotNull(s.getPayload());
+                    assertEquals(vias, s.getPayload().getVia());
+
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
+                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                        assertNotNull(s2.getPayload());
+
+                        // assert "via"
+                        final JsonArray viaJson = s2.getPayload().getJsonArray("via");
+                        assertNotNull(viaJson);
+                        assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
+
+                        ctx.completeNow();
+                    }));
+
+                })));
+    }
+
+    /**
+     * Verifies that the registry returns 200 when getting an existing device.
+     * Further the test verifies that the assertion returns FORBIDDEN when the gateway is not registered for the device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAssertDeviceWithNonRegisteredGatewayGroup(final VertxTestContext ctx) {
+        final Map<String, Device> devices = new HashMap<>();
+        final String gatewayId = "b";
+
+        final List<String> vias = Collections.unmodifiableList(Arrays.asList("a"));
+        final List<String> viaGroups = Collections.unmodifiableList(Arrays.asList("group1"));
+        final String deviceId = UUID.randomUUID().toString();
+        final Device device = new Device();
+        device.setVia(vias);
+        device.setViaGroups(viaGroups);
+        devices.put(deviceId, device);
+
+        final Device gatewayA = new Device();
+        devices.put("a", gatewayA);
+
+        final Device gatewayB = new Device();
+        final List<String> memberOfB = new ArrayList<>();
+        memberOfB.add("group2");
+        gatewayB.setMemberOf(memberOfB);
+        devices.put("b", gatewayB);
+
+        final Device gatewayC = new Device();
+        final List<String> memberOfC = new ArrayList<>();
+        memberOfC.add("group1");
+        memberOfC.add("group2");
+        gatewayC.setMemberOf(memberOfC);
+        devices.put("c", gatewayC);
+
+        createDevices(devices)
+                .compose(ok -> {
+                    final Promise<OperationResult<Device>> getResult = Promise.promise();
+                    getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE, getResult);
+                    return getResult.future();
+                })
+                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                    assertNotNull(s.getPayload());
+                    assertEquals(vias, s.getPayload().getVia());
+
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
+                        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s2.getStatus());
+                        assertNull(s2.getPayload());
 
                         ctx.completeNow();
                     }));

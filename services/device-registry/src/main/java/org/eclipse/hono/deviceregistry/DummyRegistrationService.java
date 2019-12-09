@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
 
+import io.vertx.core.json.JsonArray;
 import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -45,16 +46,23 @@ public class DummyRegistrationService extends AbstractRegistrationService {
     public void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
             final Span span, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
        final JsonObject deviceData = new JsonObject();
-
-        resultHandler.handle(Future.succeededFuture(RegistrationResult.from(
+        getAssertionPayload(tenantId, deviceId, deviceData)
+                .compose(payload -> Future.succeededFuture(RegistrationResult.from(
                 HttpURLConnection.HTTP_OK,
-                getAssertionPayload(tenantId, deviceId, deviceData))));
+                payload))).setHandler(resultHandler);
     }
 
     @Override
     protected void getDevice(final String tenantId, final String deviceId, final Span span,
             final Handler<AsyncResult<RegistrationResult>> resultHandler) {
         resultHandler.handle(Future.failedFuture("Not implemented"));
+    }
+
+    @Override
+    protected void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span,
+                                       final Handler<AsyncResult<JsonArray>> resultHandler) {
+        resultHandler.handle(Future.failedFuture("Not implemented"));
+
     }
 
 }

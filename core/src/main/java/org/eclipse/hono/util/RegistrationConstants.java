@@ -48,10 +48,28 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String FIELD_DATA         = "data";
 
     /**
-     * The name of the field in a device's registration information that contains
+     * The name of the field in a device registration information that contains
      * the identifier of the gateway that it is connected to (either as string value or inside a JSON array).
+     * Note, that it is only possible to either set the 'via' or the 'memberOf' property since gateways of gateways
+     * are currently not supported.
      */
     public static final String FIELD_VIA = "via";
+
+    /**
+     * The name of the field in the device registration information that contains the identifier of the gateways groups
+     * that the device is connected to (either as String value or inside a JSON array).
+     * Note, that is is only possible to either set the 'viaGroups' or the 'memberOf' property since groups of groups
+     * are currently not supported.
+     */
+    public static final String FIELD_VIA_GROUPS = "viaGroups";
+
+    /**
+     * The name of the field in a device registration information that contains the identifier of the names
+     * of the groups in which the device is member of (either as string value or inside a JSON array).
+     * Note, that it is only possible to either set the 'via' or the 'memberOf' property since groups of groups
+     * are currently not supported.
+     */
+    public static final String FIELD_MEMBER_OF = "memberOf";
 
     /**
      * The name of the Device Registration API endpoint.
