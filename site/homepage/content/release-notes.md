@@ -10,6 +10,8 @@ title = "Release Notes"
 * The Hono chart can now also be deployed using the recently released Helm 3. In fact,
   Helm 3 is now the recommended way for deploying Hono as it doesn't require installation
   of any Helm specific components to the Kubernetes cluster.
+* The example data grid which can be deployed using the Hono Helm chart can now be scaled
+  out to more than one node.
 
 ## 1.0.1
 
