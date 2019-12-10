@@ -46,7 +46,7 @@ spec:
         - name: SPRING_CONFIG_LOCATION
           value: file:///etc/hono/
         - name: SPRING_PROFILES_ACTIVE
-          value: dev
+          value: prod
         - name: LOGGING_CONFIG
           value: classpath:logback-spring.xml
         - name: JDK_JAVA_OPTIONS
