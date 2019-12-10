@@ -12,12 +12,13 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   {{- $args := dict "dot" . "component" "data-grid" "name" "data-grid" }}
   {{- include "hono.metadata" $args | nindent 2 }}
 spec:
   replicas: 1
+  serviceName: {{ printf "%s-%s" .Release.Name $args.name }}
   selector:
     matchLabels:
       {{- include "hono.matchLabels" $args | nindent 6 }}
@@ -37,13 +38,13 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - name: KUBERNETES_LABELS
-          value: run=infinispan-server
-        - name: _JAVA_OPTIONS
+          value: {{ printf "app.kubernetes.io/component=%s" $args.component }}
+        - name: JDK_JAVA_OPTIONS
           value: "-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80"
         - name: APP_USER
-          value: hono
+          value: {{ .Values.dataGridExample.authUsername | quote }}
         - name: APP_PASS
-          value: hono-secret
+          value: {{ .Values.dataGridExample.authPassword | quote }}
         image: {{ default "jboss/infinispan-server:9.4.11.Final" .Values.dataGridExample.imageName | quote }}
         imagePullPolicy: IfNotPresent
         name: hono-data-grid
@@ -64,6 +65,15 @@ spec:
         - mountPath: /opt/jboss/infinispan-server/standalone/configuration/hono
           name: conf
           readOnly: true
+        readinessProbe:
+          exec:
+            command:
+            - /usr/local/bin/is_healthy.sh
+          failureThreshold: 5
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 80
         resources:
           limits:
             memory: "512Mi"

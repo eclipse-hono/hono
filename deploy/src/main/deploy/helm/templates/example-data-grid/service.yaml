@@ -29,5 +29,5 @@ spec:
   selector:
     {{- include "hono.matchLabels" $args | nindent 4 }}
   sessionAffinity: None
-  type: ClusterIP
+  clusterIP: None
 {{- end }}
