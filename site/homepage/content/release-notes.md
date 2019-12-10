@@ -23,6 +23,9 @@ title = "Release Notes"
 * The Hono chart can now also be deployed using the recently released Helm 3. In fact,
   Helm 3 is now the recommended way for deploying Hono as it doesn't require installation
   of any Helm specific components to the Kubernetes cluster.
+* Under rare circumstances an HTTP adapter instance might have gotten into a state where
+  a device's requests to receive commands could no longer be processed successfully
+  anymore until the adapter instance had been restarted. This has been fixed.
 
 ## 1.0.1
 
