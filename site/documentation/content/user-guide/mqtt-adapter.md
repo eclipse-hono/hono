@@ -22,13 +22,18 @@ The adapter tries to authenticate the device using these mechanisms in the follo
 
 ### Client Certificate
 
-When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to, based on the *issuer DN* contained in the certificate. In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}). The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to. In a second step, the adapter then uses the Credentials API's *get* operation with the client certificate's *subject DN* as the *auth-id* and `x509-cert` as the *type* of secret as query parameters.
+When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to based on the *issuer DN* contained in the certificate.
+In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}).
+The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to.
+In a second step, the adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the client certificate's *subject DN* as the *auth-id*, `x509-cert` as the *type* of secret and the MQTT client identifier as *client-id* in the request payload.
 
 **NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) in order to support this mechanism.
 
 ### Username/Password
 
-When a device wants to authenticate using this mechanism, it needs to provide a *username* and a *password* in the MQTT *CONNECT* packet it sends in order to initiate the connection. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< relref "/admin-guide/mqtt-adapter-config.md#credentials-service-connection-configuration" >}}) has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the client in the *username* and `hashed-password` as the *type* of secret as query parameters.
+When a device wants to authenticate using this mechanism, it needs to provide a *username* and a *password* in the MQTT *CONNECT* packet it sends in order to initiate the connection. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
+The adapter verifies the credentials provided by the client against the credentials that the [configured Credentials service]({{< relref "/admin-guide/mqtt-adapter-config.md#credentials-service-connection-configuration" >}}) has on record for the client.
+The adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the *tenant* and *auth-id* provided by the client in the *username*, `hashed-password` as the *type* of secret and the MQTT client identifier as *client-id* in the request payload.
 
 The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
 
