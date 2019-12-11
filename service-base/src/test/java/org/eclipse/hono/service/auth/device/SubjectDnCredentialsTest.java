@@ -16,7 +16,7 @@ package org.eclipse.hono.service.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -30,9 +30,9 @@ public class SubjectDnCredentialsTest {
      */
     @Test
     public void testAuthIdIsRFC2253Compliant() {
+
         final String subjectDn = "emailAddress=hoge@acme.com, CN=devices, OU=ACME Department, O=ACME Corporation, L=Chiyoda, ST=Tokyo, C=JP";
         final SubjectDnCredentials credentials = SubjectDnCredentials.create("tenant", subjectDn);
-        System.out.println(credentials.getAuthId());
         assertThat(credentials.getAuthId())
             .isEqualTo("1.2.840.113549.1.9.1=#160d686f67654061636d652e636f6d,CN=devices,OU=ACME Department,O=ACME Corporation,L=Chiyoda,ST=Tokyo,C=JP");
     }
