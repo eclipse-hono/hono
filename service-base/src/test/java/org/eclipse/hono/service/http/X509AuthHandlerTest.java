@@ -49,7 +49,6 @@ import org.junit.Test;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;

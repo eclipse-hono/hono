@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.opentracing.contrib.vertx.ext.web.WebSpanDecorator;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.http.HttpServerRequest;

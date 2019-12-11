@@ -46,6 +46,7 @@ import org.eclipse.hono.service.auth.device.X509AuthProvider;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HonoChainAuthHandler;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.http.X509AuthHandler;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
@@ -58,7 +59,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;

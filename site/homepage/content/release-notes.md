@@ -25,6 +25,12 @@ title = "Release Notes"
   mechanisms advertised to a client connecting to these components. This can be used to
   restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both. 
 
+### Fixes & Enhancements
+
+* Hono's OpenTracing instrumentation has been upgraded to Opentracing 0.33.0.
+  The example deployment now uses the Jaeger Java client in version 0.35.2 and the
+  Jaeger 1.16 agent and back end components.
+
 ## 1.0.2
 
 ### Fixes & Enhancements
