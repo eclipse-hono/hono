@@ -19,7 +19,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.noop.NoopSpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;

@@ -57,7 +57,6 @@ import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;

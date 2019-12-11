@@ -206,7 +206,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/opentracing/contrib/opentracing-tracerresolver/${opentracing-resolver.version}/opentracing-tracerresolver-${opentracing-resolver.version}-sources.jar).
 
-### OpenTracing Vert.x Web Instrumentation ${opentracing-vertx-web.version}
+### OpenTracing Vert.x Web Instrumentation 0.1.0
 
 This product includes software developed by the [OpenTracing Vert.x Web Instrumentation project](https://github.com/opentracing-contrib/java-vertx-web).
 
