@@ -350,13 +350,15 @@ The Device Connection service can also be configured to connect to an already ex
 
 ## Deploying optional Adapters
 
-The Helm chart supports deployment of additional protocol adapters which are still considered experimental or have been deprecated.
+The Helm chart by default deploys the HTTP, MQTT and AMQP protocol adapters.
+However, the chart also supports deployment of additional protocol adapters which are still considered experimental or have been deprecated.
 The following table provides an overview of the corresponding configuration properties that need to be set on deployment.
 
 | Property                     | Default  | Description                              |
 | :--------------------------- | :------- | :--------------------------------------- |
-| *adapters.lora.enabled*      | `false` | Indicates if the (experimental) LoRa WAN protocol adapter should be deployed. |
+| *adapters.coap.enabled*      | `false` | Indicates if the (experimental) CoAP protocol adapter should be deployed. |
 | *adapters.kura.enabled*      | `false` | Indicates if the deprecated Kura protocol adapter should be deployed. |
+| *adapters.lora.enabled*      | `false` | Indicates if the (experimental) LoRa WAN protocol adapter should be deployed. |
 
 The following command will deploy the LoRa adapter along with Hono's standard adapters:
 
