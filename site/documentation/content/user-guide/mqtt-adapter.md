@@ -309,13 +309,17 @@ Note that the topic in the latter case doesn't contain a request identifier.
 
 *Gateway* components can receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details.
 
-If a device is configured in such a way that there can be *one* gateway, acting on behalf of the device, a command sent to this device will by default be directed to that gateway.
+If a device is configured in such a way that there can be *one* gateway, acting on behalf of the device, a command sent to this device will by default be directed to that gateway. However, if a device has last sent telemetry/event messages directly to the protocol adapter instead of via the gateway, this will cause commands to be directed to the device and not the gateway.
 
 If a device is configured to be used with *multiple* gateways, the particular gateway that last acted on behalf of the device will be the target that commands for that device will be routed to. The mapping of device and gateway last used by the device is updated whenever a device sends a telemetry, event or command response message via the gateway. This means that for a device configured to be used via multiple gateways to receive commands, the device first has to send at least one telemetry or event message to establish which gateway to use for receiving commands for that device.
 
 An authenticated gateway MUST use the topic filter `command//+/req/#` to subscribe to commands for all devices in whose behalf it acts.
 
 To subscribe only to commands for a specific device, an authenticated gateway MUST use the topic filter `command//${device-id}/req/#`.
+
+{{% note %}}
+An authenticated gateway opening multiple `command//${device-id}/req/#` subscriptions for different devices should do so using the same MQTT connection. Otherwise some commands might not get routed properly if multiple protocol adapter instances are involved. 
+{{% /note %}}
 
 {{% note title="Deprecation" %}}
 Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
