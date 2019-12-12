@@ -22,7 +22,7 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * An instance of this interface is always scoped to a specific tenant.
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">
+ * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">
  * Registration API specification</a> for a description of the result codes returned.
  */
 public interface RegistrationClient extends RequestResponseClient {
@@ -35,7 +35,7 @@ public interface RegistrationClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the
      *         registration service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/#assert-device-registration">
+     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
@@ -58,7 +58,7 @@ public interface RegistrationClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the
      *         registration service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/#assert-device-registration">
+     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
@@ -86,7 +86,7 @@ public interface RegistrationClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the
      *         registration service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/#assert-device-registration">
+     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *         Assert Device Registration</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
@@ -110,7 +110,7 @@ public interface RegistrationClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the
      *         registration service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/#get-registration-information">
+     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#get-registration-information">
      *         Get Registration Information</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
@@ -133,7 +133,7 @@ public interface RegistrationClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the registration service.
      *         The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/#get-registration-information"> Get
+     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#get-registration-information"> Get
      *         Registration Information</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing the (error) status

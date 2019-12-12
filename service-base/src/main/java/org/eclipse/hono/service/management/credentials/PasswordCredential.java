@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * A credential type for storing a password for a device.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#hashed-password">Hashed Password</a> for an example
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#hashed-password">Hashed Password</a> for an example
  * of the configuration properties for this credential type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)

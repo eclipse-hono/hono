@@ -22,7 +22,7 @@ import java.util.List;
  * A credential type for storing the <a href="https://www.ietf.org/rfc/rfc2253.txt">RFC 2253</a> formatted subject DN of
  * a client certificate.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#x-509-certificate">X.509 Certificate</a> for an
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#x-509-certificate">X.509 Certificate</a> for an
  * example of the configuration properties for this credential type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)

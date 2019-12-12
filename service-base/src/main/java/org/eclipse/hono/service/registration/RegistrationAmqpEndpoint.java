@@ -32,7 +32,7 @@ import io.vertx.core.json.DecodeException;
 /**
  * An {@code AmqpEndpoint} for managing device registration information.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>.
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>.
  * It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
  */

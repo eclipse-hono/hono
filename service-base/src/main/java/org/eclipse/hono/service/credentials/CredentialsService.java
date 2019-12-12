@@ -25,7 +25,7 @@ import io.vertx.core.json.JsonObject;
  * A service for keeping record of device credentials.
  * This interface only covers mandatory operations.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/credentials-api/">Credentials API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>
  */
 public interface CredentialsService {
 
@@ -43,7 +43,7 @@ public interface CredentialsService {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     default void get(final String tenantId, final String type, final String authId,
@@ -70,7 +70,7 @@ public interface CredentialsService {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     void get(String tenantId, String type, String authId, Span span,
@@ -91,7 +91,7 @@ public interface CredentialsService {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     default void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
@@ -119,7 +119,7 @@ public interface CredentialsService {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
     void get(String tenantId, String type, String authId, JsonObject clientContext, Span span,

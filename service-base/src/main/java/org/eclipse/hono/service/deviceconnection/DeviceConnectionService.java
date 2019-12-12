@@ -22,7 +22,7 @@ import io.vertx.core.Handler;
 /**
  * A service for keeping record of device connection information.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/device-connection-api/">Device Connection API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device Connection API</a>
  */
 public interface DeviceConnectionService {
 
