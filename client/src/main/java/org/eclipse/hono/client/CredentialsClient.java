@@ -25,7 +25,7 @@ import io.vertx.core.json.JsonObject;
  * An instance of this interface is always scoped to a specific tenant.
  * </p>
  * <p>
- * See Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials-api/">
+ * See Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials/">
  * Credentials API specification</a> for a description of the result codes returned.
  * </p>
  */
@@ -40,7 +40,7 @@ public interface CredentialsClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the
      *         credentials service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
@@ -60,7 +60,7 @@ public interface CredentialsClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the
      *         credentials service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
@@ -85,7 +85,7 @@ public interface CredentialsClient extends RequestResponseClient {
      *         <p>
      *         The future will succeed if a response with status 200 has been received from the
      *         credentials service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#get-credentials">
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *         Get Credentials</a>.
      *         <p>
      *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing

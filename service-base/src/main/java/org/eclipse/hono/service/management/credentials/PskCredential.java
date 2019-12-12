@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * A credential type for storing a Pre-shared Key as used in TLS handshakes.
  * <p>
- * See <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#pre-shared-key">Pre-Shared Key</a> for an example
+ * See <a href="https://www.eclipse.org/hono/docs/api/credentials/#pre-shared-key">Pre-Shared Key</a> for an example
  * of the configuration properties for this credential type.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)

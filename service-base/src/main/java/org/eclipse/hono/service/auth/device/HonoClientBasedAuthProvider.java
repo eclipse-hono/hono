@@ -34,7 +34,7 @@ public interface HonoClientBasedAuthProvider<T extends AbstractDeviceCredentials
      * for the device.
      * <p>
      * The credentials on record are retrieved using Hono's
-     *  <a href="https://www.eclipse.org/hono/docs/api/credentials-api/">Credentials API</a>.
+     *  <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
      *
      * @param credentials The credentials provided by the device.
      * @param spanContext The SpanContext (may be null).
