@@ -26,6 +26,16 @@ import org.junit.jupiter.api.Test;
 public class SubjectDnCredentialsTest {
 
     /**
+     * Verifies that the credentials contain the tenant-id.
+     */
+    @Test
+    public void testCredentialsContainTenant() {
+
+        final SubjectDnCredentials credentials = SubjectDnCredentials.create("tenant", "CN=device");
+        assertThat(credentials.getTenantId()).isEqualTo("tenant");
+    }
+
+    /**
      * Verifies that the auth-id created from a subject DN is normalized.
      */
     @Test
