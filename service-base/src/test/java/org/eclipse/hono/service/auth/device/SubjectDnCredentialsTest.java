@@ -15,7 +15,8 @@
 package org.eclipse.hono.service.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertNotNull;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 
 import javax.security.auth.x500.X500Principal;
 
@@ -45,30 +46,35 @@ public class SubjectDnCredentialsTest {
      */
     @Test
     public void testClientContextCreatedIsNotNull() {
+
         final SubjectDnCredentials credentials1 = SubjectDnCredentials.create("tenant", "CN=eclipse.org");
-        assertNotNull(credentials1.getClientContext());
+        assertThat(credentials1.getClientContext()).isNotNull();
 
         final SubjectDnCredentials credentials2 = SubjectDnCredentials.create("tenant",
                 new X500Principal("CN=eclipse.org"));
-        assertNotNull(credentials2.getClientContext());
+        assertThat(credentials2.getClientContext()).isNotNull();
     }
 
     /**
      * Verifies that you can not pass null in for the client context in the create method that takes the subjectDn as a
      * string.
      */
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testCreateDoesNotAllowNullClientContext() {
-        SubjectDnCredentials.create("tenant", "CN=eclipse.org", null);
+
+        assertThatThrownBy(() -> SubjectDnCredentials.create("tenant", "CN=eclipse.org", null))
+        .isInstanceOf(NullPointerException.class);
     }
 
     /**
      * Verifies that you can not pass null in for the client context in the create method that takes the subjectDn as a
      * X500Principal.
      */
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testCreateDoesNotAllowNullClientContextWithPrincipal() {
-        SubjectDnCredentials.create("tenant", new X500Principal("CN=eclipse.org"), null);
+
+        assertThatThrownBy(() -> SubjectDnCredentials.create("tenant", new X500Principal("CN=eclipse.org"), null))
+        .isInstanceOf(NullPointerException.class);
     }
 
 }
