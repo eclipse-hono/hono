@@ -25,7 +25,7 @@ import io.vertx.core.Handler;
  * A service for keeping record of device credentials.
  * This interface presents all the available operations on the API.
  *
- * @see <a href="https://www.eclipse.org/hono/api/credentials-api/">Credentials API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>
  */
 public interface CredentialsManagementService {
 
@@ -35,7 +35,7 @@ public interface CredentialsManagementService {
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to get credentials for.
      * @param credentials A list of credentials.
-     *                  See <a href="https://www.eclipse.org/hono/api/Credentials-API/#credentials-format">Credentials Format</a> for details.
+     *                  See <a href="https://www.eclipse.org/hono/docs/api/credentials/#credentials-format">Credentials Format</a> for details.
      * @param resourceVersion The identifier of the resource version to update.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *          An implementation should log (error) events on this span and it may set tags and use this span as the
@@ -49,7 +49,7 @@ public interface CredentialsManagementService {
      *         <li><em>404 Not Found</em> if no credentials of the given type and auth-id exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/credentials-api/#update-credentials">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#update-credentials">
      *      Credentials API - Update Credentials</a>
      */
     void set(String tenantId, String deviceId, Optional<String> resourceVersion, List<CommonCredential> credentials,

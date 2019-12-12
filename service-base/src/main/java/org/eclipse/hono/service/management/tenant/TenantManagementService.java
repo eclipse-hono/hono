@@ -42,7 +42,7 @@ public interface TenantManagementService {
      *             <li><em>409 Conflict</em> if a tenant with the given identifier and version already exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#add-tenant">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#add-tenant">
      *      Tenant API - Add Tenant</a>
      */
     void add(Optional<String> tenantId, JsonObject tenantObj, Span span, Handler<AsyncResult<OperationResult<Id>>> resultHandler);
@@ -61,7 +61,7 @@ public interface TenantManagementService {
      *            <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
      *            </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#get-tenant-information"> Tenant API - Get Tenant
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information"> Tenant API - Get Tenant
      *      Information</a>
      */
     void read(String tenantId, Span span, Handler<AsyncResult<OperationResult<Tenant>>> resultHandler);
@@ -82,7 +82,7 @@ public interface TenantManagementService {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#update-tenant">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#update-tenant">
      *      Tenant API - Update Tenant</a>
      */
     void update(String tenantId, JsonObject tenantObj, Optional<String> resourceVersion,
@@ -103,7 +103,7 @@ public interface TenantManagementService {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/tenant-api/#remove-tenant">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#remove-tenant">
      *      Tenant API - Remove Tenant</a>
      */
     void remove(String tenantId, Optional<String> resourceVersion, Span span, Handler<AsyncResult<Result<Void>>> resultHandler);

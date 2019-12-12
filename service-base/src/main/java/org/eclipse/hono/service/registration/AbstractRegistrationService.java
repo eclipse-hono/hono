@@ -66,7 +66,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      *            <li><em>404 Not Found</em> if no device with the given identifier is registered for the tenant.</li>
      *            </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#get-registration-information"> Device
+     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#get-registration-information"> Device
      *      Registration API - Get Registration Information</a>
      */
     protected abstract void getDevice(
