@@ -32,8 +32,8 @@ import io.vertx.core.Verticle;
 /**
  * A Spring Boot application exposing an AMQP based endpoint that implements Hono's device registry.
  * <p>
- * The application implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>
- * and <a href="https://www.eclipse.org/hono/docs/api/credentials-api/">Credentials API</a>.
+ * The application implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
+ * and <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
  * </p>
  */
 @ComponentScan("org.eclipse.hono.service.auth")

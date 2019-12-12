@@ -33,7 +33,7 @@ import io.vertx.core.Verticle;
 /**
  * A Spring Boot application exposing an AMQP based endpoint that implements Hono's Device Connection service.
  * <p>
- * The application implements Hono's <a href="https://www.eclipse.org/hono/docs/latest/api/device-connection-api/">
+ * The application implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">
  * Device Connection API</a>.
  */
 @ComponentScan("org.eclipse.hono.deviceconnection.infinispan")

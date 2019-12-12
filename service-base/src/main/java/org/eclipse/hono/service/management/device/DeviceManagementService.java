@@ -26,7 +26,7 @@ import org.eclipse.hono.service.management.Result;
  * A service for managing devices. <br>
  * This interface presents all the available operations on the API.
  *
- * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/">Device Registration API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
  */
 public interface DeviceManagementService {
 
@@ -45,7 +45,7 @@ public interface DeviceManagementService {
      *            <li><em>409 Conflict</em> if a device with the given identifier already exists for the tenant.</li>
      *            </ul>
      * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#register-device"> Device Registration API
+     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#register-device"> Device Registration API
      *      - Register Device</a>
      */
     void createDevice(String tenantId, Optional<String> deviceId, Device device, Span span,
@@ -66,7 +66,7 @@ public interface DeviceManagementService {
      *            <li><em>404 Not Found</em> if no device with the given identifier is registered for the tenant.</li>
      *            </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#get-registration-information"> Device
+     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#get-registration-information"> Device
      *      Registration API - Get Registration Information</a>
      */
     void readDevice(String tenantId, String deviceId, Span span,
@@ -88,7 +88,7 @@ public interface DeviceManagementService {
      *            <li><em>404 Not Found</em> if no device with the given identifier is registered for the tenant.</li>
      *            </ul>
      * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#update-device-registration"> Device
+     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#update-device-registration"> Device
      *      Registration API - Update Device Registration</a>
      */
     void updateDevice(String tenantId, String deviceId, Device device, Optional<String> resourceVersion, Span span,
@@ -111,7 +111,7 @@ public interface DeviceManagementService {
      *             registered for the tenant.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/api/device-registration-api/#deregister-device">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#deregister-device">
      *      Device Registration API - Deregister Device</a>
      */
     void deleteDevice(String tenantId, String deviceId, Optional<String> resourceVersion, Span span,

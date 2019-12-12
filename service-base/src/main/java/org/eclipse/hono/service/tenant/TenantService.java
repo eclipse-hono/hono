@@ -26,7 +26,7 @@ import io.vertx.core.json.JsonObject;
  * A service for keeping record of tenant information.
  * This interface only covers mandatory operations.
  *
- * @see <a href="https://www.eclipse.org/hono/docs/api/tenant-api/">Tenant API</a>
+ * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a>
  */
 public interface TenantService {
 
@@ -42,7 +42,7 @@ public interface TenantService {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     void get(String tenantId, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
@@ -64,7 +64,7 @@ public interface TenantService {
      *             <li><em>404 Not Found</em> if no tenant with the given identifier exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     default void get(final String tenantId, final Span span,
@@ -90,7 +90,7 @@ public interface TenantService {
      *             <li><em>404 Not Found</em> if no matching tenant exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     void get(X500Principal subjectDn, Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler);
@@ -118,7 +118,7 @@ public interface TenantService {
      *             <li><em>404 Not Found</em> if no matching tenant exists.</li>
      *             </ul>
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant-api/#get-tenant-information">
+     * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information">
      *      Tenant API - Get Tenant Information</a>
      */
     default void get(final X500Principal subjectDn, final Span span,

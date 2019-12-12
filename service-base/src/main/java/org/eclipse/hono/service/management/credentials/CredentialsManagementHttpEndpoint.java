@@ -38,7 +38,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 /**
  * An {@code HttpEndpoint} for managing device credentials.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/api/Credentials-API//">Credentials API</a>.
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials//">Credentials API</a>.
  * It receives HTTP requests representing operation invocations and sends them to the address {@link RegistryManagementConstants#EVENT_BUS_ADDRESS_CREDENTIALS_MANAGEMENT_IN} on the vertx
  * event bus for processing. The outcome is then returned to the client in the HTTP response.
  */

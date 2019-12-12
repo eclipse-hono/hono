@@ -167,7 +167,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Invokes the <em>Get Registration Information</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>
+     * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
@@ -177,7 +177,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Invokes the <em>Get Registration Information</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>
+     * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
@@ -207,7 +207,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Invokes the <em>Assert Device Registration</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>
+     * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      * <p>
      * This method delegates to {@link #assertRegistration(String, String)} with {@code null}
@@ -220,7 +220,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Invokes the <em>Assert Device Registration</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>
+     * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      */
     @Override
@@ -231,7 +231,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Invokes the <em>Assert Device Registration</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/device-registration-api/">Device Registration API</a>
+     * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
      * on the service represented by the <em>sender</em> and <em>receiver</em> links.
      * <p>
      * This method delegates to {@link #assertRegistration(String, String)} with {@code null}

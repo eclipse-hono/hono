@@ -42,7 +42,7 @@ public class GenericCredential extends CommonCredential {
      * @param type  The credential name type to set.
      * @return      a reference to this for fluent use.
      * 
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#standard-credential-types">Standard Credential Types</a>
+     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#standard-credential-types">Standard Credential Types</a>
      */
     public GenericCredential setType(final String type) {
         this.type = type;

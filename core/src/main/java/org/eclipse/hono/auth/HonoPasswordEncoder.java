@@ -18,7 +18,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A helper for encoding and matching passwords against credentials
- * managed by a Hono <a href="https://www.eclipse.org/hono/docs/api/credentials-api/">
+ * managed by a Hono <a href="https://www.eclipse.org/hono/docs/api/credentials/">
  * Credentials</a> service implementation.
  */
 public interface HonoPasswordEncoder {
@@ -28,7 +28,7 @@ public interface HonoPasswordEncoder {
      * 
      * @param rawPassword The clear text password to encode.
      * @return A <em>secret</em> as defined by Hono's
-     *         <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#hashed-password">
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#hashed-password">
      *         hashed-password credentials type</a>. The secret contains the name of the hash
      *         function, (optional) salt and the password hash.
      */
@@ -38,7 +38,7 @@ public interface HonoPasswordEncoder {
      * Matches a given password against credentials on record.
      * 
      * @param rawPassword The clear text password to match.
-     * @param secret The <a href="https://www.eclipse.org/hono/docs/api/credentials-api/#hashed-password">
+     * @param secret The <a href="https://www.eclipse.org/hono/docs/api/credentials/#hashed-password">
      *               hashed-password secret</a> to match against.
      * @return {@code true} if the password matches.
      */
