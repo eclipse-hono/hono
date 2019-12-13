@@ -72,24 +72,23 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
 
         final Promise<DeviceUser> result = Promise.promise();
         parseCredentials(context)
-        .compose(authInfo -> {
-            final Promise<User> authResult = Promise.promise();
-            getAuthProvider(context).authenticate(authInfo, authResult);
-            return authResult.future();
-        })
-        .setHandler(authAttempt -> {
-            if (authAttempt.succeeded()) {
-                if (authAttempt.result() instanceof DeviceUser) {
-                    result.complete((DeviceUser) authAttempt.result());
-                } else {
-                    log.warn("configured AuthProvider does not return DeviceUser instances [type returned: {}",
-                            authAttempt.result().getClass().getName());
-                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
-                }
-            } else {
-                result.fail(authAttempt.cause());
-            }
-        });
+                .compose(authInfo -> {
+                    final Promise<User> authResult = Promise.promise();
+                    getAuthProvider(context).authenticate(authInfo, authResult);
+                    return authResult.future();
+                }).setHandler(authAttempt -> {
+                    if (authAttempt.succeeded()) {
+                        if (authAttempt.result() instanceof DeviceUser) {
+                            result.complete((DeviceUser) authAttempt.result());
+                        } else {
+                            log.warn("configured AuthProvider does not return DeviceUser instances [type returned: {}",
+                                    authAttempt.result().getClass().getName());
+                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
+                        }
+                    } else {
+                        result.fail(authAttempt.cause());
+                    }
+                });
         return result.future();
     }
 
