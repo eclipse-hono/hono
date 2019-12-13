@@ -250,8 +250,8 @@ public final class DestinationCommandConsumer extends CommandConsumer {
      * The underlying receiver link will be created with the following properties:
      * <ul>
      * <li><em>auto accept</em> will be set to {@code true}</li>
-     * <li><em>pre-fetch size</em> will be set to {@code 0} to enforce manual flow control.
-     * However, the sender will be issued one credit on link establishment.</li>
+     * <li><em>pre-fetch size</em> will be set to the number of initial credits configured
+     * for the given connection.</li>
      * </ul>
      *
      * @param con The connection to the server.
@@ -302,7 +302,7 @@ public final class DestinationCommandConsumer extends CommandConsumer {
                     }
                     consumer.handleCommandMessage(msg, delivery);
                 },
-                0, // no pre-fetching
+                con.getConfig().getInitialCredits(),
                 false, // no auto-accept
                 sourceAddress -> { // remote close hook
                     LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed remotely",
@@ -316,7 +316,6 @@ public final class DestinationCommandConsumer extends CommandConsumer {
                     final DestinationCommandConsumer consumer = new DestinationCommandConsumer(
                             con, receiver, tenantId, gatewayOrDeviceId);
                     consumerRef.set(consumer);
-                    receiver.flow(1); // allow sender to send one command
                     consumer.setLocalCloseHandler(sourceAddress -> {
                         LOG.debug("command receiver link [tenant-id: {}, device-id: {}] closed locally",
                                 tenantId, gatewayOrDeviceId);
