@@ -332,13 +332,12 @@ public class CommandContext extends MapBasedExecutionContext {
      * @param credits The number of credits.
      * @throws IllegalArgumentException if credits is &lt; 1
      */
+    // TODO since both DestinationCommandConsumer and MappingAndDelegatingCommandConsumer use automatic credit handling now (i.e. prefetch > 0), this method can be removed
     private void flow(final int credits) {
         if (credits < 1) {
             throw new IllegalArgumentException("credits must be positive");
         }
-        if (receiver.getPrefetch() > 0) {
-            LOG.debug("will not flow credits because receiver prefetch is non-zero");
-        } else {
+        if (receiver.getPrefetch() <= 0) {
             currentSpan.log(String.format("flowing %d credits to sender", credits));
             receiver.flow(credits);
         }

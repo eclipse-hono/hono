@@ -203,7 +203,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
-                eq(0),
+                eq(props.getInitialCredits()),
                 eq(false),
                 closeHookCaptor.capture());
         // invoke close hook
@@ -231,7 +231,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(gatewaySpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
-                eq(0),
+                eq(props.getInitialCredits()),
                 eq(false),
                 closeHookCaptor.capture());
         // invoke close hook
@@ -284,7 +284,7 @@ public class CommandConsumerFactoryImplTest {
                     eq(deviceSpecificCommandAddress),
                     eq(ProtonQoS.AT_LEAST_ONCE),
                     any(ProtonMessageHandler.class),
-                    eq(0),
+                    eq(props.getInitialCredits()),
                     eq(false),
                     VertxMockSupport.anyHandler());
             return newConsumer;
@@ -339,7 +339,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
-                eq(0),
+                eq(props.getInitialCredits()),
                 eq(false),
                 VertxMockSupport.anyHandler());
 
@@ -389,7 +389,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
-                eq(0),
+                eq(props.getInitialCredits()),
                 eq(false),
                 VertxMockSupport.anyHandler());
 
@@ -403,7 +403,7 @@ public class CommandConsumerFactoryImplTest {
                 eq(deviceSpecificCommandAddress),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
-                eq(0),
+                eq(props.getInitialCredits()),
                 eq(false),
                 VertxMockSupport.anyHandler());
     }
