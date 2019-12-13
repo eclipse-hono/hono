@@ -15,6 +15,15 @@ title = "Release Notes"
 * Under rare circumstances an HTTP adapter instance might have gotten into a state where
   a device's requests to receive commands could no longer be processed successfully
   anymore until the adapter instance had been restarted. This has been fixed.
+* A potential issue has been identified where some command messages might not get sent to
+  the corresponding gateway. The scenario here involves the gateway sending event/telemetry
+  messages via HTTP with a `hono-ttd` header in order to receive commands, and doing so
+  with multiple concurrent requests for *different* devices. To resolve this issue, the 
+  corresponding tenant can be configured with a `support-concurrent-gateway-device-command-requests`
+  option set to `true` in the `ext` field of an `adapters` entry of type `hono-http`.
+  Note that with this option it is not supported for the authenticated gateway to send
+  _one_ message with a `hono-ttd` header and no device id to receive commands for *any*
+  device that has last sent a telemetry or event message via this gateway.
 
 ## 1.0.1
 

@@ -45,8 +45,10 @@ import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.JsonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -80,6 +82,13 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * Default file uploads directory used by Vert.x Web.
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
+
+    /**
+     * The name of the boolean field in the tenant configuration (inside the 'ext' field of an 'hono-http' type
+     * 'adapters' entry) that defines whether concurrent requests from gateway to get commands for specific devices
+     * shall be supported.
+     */
+    static final String FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS = "support-concurrent-gateway-device-command-requests";
 
     private static final String KEY_TIMER_ID = "timerId";
 
@@ -1022,22 +1031,30 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             // command consumer is closed by closeHandler, no explicit close necessary here
         };
 
-        final Future<MessageConsumer> commandConsumerFuture;
-        if (gatewayId != null) {
-            // gateway scenario
-            commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
-                    tenantObject.getTenantId(),
-                    deviceId,
-                    gatewayId,
-                    commandHandler,
-                    remoteCloseHandler);
-        } else {
-            commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
-                    tenantObject.getTenantId(),
-                    deviceId,
-                    commandHandler,
-                    remoteCloseHandler);
-        }
+        // First check whether the tenant has been configured to support concurrent ttd-param requests from the same
+        // gateway for different devices. In that case a device-specific (instead of a gateway-specific) consumer link will be created below
+        // (preventing multiple consumer links on the same gateway address from multiple HTTP adapter instances).
+        final Future<MessageConsumer> commandConsumerFuture = isSupportConcurrentGatewayDeviceCommandRequests(tenantObject)
+                .compose(supportConcurrentGatewayDeviceCommandRequests -> {
+                    if (gatewayId != null && !supportConcurrentGatewayDeviceCommandRequests) {
+                        // gateway scenario
+                        return getCommandConsumerFactory().createCommandConsumer(
+                                tenantObject.getTenantId(),
+                                deviceId,
+                                gatewayId,
+                                commandHandler,
+                                remoteCloseHandler);
+                    } else {
+                        if (gatewayId != null) {
+                            log.trace("gateway mapping disabled for tenant [{}], will create device-specific consumer", tenantObject.getTenantId());
+                        }
+                        return getCommandConsumerFactory().createCommandConsumer(
+                                tenantObject.getTenantId(),
+                                deviceId,
+                                commandHandler,
+                                remoteCloseHandler);
+                    }
+                });
         return commandConsumerFuture
                 .map(consumer -> {
                     if (!responseReady.isComplete()) {
@@ -1061,6 +1078,38 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         return Future.failedFuture(t);
                     }
                 });
+    }
+
+    @Override
+    protected final Future<Boolean> isGatewayMappingEnabled(final String tenantId, final String deviceId,
+            final Device authenticatedDevice) {
+        // If we want to support concurrent ttd requests from one gateway for multiple devices,
+        // we have to disable the gateway mapping.
+        return isSupportConcurrentGatewayDeviceCommandRequests(tenantId)
+                .map(supportConcurrentRequests -> {
+                    if (supportConcurrentRequests) {
+                        log.trace("gateway mapping disabled for tenant [{}]", tenantId);
+                    }
+                    return !supportConcurrentRequests;
+                })
+                .recover(t -> {
+                    log.debug("error determining whether gateway mapping is enabled, assuming true", t);
+                    return Future.succeededFuture(true);
+                });
+    }
+
+    private Future<Boolean> isSupportConcurrentGatewayDeviceCommandRequests(final String tenantId) {
+        return getTenantConfiguration(tenantId, null)
+                .compose(this::isSupportConcurrentGatewayDeviceCommandRequests);
+    }
+
+    private Future<Boolean> isSupportConcurrentGatewayDeviceCommandRequests(final TenantObject tenantObject) {
+        final Boolean result = Optional.ofNullable(tenantObject.getAdapterConfiguration(getTypeName()))
+                .map(conf -> JsonHelper.getValue(conf, TenantConstants.FIELD_EXT, JsonObject.class, null))
+                .map(extension -> JsonHelper.getValue(extension,
+                        FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS, Boolean.class, false))
+                .orElse(false);
+        return Future.succeededFuture(result);
     }
 
     /**

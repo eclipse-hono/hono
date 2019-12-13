@@ -14,7 +14,6 @@
 package org.eclipse.hono.util;
 
 import java.util.Map;
-import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -81,7 +80,7 @@ abstract class JsonBackedValueObject {
      * @param clazz The target type.
      * @param <T> The type of the property.
      * @return The property value or {@code null} if the property is not set or is of an unexpected type.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected static final <T> T getProperty(final JsonObject parent, final String name, final Class<T> clazz) {
         return getProperty(parent, name, clazz, null);
@@ -92,22 +91,14 @@ abstract class JsonBackedValueObject {
      * 
      * @param parent The JSON to get the property value from.
      * @param name The property name.
-     * @param defaultValue A default value to return if the property is {@code null}.
+     * @param defaultValue A default value to return if the property is {@code null} or is of an unexpected type.
      * @param clazz The target type.
      * @param <T> The type of the property.
      * @return The property value or the given default value if the property is not set or is of an unexpected type.
-     * @throws NullPointerException if any of parent or name are {@code null}.
+     * @throws NullPointerException if any of the parameters except defaultValue is {@code null}.
      */
     protected static final <T> T getProperty(final JsonObject parent, final String name, final Class<T> clazz,
             final T defaultValue) {
-        final Object value = parent.getValue(Objects.requireNonNull(name), defaultValue);
-        if (value == null) {
-            return defaultValue;
-        }
-        try {
-            return clazz.cast(value);
-        } catch (final ClassCastException e) {
-            return defaultValue;
-        }
+        return JsonHelper.getValue(parent, name, clazz, defaultValue);
     }
 }
