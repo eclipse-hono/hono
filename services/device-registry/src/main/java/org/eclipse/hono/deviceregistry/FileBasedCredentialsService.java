@@ -399,6 +399,29 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                 continue;
             }
 
+            if (clientContext != null && !clientContext.isEmpty()) {
+
+                final JsonObject extensionProperties = authIdCredential.getJsonObject(RegistryManagementConstants.FIELD_EXT, new JsonObject());
+
+                final boolean credentialsOnRecordMatchClientContext = clientContext.stream()
+                        .filter(entry -> entry.getValue() != null)
+                        .allMatch(entry -> {
+                            final Object valueOnRecord = extensionProperties.getValue(entry.getKey());
+                            log.debug("comparing client context property [name: {}, value: {}] to value on record: {}",
+                                    entry.getKey(), entry.getValue(), valueOnRecord);
+                            if (valueOnRecord == null) {
+                                return true;
+                            } else {
+                                return entry.getValue().equals(valueOnRecord);
+                            }
+                        });
+
+                if (!credentialsOnRecordMatchClientContext) {
+                    continue;
+                }
+
+            }
+
             // copy
             final var authIdCredentialCopy = authIdCredential.copy();
             final var secrets = authIdCredentialCopy.getJsonArray(CredentialsConstants.FIELD_SECRETS);

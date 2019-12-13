@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.deviceregistry;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -27,8 +27,10 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.UUID;
 
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -45,6 +47,7 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.CredentialsResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,6 +66,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.file.FileSystem;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -496,9 +500,71 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                 })
                 .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
                     // THEN the update fails with a 403
-                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s.getStatus());
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     ctx.completeNow();
                 })));
+    }
+
+    /**
+     * Verifies that the properties provided in a client context are matched against
+     * the properties of the credentials on record for the device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsSucceedsForMatchingClientContext(final VertxTestContext ctx) {
+        testGetCredentialsWithClientContext(ctx, "expected-value", "expected-value", HttpURLConnection.HTTP_OK);
+    }
+
+    /**
+     * Verifies that the properties provided in a client context are matched against
+     * the properties of the credentials on record for the device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsFailsForNonMatchingClientContext(final VertxTestContext ctx) {
+        testGetCredentialsWithClientContext(ctx, "expected-value", "other-value", HttpURLConnection.HTTP_NOT_FOUND);
+    }
+
+    private void testGetCredentialsWithClientContext(
+            final VertxTestContext ctx,
+            final String expectedContextValue,
+            final String providedContextValue,
+            final int expectedStatusCode) {
+
+        // GIVEN a device for which credentials are on record that
+        // contain a specific extension property
+        final var tenantId = "tenant";
+        final var deviceId = UUID.randomUUID().toString();
+        final var authId = UUID.randomUUID().toString();
+
+        final PskSecret pskSecret = new PskSecret();
+        pskSecret.setKey("sharedkey".getBytes(StandardCharsets.UTF_8));
+
+        final PskCredential pskCredential = new PskCredential();
+        pskCredential.setAuthId(authId);
+        pskCredential.setExtensions(Map.of("property-to-match", expectedContextValue));
+        pskCredential.setSecrets(Collections.singletonList(pskSecret));
+
+        setCredentials(getCredentialsManagementService(), tenantId, deviceId, List.of(pskCredential))
+                .compose(ok -> {
+                    // WHEN trying to retrieve credentials for a device that provided
+                    // a client context that contains a value for the property
+                    final Promise<CredentialsResult<JsonObject>> result = Promise.promise();
+                    getCredentialsService().get(
+                            tenantId,
+                            CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
+                            authId,
+                            new JsonObject().put("property-to-match", providedContextValue),
+                            result);
+                    return result.future();
+                })
+                .setHandler(ctx.succeeding(s -> {
+                    // THEN the request contains the expected status code
+                    ctx.verify(() -> assertThat(s.getStatus()).isEqualTo(expectedStatusCode));
+                    ctx.completeNow();
+                }));
     }
 
 }
