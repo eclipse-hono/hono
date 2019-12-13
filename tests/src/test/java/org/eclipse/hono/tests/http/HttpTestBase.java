@@ -22,6 +22,7 @@ import java.security.KeyPair;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -94,6 +95,7 @@ public abstract class HttpTestBase {
 
     private static final String COMMAND_TO_SEND = "setBrightness";
     private static final String COMMAND_JSON_KEY = "brightness";
+    private static final String FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS = "support-concurrent-gateway-device-command-requests";
 
     private static final String ORIGIN_WILDCARD = "*";
     private static final Vertx VERTX = Vertx.vertx();
@@ -227,6 +229,16 @@ public abstract class HttpTestBase {
                 new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false),
                 new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false)
                 );
+    }
+
+    /**
+     * Creates the endpoint configuration variants for Command &amp; Control scenarios where gateway mapping
+     * shall be disabled (the 'GATEWAY_FOR_ALL_DEVICES' case is not supported there).
+     *
+     * @return The configurations.
+     */
+    static Stream<HttpCommandEndpointConfiguration> commandAndControlVariantsForTestsWithGatewayMappingDisabled() {
+        return commandAndControlVariants().filter(endpointConfig -> !endpointConfig.isSubscribeAsGatewayForAllDevices());
     }
 
     /**
@@ -919,6 +931,34 @@ public abstract class HttpTestBase {
             final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();
+        testUploadMessagesWithTtdThatReplyWithCommand(endpointConfig, tenant, ctx);
+    }
+
+    /**
+     * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding
+     * response from the device, all while using a tenant that has the "support-concurrent-gateway-device-command-requests"
+     * option set.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("commandAndControlVariantsForTestsWithGatewayMappingDisabled")
+    public void testUploadMessagesWithTtdThatReplyWithCommandWithGatewayMappingDisabled(
+            final HttpCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+        final Adapter adapterConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP);
+        adapterConfig.setEnabled(true);
+        adapterConfig.setExtensions(Map.of(FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS, true));
+        tenant.addAdapterConfig(adapterConfig);
+        testUploadMessagesWithTtdThatReplyWithCommand(endpointConfig, tenant, ctx);
+    }
+
+    private void testUploadMessagesWithTtdThatReplyWithCommand(final HttpCommandEndpointConfiguration endpointConfig,
+            final Tenant tenant, final VertxTestContext ctx) throws InterruptedException {
         final VertxTestContext setup = new VertxTestContext();
 
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
