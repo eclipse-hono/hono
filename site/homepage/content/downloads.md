@@ -14,13 +14,13 @@ container orchestration platforms like Kubernetes and OpenShift.
 The release archive contains all files necessary to deploy Hono to a Kubernetes cluster using the
 [Helm package manager](https://helm.sh).
 
-* [Eclipse Hono 1.0.1 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.0.1-chart.tar.gz)
+* [Eclipse Hono 1.0.2 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.0.2-chart.tar.gz)
 
 Download and extract the archive and follow the [deployment guide]({{% doclink "/deployment/helm-based-deployment/" %}}).
 
 A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
 
-* [Eclipse Hono 1.0.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0.1-exec.jar)
+* [Eclipse Hono 1.0.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0.2-exec.jar)
 
 The client requires a Java 11 runtime environment to run.
 
@@ -51,5 +51,7 @@ For a list of the changes in this release, take a look at the [release notes]({{
 
 ## Previous versions
 
+* [Eclipse Hono 1.0.1 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.0.1-chart.tar.gz)
+* [Eclipse Hono 1.0.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0.1-exec.jar)
 * [Eclipse Hono 1.0.0 Archive](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.0.0-chart.tar.gz)
 * [Eclipse Hono 1.0.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0.0-exec.jar)

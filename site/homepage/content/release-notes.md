@@ -22,17 +22,19 @@ title = "Release Notes"
   and the [Credentials API]({{% doclink "/api/credentials/#get-credentials" %}}).
   **NB**: the example device registry does not yet support this feature. 
 
+## 1.0.2
+
 ### Fixes & Enhancements
 
 * The example deployment now also works with Kubernetes 1.16 using Helm 2.15 and later.
 * The Hono chart can now also be deployed using the recently released Helm 3. In fact,
   Helm 3 is now the recommended way for deploying Hono as it doesn't require installation
   of any Helm specific components to the Kubernetes cluster.
+* The example data grid which can be deployed using the Hono Helm chart can now be scaled
+  out to more than one node.
 * Under rare circumstances an HTTP adapter instance might have gotten into a state where
   a device's requests to receive commands could no longer be processed successfully
   anymore until the adapter instance had been restarted. This has been fixed.
-* The example data grid which can be deployed using the Hono Helm chart can now be scaled
-  out to more than one node.
 * A potential issue has been identified where some command messages might not get sent to
   the corresponding gateway. The scenario here involves the gateway sending event/telemetry
   messages via HTTP with a `hono-ttd` header in order to receive commands, and doing so
