@@ -60,6 +60,9 @@ import io.vertx.junit5.VertxTestContext.ExecutionBlock;
  */
 public abstract class AbstractCredentialsServiceTest {
 
+    protected static final JsonObject CLIENT_CONTEXT = new JsonObject()
+            .put("client-id", "some-client-identifier");
+
     /**
      * Gets credentials service being tested.
      * @return The credentials service
@@ -125,7 +128,7 @@ public abstract class AbstractCredentialsServiceTest {
     }
 
     /**
-     * Verifies that the service returns 404 if a client wants to retrieve non-existing credentials.
+     * Verifies that the service returns credentials for an existing device.
      *
      * @param ctx The vert.x test context.
      */
@@ -331,8 +334,11 @@ public abstract class AbstractCredentialsServiceTest {
 
                 mangementValidation.accept(s3);
 
-                getCredentialsService().get(tenantId, type,
+                getCredentialsService().get(
+                        tenantId,
+                        type,
                         authId,
+                        CLIENT_CONTEXT,
                         ctx.succeeding(s4 -> ctx.verify(() -> {
 
                             adapterValidation.accept(s4);

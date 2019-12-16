@@ -15,6 +15,7 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -55,19 +56,25 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
     /**
      * Extracts credentials from a client's MQTT <em>CONNECT</em> packet.
      * <p>
-     * The JSON object returned will contain a <em>username</em> and a
-     * <em>password</em> property with values extracted from the corresponding
-     * fields of the <em>CONNECT</em> packet.
+     * The JSON object returned will contain
+     * <ul>
+     * <li>a <em>username</em> property containing the corresponding value from the MQTT CONNECT packet,</li>
+     * <li>a <em>password</em> property containing the corresponding value from the MQTT CONNECT packet and</li>
+     * <li>a {@link ExecutionContextAuthHandler#PROPERTY_CLIENT_IDENTIFIER} property containing the
+     * MQTT client identifier</li>
+     * </ul>
      *
      * @param context The MQTT context for the client's CONNECT packet.
      * @return A future indicating the outcome of the operation.
      *         The future will succeed with the client's credentials extracted from the CONNECT packet
      *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
+     * @throws NullPointerException if the context is {@code null}
      * @throws IllegalArgumentException if the context does not contain an MQTT endpoint.
      */
     @Override
     public Future<JsonObject> parseCredentials(final MqttContext context) {
 
+        Objects.requireNonNull(context);
 
         if (context.deviceEndpoint() == null) {
             throw new IllegalArgumentException("no device endpoint");
@@ -91,7 +98,8 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
         } else {
             final JsonObject credentialsJSON = new JsonObject()
                     .put("username", auth.getUsername())
-                    .put("password", auth.getPassword());
+                    .put("password", auth.getPassword())
+                    .put(PROPERTY_CLIENT_IDENTIFIER, context.deviceEndpoint().clientIdentifier());
             final SpanContext spanContext = context.getTracingContext();
             if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
                 TracingHelper.injectSpanContext(tracer, spanContext, credentialsJSON);

@@ -14,24 +14,14 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.math.BigInteger;
 import java.net.HttpURLConnection;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.Principal;
-import java.security.PublicKey;
-import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.time.Instant;
-import java.time.Period;
-import java.util.Date;
-import java.util.Set;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
@@ -42,14 +32,16 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.X509Authentication;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttEndpoint;
 
 
@@ -57,7 +49,7 @@ import io.vertx.mqtt.MqttEndpoint;
  * Tests verifying behavior of {@link X509AuthHandler}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class X509AuthHandlerTest {
 
     private X509AuthHandler authHandler;
@@ -68,11 +60,51 @@ public class X509AuthHandlerTest {
      * Sets up the fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
         clientAuth = mock(X509Authentication.class);
         authProvider = mock(HonoClientBasedAuthProvider.class);
         authHandler = new X509AuthHandler(clientAuth, authProvider);
+    }
+
+    /**
+     * Verifies that the handler includes the MQTT client identifier in the authentication
+     * information retrieved from a device's CONNECT packet.
+     * 
+     * @param ctx The vert.x test context.
+     * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
+     */
+    @Test
+    public void testParseCredentialsIncludesMqttClientId(final VertxTestContext ctx) throws SSLPeerUnverifiedException {
+
+        // GIVEN an auth handler configured with an auth provider
+        final JsonObject authInfo = new JsonObject()
+                .put(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=device")
+                .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, "tenant");
+        when(clientAuth.validateClientCertificate(any(Certificate[].class), (SpanContext) any()))
+        .thenReturn(Future.succeededFuture(authInfo));
+
+        // WHEN trying to authenticate a request that contains a client certificate
+        final X509Certificate clientCert = getClientCertificate("CN=device", "CN=tenant");
+        final SSLSession sslSession = mock(SSLSession.class);
+        when(sslSession.getPeerCertificates()).thenReturn(new X509Certificate[] { clientCert });
+
+        final MqttEndpoint endpoint = mock(MqttEndpoint.class);
+        when(endpoint.isSsl()).thenReturn(true);
+        when(endpoint.sslSession()).thenReturn(sslSession);
+        when(endpoint.clientIdentifier()).thenReturn("mqtt-device");
+
+        final MqttContext context = MqttContext.fromConnectPacket(endpoint);
+        authHandler.parseCredentials(context)
+            // THEN the auth info is correctly retrieved from the client certificate
+            .setHandler(ctx.succeeding(info -> {
+                ctx.verify(() -> {
+                    assertThat(info.getString(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN)).isEqualTo("CN=device");
+                    assertThat(info.getString(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("tenant");
+                    assertThat(info.getString(X509AuthHandler.PROPERTY_CLIENT_IDENTIFIER)).isEqualTo("mqtt-device");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -83,7 +115,7 @@ public class X509AuthHandlerTest {
      * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
      */
     @Test
-    public void testHandleFailsWithStatusCodeFromAuthProvider(final TestContext ctx) throws SSLPeerUnverifiedException {
+    public void testHandleFailsWithStatusCodeFromAuthProvider(final VertxTestContext ctx) throws SSLPeerUnverifiedException {
 
         // GIVEN an auth handler configured with an auth provider that
         // fails with a 503 error code during authentication
@@ -91,7 +123,7 @@ public class X509AuthHandlerTest {
         when(clientAuth.validateClientCertificate(any(Certificate[].class), (SpanContext) any())).thenReturn(Future.failedFuture(error));
 
         // WHEN trying to authenticate a request that contains a client certificate
-        final EmptyCertificate clientCert = new EmptyCertificate("CN=device", "CN=tenant");
+        final X509Certificate clientCert = getClientCertificate("CN=device", "CN=tenant");
         final SSLSession sslSession = mock(SSLSession.class);
         when(sslSession.getPeerCertificates()).thenReturn(new X509Certificate[] { clientCert });
 
@@ -102,167 +134,24 @@ public class X509AuthHandlerTest {
         final MqttContext context = MqttContext.fromConnectPacket(endpoint);
         authHandler.authenticateDevice(context)
             // THEN the request context is failed with the 503 error code
-            .setHandler(ctx.asyncAssertFailure(t -> ctx.assertEquals(error, t)));
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isEqualTo(error);
+                });
+                ctx.completeNow();
+            }));
     }
 
-    /**
-     * An X.509 certificate which contains a subject and issuer only.
-     *
-     */
-    private static class EmptyCertificate extends X509Certificate {
+    private static X509Certificate getClientCertificate(final String subject, final String issuer) {
 
-        private final X500Principal subject;
-        private final X500Principal issuer;
+        final X509Certificate cert = mock(X509Certificate.class);
+        final X500Principal subjectDn = new X500Principal(subject);
+        final X500Principal issuerDn = new X500Principal(issuer);
+        when(cert.getSubjectDN()).thenReturn(subjectDn);
+        when(cert.getSubjectX500Principal()).thenReturn(subjectDn);
+        when(cert.getIssuerDN()).thenReturn(issuerDn);
+        when(cert.getIssuerX500Principal()).thenReturn(issuerDn);
+        return cert;
 
-        /**
-         * Creates a new certificate.
-         * 
-         * @param subject The subject.
-         * @param issuer The issuer of the certificate.
-         */
-        EmptyCertificate(final String subject, final String issuer) {
-            this.subject = new X500Principal(subject);
-            this.issuer = new X500Principal(issuer);
-        }
-
-        @Override
-        public boolean hasUnsupportedCriticalExtension() {
-            return false;
-        }
-
-        @Override
-        public Set<String> getCriticalExtensionOIDs() {
-            return null;
-        }
-
-        @Override
-        public Set<String> getNonCriticalExtensionOIDs() {
-            return null;
-        }
-
-        @Override
-        public byte[] getExtensionValue(final String oid) {
-            return null;
-        }
-
-        @Override
-        public void checkValidity() throws java.security.cert.CertificateExpiredException,
-                java.security.cert.CertificateNotYetValidException {
-        }
-
-        @Override
-        public void checkValidity(final Date date) throws java.security.cert.CertificateExpiredException,
-                java.security.cert.CertificateNotYetValidException {
-        }
-
-        @Override
-        public int getVersion() {
-            return 0;
-        }
-
-        @Override
-        public BigInteger getSerialNumber() {
-            return null;
-        }
-
-        @Override
-        public Principal getIssuerDN() {
-            return issuer;
-        }
-
-        @Override
-        public X500Principal getIssuerX500Principal() {
-            return issuer;
-        }
-
-        @Override
-        public Principal getSubjectDN() {
-            return subject;
-        }
-
-        @Override
-        public X500Principal getSubjectX500Principal() {
-            return subject;
-        }
-
-        @Override
-        public Date getNotBefore() {
-            return Date.from(Instant.now().minus(Period.ofDays(1)));
-        }
-
-        @Override
-        public Date getNotAfter() {
-            return Date.from(Instant.now().plus(Period.ofDays(1)));
-        }
-
-        @Override
-        public byte[] getTBSCertificate() throws java.security.cert.CertificateEncodingException {
-            return null;
-        }
-
-        @Override
-        public byte[] getSignature() {
-            return null;
-        }
-
-        @Override
-        public String getSigAlgName() {
-            return null;
-        }
-
-        @Override
-        public String getSigAlgOID() {
-            return null;
-        }
-
-        @Override
-        public byte[] getSigAlgParams() {
-            return null;
-        }
-
-        @Override
-        public boolean[] getIssuerUniqueID() {
-            return null;
-        }
-
-        @Override
-        public boolean[] getSubjectUniqueID() {
-            return null;
-        }
-
-        @Override
-        public boolean[] getKeyUsage() {
-            return null;
-        }
-
-        @Override
-        public int getBasicConstraints() {
-            return 0;
-        }
-
-        @Override
-        public byte[] getEncoded() throws java.security.cert.CertificateEncodingException {
-            return null;
-        }
-
-        @Override
-        public void verify(final PublicKey key) throws java.security.cert.CertificateException, NoSuchAlgorithmException,
-                InvalidKeyException, NoSuchProviderException, SignatureException {
-        }
-
-        @Override
-        public void verify(final PublicKey key, final String sigProvider) throws java.security.cert.CertificateException,
-                NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException, SignatureException {
-        }
-
-        @Override
-        public String toString() {
-            return null;
-        }
-
-        @Override
-        public PublicKey getPublicKey() {
-            return null;
-        }
     }
 }

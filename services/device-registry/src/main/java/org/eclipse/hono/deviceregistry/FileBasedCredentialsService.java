@@ -25,7 +25,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.auth.BCryptHelper;
@@ -391,7 +390,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             final JsonObject authIdCredential = (JsonObject) authIdCredentialEntry;
 
             if (!type.equals(authIdCredential.getString(CredentialsConstants.FIELD_TYPE))) {
-                // auth-id doesn't match ... continue search
+                // credentials type doesn't match ... continue search
                 continue;
             }
 
@@ -400,20 +399,27 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                 continue;
             }
 
-            if (clientContext != null) {
-                final AtomicBoolean match = new AtomicBoolean(true);
-                clientContext.forEach(field -> {
-                    if (authIdCredential.containsKey(field.getKey())) {
-                        if (!authIdCredential.getString(field.getKey()).equals(field.getValue())) {
-                            match.set(false);
-                        }
-                    } else {
-                        match.set(false);
-                    }
-                });
-                if (!match.get()) {
+            if (clientContext != null && !clientContext.isEmpty()) {
+
+                final JsonObject extensionProperties = authIdCredential.getJsonObject(RegistryManagementConstants.FIELD_EXT, new JsonObject());
+
+                final boolean credentialsOnRecordMatchClientContext = clientContext.stream()
+                        .filter(entry -> entry.getValue() != null)
+                        .allMatch(entry -> {
+                            final Object valueOnRecord = extensionProperties.getValue(entry.getKey());
+                            log.debug("comparing client context property [name: {}, value: {}] to value on record: {}",
+                                    entry.getKey(), entry.getValue(), valueOnRecord);
+                            if (valueOnRecord == null) {
+                                return true;
+                            } else {
+                                return entry.getValue().equals(valueOnRecord);
+                            }
+                        });
+
+                if (!credentialsOnRecordMatchClientContext) {
                     continue;
                 }
+
             }
 
             // copy
