@@ -27,13 +27,35 @@ amqpMessagingNetworkExample:
     svc:
       annotations: {}
       loadBalancerIP:
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.1"
+        memory: "64M"
+      limits:
+        cpu: "1"
+        memory: "256M"
   # AMQP Messaging Network Broker configuration.
   broker:
     type: artemis
     artemis:
-    # imageName contains the name (including tag) of the container
-    # image to use for the example AMQP Messaging Network Broker
+      # imageName contains the name (including tag) of the container
+      # image to use for the example AMQP Messaging Network Broker
       imageName: ${artemis.image.name}
+      # resources contains the container's 'requests and limits for CPU and memory
+      # as defined by the Kubernetes API.
+      # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+      # for a description of the properties' semantics.
+      resources:
+        requests:
+          cpu: "0.05"
+          memory: "256M"
+        limits:
+          cpu: "1"
+          memory: "512M"
    # Azure Service Bus as alternative to self-hosted Artemis ActiveMQ for event persistence
     servicebus:
       saslUsername:
@@ -51,6 +73,17 @@ dataGridExample:
   # imageName contains the name (including tag)
   # of the container image to use for the example data grid.
   imageName: ${infinispan.image.name}
+  # resources contains the container's 'requests and limits for CPU and memory
+  # as defined by the Kubernetes API.
+  # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  # for a description of the properties' semantics.
+  resources:
+    requests:
+      cpu: "0.1"
+      memory: "256M"
+    limits:
+      cpu: "0.5"
+      memory: "512M"
   # authUsername contains the name of the user that is authorized to connect to the example data grid.
   authUsername: "hono"
   # authPassword contains the secret of the user that is authorized to connect to the example data grid
@@ -65,6 +98,17 @@ jaegerBackendExample:
   # allInOneImage contains the name (including tag)
   # of the container image to use for the example Jaeger back end.
   allInOneImage: ${jaeger-all-in-one.image.name}
+  # resources contains the container's 'requests and limits for CPU and memory
+  # as defined by the Kubernetes API.
+  # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  # for a description of the properties' semantics.
+  resources:
+    requests:
+      cpu: "0.1"
+      memory: "256M"
+    limits:
+      cpu: "1"
+      memory: "512M"
   svc:
     annotations: {}
     loadBalancerIP:
@@ -174,6 +218,17 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the AMQP adapter
     imageName: ${docker.repository}/hono-adapter-amqp-vertx:${project.version}
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.05"
+        memory: "300M"
+      limits:
+        cpu: "1"
+        memory: "512M"
 
     svc:
       annotations: {}
@@ -232,6 +287,17 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the CoAP adapter
     imageName: ${docker.repository}/hono-adapter-coap-vertx:${project.version}
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.05"
+        memory: "256M"
+      limits:
+        cpu: "1"
+        memory: "512M"
 
     svc:
       annotations: {}
@@ -277,6 +343,17 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the HTTP adapter
     imageName: ${docker.repository}/hono-adapter-http-vertx:${project.version}
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.05"
+        memory: "300M"
+      limits:
+        cpu: "1"
+        memory: "512M"
 
     svc:
       annotations: {}
@@ -333,6 +410,17 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the LoRa adapter
     imageName: ${docker.repository}/hono-adapter-lora-vertx:${project.version}
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.05"
+        memory: "300M"
+      limits:
+        cpu: "1"
+        memory: "512M"
 
     svc:
       annotations: {}
@@ -386,6 +474,17 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the MQTT adapter
     imageName: ${docker.repository}/hono-adapter-mqtt-vertx:${project.version}
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.05"
+        memory: "300M"
+      limits:
+        cpu: "1"
+        memory: "512M"
 
     svc:
       annotations: {}
@@ -442,6 +541,18 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the Kura adapter
     imageName: ${docker.repository}/hono-adapter-kura:${project.version}
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.05"
+        memory: "300M"
+      limits:
+        cpu: "1"
+        memory: "512M"
+
     svc:
       annotations: {}
       loadBalancerIP:
@@ -498,6 +609,17 @@ authServer:
   # imageName contains the name (including registry and tag)
   # of the container image to use for the Auth Server
   imageName: ${docker.repository}/hono-service-auth:${project.version}
+  # resources contains the container's 'requests and limits for CPU and memory
+  # as defined by the Kubernetes API.
+  # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  # for a description of the properties' semantics.
+  resources:
+    requests:
+      cpu: "0.05"
+      memory: "196M"
+    limits:
+      cpu: "0.2"
+      memory: "256M"
 
   # extraSecretMounts describes additional secrets that should be mounted into the
   # Auth Server's' container filesystem. The files from the secret(s) can
@@ -573,6 +695,17 @@ deviceRegistryExample:
   # imageName contains the name (including registry and tag)
   # of the container image to use for the example Device Registry
   imageName: ${docker.repository}/hono-service-device-registry:${project.version}
+  # resources contains the container's 'requests and limits for CPU and memory
+  # as defined by the Kubernetes API.
+  # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  # for a description of the properties' semantics.
+  resources:
+    requests:
+      cpu: "0.05"
+      memory: "256M"
+    limits:
+      cpu: "0.3"
+      memory: "256M"
 
   svc:
     annotations: {}
@@ -665,6 +798,18 @@ deviceConnectionService:
   # imageName contains the name (including registry and tag)
   # of the container image to use for the Device Connection service
   imageName: ${docker.repository}/hono-service-device-connection:${project.version}
+  # resources contains the container's 'requests and limits for CPU and memory
+  # as defined by the Kubernetes API.
+  # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  # for a description of the properties' semantics.
+  resources:
+    requests:
+      cpu: "0.05"
+      memory: "256M"
+    limits:
+      cpu: "0.5"
+      memory: "256M"
+
   svc:
     annotations: {}
 
@@ -778,6 +923,17 @@ prometheus:
       scrape_interval: 10s
     service:
       servicePort: 9090
+    # resources contains the container's 'requests and limits for CPU and memory
+    # as defined by the Kubernetes API.
+    # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+    # for a description of the properties' semantics.
+    resources:
+      requests:
+        cpu: "0.05"
+        memory: "64M"
+      limits:
+        cpu: "0.5"
+        memory: "256M"
 
   alertmanager:
     enabled: false
@@ -804,6 +960,18 @@ grafana:
   podLabels:
     app.kubernetes.io/name: eclipse-hono
     app.kubernetes.io/component: dashboard
+
+  # resources contains the container's 'requests and limits for CPU and memory
+  # as defined by the Kubernetes API.
+  # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+  # for a description of the properties' semantics.
+  resources:
+    requests:
+      cpu: "0.05"
+      memory: "64M"
+    limits:
+      cpu: "0.3"
+      memory: "256M"
 
   
   ## Expose the grafana service to be accessed from outside the cluster (LoadBalancer service).

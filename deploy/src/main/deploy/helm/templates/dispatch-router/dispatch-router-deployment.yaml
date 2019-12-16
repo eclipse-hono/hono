@@ -47,9 +47,10 @@ spec:
         - name: internal
           containerPort: 5673
           protocol: TCP
+        {{- with .Values.amqpMessagingNetworkExample.dispatchRouter.resources }}
         resources:
-          limits:
-            memory: "512Mi"
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         livenessProbe:
           initialDelaySeconds: 180
           periodSeconds: 9

@@ -74,9 +74,10 @@ spec:
           periodSeconds: 10
           successThreshold: 1
           timeoutSeconds: 80
+        {{- with .Values.dataGridExample.resources }}
         resources:
-          limits:
-            memory: "512Mi"
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
       volumes:
       - name: conf
