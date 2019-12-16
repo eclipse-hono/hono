@@ -13,8 +13,10 @@
 
 package org.eclipse.hono.service.management;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -22,6 +24,11 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.RoutingContext;
 
 /**
  * Utility class for the management HTTP API.
@@ -32,6 +39,22 @@ public class Util {
      * Prevent instantiation.
      */
     private Util(){}
+
+    /**
+     * Creates a new <em>OpenTracing</em> span for tracing the execution of a service operation.
+     *
+     * @param operationName The operation name that the span should be created for.
+     * @param spanContext Existing span context.
+     * @param tracer the Tracer instance.
+     * @param className The class name to insert in the Span.
+     * @return The new {@code Span}.
+     * @throws NullPointerException if operationName is {@code null}.
+     */
+    public static final Span newChildSpan(final String operationName, final SpanContext spanContext,
+            final Tracer tracer, final String className) {
+        return newChildSpan(operationName, spanContext, tracer, null, null, className);
+
+    }
 
     /**
      * Creates a new <em>OpenTracing</em> span for tracing the execution of a service operation.
@@ -82,6 +105,57 @@ public class Util {
             final Tracer tracer,
             final String tenantId, final String className) {
         return newChildSpan(operationName, spanContext, tracer, tenantId, null, className);
+    }
+
+    /**
+     * Creates a response based on generic result.
+     * <p>
+     * The behavior is as follows:
+     * <ol>
+     * <li>Set the status code on the response.</li>
+     * <li>If the status code represents an error condition (i.e. the code is &gt;= 400),
+     * then the JSON object passed in to the returned handler is written to the response body.</li>
+     * <li>Otherwise, the JSON object is written to the response body and the given custom handler is
+     * invoked (if not {@code null}).</li>
+     * </ol>
+     *
+     * @param ctx The routing context of the request.
+     * @param result The generic result of the operation.
+     * @param customHandler An (optional) handler for post processing the HTTP response, e.g. to set any additional HTTP
+     *                      headers. The handler <em>must not</em> write to response body. May be {@code null}.
+     * @param span The active OpenTracing span for this operation. The status of the response is logged and span is finished.
+     */
+    public static final void writeResponse(final RoutingContext ctx, final Result<?> result, final Handler<HttpServerResponse> customHandler, final Span span) {
+        final int status = result.getStatus();
+        final HttpServerResponse response = ctx.response();
+        response.setStatusCode(status);
+        if (status >= 400) {
+            HttpUtils.setResponseBody(response, JsonObject.mapFrom(result.getPayload()));
+        } else if (status == HttpURLConnection.HTTP_CREATED) {
+            HttpUtils.setResponseBody(response, JsonObject.mapFrom(result.getPayload()));
+            if (customHandler != null) {
+                customHandler.handle(response);
+            }
+        }
+        Tags.HTTP_STATUS.set(span, status);
+        span.finish();
+        response.end();
+    }
+
+    /**
+     * Creates a response based on operation result (including resource version).
+     * <p>
+     * Sets ETAG header and then calls {@link #writeResponse}
+     *
+     * @param ctx The routing context of the request.
+     * @param result The operation result of the operation.
+     * @param customHandler An (optional) handler for post processing the HTTP response, e.g. to set any additional HTTP
+     *                      headers. The handler <em>must not</em> write to response body. May be {@code null}.
+     * @param span The active OpenTracing span for this operation. The status of the response is logged and span is finished.
+     */
+    public static final void writeOperationResponse(final RoutingContext ctx, final OperationResult<?> result, final Handler<HttpServerResponse> customHandler, final Span span) {
+        result.getResourceVersion().ifPresent(v -> ctx.response().putHeader(HttpHeaders.ETAG, v));
+        writeResponse(ctx, result, customHandler, span);
     }
 
 }
