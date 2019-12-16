@@ -45,6 +45,10 @@ spec:
           protocol: TCP
         - containerPort: 16686
           protocol: TCP
+        {{- with .Values.jaegerBackendExample.resources }}
+        resources:
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         readinessProbe:
           httpGet:
             path: "/"

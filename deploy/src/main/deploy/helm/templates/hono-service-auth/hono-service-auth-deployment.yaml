@@ -55,9 +55,10 @@ spec:
               fieldPath: metadata.namespace
         volumeMounts:
         {{- include "hono.container.secretVolumeMounts" ( dict "name" $args.name "conf" .Values.authServer ) | indent 8 }}
+        {{- with .Values.authServer.resources }}
         resources:
-          limits:
-            memory: "196Mi"
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /liveness

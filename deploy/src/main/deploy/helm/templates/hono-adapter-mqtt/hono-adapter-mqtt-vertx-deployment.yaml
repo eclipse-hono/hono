@@ -57,9 +57,10 @@ spec:
         {{- include "hono.jaeger.clientConf" $args | indent 8 }}
         volumeMounts:
         {{- include "hono.container.secretVolumeMounts" ( dict "name" $args.name "conf" .Values.adapters.mqtt ) | indent 8 }}
+        {{- with .Values.adapters.mqtt.resources }}
         resources:
-          limits:
-            memory: "256Mi"
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /liveness
