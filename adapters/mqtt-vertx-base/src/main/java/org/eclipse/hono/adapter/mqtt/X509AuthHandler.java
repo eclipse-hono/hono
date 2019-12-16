@@ -59,16 +59,39 @@ public class X509AuthHandler extends ExecutionContextAuthHandler<MqttContext> {
         this.auth = Objects.requireNonNull(clientAuth);
     }
 
+    /**
+     * Validates a client certificate and extracts credentials from it.
+     * <p>
+     * The JSON object returned will contain
+     * <ul>
+     * <li>the subject DN of the validated client certificate in the
+     * {@link org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_SUBJECT_DN} property,</li>
+     * <li>the tenant that the device belongs to in the {@link org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_TENANT_ID}
+     * property and</li>
+     * <li>the device's MQTT client identifier in the {@link ExecutionContextAuthHandler#PROPERTY_CLIENT_IDENTIFIER} property</li>
+     * </ul>
+     * 
+     * @param context The MQTT context for the client's CONNECT packet.
+     * @return A future indicating the outcome of the operation.
+     *         The future will succeed with the client's credentials extracted from the CONNECT packet
+     *         or it will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} indicating
+     *         the cause of the failure.
+     * @throws NullPointerException if the context is {@code null}
+     * @throws IllegalArgumentException if the context does not contain an MQTT endpoint.
+     */
     @Override
     public Future<JsonObject> parseCredentials(final MqttContext context) {
 
         Objects.requireNonNull(context);
 
-        if (context.deviceEndpoint().isSsl()) {
+        if (context.deviceEndpoint() == null) {
+            throw new IllegalArgumentException("no device endpoint");
+        } else if (context.deviceEndpoint().isSsl()) {
             try {
                 final Certificate[] path = context.deviceEndpoint().sslSession().getPeerCertificates();
                 final SpanContext currentSpan = context.getTracingContext();
-                return auth.validateClientCertificate(path, currentSpan);
+                return auth.validateClientCertificate(path, currentSpan)
+                        .map(authInfo -> authInfo.put(PROPERTY_CLIENT_IDENTIFIER, context.deviceEndpoint().clientIdentifier()));
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
                 log.debug("could not retrieve client certificate from device endpoint: {}", e.getMessage());

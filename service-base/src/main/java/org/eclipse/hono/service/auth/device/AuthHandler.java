@@ -37,6 +37,7 @@ public interface AuthHandler<T extends ExecutionContext> {
      * 
      * @param context The execution context.
      * @return The credentials.
+     * @throws NullPointerException if the context is {@code null}
      */
     Future<JsonObject> parseCredentials(T context);
 
@@ -45,6 +46,7 @@ public interface AuthHandler<T extends ExecutionContext> {
      * 
      * @param context The execution context.
      * @return The authenticated device.
+     * @throws NullPointerException if the context is {@code null}
      */
     Future<DeviceUser> authenticateDevice(T context);
 
