@@ -15,7 +15,9 @@ package org.eclipse.hono.service.metric;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -50,6 +52,10 @@ public class MicrometerBasedMetrics implements Metrics {
      */
     public static final String METER_CONNECTIONS_AUTHENTICATED = "hono.connections.authenticated";
     /**
+     * This metric is used to keep track of the connection duration of the authenticated devices to Hono.
+     */
+    public static final String METER_CONNECTIONS_AUTHENTICATED_DURATION = "hono.connections.authenticated.duration";
+    /**
      * The name of the meter for unauthenticated connections.
      */
     public static final String METER_CONNECTIONS_UNAUTHENTICATED = "hono.connections.unauthenticated";
@@ -79,6 +85,7 @@ public class MicrometerBasedMetrics implements Metrics {
     protected final MeterRegistry registry;
 
     private final Map<String, AtomicLong> authenticatedConnections = new ConcurrentHashMap<>();
+    private final Map<String, DeviceConnectionDurationTracker> connectionDurationTrackers = new ConcurrentHashMap<>();
     private final Map<String, Long> lastSeenTimestampPerTenant = new ConcurrentHashMap<>();
     private final AtomicLong unauthenticatedConnections;
     private final AtomicInteger totalCurrentConnections = new AtomicInteger();
@@ -125,9 +132,11 @@ public class MicrometerBasedMetrics implements Metrics {
     public final void incrementConnections(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
-                .incrementAndGet();
+        final long tenantSpecificAuthenticatedConnections = gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED,
+                this.authenticatedConnections, tenantId, AtomicLong::new)
+                        .incrementAndGet();
         this.totalCurrentConnections.incrementAndGet();
+        trackDeviceConnectionDuration(tenantId, tenantSpecificAuthenticatedConnections);
         updateLastSeenTimestamp(tenantId);
 
     }
@@ -136,9 +145,11 @@ public class MicrometerBasedMetrics implements Metrics {
     public final void decrementConnections(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED, this.authenticatedConnections, tenantId, AtomicLong::new)
-                .decrementAndGet();
+        final long tenantSpecificAuthenticatedConnections = gaugeForTenant(METER_CONNECTIONS_AUTHENTICATED,
+                this.authenticatedConnections, tenantId, AtomicLong::new)
+                        .decrementAndGet();
         this.totalCurrentConnections.decrementAndGet();
+        trackDeviceConnectionDuration(tenantId, tenantSpecificAuthenticatedConnections);
         updateLastSeenTimestamp(tenantId);
 
     }
@@ -387,6 +398,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
         // the onMeterRemoved() handler removes it also from this.authenticatedConnections
         registry.find(METER_CONNECTIONS_AUTHENTICATED).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_CONNECTIONS_AUTHENTICATED_DURATION).tags(tenantTag).meters().forEach(registry::remove);
 
         registry.find(METER_MESSAGES_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
         registry.find(METER_MESSAGES_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
@@ -394,5 +406,32 @@ public class MicrometerBasedMetrics implements Metrics {
         registry.find(METER_COMMANDS_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
 
         vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
+    }
+
+    /**
+     * Tracks the device connection duration for the given tenant and records the tracked value.
+     * 
+     * @param tenantId The tenant identifier.
+     * @param deviceConnectionsCount The number of device connections.
+     */
+    private void trackDeviceConnectionDuration(final String tenantId, final long deviceConnectionsCount) {
+
+        connectionDurationTrackers.compute(tenantId,
+                (tenant, deviceConnectionDurationTracker) -> Optional.ofNullable(deviceConnectionDurationTracker)
+                        .map(tracker -> tracker.updateNoOfDeviceConnections(deviceConnectionsCount))
+                        .orElseGet(() -> {
+                            if (deviceConnectionsCount > 0) {
+                                return DeviceConnectionDurationTracker.Builder
+                                        .forTenant(tenant)
+                                        .withVertx(vertx)
+                                        .withNumberOfDeviceConnections(deviceConnectionsCount)
+                                        .recordUsing(connectionDuration -> registry
+                                                .timer(METER_CONNECTIONS_AUTHENTICATED_DURATION,
+                                                        Tags.of(MetricsTags.getTenantTag(tenantId)))
+                                                .record(connectionDuration, TimeUnit.MILLISECONDS))
+                                        .start();
+                            }
+                            return null;
+                        }));
     }
 }
