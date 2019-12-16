@@ -250,8 +250,15 @@ Make sure to adapt/add properties as required by the AMQP Messaging Network.
 Note that *my-secret* is expected to already exist in the namespace that Hono gets deployed to, i.e. the Helm chart will **not**
 create this secret.
 
-Assuming that the file is named `customAmqpNetwork.yaml`, the values can then be passed in to the `helm install` command
+Assuming that the file is named `customAmqpNetwork.yaml`, the values can then be passed in to the Helm 3 `install` command
 as follows:
+
+```sh
+# in directory: eclipse-hono-$VERSION
+helm install hono  eclipse-hono/ --dependency-update --namespace hono -f customAmqpNetwork.yaml
+```
+
+or Helm 2
 
 ```sh
 # in directory: eclipse-hono-$VERSION
@@ -310,8 +317,15 @@ individual protocol adapters.
 Note that *my-secret* is expected to already exist in the namespace that Hono gets deployed to, i.e. the Helm chart will **not**
 create this secret.
 
-Assuming that the file is named `customRegistry.yaml`, the values can then be passed in to the `helm install` command
+Assuming that the file is named `customRegistry.yaml`, the values can then be passed in to the Helm 3 `install` command
 as follows:
+
+```sh
+# in directory: eclipse-hono-$VERSION
+helm install hono  eclipse-hono/ --dependency-update --namespace hono -f customRegistry.yaml
+```
+
+or Helm 2
 
 ```sh
 # in directory: eclipse-hono-$VERSION
@@ -325,7 +339,14 @@ This example implementation is used by default when the example registry is depl
 
 Hono also contains a production ready, data grid based implementation of the Device Connection API which can be deployed and used instead of
 the example implementation. The component can be deployed by means of setting the *deviceConnectionService.enabled* property to `true` when
-running Helm:
+running Helm 3
+
+~~~sh
+# in directory: eclipse-hono-$VERSION
+helm install hono eclipse-hono/ --dependency-update --namespace hono --set deviceConnectionService.enabled=true
+~~~
+
+or Helm 2:
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
@@ -335,7 +356,14 @@ helm install --dep-up --name hono --namespace hono --set deviceConnectionService
 This will deploy the Device Connection service and configure all protocol adapters to use it instead of the example Device Registry implementation.
 However, the service requires a connection to a data grid in order to store the device connection data.
 The Helm chart supports deployment of a simple data grid which can be used for experimenting by means of setting the
-*dataGridDeployExample* property to `true` when running Helm:
+*dataGridDeployExample* property to `true` when running Helm 3:
+
+~~~sh
+# in directory: eclipse-hono-$VERSION
+helm install hono eclipse-hono/ --dependency-update --namespace hono --set deviceConnectionService.enabled=true --set dataGridExample.enabled=true
+~~~
+
+or Helm 2
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
@@ -360,7 +388,14 @@ The following table provides an overview of the corresponding configuration prop
 | *adapters.kura.enabled*      | `false` | Indicates if the deprecated Kura protocol adapter should be deployed. |
 | *adapters.lora.enabled*      | `false` | Indicates if the (experimental) LoRa WAN protocol adapter should be deployed. |
 
-The following command will deploy the LoRa adapter along with Hono's standard adapters:
+The following command will deploy the LoRa adapter along with Hono's standard adapters using Helm 3
+
+~~~sh
+# in directory: eclipse-hono-$VERSION
+helm install hono eclipse-hono/ --dependency-update --namespace hono --set adapters.lora.enabled=true
+~~~
+
+or Helm 2
 
 ~~~sh
 # in directory: eclipse-hono-$VERSION
@@ -396,11 +431,37 @@ Assuming that the images should be tagged with `1.0-CUSTOM` and the container re
 You may need to log in to the (private) container registry before pushing the images.
 {{% /note %}}
 
-Once the images have been pushed, the deployment can be done using Helm:
+The image names that Hono should use for starting up containers can be configured in a YAML file:
+
+```yaml
+deviceRegistryExample:
+  imageName: "my.registry.io/eclipse/hono-service-device-registry:1.0-CUSTOM"
+authServer:
+  imageName: "my.registry.io/eclipse/hono-service-auth:1.0-CUSTOM"
+deviceConnectionService:
+  imageName: "my.registry.io/eclipse/hono-service-device-connection:1.0-CUSTOM"
+adapters:
+  amqp:
+    imageName: "my.registry.io/eclipse/hono-adapter-amqp-vertx:1.0-CUSTOM"
+  mqtt:
+    imageName: "my.registry.io/eclipse/hono-adapter-mqtt-vertx:1.0-CUSTOM"
+  http:
+    imageName: "my.registry.io/eclipse/hono-adapter-http-vertx:1.0-CUSTOM"
+
+```
+
+Assuming that the YAML file is called `imageNames.yaml`, the deployment can then be done using Helm 3:
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
-helm install --dep-up --name hono --namespace hono --set deviceRegistry.imageName=my.registry.io/eclipse/hono-service-device-registry:1.0-CUSTOM,authServer.imageName=my.registry.io/eclipse/hono-service-auth:1.0-CUSTOM,deviceConnectionService.imageName=my.registry.io/eclipse/hono-service-device-connection:1.0-CUSTOM,adapters.amqp.imageName=my.registry.io/eclipse/hono-adapter-amqp-vertx:1.0-CUSTOM,adapters.mqtt.imageName=my.registry.io/eclipse/hono-adapter-mqtt-vertx:1.0-CUSTOM,adapters.http.imageName=my.registry.io/eclipse/hono-adapter-http-vertx:1.0-CUSTOM target/deploy/helm/eclipse-hono/
+helm install hono target/deploy/helm/eclipse-hono/ --dependency-update --namespace hono -f imageNames.yaml
+~~~
+
+or Helm 2
+
+~~~sh
+# in Hono working tree directory: hono/deploy
+helm install --dep-up --name hono --namespace hono -f imageNames.yaml target/deploy/helm/eclipse-hono/
 ~~~
 
 ### Deploying to Minikube
@@ -420,7 +481,14 @@ In any case the build process can be started using the following command:
 # in base directory of Hono working tree:
 mvn clean install -Pbuild-docker-image,metrics-prometheus
 ~~~
-The newly built images can then be deployed using Helm:
+The newly built images can then be deployed using Helm 3:
+
+~~~sh
+# in Hono working tree directory: hono/deploy
+helm install hono target/deploy/helm/eclipse-hono/ --dependency-update --namespace hono
+~~~
+
+or Helm 2
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
@@ -547,7 +615,14 @@ with the `jaeger` Maven profile. Please refer to [Monitoring & Tracing]
 The newly built images also need to be made available to the target Kubernetes cluster as described in the two previous sections.
 
 The chart can be configured to deploy and use an example Jaeger back end by means of setting the *jaegerBackendDeployExample* property
-to `true` when running Helm:
+to `true` when running Helm 3:
+
+~~~sh
+# in Hono working tree directory: hono/deploy
+helm install hono target/deploy/helm/eclipse-hono/ --dependency-update --namespace hono --set jaegerBackendExample.enabled=true
+~~~
+
+or Helm 2
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
@@ -565,6 +640,15 @@ kubectl get service hono-jaeger-query --output='jsonpath={.status.loadBalancer.i
 If no example Jaeger back end should be deployed but instead an existing Jaeger installation should be used,
 the chart's *jaegerAgentConf* property can be set to environment variables which are passed in to
 the Jaeger Agent that is deployed with each of Hono's components.
+
+Using Helm 3
+
+~~~sh
+# in Hono working tree directory: hono/deploy
+helm install hono target/deploy/helm/eclipse-hono/ --dependency-update --namespace hono --set jaegerAgentConf.REPORTER_TYPE=tchannel --set jaegerAgentConf.REPORTER_TCHANNEL_HOST_PORT=my-jaeger-collector:14267
+~~~
+
+or Helm 2
 
 ~~~sh
 # in Hono working tree directory: hono/deploy
