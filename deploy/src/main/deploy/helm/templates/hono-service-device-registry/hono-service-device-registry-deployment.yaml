@@ -85,9 +85,10 @@ spec:
         {{- include "hono.container.secretVolumeMounts" ( dict "name" $args.name "conf" .Values.deviceRegistryExample ) | indent 8 }}
         - name: "registry"
           mountPath: "/var/lib/hono/device-registry"
+        {{- with .Values.deviceRegistryExample.resources }}
         resources:
-          limits:
-            memory: "256Mi"
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /liveness

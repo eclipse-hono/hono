@@ -58,9 +58,10 @@ spec:
         {{- include "hono.jaeger.clientConf" $args | indent 8 }}
         volumeMounts:
         {{- include "hono.container.secretVolumeMounts" ( dict "name" $args.name "conf" .Values.adapters.kura ) | indent 8 }}
+        {{- with .Values.adapters.kura.resources }}
         resources:
-          limits:
-            memory: "256Mi"
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         readinessProbe:
           httpGet:
             path: /readiness

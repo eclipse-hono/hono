@@ -48,11 +48,10 @@ spec:
           containerPort: 5671
           protocol: TCP
         imagePullPolicy: IfNotPresent
+        {{- with .Values.amqpMessagingNetworkExample.broker.artemis.resources }}
         resources:
-          limits:
-            memory: "512Mi"
-          requests:
-            memory: "256Mi"
+          {{- . | toYaml | nindent 10 }}
+        {{- end }}
         livenessProbe:
           initialDelaySeconds: 20
           periodSeconds: 9
