@@ -229,7 +229,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      */
     public final void setResponseCache(final ExpiringValueCache<Object, R> cache) {
         this.responseCache = cache;
-        LOG.info("enabling caching of responses from {}", getName());
+        LOG.debug("enabling caching of responses from {}", getName());
     }
 
     /**
