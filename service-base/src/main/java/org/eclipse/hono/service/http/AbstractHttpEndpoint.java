@@ -23,6 +23,7 @@ import java.util.function.IntPredicate;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.AbstractEndpoint;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
@@ -31,6 +32,8 @@ import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.opentracing.Span;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
@@ -346,6 +349,47 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     protected final String getDeviceIdParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_DEVICE_ID);
     }
+
+    /**
+     * Get request parameter value and check if it has been set. If it's not set, fail the request.
+     *
+     * @param paramName The name of the parameter to get.
+     * @param ctx The routing context of the request.
+     * @param span The active OpenTracing span for this operation. In case of the missing mandatory parameter, the error is logged and the span is finished.
+     *             Otherwise, the parameter is set as a span tag.
+     * @return The value of the parameter if it's set or {@code null} otherwise.
+     * @throws NullPointerException If ctx or paramName are {@code null}.
+     */
+    protected final String getMandatoryRequestParam(final String paramName, final RoutingContext ctx, final Span span) {
+        return getRequestParam(paramName, ctx, span, false);
+    }
+
+    /**
+     * Get request parameter value. Optionally, if parameter has not been set, fail the request.
+     *
+     * @param paramName The name of the parameter to get.
+     * @param ctx The routing context of the request.
+     * @param span The active OpenTracing span for this operation. In case of the missing mandatory parameter, the error is logged and the span is finished.
+     *             Otherwise, the parameter is set as a span tag.
+     * @param optional Whether to check if parameter has been set or not.
+     * @return The value of the parameter if it's set or {@code null} otherwise.
+     * @throws NullPointerException If ctx or paramName are {@code null}.
+     */
+    protected final String getRequestParam(final String paramName, final RoutingContext ctx, final Span span, final boolean optional) {
+        final String value = ctx.request().getParam(paramName);
+        if (!optional && value == null) {
+            final String msg = String.format("Missing request parameter: %s", paramName);
+            TracingHelper.logError(span, msg);
+            HttpUtils.badRequest(ctx, msg);
+            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
+            span.finish();
+            return null;
+        } else {
+            span.setTag(paramName, value);
+            return value;
+        }
+    }
+
 
     /**
      * Check the ETags values from the HTTP if-Match header if they exist,

@@ -13,13 +13,12 @@
 package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.service.management.Id;
@@ -76,7 +75,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
     private static final Logger log = LoggerFactory.getLogger(FileBasedRegistrationService.class);
 
     // <tenantId, <deviceId, registrationData>>
-    private final Map<String, Map<String, Versioned<Device>>> identities = new HashMap<>();
+    private final ConcurrentMap<String, ConcurrentMap<String, Versioned<Device>>> identities = new ConcurrentHashMap<>();
     private boolean running = false;
     private boolean dirty = false;
     private FileBasedRegistrationConfigProperties config;
@@ -212,7 +211,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
         int count = 0;
         log.debug("loading devices for tenant [{}]", tenantId);
-        final Map<String, Versioned<Device>> deviceMap = new HashMap<>();
+        final ConcurrentMap<String, Versioned<Device>> deviceMap = new ConcurrentHashMap<>();
         for (final Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
             if (deviceObj instanceof JsonObject) {
                 final JsonObject entry = (JsonObject) deviceObj;
@@ -277,7 +276,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
         return checkFileExists(true).compose(s -> {
             final AtomicInteger idCount = new AtomicInteger();
             final JsonArray tenants = new JsonArray();
-            for (final Entry<String, Map<String, Versioned<Device>>> entry : identities.entrySet()) {
+            for (final Entry<String, ConcurrentMap<String, Versioned<Device>>> entry : identities.entrySet()) {
                 final JsonArray devices = new JsonArray();
                 for (final Entry<String, Versioned<Device>> deviceEntry : entry.getValue().entrySet()) {
                     devices.add(
@@ -379,7 +378,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
     private Versioned<Device> getRegistrationData(final String tenantId, final String deviceId) {
 
-        final Map<String, Versioned<Device>> devices = this.identities.get(tenantId);
+        final ConcurrentMap<String, Versioned<Device>> devices = this.identities.get(tenantId);
 
         if (devices == null) {
             return null;
@@ -412,7 +411,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
 
-        final Map<String, Versioned<Device>> devices = identities.get(tenantId);
+        final ConcurrentMap<String, Versioned<Device>> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
@@ -460,7 +459,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
         Objects.requireNonNull(tenantId);
         final String deviceIdValue = deviceId.orElseGet(() -> generateDeviceId(tenantId));
 
-        final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
+        final ConcurrentMap<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
         if (devices.size() >= getConfig().getMaxDevicesPerTenant()) {
             TracingHelper.logError(span, "Maximum devices number limit reached for tenant");
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
@@ -508,7 +507,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
     private OperationResult<Id> doUpdateDevice(final String tenantId, final String deviceId, final Device device,
             final Optional<String> resourceVersion, final Span span) {
 
-        final Map<String, Versioned<Device>> devices = identities.get(tenantId);
+        final ConcurrentMap<String, Versioned<Device>> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
@@ -533,7 +532,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
                 Optional.ofNullable(newDevice.getVersion()));
     }
 
-    private Map<String, Versioned<Device>> getDevicesForTenant(final String tenantId) {
+    private ConcurrentMap<String, Versioned<Device>> getDevicesForTenant(final String tenantId) {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
 
@@ -564,7 +563,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
      */
     private String generateDeviceId(final String tenantId) {
 
-        final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
+        final ConcurrentMap<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
         String tempDeviceId;
         do {
             tempDeviceId = UUID.randomUUID().toString();
