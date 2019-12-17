@@ -71,22 +71,18 @@ public final class HotrodBasedDeviceConnectionInfoCache implements DeviceConnect
 
         final Promise<Void> result = Promise.promise();
 
-        if (cache == null) {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to remote cache"));
-        } else {
-            cache
-            .putAsync(getKey(tenantId, deviceId), gatewayId)
-            .whenComplete((replacedValue, error) -> {
-                if (error == null) {
-                    LOG.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]", tenantId, deviceId, gatewayId);
-                    result.complete();
-                } else {
-                    LOG.debug("failed to set last known gateway [tenant: {}, device-id: {}, gateway: {}]",
-                            tenantId, deviceId, gatewayId, error);
-                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error));
-                }
-            });
-        }
+        cache.putAsync(getKey(tenantId, deviceId), gatewayId)
+                .whenComplete((replacedValue, error) -> {
+                    if (error == null) {
+                        LOG.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]", tenantId, deviceId,
+                                gatewayId);
+                        result.complete();
+                    } else {
+                        LOG.debug("failed to set last known gateway [tenant: {}, device-id: {}, gateway: {}]",
+                                tenantId, deviceId, gatewayId, error);
+                        result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error));
+                    }
+                });
 
         return HonoProtonHelper.handleOnContext(result, Vertx.currentContext());
     }
@@ -99,24 +95,22 @@ public final class HotrodBasedDeviceConnectionInfoCache implements DeviceConnect
 
         final Promise<JsonObject> result = Promise.promise();
 
-        if (cache == null) {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to remote cache"));
-        } else {
-            cache.getAsync(getKey(tenantId, deviceId))
-            .whenComplete((gatewayId, error) -> {
-                if (error != null) {
-                    LOG.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
-                            tenantId, deviceId, error);
-                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error));
-                } else if (gatewayId == null) {
-                    LOG.debug("could not find last known gateway for device [tenant: {}, device-id: {}]", tenantId, deviceId);
-                    result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
-                } else {
-                    LOG.debug("found last known gateway for device [tenant: {}, device-id: {}]: {}", tenantId, deviceId, gatewayId);
-                    result.complete(getResult(gatewayId));
-                }
-            });
-        }
+        cache.getAsync(getKey(tenantId, deviceId))
+                .whenComplete((gatewayId, error) -> {
+                    if (error != null) {
+                        LOG.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
+                                tenantId, deviceId, error);
+                        result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, error));
+                    } else if (gatewayId == null) {
+                        LOG.debug("could not find last known gateway for device [tenant: {}, device-id: {}]", tenantId,
+                                deviceId);
+                        result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
+                    } else {
+                        LOG.debug("found last known gateway for device [tenant: {}, device-id: {}]: {}", tenantId,
+                                deviceId, gatewayId);
+                        result.complete(getResult(gatewayId));
+                    }
+                });
 
         return HonoProtonHelper.handleOnContext(result, Vertx.currentContext());
     }

@@ -66,9 +66,14 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
 
     /**
      * Starts up the factory.
+     * 
+     * @throws IllegalStateException if the cache manager is not set.
      */
     @PostConstruct
     public void start() {
+        if (cacheManager == null) {
+            throw new IllegalStateException("cache manager must be set");
+        }
         cacheManager.start();
         cache = cacheManager.getCache("device-connection");
         cache.start();

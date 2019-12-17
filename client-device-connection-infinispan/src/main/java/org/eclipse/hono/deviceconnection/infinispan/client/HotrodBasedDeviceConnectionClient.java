@@ -14,11 +14,9 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.DeviceConnectionClient;
-import org.eclipse.hono.client.ServerErrorException;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
@@ -65,7 +63,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
      */
     @Override
     public boolean isOpen() {
-        return cache != null;
+        return true;
     }
 
     /**
@@ -106,11 +104,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
     @Override
     public Future<Void> setLastKnownGatewayForDevice(final String deviceId, final String gatewayId, final SpanContext context) {
 
-        if (isOpen()) {
-            return cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, context);
-        } else {
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to remote cache"));
-        }
+        return cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, context);
     }
 
     /**
@@ -119,10 +113,6 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
     @Override
     public Future<JsonObject> getLastKnownGatewayForDevice(final String deviceId, final SpanContext context) {
 
-        if (isOpen()) {
-            return cache.getLastKnownGatewayForDevice(tenantId, deviceId, context);
-        } else {
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to remote cache"));
-        }
+        return cache.getLastKnownGatewayForDevice(tenantId, deviceId, context);
     }
 }
