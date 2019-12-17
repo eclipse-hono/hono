@@ -73,7 +73,8 @@ spec:
             path: /readiness
             port: {{ .Values.healthCheckPort }}
             scheme: HTTPS
-          initialDelaySeconds: 30
+          initialDelaySeconds: 60
+          periodSeconds: 10
       volumes:
       {{- include "hono.pod.secretVolumes" ( dict "releaseName" .Release.Name "name" $args.name "conf" .Values.deviceConnectionService ) | indent 6 }}
 {{- end }}

@@ -23,10 +23,9 @@ import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.deviceconnection.EventBusDeviceConnectionAdapter;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
+import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.commons.api.BasicCache;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
@@ -45,7 +44,6 @@ import io.vertx.ext.healthchecks.Status;
  */
 public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConnectionAdapter implements DeviceConnectionService, HealthCheckProvider {
 
-    private static final Logger LOG = LoggerFactory.getLogger(RemoteCacheBasedDeviceConnectionService.class);
     private RemoteCacheContainer cacheManager;
     private BasicCache<String, String> cache;
 
@@ -86,26 +84,34 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
     @Override
     protected void doStart(final Future<Void> startFuture) {
 
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(startFuture);
-
         if (cacheManager == null) {
-            result.fail(new IllegalStateException("cache manager is not set"));
+            startFuture.fail(new IllegalStateException("cache manager is not set"));
         } else {
-            context.executeBlocking(r -> {
-                cacheManager.start();
-                cache = cacheManager.getCache("device-connection");
-                cache.start();
-                r.complete(cacheManager);
-            }, attempt -> {
-                if (attempt.succeeded()) {
-                    LOG.info("successfully connected to remote cache");
-                } else {
-                    LOG.info("failed to connect to remote cache", attempt.cause());
-                }
-            });
-            result.complete();
+            connectToGrid();
+            startFuture.complete();
         }
+    }
+
+    private void connectToGrid() {
+
+        context.executeBlocking(r -> {
+            if (!cacheManager.isStarted()) {
+                log.debug("trying to start cache manager");
+                cacheManager.start();
+                log.info("started cache manager, now connecting to remote cache");
+            }
+            log.debug("trying to connect to remote cache");
+            cache = cacheManager.getCache("device-connection");
+            cache.start();
+            r.complete(cacheManager);
+        }, attempt -> {
+            if (attempt.succeeded()) {
+                log.info("successfully connected to remote cache");
+            } else {
+                log.debug("failed to connect to remote cache: {}", attempt.cause().getMessage());
+                vertx.setTimer(5000, timerId -> connectToGrid());
+            }
+        });
     }
 
     /**
@@ -139,9 +145,9 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
             r.complete();
         }, stopAttempt -> {
             if (stopAttempt.succeeded()) {
-                LOG.info("connection(s) to remote cache stopped successfully");
+                log.info("connection(s) to remote cache stopped successfully");
             } else {
-                LOG.info("error trying to stop connection(s) to remote cache", stopAttempt.cause());
+                log.info("error trying to stop connection(s) to remote cache", stopAttempt.cause());
             }
             result.complete();
         });
@@ -244,22 +250,32 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         readinessHandler.register("remote-cache-connection", this::checkForCacheAvailability);
     }
 
+    private void checkForCacheAvailability(final Promise<Status> status) {
+
+        if (cacheManager.isStarted()) {
+            if (cache instanceof RemoteCache) {
+                try {
+                    ((RemoteCache<String, String>) cache).serverStatistics();
+                    status.complete(Status.OK());
+                } catch (RuntimeException e) {
+                    // cannot interact with data grid
+                    status.complete(Status.KO());
+                }
+            } else {
+                status.complete(Status.KO());
+            }
+        } else {
+            status.complete(Status.KO());
+        }
+    }
+
     /**
      * {@inheritDoc}
      * <p>
-     * Registers a check for an established connection to the remote cache.
+     * Does not register any specific checks.
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        livenessHandler.register("remote-cache-connection", this::checkForCacheAvailability);
     }
 
-    private void checkForCacheAvailability(final Promise<Status> status) {
-
-        if (cache == null) {
-            status.complete(Status.KO());
-        } else {
-            status.complete(Status.OK());
-        }
-    }
 }
