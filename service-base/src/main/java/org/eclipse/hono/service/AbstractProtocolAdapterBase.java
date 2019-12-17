@@ -903,12 +903,16 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .map(client -> client.isConnected())
                 .orElse(Future.failedFuture(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "Command & Control client factory is not set"))));
-        if (deviceConnectionClientFactory instanceof DeviceConnectionClientFactory) {
-            connections.add(Optional.ofNullable(deviceConnectionClientFactory)
-                    .map(client -> ((DeviceConnectionClientFactory) client).isConnected())
-                    .orElse(Future.failedFuture(new ServerErrorException(
-                            HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set"))));
-        }
+        connections.add(Optional.ofNullable(deviceConnectionClientFactory)
+                .map(client -> {
+                    if (deviceConnectionClientFactory instanceof DeviceConnectionClientFactory) {
+                        return ((DeviceConnectionClientFactory) client).isConnected();
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                })
+                .orElse(Future.failedFuture(new ServerErrorException(
+                        HttpURLConnection.HTTP_UNAVAILABLE, "Device Connection client factory is not set"))));
         return CompositeFuture.all(connections).mapEmpty();
     }
 
