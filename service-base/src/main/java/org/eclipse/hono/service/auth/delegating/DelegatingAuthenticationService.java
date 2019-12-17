@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.auth.delegating;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.AuthenticationServerClient;
@@ -53,6 +54,19 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     @Override
     public void setConfig(final AuthenticationServerClientConfigProperties configuration) {
         setSpecificConfig(configuration);
+    }
+
+    /**
+     * Gets the supported SASL mechanisms from the service configuration. If no configuration is set, the
+     * mechanisms EXTERNAL and PLAIN (in that order) are returned.
+     *
+     * @return The supported SASL mechanisms.
+     */
+    @Override
+    public final String[] getSupportedSaslMechanisms() {
+        return Optional.ofNullable(getConfig())
+                .map(config -> config.getSupportedSaslMechanisms().toArray(new String[0]))
+                .orElse(DEFAULT_SASL_MECHANISMS);
     }
 
     /**

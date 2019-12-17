@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
@@ -70,6 +71,19 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     @Override
     public void setConfig(final AuthenticationServerConfigProperties configuration) {
         setSpecificConfig(configuration);
+    }
+
+    /**
+     * Gets the supported SASL mechanisms from the service configuration. If no configuration is set, the
+     * mechanisms EXTERNAL and PLAIN (in that order) are returned.
+     *
+     * @return The supported SASL mechanisms.
+     */
+    @Override
+    public String[] getSupportedSaslMechanisms() {
+        return Optional.ofNullable(getConfig())
+                .map(config -> config.getSupportedSaslMechanisms().toArray(new String[0]))
+                .orElse(DEFAULT_SASL_MECHANISMS);
     }
 
     /**

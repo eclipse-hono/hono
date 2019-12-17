@@ -513,6 +513,7 @@ authServer:
       # /etc/hono/permissions.json and issues tokens with a lifetime of 1h
       svc:
       #  permissionsPath: "file:///etc/hono/permissions.json"
+      #  supportedSaslMechanisms: EXTERNAL, PLAIN
       #  signing:
           # tokenExpiration contains the number of seconds after which tokens issued
           # by the Auth server will expire.
