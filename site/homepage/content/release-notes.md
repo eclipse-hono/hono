@@ -21,6 +21,9 @@ title = "Release Notes"
   concept and for details to the [Tenant API]({{% doclink "/api/tenant/#trusted-ca-format" %}})
   and the [Credentials API]({{% doclink "/api/credentials/#get-credentials" %}}).
   **NB**: the example device registry does not yet support this feature. 
+* The Hono Auth Server and Device Registry components now support configuring the SASL
+  mechanisms advertised to a client connecting to these components. This can be used to
+  restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both. 
 
 ## 1.0.2
 
