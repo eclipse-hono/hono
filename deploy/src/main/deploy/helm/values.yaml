@@ -646,16 +646,13 @@ authServer:
       # to the vert.x runtime during start-up.
       maxInstances: 1
     auth:
-      # svc contains configuration properties for the server
-      # If not set, the sever by default loads permissions from
-      # /etc/hono/permissions.json and issues tokens with a lifetime of 1h
+      # svc contains configuration properties for the server as defined by
+      # https://www.eclipse.org/hono/docs/admin-guide/auth-server-config/
+      # If not set, the server by default loads permission rules from
+      # /etc/hono/permissions.json, uses the AMQP endpoint's server certificate
+      # for signing tokens and issues tokens with a lifetime of 1h
       svc:
-      #  permissionsPath: "file:///etc/hono/permissions.json"
-      #  supportedSaslMechanisms: EXTERNAL, PLAIN
-      #  signing:
-          # tokenExpiration contains the number of seconds after which tokens issued
-          # by the Auth server will expire.
-          #tokenExpiration: 3600
+
       # amqp contains configuration properties for the server's
       # exposed AMQP endpoints.
       # If not set, the sever by default exposes the secure and insecure ports

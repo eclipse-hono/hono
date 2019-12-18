@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
@@ -106,6 +107,11 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         } else {
             try {
                 loadPermissions();
+                if (log.isInfoEnabled()) {
+                    final String saslMechanisms = getConfig().getSupportedSaslMechanisms().stream()
+                            .collect(Collectors.joining(", "));
+                    log.info("starting {} with support for SASL mechanisms: {}", getClass().getSimpleName(), saslMechanisms);
+                }
                 startPromise.complete();
             } catch (final IOException e) {
                 log.error("cannot load permissions from resource {}", getConfig().getPermissionsPath(), e);
