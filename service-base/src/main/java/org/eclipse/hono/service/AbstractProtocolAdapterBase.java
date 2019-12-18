@@ -14,7 +14,6 @@ package org.eclipse.hono.service;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -1247,15 +1246,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         Objects.requireNonNull(registrationInfo);
 
-        final Message msg = ProtonHelper.message();
-        msg.setContentType(contentType);
-        msg.setCreationTime(Instant.now().toEpochMilli());
-        MessageHelper.setPayload(msg, contentType, payload);
-
-        return MessageHelper.addProperties(
-                msg,
+        return MessageHelper.newMessage(
                 target,
                 publishAddress,
+                contentType,
+                payload,
                 tenant,
                 registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS),
                 timeUntilDisconnect,
@@ -1298,6 +1293,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             final TenantObject tenant,
             final JsonObject registrationInfo,
             final Integer timeUntilDisconnect) {
+
         return addProperties(msg, target, publishAddress, tenant, registrationInfo, timeUntilDisconnect, null);
     }
 
