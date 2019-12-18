@@ -15,6 +15,7 @@ package org.eclipse.hono.service.auth.delegating;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.AuthenticationServerClient;
@@ -155,6 +156,11 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
             result.fail(new IllegalStateException("no connection factory for Authentication service set"));
         } else {
             client = new AuthenticationServerClient(vertx, factory);
+            if (log.isInfoEnabled()) {
+                final String saslMechanisms = getConfig().getSupportedSaslMechanisms().stream()
+                        .collect(Collectors.joining(", "));
+                log.info("starting {} with support for SASL mechanisms: {}", toString(), saslMechanisms);
+            }
             result.complete();
         }
     }
@@ -173,8 +179,10 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
 
     @Override
     public String toString() {
-        return new StringBuilder(DelegatingAuthenticationService.class.getSimpleName())
-                .append("[Authentication service: ").append(getConfig().getHost()).append(":").append(getConfig().getPort()).append("]")
+        return new StringBuilder(getClass().getSimpleName())
+                .append(" [")
+                .append("Authentication service: ").append(getConfig().getHost()).append(":").append(getConfig().getPort())
+                .append("]")
                 .toString();
     }
 }
