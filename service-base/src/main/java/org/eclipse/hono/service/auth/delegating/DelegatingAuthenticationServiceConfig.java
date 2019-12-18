@@ -72,10 +72,6 @@ public class DelegatingAuthenticationServiceConfig {
     @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
     public AuthTokenHelper tokenValidator(final Vertx vertx) {
         final AuthenticationServerClientConfigProperties authClientProps = authenticationServiceClientProperties();
-        if (!authClientProps.getValidation().isAppropriateForValidating() && authClientProps.getCertPath() != null) {
-            // fall back to TLS configuration
-            authClientProps.getValidation().setCertPath(authClientProps.getCertPath());
-        }
         return AuthTokenHelperImpl.forValidating(vertx, authClientProps.getValidation());
     }
 }
