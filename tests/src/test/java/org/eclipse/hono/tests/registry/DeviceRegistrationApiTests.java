@@ -113,7 +113,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .setHandler(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
                         assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactlyElementsOf(via);
+                        assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactly(gatewayId);
                     });
                     ctx.completeNow();
                 }));
