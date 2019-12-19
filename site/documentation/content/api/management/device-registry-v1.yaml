@@ -746,7 +746,12 @@ components:
                type: array
                items:
                   type: string
-               description: The device IDs of the gateways this device is assigned to.
+               description: The device IDs of the gateways and the IDs of the gateway groups that are registered to act on behalf of this device. Note that "via" and "memberOf" must not be set at the same time.
+            "memberOf":
+               type: array
+               items:
+                  type: string
+               description: The IDs of the gateway groups in which this device is a member. Note that "via" and "memberOf" must not be set at the same time.
             "ext":
                $ref: '#/components/schemas/Extensions'
 
