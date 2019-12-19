@@ -44,6 +44,8 @@ import io.vertx.ext.healthchecks.Status;
  */
 public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConnectionAdapter implements DeviceConnectionService, HealthCheckProvider {
 
+    private static final String CACHE_NAME = "device-connection";
+
     private RemoteCacheContainer cacheManager;
     private BasicCache<String, String> cache;
 
@@ -95,15 +97,23 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
     private void connectToGrid() {
 
         context.executeBlocking(r -> {
-            if (!cacheManager.isStarted()) {
-                log.debug("trying to start cache manager");
-                cacheManager.start();
-                log.info("started cache manager, now connecting to remote cache");
+            try {
+                if (!cacheManager.isStarted()) {
+                    log.debug("trying to start cache manager");
+                    cacheManager.start();
+                    log.info("started cache manager, now connecting to remote cache");
+                }
+                log.debug("trying to connect to remote cache");
+                cache = cacheManager.getCache(CACHE_NAME);
+                if (cache == null) {
+                    r.fail(new IllegalStateException("remote cache [" + CACHE_NAME + "] does not exist"));
+                } else {
+                    cache.start();
+                    r.complete(cacheManager);
+                }
+            } catch (final Throwable t) {
+                r.fail(t);
             }
-            log.debug("trying to connect to remote cache");
-            cache = cacheManager.getCache("device-connection");
-            cache.start();
-            r.complete(cacheManager);
         }, attempt -> {
             if (attempt.succeeded()) {
                 log.info("successfully connected to remote cache");
@@ -139,10 +149,14 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         result.future().setHandler(stopFuture);
 
         context.executeBlocking(r -> {
-            if (cacheManager != null) {
-                cacheManager.stop();
+            try {
+                if (cacheManager != null) {
+                    cacheManager.stop();
+                }
+                r.complete();
+            } catch (final Throwable t) {
+                r.fail(t);
             }
-            r.complete();
         }, stopAttempt -> {
             if (stopAttempt.succeeded()) {
                 log.info("connection(s) to remote cache stopped successfully");
