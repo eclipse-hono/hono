@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,10 @@
 
 package org.eclipse.hono.service.auth.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -91,23 +92,23 @@ public class SimpleAuthenticationServerTest {
         server.processRemoteOpen(con);
         final ArgumentCaptor<Symbol[]> offeredCapabilitiesCaptor = ArgumentCaptor.forClass(Symbol[].class);
         verify(con).setOfferedCapabilities(offeredCapabilitiesCaptor.capture());
-        assertTrue(Arrays.stream(offeredCapabilitiesCaptor.getValue()).anyMatch(symbol -> symbol.equals(AddressAuthzHelper.CAPABILITY_ADDRESS_AUTHZ)));
+        assertThat(Arrays.stream(offeredCapabilitiesCaptor.getValue()).anyMatch(symbol -> symbol.equals(AddressAuthzHelper.CAPABILITY_ADDRESS_AUTHZ))).isTrue();
         final ArgumentCaptor<Map<Symbol, Object>> propsCaptor = ArgumentCaptor.forClass(Map.class);
         verify(con).setProperties(propsCaptor.capture());
         final Map<String, String[]> authz = (Map<String, String[]>) propsCaptor.getValue().get(AddressAuthzHelper.PROPERTY_ADDRESS_AUTHZ);
-        assertNotNull(authz);
-        assertThat(authz.get("telemetry/DEFAULT_TENANT"), is(new String[] { "recv" }));
+        assertThat(authz).isNotNull();
+        assertThat(authz.get("telemetry/DEFAULT_TENANT")).isEqualTo(new String[] { "recv" });
         connectionPropertiesAssertion.handle(propsCaptor.getValue());
     }
 
     @SuppressWarnings("unchecked")
     private void assertClientIdentity(final Map<Symbol, Object> connectionProperties) {
         final Map<String, Object> authenticatedIdentity = (Map<String, Object>) connectionProperties.get(AddressAuthzHelper.PROPERTY_AUTH_IDENTITY);
-        assertThat(authenticatedIdentity.get("sub"), is("application X"));
+        assertThat(authenticatedIdentity.get("sub")).isEqualTo("application X");
     }
 
     private void assertLegacyClientIdentity(final Map<Symbol, Object> connectionProperties) {
-        assertThat(connectionProperties.get(AddressAuthzHelper.PROPERTY_AUTH_IDENTITY), is("application X"));
+        assertThat(connectionProperties.get(AddressAuthzHelper.PROPERTY_AUTH_IDENTITY)).isEqualTo("application X");
     }
 
 }
