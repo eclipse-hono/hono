@@ -16,7 +16,10 @@ version: ${project.version}
 # Version of the application being deployed by the chart
 appVersion: ${project.version}
 name: eclipse-hono
-description: Scalable IoT messaging platform
+description: |
+  Eclipse Hono™ provides remote service interfaces for connecting large numbers of IoT devices to a back end and
+  interacting with them in a uniform way regardless of the device communication protocol.
+icon: https://github.com/eclipse/hono/blob/master/logo/SVG-Tiny/HONO-Logo_Bild_s-135x125px.svg
 keywords:
   - IoT
   - messaging
