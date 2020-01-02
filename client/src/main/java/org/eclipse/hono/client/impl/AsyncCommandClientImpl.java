@@ -99,14 +99,25 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
     }
 
     @Override
+    public Future<ProtonDelivery> sendAndWaitForOutcome(final Message message, final SpanContext context) {
+        return send(message, context);
+    }
+
+    @Override
     public Future<Void> sendAsyncCommand(final String deviceId, final String command, final Buffer data, final String correlationId,
             final String replyId) {
         return sendAsyncCommand(deviceId, command, null, data, correlationId, replyId, null);
     }
 
     @Override
+    public Future<Void> sendAsyncCommand(final String deviceId, final String command, final String contentType,
+            final Buffer data, final String correlationId, final String replyId, final Map<String, Object> properties) {
+        return sendAsyncCommand(deviceId, command, contentType, data, correlationId, replyId, properties, null);
+    }
+
+    @Override
     public Future<Void> sendAsyncCommand(final String deviceId, final String command, final String contentType, final Buffer data,
-            final String correlationId, final String replyId, final Map<String, Object> properties) {
+            final String correlationId, final String replyId, final Map<String, Object> properties, final SpanContext context) {
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
         Objects.requireNonNull(replyId);
@@ -120,7 +131,7 @@ public class AsyncCommandClientImpl extends AbstractSender implements AsyncComma
         final String replyToAddress = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId);
         message.setReplyTo(replyToAddress);
 
-        return sendAndWaitForOutcome(message).compose(ignore -> Future.succeededFuture());
+        return sendAndWaitForOutcome(message, context).compose(ignore -> Future.succeededFuture());
     }
 
     /**
