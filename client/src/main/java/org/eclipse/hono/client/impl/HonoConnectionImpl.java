@@ -463,6 +463,9 @@ public class HonoConnectionImpl implements HonoConnection {
                                             new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
                                                     "client is already shut down")));
                                 } else {
+                                    log.debug("attempt [#{}]: connected to server [{}:{}]; remote container: {}",
+                                            connectAttempts.get() + 1, connectionFactory.getHost(),
+                                            connectionFactory.getPort(), newConnection.getRemoteContainer());
                                     setConnection(newConnection);
                                     wrappedConnectionHandler.handle(Future.succeededFuture(this));
                                 }
@@ -995,6 +998,19 @@ public class HonoConnectionImpl implements HonoConnection {
             completionHandler.handle(Future.failedFuture(
                     new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already disconnecting")));
         }
+    }
+
+    /**
+     * Gets the remote container id as advertised by the peer.
+     *
+     * @return The remote container id or {@code null}.
+     */
+    @Override
+    public String getRemoteContainer() {
+        if (!isConnectedInternal()) {
+            return null;
+        }
+        return connection.getRemoteContainer();
     }
 
     //-----------------------------------< private methods >---

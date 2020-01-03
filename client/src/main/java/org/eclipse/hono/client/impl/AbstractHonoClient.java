@@ -104,6 +104,7 @@ public abstract class AbstractHonoClient {
      * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
      * <li>{@link Tags#PEER_HOSTNAME} - set to {@link ClientConfigProperties#getHost()}</li>
      * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
+     * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainer()}</li>
      * </ul>
      * 
      * @param parent The existing span. If not {@code null} then the new span will have a
@@ -124,6 +125,7 @@ public abstract class AbstractHonoClient {
      * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
      * <li>{@link Tags#PEER_HOSTNAME} - set to {@link ClientConfigProperties#getHost()}</li>
      * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
+     * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainer()}</li>
      * </ul>
      * 
      * @param parent The existing span. If not {@code null} then the new span will have a
@@ -143,6 +145,7 @@ public abstract class AbstractHonoClient {
                 .withTag(Tags.COMPONENT.getKey(), "hono-client")
                 .withTag(Tags.PEER_HOSTNAME.getKey(), connection.getConfig().getHost())
                 .withTag(Tags.PEER_PORT.getKey(), connection.getConfig().getPort())
+                .withTag(TracingHelper.TAG_PEER_CONTAINER.getKey(), connection.getRemoteContainer())
                 .start();
     }
 

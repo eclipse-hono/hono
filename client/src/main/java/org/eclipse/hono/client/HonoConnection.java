@@ -219,6 +219,17 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
     boolean isShutdown();
 
     /**
+     * Gets the remote container id as advertised by the peer.
+     * <p>
+     * This default implementation simply returns {@code N/A}.
+     *
+     * @return The remote container id or {@code null}.
+     */
+    default String getRemoteContainer() {
+        return "N/A";
+    }
+
+    /**
      * Checks if this client supports a certain capability.
      * <p>
      * The result of this method should only be considered reliable if this client is connected to the server.
