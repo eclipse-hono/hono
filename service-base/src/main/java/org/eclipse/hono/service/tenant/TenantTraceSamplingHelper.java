@@ -39,6 +39,21 @@ public final class TenantTraceSamplingHelper {
     }
 
     /**
+     * Gets the trace sampling priority configured for the given tenant.
+     *
+     * @param tenantObjectWithAuthId The tenant object combined with an auth-id.
+     * @return An <em>OptionalInt</em> containing the identified sampling priority or an empty
+     *         <em>OptionalInt</em> if no priority was identified.
+     * @throws NullPointerException if tenantObjectWithAuthId is {@code null}.
+     */
+    public static OptionalInt getTraceSamplingPriority(final TenantObjectWithAuthId tenantObjectWithAuthId) {
+        Objects.requireNonNull(tenantObjectWithAuthId);
+        return Optional.ofNullable(getSamplingMode(tenantObjectWithAuthId))
+                .map(mode -> getSamplingPriority(mode))
+                .orElse(OptionalInt.empty());
+    }
+
+    /**
      * Applies the trace sampling priority configured for the given tenant to the given span.
      *
      * @param tenantObjectWithAuthId The tenant object combined with an auth-id.
