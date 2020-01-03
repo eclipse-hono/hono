@@ -163,7 +163,12 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             // set up handlers
 
             receiver.handler((delivery, message) -> {
-                handleRequestMessage(con, receiver, targetAddress, delivery, message);
+                try {
+                    handleRequestMessage(con, receiver, targetAddress, delivery, message);
+                } catch (final Exception ex) {
+                    logger.warn("error handling message", ex);
+                    ProtonHelper.released(delivery, true);
+                }
             });
             HonoProtonHelper.setCloseHandler(receiver, remoteClose -> onLinkDetach(receiver));
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));

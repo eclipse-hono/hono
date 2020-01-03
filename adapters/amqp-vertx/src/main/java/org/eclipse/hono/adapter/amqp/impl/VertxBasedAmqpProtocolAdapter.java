@@ -530,14 +530,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             HonoProtonHelper.setCloseHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             receiver.handler((delivery, message) -> {
-                final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, authenticatedDevice);
-                ctx.setTimer(metrics.startTimer());
-                if (authenticatedDevice == null) {
-                    applyTenantTraceSamplingPriority(ctx, span)
-                            .setHandler(ar -> onMessageReceived(ctx));
-                } else {
-                    ctx.setTraceSamplingPriority(traceSamplingPriority);
-                    onMessageReceived(ctx);
+                try {
+                    final AmqpContext ctx = AmqpContext.fromMessage(delivery, message, authenticatedDevice);
+                    ctx.setTimer(metrics.startTimer());
+                    if (authenticatedDevice == null) {
+                        deriveAndSetTenantTraceSamplingPriority(ctx)
+                                .setHandler(ar -> onMessageReceived(ctx));
+                    } else {
+                        ctx.setTraceSamplingPriority(traceSamplingPriority);
+                        onMessageReceived(ctx);
+                    }
+                } catch (final Exception ex) {
+                    log.warn("error handling message", ex);
+                    ProtonHelper.released(delivery, true);
                 }
             });
             receiver.open();
@@ -551,6 +556,30 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             span.log("link established");
         }
         span.finish();
+    }
+
+    /**
+     * Derives the tenant from the given context and sets the trace sampling priority configured for that tenant on
+     * the given context.
+     * <p>
+     * This is for unauthenticated connections where the tenant id and the device/auth id get taken from the message
+     * address.
+     *
+     * @param context The execution context.
+     * @return A succeeded future indicating the outcome of the operation. Its value will be an <em>OptionalInt</em>
+     *         with the identified sampling priority or an empty <em>OptionalInt</em> if no priority was identified.
+     * @throws NullPointerException if context is {@code null}.
+     */
+    protected Future<OptionalInt> deriveAndSetTenantTraceSamplingPriority(final AmqpContext context) {
+        Objects.requireNonNull(context);
+        return tenantObjectWithAuthIdProvider.get(context, null)
+                .map(tenantObjectWithAuthId -> {
+                    final OptionalInt traceSamplingPriority = TenantTraceSamplingHelper
+                            .getTraceSamplingPriority(tenantObjectWithAuthId);
+                    context.setTraceSamplingPriority(traceSamplingPriority);
+                    return traceSamplingPriority;
+                })
+                .recover(t -> Future.succeededFuture(OptionalInt.empty()));
     }
 
     /**
@@ -578,9 +607,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     context.setTraceSamplingPriority(traceSamplingPriority);
                     return traceSamplingPriority;
                 })
-                .recover(t -> {
-                    return Future.succeededFuture(OptionalInt.empty());
-                });
+                .recover(t -> Future.succeededFuture(OptionalInt.empty()));
     }
 
     /**
@@ -605,9 +632,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             OptionalInt.class, traceSamplingPriority);
                     return (Void) null;
                 })
-                .recover(t -> {
-                    return Future.succeededFuture();
-                });
+                .recover(t -> Future.succeededFuture());
     }
 
     /**
