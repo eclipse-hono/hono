@@ -90,6 +90,10 @@ public final class TracingHelper {
      */
     public static final StringTag TAG_REMOTE_STATE = new StringTag("message_bus.remote_state");
     /**
+     * An OpenTracing tag that indicates the container id of a remote peer.
+     */
+    public static final StringTag TAG_PEER_CONTAINER = new StringTag("peer.container");
+    /**
      * An OpenTracing tag indicating if a client's connection is secured using TLS.
      */
     public static final BooleanTag TAG_TLS = new BooleanTag("tls");

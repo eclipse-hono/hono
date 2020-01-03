@@ -106,7 +106,7 @@ public final class HonoClientUnitTestHelper {
         final SpanBuilder spanBuilder = mock(SpanBuilder.class, Mockito.RETURNS_SMART_NULLS);
         when(spanBuilder.addReference(anyString(), any())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
-        when(spanBuilder.withTag(anyString(), anyString())).thenReturn(spanBuilder);
+        when(spanBuilder.withTag(anyString(), (String) any())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
         when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
         when(spanBuilder.start()).thenReturn(spanToCreate);
