@@ -292,6 +292,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <ol>
      * <li>a handler to add a Micrometer {@code Timer.Sample} to the routing context,</li>
      * <li>a handler and failure handler that creates tracing data for all server requests,</li>
+     * <li>a handler to log when the connection is closed prematurely,</li>
      * <li>a default failure handler,</li>
      * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
      * properties,</li>
@@ -315,16 +316,24 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final TracingHandler tracingHandler = createTracingHandler();
         matchAllRoute.handler(tracingHandler).failureHandler(tracingHandler);
 
-        // 3. default handler for failed routes
+        // 3. handler to log when the connection is closed prematurely
+        matchAllRoute.handler(ctx -> {
+            if (!ctx.response().closed() && !ctx.response().ended()) {
+                ctx.response().closeHandler(v -> logResponseGettingClosedPrematurely(ctx));
+            }
+            ctx.next();
+        });
+
+        // 4. default handler for failed routes
         matchAllRoute.failureHandler(new DefaultFailureHandler());
 
-        // 4. BodyHandler with request size limit
+        // 5. BodyHandler with request size limit
         log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY)
                 .setBodyLimit(getConfig().getMaxPayloadSize());
         matchAllRoute.handler(bodyHandler);
 
-        // 5. handler to set the trace sampling priority
+        // 6. handler to set the trace sampling priority
         Optional.ofNullable(getTenantTraceSamplingHandler())
                 .ifPresent(tenantTraceSamplingHandler -> matchAllRoute.handler(tenantTraceSamplingHandler));
         return router;
@@ -706,7 +715,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     EndpointType.EVENT.equals(endpoint) ? HttpUtils.getTimeToLive(ctx) : null);
             customizeDownstreamMessage(downstreamMessage, ctx);
 
-            addConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);
+            setTtdRequestConnectionCloseHandler(ctx, commandConsumerTracker.result(), tenant, deviceId, currentSpan);
 
             if (MetricsTags.QoS.AT_MOST_ONCE.equals(qos)) {
                 return CompositeFuture.all(
@@ -738,6 +747,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         endpoint, tenant, deviceId);
                 TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
                 currentSpan.finish();
+                ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
             } else {
                 final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                 setResponsePayload(ctx.response(), commandContext, currentSpan);
@@ -803,6 +813,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
             log.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                     endpoint, tenant, deviceId, t);
+            final boolean responseClosedPrematurely = ctx.response().closed();
             final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
             if (commandContext != null) {
                 commandContext.release();
@@ -820,6 +831,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 outcome = ProcessingOutcome.UNDELIVERABLE;
                 HttpUtils.serviceUnavailable(ctx, 2, "temporarily unavailable");
             }
+            if (responseClosedPrematurely) {
+                log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
+                        endpoint, tenant, deviceId);
+                TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
+            }
             metrics.reportTelemetry(
                     endpoint,
                     tenant,
@@ -833,6 +849,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             currentSpan.finish();
             return Future.failedFuture(t);
         });
+    }
+
+    private void logResponseGettingClosedPrematurely(final RoutingContext ctx) {
+        log.trace("connection got closed before response could be sent");
+        Optional.ofNullable(getRootSpan(ctx)).ifPresent(span -> {
+            TracingHelper.logError(span, "connection got closed before response could be sent");
+        });
+    }
+
+    private Span getRootSpan(final RoutingContext ctx) {
+        final Object rootSpanObject = ctx.get(TracingHandler.CURRENT_SPAN);
+        return rootSpanObject instanceof Span ? (Span) rootSpanObject : null;
     }
 
     /**
@@ -849,7 +877,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Adds a handler for tidying up when a device closes the HTTP connection before
+     * Sets a handler for tidying up when a device closes the HTTP connection of a TTD request before
      * a response could be sent.
      * <p>
      * The handler will close the message consumer and increment the metric for expired TTDs.
@@ -860,18 +888,21 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param deviceId The identifier of the device.
      * @param currentSpan The <em>OpenTracing</em> Span used for tracking the processing of the request.
      */
-    private void addConnectionCloseHandler(
+    private void setTtdRequestConnectionCloseHandler(
             final RoutingContext ctx,
             final MessageConsumer messageConsumer,
             final String tenantId,
             final String deviceId,
             final Span currentSpan) {
 
-        if (messageConsumer != null && !ctx.response().closed()) {
+        if (messageConsumer != null && !ctx.response().closed() && !ctx.response().ended()) {
             ctx.response().closeHandler(v -> {
                 log.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
                         tenantId, deviceId);
-                currentSpan.log("device closed connection");
+                currentSpan.log("device closed connection, stop waiting for command");
+                currentSpan.finish();
+                logResponseGettingClosedPrematurely(ctx);
+                ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
                 cancelCommandReceptionTimer(ctx);
                 messageConsumer.close(null);
             });
