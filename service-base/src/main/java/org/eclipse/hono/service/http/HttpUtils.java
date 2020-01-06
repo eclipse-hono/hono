@@ -178,10 +178,12 @@ public final class HttpUtils {
         Objects.requireNonNull(ctx);
         Objects.requireNonNull(error);
 
+        // don't check for "ctx.response().closed()" here - such a request should still be failed so that failureHandlers get invoked
         if (ctx.failed() || ctx.response().ended()) {
             // nothing to do
         } else {
-            if (headers != null) {
+            // the check for "closed" here is to prevent an IllegalStateException in "putHeader" (vert.x < 3.8)
+            if (headers != null && !ctx.response().closed()) {
                 for (final Entry<CharSequence, CharSequence> header : headers.entrySet()) {
                     ctx.response().putHeader(header.getKey(), header.getValue());
                 }
@@ -361,7 +363,7 @@ public final class HttpUtils {
      * This method also sets the <em>content-length</em> and <em>content-type</em>
      * headers of the HTTP response accordingly but does not end the response.
      * <p>
-     * If the response is already ended or the buffer is {@code null}, this method
+     * If the response is already ended or closed or the buffer is {@code null}, this method
      * does nothing.
      * 
      * @param response The HTTP response.
@@ -373,7 +375,7 @@ public final class HttpUtils {
     public static void setResponseBody(final HttpServerResponse response, final Buffer buffer, final String contentType) {
 
         Objects.requireNonNull(response);
-        if (!response.ended() && buffer != null) {
+        if (!response.ended() && !response.closed() && buffer != null) {
             if (contentType == null) {
                 response.putHeader(HttpHeaders.CONTENT_TYPE, CONTENT_TYPE_OCTET_STREAM);
             } else {
