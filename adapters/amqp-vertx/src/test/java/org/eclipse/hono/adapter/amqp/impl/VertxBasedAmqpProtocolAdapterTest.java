@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.eclipse.hono.adapter.amqp.impl;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -70,6 +71,7 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -77,11 +79,9 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
@@ -92,9 +92,9 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
@@ -105,7 +105,8 @@ import io.vertx.proton.ProtonServer;
 /**
  * Verifies the behavior of {@link VertxBasedAmqpProtocolAdapter}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 6, timeUnit = TimeUnit.SECONDS)
 public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
@@ -116,12 +117,6 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * A device used for testing.
      */
     private static final String TEST_DEVICE = "test-device";
-
-    /**
-     * Global timeout for all test cases.
-     */
-    @Rule
-    public Timeout globalTimeout = new Timeout(6, TimeUnit.SECONDS);
 
     private TenantClientFactory tenantClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
@@ -139,11 +134,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
      * Setups the protocol adapter.
-     * 
-     * @param context The vert.x test context.
      */
-    @Before
-    public void setup(final TestContext context) {
+    @BeforeEach
+    public void setup() {
 
         metrics = mock(AmqpAdapterMetrics.class);
 
@@ -195,23 +188,23 @@ public class VertxBasedAmqpProtocolAdapterTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testStartUsesClientProvidedAmqpServer(final TestContext ctx) {
+    public void testStartUsesClientProvidedAmqpServer(final VertxTestContext ctx) {
         // GIVEN an adapter with a client provided Amqp Server
         final ProtonServer server = getAmqpServer();
         final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
 
         // WHEN starting the adapter
-        final Async startup = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertSuccess(result -> {
-            startup.complete();
-        }));
         adapter.start(startupTracker);
 
-        // THEN the client provided server is started
-        startup.await();
-        verify(server).connectHandler(any(Handler.class));
-        verify(server).listen(any(Handler.class));
+        startupTracker.future().setHandler(ctx.succeeding(result -> {
+            ctx.verify(() -> {
+                // THEN the client provided server is started
+                verify(server).connectHandler(any(Handler.class));
+                verify(server).listen(any(Handler.class));
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -271,7 +264,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadTelemetryWithAtMostOnceDeliverySemantics(final TestContext ctx) {
+    public void testUploadTelemetryWithAtMostOnceDeliverySemantics(final VertxTestContext ctx) {
         // GIVEN an AMQP adapter with a configured server
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
@@ -286,31 +279,33 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("payload");
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
-        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null)).setHandler(ctx.asyncAssertSuccess(d -> {
-            // THEN the adapter has forwarded the message downstream
-            verify(telemetrySender).send(any(Message.class), (SpanContext) any());
-            // and acknowledged the message to the device
-            verify(delivery).disposition(any(Accepted.class), eq(true));
-            // and has reported the telemetry message
-            verify(metrics).reportTelemetry(
-                    eq(EndpointType.TELEMETRY),
-                    eq(TEST_TENANT_ID),
-                    eq(tenantObject),
-                    eq(ProcessingOutcome.FORWARDED),
-                    eq(QoS.AT_MOST_ONCE),
-                    eq(payload.length()),
-                    any());
-        }));
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
+            .setHandler(ctx.succeeding(d -> {
+                ctx.verify(() -> {
+                    // THEN the adapter has forwarded the message downstream
+                    verify(telemetrySender).send(any(Message.class), (SpanContext) any());
+                    // and acknowledged the message to the device
+                    verify(delivery).disposition(any(Accepted.class), eq(true));
+                    // and has reported the telemetry message
+                    verify(metrics).reportTelemetry(
+                            eq(EndpointType.TELEMETRY),
+                            eq(TEST_TENANT_ID),
+                            eq(tenantObject),
+                            eq(ProcessingOutcome.FORWARDED),
+                            eq(QoS.AT_MOST_ONCE),
+                            eq(payload.length()),
+                            any());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
      * Verifies that a request to upload an "unsettled" telemetry message results in the sender sending the
      * message and waits for a response from the downstream peer.
-     * 
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadTelemetryWithAtLeastOnceDeliverySemantics(final TestContext ctx) {
+    public void testUploadTelemetryWithAtLeastOnceDeliverySemantics() {
         // GIVEN an adapter configured to use a user-define server.
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
         final DownstreamSender telemetrySender = givenATelemetrySenderForAnyTenant();
@@ -357,7 +352,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadTelemetryMessageFailsForDisabledAdapter(final TestContext ctx) {
+    public void testUploadTelemetryMessageFailsForDisabledAdapter(final VertxTestContext ctx) {
 
         // GIVEN an adapter configured to use a user-define server.
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
@@ -372,24 +367,28 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
         final Buffer payload = Buffer.buffer("some payload");
 
-        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null)).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the adapter does not send the message (regardless of the delivery mode).
-            verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
-            verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    // THEN the adapter does not send the message (regardless of the delivery mode).
+                    verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
+                    verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
 
-            // AND notifies the device by sending back a REJECTED disposition
-            verify(delivery).disposition(any(Rejected.class), eq(true));
+                    // AND notifies the device by sending back a REJECTED disposition
+                    verify(delivery).disposition(any(Rejected.class), eq(true));
 
-            // AND has reported the message as unprocessable
-            verify(metrics).reportTelemetry(
-                    eq(EndpointType.TELEMETRY),
-                    eq(TEST_TENANT_ID),
-                    eq(tenantObject),
-                    eq(ProcessingOutcome.UNPROCESSABLE),
-                    eq(QoS.AT_LEAST_ONCE),
-                    eq(payload.length()),
-                    any());
-        }));
+                    // AND has reported the message as unprocessable
+                    verify(metrics).reportTelemetry(
+                            eq(EndpointType.TELEMETRY),
+                            eq(TEST_TENANT_ID),
+                            eq(tenantObject),
+                            eq(ProcessingOutcome.UNPROCESSABLE),
+                            eq(QoS.AT_LEAST_ONCE),
+                            eq(payload.length()),
+                            any());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -399,7 +398,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadEventFailsForGatewayOfDifferentTenant(final TestContext ctx) {
+    public void testUploadEventFailsForGatewayOfDifferentTenant(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
@@ -415,14 +414,18 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final String to = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, "other-tenant", TEST_DEVICE).toString();
         final Buffer payload = Buffer.buffer("some payload");
 
-        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), gateway)).setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the adapter does not send the event
-            verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
-            verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), gateway))
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    // THEN the adapter does not send the event
+                    verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
+                    verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
 
-            // AND notifies the device by sending back a REJECTED disposition
-            verify(delivery).disposition(any(Rejected.class), eq(true));
-        }));
+                    // AND notifies the device by sending back a REJECTED disposition
+                    verify(delivery).disposition(any(Rejected.class), eq(true));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -506,9 +509,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * the device closes the connection to the adapter.
      *
      * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
      */
     @Test
-    public void testAdapterClosesCommandConsumerWhenDeviceClosesConnection(final TestContext ctx) {
+    public void testAdapterClosesCommandConsumerWhenDeviceClosesConnection(final VertxTestContext ctx) throws InterruptedException {
 
         final Handler<ProtonConnection> trigger = deviceConnection -> {
             @SuppressWarnings("unchecked")
@@ -524,9 +528,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * the connection to a device fails unexpectedly.
      *
      * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
      */
     @Test
-    public void testAdapterClosesCommandConsumerWhenConnectionToDeviceIsLost(final TestContext ctx) {
+    public void testAdapterClosesCommandConsumerWhenConnectionToDeviceIsLost(final VertxTestContext ctx) throws InterruptedException {
 
         final Handler<ProtonConnection> trigger = deviceConnection -> {
             @SuppressWarnings("unchecked")
@@ -542,9 +547,12 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * the connection to a device fails unexpectedly.
      *
      * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
      */
     @SuppressWarnings("unchecked")
-    private void testAdapterClosesCommandConsumer(final TestContext ctx, final Handler<ProtonConnection> connectionLossTrigger) {
+    private void testAdapterClosesCommandConsumer(
+            final VertxTestContext ctx,
+            final Handler<ProtonConnection> connectionLossTrigger) throws InterruptedException {
 
         // GIVEN an AMQP adapter
         final Promise<ProtonDelivery> outcome = Promise.promise();
@@ -553,13 +561,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonServer server = getAmqpServer();
         final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
 
-        final Async startup = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertSuccess(ok -> {
-            startup.complete();
-        }));
+        startupTracker.future().setHandler(ctx.completing());
         adapter.start(startupTracker);
-        startup.await();
+        assertTrue(ctx.awaitCompletion(2, TimeUnit.SECONDS));
 
         // to which a device is connected
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
@@ -598,7 +603,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testUploadCommandResponseSucceeds(final TestContext ctx) {
+    public void testUploadCommandResponseSucceeds(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
@@ -620,17 +625,20 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getCorrelationId()).thenReturn("correlation-id");
         when(message.getApplicationProperties()).thenReturn(props);
 
-        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).setHandler(ctx.asyncAssertSuccess(ok -> {
-            // THEN the adapter forwards the command response message downstream
-            verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
-            // and reports the forwarded message
-            verify(metrics).reportCommand(
-                eq(Direction.RESPONSE),
-                eq(TEST_TENANT_ID),
-                eq(tenantObject),
-                eq(ProcessingOutcome.FORWARDED),
-                eq(payload.length()),
-                any());
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).setHandler(ctx.succeeding(ok -> {
+            ctx.verify(() -> {
+                // THEN the adapter forwards the command response message downstream
+                verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+                // and reports the forwarded message
+                verify(metrics).reportCommand(
+                    eq(Direction.RESPONSE),
+                    eq(TEST_TENANT_ID),
+                    eq(tenantObject),
+                    eq(ProcessingOutcome.FORWARDED),
+                    eq(payload.length()),
+                    any());
+            });
+            ctx.completeNow();
         }));
     }
 
@@ -856,7 +864,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @param ctx The test context to use for running asynchronous tests.
      */
     @Test
-    public void testMessageLimitExceededForATelemetryMessage(final TestContext ctx) {
+    public void testMessageLimitExceededForATelemetryMessage(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
@@ -874,24 +882,26 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the adapter does not send the message (regardless of the delivery mode).
-                    verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
-                    verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
-                    // because the message limit is exceeded
-                    ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
-                            ((ClientErrorException) t).getErrorCode());
-                    // AND notifies the device by sending back a REJECTED disposition
-                    verify(delivery).disposition(any(Rejected.class), eq(true));
-                    // AND has reported the message as unprocessable
-                    verify(metrics).reportTelemetry(
-                            eq(EndpointType.TELEMETRY),
-                            eq(TEST_TENANT_ID),
-                            eq(tenantObject),
-                            eq(ProcessingOutcome.UNPROCESSABLE),
-                            eq(QoS.AT_LEAST_ONCE),
-                            eq(payload.length()),
-                            any());
+                .setHandler(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the adapter does not send the message (regardless of the delivery mode).
+                        verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
+                        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+                        // because the message limit is exceeded
+                        assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS));
+                        // AND notifies the device by sending back a REJECTED disposition
+                        verify(delivery).disposition(any(Rejected.class), eq(true));
+                        // AND has reported the message as unprocessable
+                        verify(metrics).reportTelemetry(
+                                eq(EndpointType.TELEMETRY),
+                                eq(TEST_TENANT_ID),
+                                eq(tenantObject),
+                                eq(ProcessingOutcome.UNPROCESSABLE),
+                                eq(QoS.AT_LEAST_ONCE),
+                                eq(payload.length()),
+                                any());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -901,7 +911,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @param ctx The test context to use for running asynchronous tests.
      */
     @Test
-    public void testMessageLimitExceededForAnEventMessage(final TestContext ctx) {
+    public void testMessageLimitExceededForAnEventMessage(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
@@ -919,24 +929,26 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the adapter does not send the message (regardless of the delivery mode).
-                    verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
-                    verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
-                    // because the message limit is exceeded
-                    ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
-                            ((ClientErrorException) t).getErrorCode());
-                    // AND notifies the device by sending back a REJECTED disposition
-                    verify(delivery).disposition(any(Rejected.class), eq(true));
-                    // AND has reported the message as unprocessable
-                    verify(metrics).reportTelemetry(
-                            eq(EndpointType.EVENT),
-                            eq(TEST_TENANT_ID),
-                            eq(tenantObject),
-                            eq(ProcessingOutcome.UNPROCESSABLE),
-                            eq(QoS.AT_LEAST_ONCE),
-                            eq(payload.length()),
-                            any());
+                .setHandler(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the adapter does not send the message (regardless of the delivery mode).
+                        verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
+                        verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
+                        // because the message limit is exceeded
+                        assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS));
+                        // AND notifies the device by sending back a REJECTED disposition
+                        verify(delivery).disposition(any(Rejected.class), eq(true));
+                        // AND has reported the message as unprocessable
+                        verify(metrics).reportTelemetry(
+                                eq(EndpointType.EVENT),
+                                eq(TEST_TENANT_ID),
+                                eq(tenantObject),
+                                eq(ProcessingOutcome.UNPROCESSABLE),
+                                eq(QoS.AT_LEAST_ONCE),
+                                eq(payload.length()),
+                                any());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -946,7 +958,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
      * @param ctx The test context to use for running asynchronous tests.
      */
     @Test
-    public void testMessageLimitExceededForACommandResponseMessage(final TestContext ctx) {
+    public void testMessageLimitExceededForACommandResponseMessage(final VertxTestContext ctx) {
 
         // GIVEN an AMQP adapter
         final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
@@ -969,23 +981,25 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getApplicationProperties()).thenReturn(props);
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null))
-                .setHandler(ctx.asyncAssertFailure(t -> {
-                    // THEN the adapter does not send the message (regardless of the delivery mode).
-                    verify(responseSender, never()).send(any(Message.class), any());
-                    verify(responseSender, never()).sendAndWaitForOutcome(any(Message.class), any());
-                    // because the message limit is exceeded
-                    ctx.assertEquals(HttpUtils.HTTP_TOO_MANY_REQUESTS,
-                            ((ClientErrorException) t).getErrorCode());
-                    // AND notifies the device by sending back a REJECTED disposition
-                    verify(delivery).disposition(any(Rejected.class), eq(true));
-                    // AND has reported the message as unprocessable
-                    verify(metrics).reportCommand(
-                            eq(Direction.RESPONSE),
-                            eq(TEST_TENANT_ID),
-                            eq(tenantObject),
-                            eq(ProcessingOutcome.UNPROCESSABLE),
-                            eq(payload.length()),
-                            any());
+                .setHandler(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the adapter does not send the message (regardless of the delivery mode).
+                        verify(responseSender, never()).send(any(Message.class), any());
+                        verify(responseSender, never()).sendAndWaitForOutcome(any(Message.class), any());
+                        // because the message limit is exceeded
+                        assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS));
+                        // AND notifies the device by sending back a REJECTED disposition
+                        verify(delivery).disposition(any(Rejected.class), eq(true));
+                        // AND has reported the message as unprocessable
+                        verify(metrics).reportCommand(
+                                eq(Direction.RESPONSE),
+                                eq(TEST_TENANT_ID),
+                                eq(tenantObject),
+                                eq(ProcessingOutcome.UNPROCESSABLE),
+                                eq(payload.length()),
+                                any());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -1035,8 +1049,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     private TenantObject givenAConfiguredTenant(final String tenantId, final boolean enabled) {
         final TenantObject tenantConfig = TenantObject.from(tenantId, Boolean.TRUE);
-        tenantConfig
-                .addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_AMQP, enabled));
+        tenantConfig.addAdapter(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP).setEnabled(enabled));
         when(tenantClient.get(eq(tenantId), (SpanContext) any())).thenReturn(Future.succeededFuture(tenantConfig));
         return tenantConfig;
     }
