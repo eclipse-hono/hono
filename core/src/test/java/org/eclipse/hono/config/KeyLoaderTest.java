@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.config;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 
@@ -44,10 +48,11 @@ public class KeyLoaderTest {
     /**
      * Verifies that the loader fails to load a non-existing key store.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testLoaderFailsForNonExistingKeyStore() {
 
-        KeyLoader.fromKeyStore(vertx, "non-existing.p12", "secret".toCharArray());
+        assertThatThrownBy(() -> KeyLoader.fromKeyStore(vertx, "non-existing.p12", "secret".toCharArray()))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
@@ -94,20 +99,22 @@ public class KeyLoaderTest {
      * Verifies that the loader fails to load a private key from
      * a non-existing PEM file.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testLoaderFailsForNonExistingKeyFile() {
 
-        KeyLoader.fromFiles(vertx, "non-existing-key.pem", PREFIX_KEY_PATH + "auth-server-cert.pem");
+        assertThatThrownBy(() -> KeyLoader.fromFiles(vertx, "non-existing-key.pem", PREFIX_KEY_PATH + "auth-server-cert.pem"))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
      * Verifies that the loader fails to load a certificate from
      * a non-existing PEM file.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testLoaderFailsForNonExistingCertFile() {
 
-        KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", "non-existing-cert.pem");
+        assertThatThrownBy(() -> KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", "non-existing-cert.pem"))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**

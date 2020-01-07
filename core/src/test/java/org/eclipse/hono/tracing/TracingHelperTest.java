@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,16 +13,14 @@
 
 package org.eclipse.hono.tracing;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.Collections;
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
@@ -48,10 +46,10 @@ public class TracingHelperTest {
         verify(span).log(itemsCaptor.capture());
 
         final Map<?, ?> capturedItemsMap = itemsCaptor.getValue();
-        assertThat(capturedItemsMap, is(notNullValue()));
-        assertThat(capturedItemsMap.size(), is(2));
-        assertThat(capturedItemsMap.get(Fields.MESSAGE), is(errorMessage));
-        assertThat(capturedItemsMap.get(Fields.EVENT), is(Tags.ERROR.getKey()));
+        assertThat(capturedItemsMap).isNotNull();
+        assertThat(capturedItemsMap).hasSize(2);
+        assertThat(capturedItemsMap.get(Fields.MESSAGE)).isEqualTo(errorMessage);
+        assertThat(capturedItemsMap.get(Fields.EVENT)).isEqualTo(Tags.ERROR.getKey());
     }
 
     /**
@@ -68,10 +66,10 @@ public class TracingHelperTest {
         verify(span).log(itemsCaptor.capture());
 
         final Map<?, ?> capturedItemsMap = itemsCaptor.getValue();
-        assertThat(capturedItemsMap, is(notNullValue()));
-        assertThat(capturedItemsMap.size(), is(2));
-        assertThat(capturedItemsMap.get(Fields.MESSAGE), is(errorMessage));
-        assertThat(capturedItemsMap.get(Fields.EVENT), is(Tags.ERROR.getKey()));
+        assertThat(capturedItemsMap).isNotNull();
+        assertThat(capturedItemsMap).hasSize(2);
+        assertThat(capturedItemsMap.get(Fields.MESSAGE)).isEqualTo(errorMessage);
+        assertThat(capturedItemsMap.get(Fields.EVENT)).isEqualTo(Tags.ERROR.getKey());
     }
 
     /**
@@ -88,9 +86,9 @@ public class TracingHelperTest {
         verify(span).log(itemsCaptor.capture());
 
         final Map<?, ?> capturedItemsMap = itemsCaptor.getValue();
-        assertThat(capturedItemsMap, is(notNullValue()));
-        assertThat(capturedItemsMap.size(), is(2));
-        assertThat(capturedItemsMap.get(Fields.ERROR_OBJECT), is(exception));
-        assertThat(capturedItemsMap.get(Fields.EVENT), is(Tags.ERROR.getKey()));
+        assertThat(capturedItemsMap).isNotNull();
+        assertThat(capturedItemsMap).hasSize(2);
+        assertThat(capturedItemsMap.get(Fields.ERROR_OBJECT)).isEqualTo(exception);
+        assertThat(capturedItemsMap.get(Fields.EVENT)).isEqualTo(Tags.ERROR.getKey());
     }
 }
