@@ -63,10 +63,15 @@ public class Application extends AbstractApplication {
      * 
      * @param service The service.
      * @throws NullPointerException if service is {@code null}.
+     * @throws IllegalArgumentException if the given service is not a {@code Verticle}.
      */
     @Autowired
     public void setAuthenticationService(final AuthenticationService service) {
-        this.authService = Objects.requireNonNull(service);
+        Objects.requireNonNull(service);
+        if (!(service instanceof Verticle)) {
+            throw new IllegalArgumentException("authentication service must be a vert.x Verticle");
+        }
+        this.authService = service;
     }
 
     /**
@@ -85,7 +90,7 @@ public class Application extends AbstractApplication {
             log.info("deploying component [{}]", component.getClass().getName());
             getVertx().deployVerticle((Verticle) component, result);
             return result.future().map(id -> {
-                registerHealthCheckProvider(serviceImplementation);
+                registerHealthCheckProvider(component);
                 return id;
             });
         } else {
@@ -106,7 +111,6 @@ public class Application extends AbstractApplication {
 
     private void registerHealthCheckProvider(final Object obj) {
         if (obj instanceof HealthCheckProvider) {
-            log.debug("registering health check provider [{}]", obj.getClass().getName());
             registerHealthchecks((HealthCheckProvider) obj);
         }
     }

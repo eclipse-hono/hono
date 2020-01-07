@@ -14,6 +14,7 @@
 package org.eclipse.hono.service;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -277,6 +278,9 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      * @param provider The provider of the health checks.
      */
     protected final void registerHealthchecks(final HealthCheckProvider provider) {
-        healthCheckServer.registerHealthCheckResources(provider);
+        Optional.ofNullable(provider).ifPresent(p -> {
+            log.debug("registering health checks [provider: {}]", p.getClass().getName());
+            healthCheckServer.registerHealthCheckResources(p);
+        });
     }
 }
