@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.connection.impl;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -22,11 +22,13 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectTimeoutException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -35,9 +37,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonClient;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
@@ -46,7 +48,7 @@ import io.vertx.proton.ProtonConnection;
  * Verifies behavior of {@code ConnectionFactoryImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class ConnectionFactoryImplTest {
 
     private static final String PREFIX_KEY_PATH = "target/certs/";
@@ -57,7 +59,7 @@ public class ConnectionFactoryImplTest {
     /**
      * Sets up fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
         props = new ClientConfigProperties();
         props.setHost("127.0.0.1");
@@ -72,21 +74,18 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectInvokesHandlerOnFailureToConnect(final TestContext ctx) {
+    @Timeout(value = 2, timeUnit = TimeUnit.SECONDS)
+    public void testConnectInvokesHandlerOnFailureToConnect(final VertxTestContext ctx) {
 
         // GIVEN a factory configured to connect to a non-existing server
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
 
         // WHEN trying to connect to the server
-        final Async handlerInvocation = ctx.async();
-
-        factory.connect(null, null, null, ctx.asyncAssertFailure(t -> {
-            ctx.assertFalse(t instanceof ConnectTimeoutException);
-            handlerInvocation.complete();
+        factory.connect(null, null, null, ctx.failing(t -> {
+            // THEN the connection attempt fails but does not time out
+            ctx.verify(() -> assertFalse(t instanceof ConnectTimeoutException));
+            ctx.completeNow();
         }));
-
-        // THEN the connection attempt fails and the given handler is invoked
-        handlerInvocation.await(2000);
     }
 
     /**
@@ -95,7 +94,8 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectInvokesHandlerOnConnectTimeout(final TestContext ctx) {
+    @Timeout(value = 2, timeUnit = TimeUnit.SECONDS)
+    public void testConnectInvokesHandlerOnConnectTimeout(final VertxTestContext ctx) {
 
         // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
         props.setConnectTimeout(10);
@@ -104,26 +104,20 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
-        final Async handlerInvocation = ctx.async();
-
-        factory.connect(null, null, null, ctx.asyncAssertFailure(t -> {
-            ctx.assertTrue(t instanceof ConnectTimeoutException);
-            handlerInvocation.complete();
+        factory.connect(null, null, null, ctx.failing(t -> {
+            // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
+            ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
+            ctx.completeNow();
         }));
-
-        // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
-        handlerInvocation.await(2000);
     }
 
     /**
      * Verifies that the given result handler is invoked if a connection gets closed after SASL auth was successful and
      * AMQP open frame was sent by client, but no AMQP open frame from server was received yet.
-     *
-     * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testConnectInvokesHandlerOnDisconnectAfterSendingOpenFrame(final TestContext ctx) {
+    public void testConnectInvokesHandlerOnDisconnectAfterSendingOpenFrame() {
         // GIVEN a factory configured to connect to a server (with mocked connection)
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
         final ProtonClient protonClientMock = mock(ProtonClient.class);
@@ -145,18 +139,16 @@ public class ConnectionFactoryImplTest {
         verify(protonConnectionMock).disconnectHandler(disconnectHandlerCaptor.capture());
         disconnectHandlerCaptor.getValue().handle(protonConnectionMock);
         // as we call handler ourselves handling is synchronous here
-        assertTrue("Connection result handler was not failed", resultHandler.future().failed());
+        assertTrue(resultHandler.future().failed(), "Connection result handler was not failed");
     }
 
     /**
      * Verifies that the factory does not enable SASL_PLAIN if the username and password are empty
      * strings.
-     * 
-     * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testConnectDoesNotUseSaslPlainForEmptyUsernameAndPassword(final TestContext ctx) {
+    public void testConnectDoesNotUseSaslPlainForEmptyUsernameAndPassword() {
 
         // GIVEN a factory configured to connect to a server
         final ProtonClientOptions options = new ProtonClientOptions();
@@ -177,12 +169,10 @@ public class ConnectionFactoryImplTest {
     /**
      * Verifies that the factory enables SASL_PLAIN if the username and password are non-empty
      * strings.
-     * 
-     * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testConnectAddsSaslPlainForNonEmptyUsernameAndPassword(final TestContext ctx) {
+    public void testConnectAddsSaslPlainForNonEmptyUsernameAndPassword() {
 
         // GIVEN a factory configured to connect to a server
         final ProtonClientOptions options = new ProtonClientOptions();

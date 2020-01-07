@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.tracing;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +21,7 @@ import java.util.Map;
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.message.impl.MessageImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests verifying the behavior of {@link MessageAnnotationsInjectAdapter} and {@link MessageAnnotationsExtractAdapter}.
@@ -59,7 +58,7 @@ public class MessageAnnotationsInjectExtractAdapterTest {
         // extract the properties from the decoded message
         final MessageAnnotationsExtractAdapter extractAdapter = new MessageAnnotationsExtractAdapter(decodedMessage, propertiesMapName);
         extractAdapter.iterator().forEachRemaining(extractedEntry -> {
-            assertThat(extractedEntry.getValue(), is(testEntries.get(extractedEntry.getKey())));
+            assertThat(extractedEntry.getValue()).isEqualTo(testEntries.get(extractedEntry.getKey()));
         });
     }
 }
