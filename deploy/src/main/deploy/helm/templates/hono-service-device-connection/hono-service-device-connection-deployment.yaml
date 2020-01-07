@@ -65,16 +65,17 @@ spec:
         livenessProbe:
           httpGet:
             path: /liveness
-            port: {{ .Values.healthCheckPort }}
+            port: health
             scheme: HTTPS
-          initialDelaySeconds: 90
+          initialDelaySeconds: 60
         readinessProbe:
           httpGet:
             path: /readiness
-            port: {{ .Values.healthCheckPort }}
+            port: health
             scheme: HTTPS
-          initialDelaySeconds: 60
-          periodSeconds: 10
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          failureThreshold: 2
       volumes:
       {{- include "hono.pod.secretVolumes" ( dict "releaseName" .Release.Name "name" $args.name "conf" .Values.deviceConnectionService ) | indent 6 }}
 {{- end }}
