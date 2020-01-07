@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceconnection.infinispan;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.HealthCheckProvider;
@@ -48,6 +49,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
 
     private RemoteCacheContainer cacheManager;
     private BasicCache<String, String> cache;
+    private AtomicBoolean connecting = new AtomicBoolean(false);
 
     /**
      * Sets the cache manager to use for retrieving a cache.
@@ -96,32 +98,37 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
 
     private void connectToGrid() {
 
-        context.executeBlocking(r -> {
-            try {
-                if (!cacheManager.isStarted()) {
-                    log.debug("trying to start cache manager");
-                    cacheManager.start();
-                    log.info("started cache manager, now connecting to remote cache");
+        if (connecting.compareAndSet(false, true)) {
+
+            context.executeBlocking(r -> {
+                try {
+                    if (!cacheManager.isStarted()) {
+                        log.debug("trying to start cache manager");
+                        cacheManager.start();
+                        log.info("started cache manager, now connecting to remote cache");
+                    }
+                    log.debug("trying to connect to remote cache");
+                    cache = cacheManager.getCache(CACHE_NAME);
+                    if (cache == null) {
+                        r.fail(new IllegalStateException("remote cache [" + CACHE_NAME + "] does not exist"));
+                    } else {
+                        cache.start();
+                        r.complete(cacheManager);
+                    }
+                } catch (final Throwable t) {
+                    r.fail(t);
                 }
-                log.debug("trying to connect to remote cache");
-                cache = cacheManager.getCache(CACHE_NAME);
-                if (cache == null) {
-                    r.fail(new IllegalStateException("remote cache [" + CACHE_NAME + "] does not exist"));
+            }, attempt -> {
+                if (attempt.succeeded()) {
+                    log.info("successfully connected to remote cache");
                 } else {
-                    cache.start();
-                    r.complete(cacheManager);
+                    log.debug("failed to connect to remote cache: {}", attempt.cause().getMessage());
                 }
-            } catch (final Throwable t) {
-                r.fail(t);
-            }
-        }, attempt -> {
-            if (attempt.succeeded()) {
-                log.info("successfully connected to remote cache");
-            } else {
-                log.debug("failed to connect to remote cache: {}", attempt.cause().getMessage());
-                vertx.setTimer(5000, timerId -> connectToGrid());
-            }
-        });
+                connecting.set(false);
+            });
+        } else {
+            log.info("already trying to establish connection to data grid");
+        }
     }
 
     /**
@@ -266,21 +273,18 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
 
     private void checkForCacheAvailability(final Promise<Status> status) {
 
-        if (cacheManager.isStarted()) {
-            if (cache instanceof RemoteCache) {
-                try {
-                    ((RemoteCache<String, String>) cache).serverStatistics();
-                    status.complete(Status.OK());
-                } catch (RuntimeException e) {
-                    // cannot interact with data grid
-                    status.complete(Status.KO());
-                }
-            } else {
-                status.complete(Status.KO());
+        if (cacheManager.isStarted() && cache instanceof RemoteCache) {
+            try {
+                ((RemoteCache<String, String>) cache).serverStatistics();
+                status.complete(Status.OK());
+                return;
+            } catch (RuntimeException e) {
+                // cannot interact with data grid
             }
-        } else {
-            status.complete(Status.KO());
         }
+        // try to (re-)establish connection
+        connectToGrid();
+        status.complete(Status.KO());
     }
 
     /**
