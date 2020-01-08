@@ -271,8 +271,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private Future<Long> executeQuery(final String query) {
 
         final Future<Long> result = Future.future();
-        log.trace("running query [{}] against Prometheus backend [http://{}:{}{}]",
-                query, config.getHost(), config.getPort(), QUERY_URI);
+        log.trace("running Prometheus query [URL: http://{}:{}{}, query: {}]",
+                config.getHost(), config.getPort(), QUERY_URI, query);
         client.get(config.getPort(), config.getHost(), QUERY_URI)
         .addQueryParam("query", query)
         .expect(ResponsePredicate.SC_OK)
@@ -282,7 +282,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 final HttpResponse<JsonObject> response = sendAttempt.result();
                 result.complete(extractLongValue(response.body()));
             } else {
-                log.debug("error fetching result from Prometheus: {}", sendAttempt.cause().getMessage());
+                log.warn("failed to run Prometheus query [URL: http://{}:{}{}, query: {}]: {}",
+                        config.getHost(), config.getPort(), QUERY_URI, query, sendAttempt.cause().getMessage());
                 result.fail(sendAttempt.cause());
             }
         });
