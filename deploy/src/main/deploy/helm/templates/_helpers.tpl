@@ -218,6 +218,11 @@ deviceConnection:
   trustStorePath: /etc/hono/trusted-certs.pem
   hostnameVerificationRequired: false
 {{- end }}
+{{- if .dot.Values.prometheus.createInstance }}
+resource-limits:
+  prometheus-based:
+    host: {{ .dot.Release.Name }}-prometheus-server
+{{- end}}
 {{- end }}
 
 {{/*

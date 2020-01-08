@@ -19,6 +19,7 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -41,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -354,8 +356,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private Future<Long> executeQuery(final String query, final Span span) {
 
         final Promise<Long> result = Promise.promise();
-        log.trace("running query [{}] against Prometheus backend [http://{}:{}{}]",
-                query, config.getHost(), config.getPort(), QUERY_URI);
+        log.trace("running Prometheus query [URL: http://{}:{}{}, query: {}]",
+                config.getHost(), config.getPort(), QUERY_URI, query);
         client.get(config.getPort(), config.getHost(), QUERY_URI)
         .addQueryParam("query", query)
         .expect(ResponsePredicate.SC_OK)
@@ -365,9 +367,16 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 final HttpResponse<JsonObject> response = sendAttempt.result();
                 result.complete(extractLongValue(response.body(), span));
             } else {
-                TracingHelper.logError(span,
-                        String.format("Error fetching result from Prometheus: %s", sendAttempt.cause().toString()));
-                log.debug("Error fetching result from Prometheus: {}", sendAttempt.cause().toString());
+                final Map<String, Object> items = Map.of(
+                        Fields.EVENT, Tags.ERROR.getKey(),
+                        Fields.MESSAGE, "failed to run Prometheus query",
+                        "URL", String.format("http://%s:%d%s", config.getHost(), config.getPort(), QUERY_URI),
+                        "query", query,
+                        Fields.ERROR_KIND, "Exception",
+                        Fields.ERROR_OBJECT, sendAttempt.cause());
+                TracingHelper.logError(span, items);
+                log.warn("failed to run Prometheus query [URL: http://{}:{}{}, query: {}]: {}",
+                        config.getHost(), config.getPort(), QUERY_URI, query, sendAttempt.cause().getMessage());
                 result.fail(sendAttempt.cause());
             }
         });
