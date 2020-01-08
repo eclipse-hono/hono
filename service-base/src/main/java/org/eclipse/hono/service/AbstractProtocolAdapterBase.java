@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -412,6 +412,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         } else if (deviceConnectionClientFactory == null) {
             result.fail(new IllegalStateException("Device Connection client factory must be set"));
         } else {
+
+            log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
+
             connectToService(tenantClientFactory, "Tenant service");
             connectToService(downstreamSenderFactory, "AMQP Messaging Network");
             connectToService(registrationClientFactory, "Device Registration service");

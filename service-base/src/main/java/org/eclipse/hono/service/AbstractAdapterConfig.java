@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,6 +40,7 @@ import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
@@ -520,6 +521,7 @@ public abstract class AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.resource-limits.prometheus-based")
+    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
     @ConditionalOnProperty(name = "hono.resource-limits.prometheus-based.host")
     public PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig() {
         return new PrometheusBasedResourceLimitChecksConfig();
@@ -531,6 +533,7 @@ public abstract class AbstractAdapterConfig {
      * @return A ResourceLimitChecks instance.
      */
     @Bean
+    @ConditionalOnClass(name = "io.micrometer.prometheus.PrometheusMeterRegistry")
     @ConditionalOnProperty(name = "hono.resource-limits.prometheus-based.host")
     public ResourceLimitChecks resourceLimitChecks() {
         final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
