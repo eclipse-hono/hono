@@ -10,7 +10,19 @@
         "not-after": "${trusted-ca.not-after}"
       }
     ],
-    "enabled": true
+    "enabled": true,
+    "resource-limits": {
+      "max-connections": 100,
+      "max-ttl": 20,
+      "data-volume": {
+        "effective-since": "2020-01-01T00:00:00+00:00",
+        "max-bytes": 1000000000,
+        "period": {
+          "mode": "days",
+          "no-of-days": 7
+        }
+      }
+    }
   },
   {
     "tenant-id": "HTTP_TENANT",
