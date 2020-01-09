@@ -218,6 +218,9 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the AMQP adapter
     imageName: ${docker.repository}/hono-adapter-amqp-vertx:${project.version}
+    # javaOptions contains options to pass to the JVM when starting
+    # up the service
+    javaOptions: ${default-java-options}
     # resources contains the container's 'requests and limits for CPU and memory
     # as defined by the Kubernetes API.
     # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -287,6 +290,9 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the CoAP adapter
     imageName: ${docker.repository}/hono-adapter-coap-vertx:${project.version}
+    # javaOptions contains options to pass to the JVM when starting
+    # up the service
+    javaOptions: ${default-java-options}
     # resources contains the container's 'requests and limits for CPU and memory
     # as defined by the Kubernetes API.
     # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -343,6 +349,9 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the HTTP adapter
     imageName: ${docker.repository}/hono-adapter-http-vertx:${project.version}
+    # javaOptions contains options to pass to the JVM when starting
+    # up the service
+    javaOptions: ${default-java-options}
     # resources contains the container's 'requests and limits for CPU and memory
     # as defined by the Kubernetes API.
     # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -410,6 +419,9 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the LoRa adapter
     imageName: ${docker.repository}/hono-adapter-lora-vertx:${project.version}
+    # javaOptions contains options to pass to the JVM when starting
+    # up the service
+    javaOptions: ${default-java-options}
     # resources contains the container's 'requests and limits for CPU and memory
     # as defined by the Kubernetes API.
     # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -474,6 +486,9 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the MQTT adapter
     imageName: ${docker.repository}/hono-adapter-mqtt-vertx:${project.version}
+    # javaOptions contains options to pass to the JVM when starting
+    # up the service
+    javaOptions: ${default-java-options}
     # resources contains the container's 'requests and limits for CPU and memory
     # as defined by the Kubernetes API.
     # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -541,6 +556,9 @@ adapters:
     # imageName contains the name (including registry and tag)
     # of the container image to use for the Kura adapter
     imageName: ${docker.repository}/hono-adapter-kura:${project.version}
+    # javaOptions contains options to pass to the JVM when starting
+    # up the service
+    javaOptions: ${default-java-options}
     # resources contains the container's 'requests and limits for CPU and memory
     # as defined by the Kubernetes API.
     # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -609,6 +627,9 @@ authServer:
   # imageName contains the name (including registry and tag)
   # of the container image to use for the Auth Server
   imageName: ${docker.repository}/hono-service-auth:${project.version}
+  # javaOptions contains options to pass to the JVM when starting
+  # up the service
+  javaOptions: ${default-java-options}
   # resources contains the container's 'requests and limits for CPU and memory
   # as defined by the Kubernetes API.
   # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -692,6 +713,9 @@ deviceRegistryExample:
   # imageName contains the name (including registry and tag)
   # of the container image to use for the example Device Registry
   imageName: ${docker.repository}/hono-service-device-registry:${project.version}
+  # javaOptions contains options to pass to the JVM when starting
+  # up the service
+  javaOptions: ${default-java-options}
   # resources contains the container's 'requests and limits for CPU and memory
   # as defined by the Kubernetes API.
   # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
@@ -795,6 +819,9 @@ deviceConnectionService:
   # imageName contains the name (including registry and tag)
   # of the container image to use for the Device Connection service
   imageName: ${docker.repository}/hono-service-device-connection:${project.version}
+  # javaOptions contains options to pass to the JVM when starting
+  # up the service
+  javaOptions: ${default-java-options}
   # resources contains the container's 'requests and limits for CPU and memory
   # as defined by the Kubernetes API.
   # Refer to https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
