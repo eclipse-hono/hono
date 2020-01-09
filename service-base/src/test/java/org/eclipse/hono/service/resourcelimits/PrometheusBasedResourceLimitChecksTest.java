@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,19 +18,22 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
-import io.opentracing.noop.NoopTracerFactory;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.util.Constants;
@@ -45,6 +48,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.Tracer.SpanBuilder;
+import io.opentracing.log.Fields;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -101,7 +106,11 @@ public class PrometheusBasedResourceLimitChecksTest {
         span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
 
-        tracer = NoopTracerFactory.create();
+        final SpanBuilder builder = mock(SpanBuilder.class, withSettings().defaultAnswer(RETURNS_SELF));
+        when(builder.start()).thenReturn(span);
+
+        tracer = mock(Tracer.class);
+        when(tracer.buildSpan(anyString())).thenReturn(builder);
 
         final PrometheusBasedResourceLimitChecksConfig config = new PrometheusBasedResourceLimitChecksConfig();
         config.setHost(DEFAULT_HOST);
@@ -212,6 +221,39 @@ public class PrometheusBasedResourceLimitChecksTest {
                     ctx.verify(() -> {
                         assertTrue(response);
                         verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the message limit check returns {@code false} if no metrics are
+     * available (yet).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testMessageLimitNotExceededForMissingMetrics(final VertxTestContext ctx) {
+
+        givenDataVolumeUsageInBytes(null);
+        final long incomingMessageSize = 20;
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setDataVolume(new DataVolume()
+                                .setMaxBytes(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new DataVolumePeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
+
+        limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, spanContext)
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        // THEN the limit is not exceeded
+                        assertFalse(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                        // AND the span is not marked as erroneous
+                        verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
                     });
                     ctx.completeNow();
                 }));
@@ -384,33 +426,34 @@ public class PrometheusBasedResourceLimitChecksTest {
                 }));
     }
 
+    private void givenCurrentConnections(final Integer currentConnections) {
+        givenResponseWithValue(currentConnections);
+    }
+
+    private void givenDataVolumeUsageInBytes(final Integer consumedBytes) {
+        givenResponseWithValue(consumedBytes);
+    }
+
     @SuppressWarnings("unchecked")
-    private void givenCurrentConnections(final int currentConnections) {
+    private void givenResponseWithValue(final Integer value) {
         doAnswer(invocation -> {
             final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
             final HttpResponse<JsonObject> response = mock(HttpResponse.class);
-            when(response.body()).thenReturn(createPrometheusResponse(currentConnections));
+            when(response.body()).thenReturn(createPrometheusResponse(value));
             responseHandler.handle(Future.succeededFuture(response));
             return null;
         }).when(request).send(any(Handler.class));
     }
 
-    @SuppressWarnings("unchecked")
-    private void givenDataVolumeUsageInBytes(final int consumedBytes) {
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
-            final HttpResponse<JsonObject> response = mock(HttpResponse.class);
-            when(response.body()).thenReturn(createPrometheusResponse(consumedBytes));
-            responseHandler.handle(Future.succeededFuture(response));
-            return null;
-        }).when(request).send(any(Handler.class));
-    }
-
-    private JsonObject createPrometheusResponse(final int connections) {
+    private JsonObject createPrometheusResponse(final Integer value) {
+        final JsonArray valueArray = new JsonArray();
+        if (value != null) {
+            valueArray.add("timestamp").add(String.valueOf(value));
+        }
         return new JsonObject()
                 .put("status", "success")
                 .put("data", new JsonObject()
                         .put("result", new JsonArray().add(new JsonObject()
-                                .put("value", new JsonArray().add("timestamp").add(String.valueOf(connections))))));
+                                .put("value", valueArray))));
     }
 }
