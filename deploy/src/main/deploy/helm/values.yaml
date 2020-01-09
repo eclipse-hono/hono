@@ -51,7 +51,7 @@ amqpMessagingNetworkExample:
       # for a description of the properties' semantics.
       resources:
         requests:
-          cpu: "0.05"
+          cpu: "0.1"
           memory: "256M"
         limits:
           cpu: "1"
@@ -227,7 +227,7 @@ adapters:
     # for a description of the properties' semantics.
     resources:
       requests:
-        cpu: "0.05"
+        cpu: "0.1"
         memory: "300M"
       limits:
         cpu: "1"
@@ -299,7 +299,7 @@ adapters:
     # for a description of the properties' semantics.
     resources:
       requests:
-        cpu: "0.05"
+        cpu: "0.1"
         memory: "256M"
       limits:
         cpu: "1"
@@ -358,7 +358,7 @@ adapters:
     # for a description of the properties' semantics.
     resources:
       requests:
-        cpu: "0.05"
+        cpu: "0.1"
         memory: "300M"
       limits:
         cpu: "1"
@@ -428,7 +428,7 @@ adapters:
     # for a description of the properties' semantics.
     resources:
       requests:
-        cpu: "0.05"
+        cpu: "0.1"
         memory: "300M"
       limits:
         cpu: "1"
@@ -495,7 +495,7 @@ adapters:
     # for a description of the properties' semantics.
     resources:
       requests:
-        cpu: "0.05"
+        cpu: "0.1"
         memory: "300M"
       limits:
         cpu: "1"
@@ -565,7 +565,7 @@ adapters:
     # for a description of the properties' semantics.
     resources:
       requests:
-        cpu: "0.05"
+        cpu: "0.1"
         memory: "300M"
       limits:
         cpu: "1"
@@ -636,10 +636,10 @@ authServer:
   # for a description of the properties' semantics.
   resources:
     requests:
-      cpu: "0.05"
+      cpu: "0.1"
       memory: "196M"
     limits:
-      cpu: "0.2"
+      cpu: "1"
       memory: "256M"
 
   # extraSecretMounts describes additional secrets that should be mounted into the
@@ -722,11 +722,11 @@ deviceRegistryExample:
   # for a description of the properties' semantics.
   resources:
     requests:
-      cpu: "0.05"
-      memory: "256M"
+      cpu: "0.1"
+      memory: "300M"
     limits:
-      cpu: "0.3"
-      memory: "256M"
+      cpu: "1"
+      memory: "300M"
 
   svc:
     annotations: {}
@@ -828,10 +828,10 @@ deviceConnectionService:
   # for a description of the properties' semantics.
   resources:
     requests:
-      cpu: "0.05"
+      cpu: "0.1"
       memory: "256M"
     limits:
-      cpu: "0.5"
+      cpu: "1"
       memory: "256M"
 
   svc:
@@ -953,7 +953,7 @@ prometheus:
     # for a description of the properties' semantics.
     resources:
       requests:
-        cpu: "0.05"
+        cpu: "0.1"
         memory: "64M"
       limits:
         cpu: "0.5"
@@ -991,7 +991,7 @@ grafana:
   # for a description of the properties' semantics.
   resources:
     requests:
-      cpu: "0.05"
+      cpu: "0.1"
       memory: "64M"
     limits:
       cpu: "0.3"
