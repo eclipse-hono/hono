@@ -7,7 +7,7 @@ This module contains integration tests for Hono. The tests are executed against 
 In order to run the tests you will need the following:
 
 * a working *Docker Engine* installation (either local or on a separate host)
-* the Docker images of the Hono components. See the [Getting Started guide on the project web site](https://www.eclipse.org/hono/getting-started/) for instructions on building the Docker images.
+* the Docker images of the Hono components. See the [Developer Guide on the project web site](https://www.eclipse.org/hono/docs/dev-guide/building_hono/) for instructions on building the Docker images.
 
 ## Running the Tests
 
