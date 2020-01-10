@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -68,17 +68,18 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
 
         Objects.requireNonNull(tenantId);
 
-        return connection.executeOnContext(result -> {
-            registrationClientFactory.getOrCreateClient(
-                    RegistrationClientImpl.getTargetAddress(tenantId),
-                    () -> RegistrationClientImpl.create(
-                            cacheProvider,
-                            connection,
-                            tenantId,
-                            this::removeRegistrationClient,
-                            this::removeRegistrationClient),
-                    result);
-        });
+        return connection.isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> connection.executeOnContext(result -> {
+                    registrationClientFactory.getOrCreateClient(
+                            RegistrationClientImpl.getTargetAddress(tenantId),
+                            () -> RegistrationClientImpl.create(
+                                    cacheProvider,
+                                    connection,
+                                    tenantId,
+                                    this::removeRegistrationClient,
+                                    this::removeRegistrationClient),
+                            result);
+                }));
     }
 
     private void removeRegistrationClient(final String tenantId) {

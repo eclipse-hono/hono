@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,15 +58,16 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
     public final Future<DownstreamSender> getOrCreateTelemetrySender(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        return connection.executeOnContext(result -> {
-            clientFactory.getOrCreateClient(
-                    TelemetrySenderImpl.getTargetAddress(tenantId, null),
-                    () -> TelemetrySenderImpl.create(connection, tenantId,
-                            onSenderClosed -> {
-                                clientFactory.removeClient(TelemetrySenderImpl.getTargetAddress(tenantId, null));
-                            }),
-                    result);
-        });
+        return connection.isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> connection.executeOnContext(result -> {
+                    clientFactory.getOrCreateClient(
+                            TelemetrySenderImpl.getTargetAddress(tenantId, null),
+                            () -> TelemetrySenderImpl.create(connection, tenantId,
+                                    onSenderClosed -> {
+                                        clientFactory.removeClient(TelemetrySenderImpl.getTargetAddress(tenantId, null));
+                                    }),
+                            result);
+                }));
     }
 
     /**
@@ -76,15 +77,16 @@ public class DownstreamSenderFactoryImpl extends AbstractHonoClientFactory imple
     public final Future<DownstreamSender> getOrCreateEventSender(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        return connection.executeOnContext(result -> {
-            clientFactory.getOrCreateClient(
-                    EventSenderImpl.getTargetAddress(tenantId, null),
-                    () -> EventSenderImpl.create(connection, tenantId,
-                            onSenderClosed -> {
-                                clientFactory.removeClient(EventSenderImpl.getTargetAddress(tenantId, null));
-                            }),
-                    result);
-        });
+        return connection.isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> connection.executeOnContext(result -> {
+                    clientFactory.getOrCreateClient(
+                            EventSenderImpl.getTargetAddress(tenantId, null),
+                            () -> EventSenderImpl.create(connection, tenantId,
+                                    onSenderClosed -> {
+                                        clientFactory.removeClient(EventSenderImpl.getTargetAddress(tenantId, null));
+                                    }),
+                            result);
+                }));
     }
 
     private void handleTenantTimeout(final Message<String> msg) {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,6 +58,11 @@ public abstract class ConnectionLifecycleWrapper<T> implements ConnectionLifecyc
     @Override
     public Future<Void> isConnected() {
         return delegate.isConnected();
+    }
+
+    @Override
+    public Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+        return delegate.isConnected(waitForCurrentConnectAttemptTimeout);
     }
 
     @Override

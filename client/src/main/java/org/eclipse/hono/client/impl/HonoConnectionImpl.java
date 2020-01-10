@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLException;
 import javax.security.sasl.AuthenticationException;
@@ -110,12 +109,8 @@ public class HonoConnectionImpl implements HonoConnection {
     private final AtomicBoolean disconnecting = new AtomicBoolean(false);
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
-    /**
-     * Reference to a list of promises created in {@link #checkConnected(Handler)}, waiting to be completed
-     * in a concurrent {@link #connect()} invocation. When {@link #connect()} is finished, the reference
-     * value will be set back to {@code null}.
-     */
-    private final AtomicReference<List<Promise<Void>>> checkConnectedPromises = new AtomicReference<>();
+
+    private final DeferredConnectionCheckHandler deferredConnectionCheckHandler;
 
     private ProtonClientOptions clientOptions;
     private AtomicInteger connectAttempts;
@@ -157,6 +152,7 @@ public class HonoConnectionImpl implements HonoConnection {
         } else {
             this.vertx = Vertx.vertx();
         }
+        deferredConnectionCheckHandler = new DeferredConnectionCheckHandler(vertx);
         if (connectionFactory != null) {
             this.connectionFactory = connectionFactory;
         } else {
@@ -231,7 +227,7 @@ public class HonoConnectionImpl implements HonoConnection {
     public final <T> Future<T> executeOnContext(final Handler<Promise<T>> codeToRun) {
 
         if (context == null) {
-            // this means that the connection to the peer is not established (yet)
+            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
         } else {
             return HonoProtonHelper.executeOnContext(context, codeToRun);
@@ -256,7 +252,7 @@ public class HonoConnectionImpl implements HonoConnection {
     public final <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
 
         if (context == null) {
-            // this means that the connection to the peer is not established (yet)
+            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
         } else {
             return HonoProtonHelper.executeOrRunOnContext(context, codeToRun);
@@ -265,9 +261,6 @@ public class HonoConnectionImpl implements HonoConnection {
 
     /**
      * {@inheritDoc}
-     * <p>
-     * If a connection attempt is currently in progress, the returned future is completed
-     * with the outcome of the connection attempt.
      */
     @Override
     public final Future<Void> isConnected() {
@@ -276,9 +269,6 @@ public class HonoConnectionImpl implements HonoConnection {
 
     /**
      * Checks if this client is currently connected to the server.
-     * <p>
-     * If a connection attempt is currently in progress, the returned future is completed
-     * with the outcome of the connection attempt.
      *
      * @return A succeeded future if this client is connected.
      */
@@ -291,44 +281,36 @@ public class HonoConnectionImpl implements HonoConnection {
     private void checkConnected(final Handler<AsyncResult<Void>> resultHandler) {
         if (isConnectedInternal()) {
             resultHandler.handle(Future.succeededFuture());
-        } else if (connecting.get()) {
-            // connect attempt in progress - let its completion complete the resultHandler here
-            log.debug("connection attempt to server [{}:{}] in progress, connection check will be completed with its result",
-                    connectionFactory.getHost(), connectionFactory.getPort());
-            final Promise<Void> promiseToAdd = Promise.promise();
-            promiseToAdd.future().setHandler(resultHandler);
-            // atomically add the promise to checkConnectedPromises - but only if checkConnectedPromises hasn't been cleared already
-            final List<Promise<Void>> newCheckConnectedPromises = checkConnectedPromises
-                    .accumulateAndGet(Collections.singletonList(promiseToAdd), (existing, toAdd) -> {
-                        // no modification of the existing list done here, keeping the accumulatorFunction function side-effect free as required
-                        if (existing == null) {
-                            return null;
-                        }
-                        final List<Promise<Void>> promises = new ArrayList<>(existing.size() + 1);
-                        promises.addAll(existing);
-                        promises.add(toAdd.get(0));
-                        return promises;
-                    });
-            if (newCheckConnectedPromises == null) {
-                // checkConnectedPromises wasn't updated with our promiseToAdd because the checkConnectedPromises were cleared in between
-                resultHandler.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
-            }
         } else {
             resultHandler.handle(Future.failedFuture(
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
         }
     }
 
-    private void removeAndCompleteCheckConnectedPromises(final AsyncResult<HonoConnection> connectionResult) {
-        final List<Promise<Void>> promises = checkConnectedPromises.getAndSet(null);
-        if (promises != null) {
-            final Context ctx = vertx.getOrCreateContext();
-            if (connectionResult.succeeded()) {
-                promises.forEach(promise -> ctx.runOnContext(v -> promise.complete()));
-            } else {
-                promises.forEach(promise -> ctx.runOnContext(v -> promise.fail(connectionResult.cause())));
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+        return executeOnContext(result -> checkConnected(result, waitForCurrentConnectAttemptTimeout));
+    }
+
+    private void checkConnected(final Handler<AsyncResult<Void>> resultHandler, final long waitForCurrentConnectAttemptTimeout) {
+        if (isConnectedInternal()) {
+            resultHandler.handle(Future.succeededFuture());
+        } else if (waitForCurrentConnectAttemptTimeout > 0 && deferredConnectionCheckHandler.isConnectionAttemptInProgress()) {
+            // connect attempt in progress - let its completion complete the resultHandler here
+            log.debug("connection attempt to server [{}:{}] in progress, connection check will be completed with its result",
+                    connectionFactory.getHost(), connectionFactory.getPort());
+            final boolean added = deferredConnectionCheckHandler.addConnectionCheck(resultHandler,
+                    waitForCurrentConnectAttemptTimeout);
+            if (!added) {
+                // connection attempt was finished in between
+                checkConnected(resultHandler);
             }
+        } else {
+            resultHandler.handle(Future.failedFuture(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
         }
     }
 
@@ -418,10 +400,10 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<AsyncResult<HonoConnection>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
-        // make sure concurrently created checkConnected() promises get completed along with the given connectionHandler
+        // make sure concurrently invoked connection checks get completed along with the given connectionHandler
         final Handler<AsyncResult<HonoConnection>> wrappedConnectionHandler = connectionHandler instanceof ConnectMethodConnectionHandler
                 ? connectionHandler
-                : new ConnectMethodConnectionHandler(connectionHandler, this::removeAndCompleteCheckConnectedPromises);
+                : new ConnectMethodConnectionHandler(connectionHandler, deferredConnectionCheckHandler::setConnectionAttemptFinished);
 
         context = vertx.getOrCreateContext();
         log.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
@@ -435,7 +417,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         connectionFactory.getPort());
                 wrappedConnectionHandler.handle(Future.succeededFuture(this));
             } else if (connecting.compareAndSet(false, true)) {
-                checkConnectedPromises.compareAndSet(null, Collections.emptyList());
+                deferredConnectionCheckHandler.setConnectionAttemptInProgress();
 
                 log.debug("starting attempt [#{}] to connect to server [{}:{}]",
                         connectAttempts.get() + 1, connectionFactory.getHost(), connectionFactory.getPort());
@@ -573,6 +555,7 @@ public class HonoConnectionImpl implements HonoConnection {
             failConnectionAttempt(connectionFailureCause, connectionHandler);
 
         } else {
+            deferredConnectionCheckHandler.setConnectionAttemptInProgress();
             if (connectionFailureCause != null) {
                 logConnectionError(connectionFailureCause);
             }
@@ -663,7 +646,7 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<Void> closeHandler) {
 
         if (context == null) {
-            // this means that the connection to the peer is not established (yet)
+            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
             closeHandler.handle(null);
         } else {
             HonoProtonHelper.closeAndFree(context, link, closeHandler);
@@ -683,7 +666,7 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<Void> closeHandler) {
 
         if (context == null) {
-            // this means that the connection to the peer is not established (yet)
+            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
             closeHandler.handle(null);
         } else {
             HonoProtonHelper.closeAndFree(context, link, detachTimeOut, closeHandler);
