@@ -12,12 +12,15 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.mqtt;
 
-import io.netty.handler.codec.http.QueryStringDecoder;
-
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+
+import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * A collection of methods for processing <em>property-bag</em> set at the end of a topic.
@@ -66,7 +69,21 @@ public final class PropertyBag {
                 .map(props -> props.get(name))
                 .map(values -> values.get(0))
                 .orElse(null);
-    }    
+    }
+
+    /**
+     * Gets an iterator iterating over the properties.
+     *
+     * @return The properties iterator.
+     */
+    public Iterator<Map.Entry<String, String>> getPropertiesIterator() {
+        return Optional.ofNullable(properties)
+                .map(props -> props.entrySet().stream()
+                        .map(entry -> (Map.Entry<String, String>) new AbstractMap.SimpleEntry<>(entry.getKey(),
+                                entry.getValue() != null ? entry.getValue().get(0) : null))
+                        .iterator())
+                .orElse(Collections.emptyIterator());
+    }
 
     /**
      * Returns the topic without the <em>property-bag</em>.

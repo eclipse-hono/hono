@@ -14,9 +14,12 @@
 package org.eclipse.hono.tracing;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
 
@@ -27,6 +30,7 @@ import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopSpanContext;
 import io.opentracing.propagation.Format;
+import io.opentracing.propagation.TextMap;
 import io.opentracing.tag.BooleanTag;
 import io.opentracing.tag.IntTag;
 import io.opentracing.tag.StringTag;
@@ -306,6 +310,71 @@ public final class TracingHelper {
         Objects.requireNonNull(headers);
 
         return tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(headers));
+    }
+
+    /**
+     * Injects a {@code SpanContext} as key-value pairs into a given operation.
+     * <p>
+     * This provides a generic way to serialize a span context in any kind of textual data.
+     * See {@link #extractSpanContext(Tracer, Supplier)} for the corresponding method to deserialize the
+     * context from that data.
+     *
+     * @param tracer The Tracer to use for injecting the context.
+     * @param spanContext The context to inject.
+     * @param keyValueConsumer The operation that will receive the key-value pairs representing the context.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext,
+            final BiConsumer<String, String> keyValueConsumer) {
+
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(spanContext);
+        Objects.requireNonNull(keyValueConsumer);
+
+        tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
+                new TextMap() {
+                    @Override
+                    public Iterator<Map.Entry<String, String>> iterator() {
+                        throw new UnsupportedOperationException();
+                    }
+
+                    @Override
+                    public void put(final String key, final String value) {
+                        keyValueConsumer.accept(key, value);
+                    }
+                });
+    }
+
+    /**
+     * Extracts a {@code SpanContext} from given key-value pairs.
+     * <p>
+     * This provides a generic way to deserialize a span context from any kind of textual data.
+     * See {@link #injectSpanContext(Tracer, SpanContext, BiConsumer)} for the corresponding method to
+     * serialize the context in that data.
+     *
+     * @param tracer The Tracer to use for extracting the context.
+     * @param keyValueIteratorSupplier The supplier that provides an iterator over key-values pairs representing the
+     *            context.
+     * @return The context or {@code null} if the given options do not contain a context.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static SpanContext extractSpanContext(final Tracer tracer,
+            final Supplier<Iterator<Map.Entry<String, String>>> keyValueIteratorSupplier) {
+
+        Objects.requireNonNull(tracer);
+        Objects.requireNonNull(keyValueIteratorSupplier);
+
+        return tracer.extract(Format.Builtin.TEXT_MAP, new TextMap() {
+            @Override
+            public Iterator<Map.Entry<String, String>> iterator() {
+                return keyValueIteratorSupplier.get();
+            }
+
+            @Override
+            public void put(final String key, final String value) {
+                throw new UnsupportedOperationException();
+            }
+        });
     }
 
     /**

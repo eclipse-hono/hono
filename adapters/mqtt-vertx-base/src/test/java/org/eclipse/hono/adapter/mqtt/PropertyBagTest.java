@@ -13,11 +13,15 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import org.eclipse.hono.adapter.mqtt.PropertyBag;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Verifies behavior of {@link PropertyBag}.
@@ -39,7 +43,7 @@ public class PropertyBagTest {
      * Verifies that the property bag object is null when no <em>property-bag</em> is set.
      */
     @Test
-    public void VerifyWhenNoPropertyBagIsSet() {
+    public void verifyWhenNoPropertyBagIsSet() {
         assertNull(PropertyBag.fromTopic("event/tenant/device"));
     }
 
@@ -59,5 +63,20 @@ public class PropertyBagTest {
         assertEquals("event/tenant/device",
                 PropertyBag.fromTopic("event/tenant/device/?hono-ttl=30")
                         .topicWithoutPropertyBag());
+    }
+
+    /**
+     * Verifies that <em>getPropertiesIterator</em> returns an iterator with the expected entries.
+     */
+    @Test
+    public void testGetPropertiesIterator() {
+        final PropertyBag propertyBag = PropertyBag.fromTopic("event/tenant/device/?param1=30&param2=value2");
+        assertNotNull(propertyBag);
+        final Iterator<Map.Entry<String, String>> propertiesIterator = propertyBag.getPropertiesIterator();
+        final Map<String, String> tmpMap = new HashMap<>();
+        propertiesIterator.forEachRemaining((entry) -> tmpMap.put(entry.getKey(), entry.getValue()));
+        assertEquals(2, tmpMap.size());
+        assertEquals("30", tmpMap.get("param1"));
+        assertEquals("value2", tmpMap.get("param2"));
     }
 }
