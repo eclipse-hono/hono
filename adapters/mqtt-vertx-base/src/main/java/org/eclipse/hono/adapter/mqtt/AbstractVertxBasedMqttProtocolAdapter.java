@@ -65,6 +65,7 @@ import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
@@ -824,10 +825,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     void handlePublishedMessage(final MqttContext context) {
-        // there is no way to extract a SpanContext from an MQTT 3.1 message
-        // so we start a new one for every message
+        // try to extract a SpanContext from the property bag of the message's topic (if set)
+        final SpanContext spanContext = Optional.ofNullable(context.propertyBag())
+                .map(propertyBag -> TracingHelper.extractSpanContext(tracer, propertyBag::getPropertiesIterator))
+                .orElse(null);
         final MqttQoS qos = context.message().qosLevel();
-        final Span span = tracer.buildSpan("PUBLISH")
+        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "PUBLISH")
             .ignoreActiveSpan()
             .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
             .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), context.message().topicName())
