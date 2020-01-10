@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,7 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,6 +94,37 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConn
     @Override
     public final Future<Void> isConnected() {
         return connection.isConnected();
+    }
+
+    /**
+     * Checks whether this client is connected to the service.
+     * <p>
+     * If a connection attempt is currently in progress, the returned future is completed
+     * with the outcome of the connection attempt. If the connection attempt (including
+     * potential reconnect attempts) isn't finished after the given timeout, the returned
+     * future is failed.
+     * <p>
+     * Simply delegates to {@link HonoConnection#isConnected(long)}.
+     * 
+     * @param waitForCurrentConnectAttemptTimeout The maximum number of milliseconds to wait for
+     *                                            an ongoing connection attempt to finish.
+     * @return A succeeded future if this factory is connected.
+     *         Otherwise, the future will be failed with a {@link ServerErrorException}.
+     */
+    @Override
+    public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+        return connection.isConnected(waitForCurrentConnectAttemptTimeout);
+    }
+
+    /**
+     * Gets the default timeout used when checking whether this client is connected to the service.
+     * <p>
+     * The value returned here is the {@link ClientConfigProperties#getLinkEstablishmentTimeout()}.
+     *
+     * @return The timeout value in milliseconds.
+     */
+    public final long getDefaultConnectionCheckTimeout() {
+        return connection.getConfig().getLinkEstablishmentTimeout();
     }
 
     /**

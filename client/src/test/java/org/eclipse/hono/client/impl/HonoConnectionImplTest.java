@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -343,17 +343,21 @@ public class HonoConnectionImplTest {
     }
 
     /**
-     * Verifies that {@link HonoConnectionImpl#checkConnected()} only completes once a concurrent
+     * Verifies that {@link HonoConnectionImpl#isConnected(long)} only completes once a concurrent
      * connection attempt (which eventually succeeds here) is finished.
      *
      * @param ctx The test execution context.
      */
     @Test
-    public void testCheckConnectedSucceedsAfterConcurrentReconnectSucceeded(final TestContext ctx) {
+    public void testIsConnectedWithTimeoutSucceedsAfterConcurrentReconnectSucceeded(final TestContext ctx) {
 
-        final AtomicBoolean checkConnectedInvocationsDone = new AtomicBoolean(false);
-        final AtomicReference<Future<Void>> checkConnected1FutureRef = new AtomicReference<>();
-        final AtomicReference<Future<Void>> checkConnected2FutureRef = new AtomicReference<>();
+        final long isConnectedTimeout = 44444L;
+        // let the vertx timer for the isConnectedTimeout do nothing
+        when(vertx.setTimer(eq(isConnectedTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        final AtomicBoolean isConnectedInvocationsDone = new AtomicBoolean(false);
+        final AtomicReference<Future<Void>> isConnected1FutureRef = new AtomicReference<>();
+        final AtomicReference<Future<Void>> isConnectedTimeoutForcedFutureRef = new AtomicReference<>();
+        final AtomicReference<Future<Void>> isConnected2FutureRef = new AtomicReference<>();
         // GIVEN a client that is configured to connect to a peer
         // to which the connection can be established on the third attempt only
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
@@ -362,13 +366,15 @@ public class HonoConnectionImplTest {
                                 final Handler<AsyncResult<ProtonConnection>> closeHandler,
                                 final Handler<ProtonConnection> disconnectHandler,
                                 final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-                // and GIVEN "checkConnected" invocations done while the "connect" invocation is still in progress
-                if (checkConnectedInvocationsDone.compareAndSet(false, true)) {
-                    checkConnected1FutureRef.set(honoConnection.checkConnected());
-                    checkConnected2FutureRef.set(honoConnection.checkConnected());
-                    // assert "checkConnected" invocations have not completed yet
-                    ctx.assertFalse(checkConnected1FutureRef.get().isComplete());
-                    ctx.assertFalse(checkConnected2FutureRef.get().isComplete());
+                // and GIVEN "isConnected" invocations done while the "connect" invocation is still in progress
+                if (isConnectedInvocationsDone.compareAndSet(false, true)) {
+                    isConnected1FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    isConnectedTimeoutForcedFutureRef.set(honoConnection.isConnected(1L));
+                    isConnected2FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    // assert "isConnected" invocations have not completed yet, apart from the one with the forced timeout
+                    ctx.assertFalse(isConnected1FutureRef.get().isComplete());
+                    ctx.assertTrue(isConnectedTimeoutForcedFutureRef.get().failed());
+                    ctx.assertFalse(isConnected2FutureRef.get().isComplete());
                 }
                 super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
             }
@@ -380,8 +386,8 @@ public class HonoConnectionImplTest {
 
         // WHEN trying to connect
         honoConnection.connect()
-                // THEN the "checkConnected" futures succeed
-                .compose(v -> CompositeFuture.all(checkConnected1FutureRef.get(), checkConnected2FutureRef.get()))
+                // THEN the "isConnected" futures succeed
+                .compose(v -> CompositeFuture.all(isConnected1FutureRef.get(), isConnected2FutureRef.get()))
                 .setHandler(ctx.asyncAssertSuccess());
 
         // and the client fails twice to connect
@@ -391,17 +397,20 @@ public class HonoConnectionImplTest {
     }
 
     /**
-     * Verifies that {@link HonoConnectionImpl#checkConnected()} only completes once a concurrent
+     * Verifies that {@link HonoConnectionImpl#isConnected(long)} only completes once a concurrent
      * connection attempt (which eventually fails here) is finished.
      *
      * @param ctx The vert.x test client.
      */
     @Test
-    public void testCheckConnectedFailsAfterConcurrentReconnectFailed(final TestContext ctx) {
+    public void testIsConnectedWithTimeoutFailsAfterConcurrentReconnectFailed(final TestContext ctx) {
 
-        final AtomicBoolean checkConnectedInvocationsDone = new AtomicBoolean(false);
-        final AtomicReference<Future<Void>> checkConnected1FutureRef = new AtomicReference<>();
-        final AtomicReference<Future<Void>> checkConnected2FutureRef = new AtomicReference<>();
+        final long isConnectedTimeout = 44444L;
+        // let the vertx timer for the isConnectedTimeout do nothing
+        when(vertx.setTimer(eq(isConnectedTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        final AtomicBoolean isConnectedInvocationsDone = new AtomicBoolean(false);
+        final AtomicReference<Future<Void>> isConnected1FutureRef = new AtomicReference<>();
+        final AtomicReference<Future<Void>> isConnected2FutureRef = new AtomicReference<>();
         // GIVEN a client that is configured to connect to a peer
         // to which the connection can be established on the third attempt only
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
@@ -410,13 +419,13 @@ public class HonoConnectionImplTest {
                                 final Handler<AsyncResult<ProtonConnection>> closeHandler,
                                 final Handler<ProtonConnection> disconnectHandler,
                                 final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-                // and GIVEN "checkConnected" invocations done while the "connect" invocation is still in progress
-                if (checkConnectedInvocationsDone.compareAndSet(false, true)) {
-                    checkConnected1FutureRef.set(honoConnection.checkConnected());
-                    checkConnected2FutureRef.set(honoConnection.checkConnected());
-                    // assert "checkConnected" invocations have not completed yet
-                    ctx.assertFalse(checkConnected1FutureRef.get().isComplete());
-                    ctx.assertFalse(checkConnected2FutureRef.get().isComplete());
+                // and GIVEN "isConnected" invocations done while the "connect" invocation is still in progress
+                if (isConnectedInvocationsDone.compareAndSet(false, true)) {
+                    isConnected1FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    isConnected2FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    // assert "isConnected" invocations have not completed yet
+                    ctx.assertFalse(isConnected1FutureRef.get().isComplete());
+                    ctx.assertFalse(isConnected2FutureRef.get().isComplete());
                 }
                 super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
             }
@@ -428,14 +437,14 @@ public class HonoConnectionImplTest {
 
         // WHEN the client tries to connect
         honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the connection attempt fails and the "checkConnected" futures fail as well
+            // THEN the connection attempt fails and the "isConnected" futures fail as well
             ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
 
-            ctx.assertTrue(checkConnected1FutureRef.get().failed());
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) checkConnected1FutureRef.get().cause()).getErrorCode());
+            ctx.assertTrue(isConnected1FutureRef.get().failed());
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) isConnected1FutureRef.get().cause()).getErrorCode());
 
-            ctx.assertTrue(checkConnected2FutureRef.get().failed());
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) checkConnected2FutureRef.get().cause()).getErrorCode());
+            ctx.assertTrue(isConnected2FutureRef.get().failed());
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) isConnected2FutureRef.get().cause()).getErrorCode());
         }));
         // and the client has indeed tried three times in total before giving up
         assertTrue(connectionFactory.awaitFailure());

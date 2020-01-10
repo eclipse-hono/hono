@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -62,17 +62,17 @@ public class DeviceConnectionClientFactoryImpl extends AbstractHonoClientFactory
     public final Future<DeviceConnectionClient> getOrCreateDeviceConnectionClient(final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-
-        return connection.executeOnContext(result -> {
-            deviceConnectionClientFactory.getOrCreateClient(
-                    DeviceConnectionClientImpl.getTargetAddress(tenantId),
-                    () -> DeviceConnectionClientImpl.create(
-                            connection,
-                            tenantId,
-                            this::removeDeviceConnectionClient,
-                            this::removeDeviceConnectionClient),
-                    result);
-        });
+        return connection.isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> connection.executeOnContext(result -> {
+                    deviceConnectionClientFactory.getOrCreateClient(
+                            DeviceConnectionClientImpl.getTargetAddress(tenantId),
+                            () -> DeviceConnectionClientImpl.create(
+                                    connection,
+                                    tenantId,
+                                    this::removeDeviceConnectionClient,
+                                    this::removeDeviceConnectionClient),
+                            result);
+                }));
     }
 
     private void removeDeviceConnectionClient(final String tenantId) {

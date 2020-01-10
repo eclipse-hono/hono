@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -176,6 +176,13 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
     public Future<Void> isConnected() {
         final Future<Void> registrationFuture = registrationClientFactory.isConnected();
         final Future<Void> deviceConnectionFuture = deviceConnectionClientFactory.isConnected();
+        return CompositeFuture.all(registrationFuture, deviceConnectionFuture).mapEmpty();
+    }
+
+    @Override
+    public Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+        final Future<Void> registrationFuture = registrationClientFactory.isConnected(waitForCurrentConnectAttemptTimeout);
+        final Future<Void> deviceConnectionFuture = deviceConnectionClientFactory.isConnected(waitForCurrentConnectAttemptTimeout);
         return CompositeFuture.all(registrationFuture, deviceConnectionFuture).mapEmpty();
     }
 

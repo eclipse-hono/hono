@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.impl;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -112,6 +113,9 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
         final Vertx vertx = Vertx.vertx();
         final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
         when(connection.getVertx()).thenReturn(vertx);
+
+        when(connection.isConnected()).thenReturn(Future.succeededFuture());
+        when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
 
         final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         when(connection.createReceiver(anyString(), any(), any(), any())).thenReturn(Future.succeededFuture(receiver));

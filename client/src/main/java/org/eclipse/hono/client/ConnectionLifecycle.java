@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,6 +63,25 @@ public interface ConnectionLifecycle<T> {
      *         {@link ServerErrorException}.
      */
     Future<Void> isConnected();
+
+    /**
+     * Checks whether the connection is currently established.
+     * <p>
+     * If a connection attempt is currently in progress, the returned future is completed
+     * with the outcome of the connection attempt. If the connection attempt (including
+     * potential reconnect attempts) isn't finished after the given timeout, the returned
+     * future is failed.
+     * <p>
+     * This default implementation simply returns {@link #isConnected()}.
+     *
+     * @param waitForCurrentConnectAttemptTimeout The maximum number of milliseconds to wait for
+     *                                            an ongoing connection attempt to finish.
+     * @return A succeeded future if this connection is established.
+     *         Otherwise, the future will be failed with a {@link ServerErrorException}.
+     */
+    default Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+        return isConnected();
+    }
 
     /**
      * Disconnects from the service.
