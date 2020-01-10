@@ -1,5 +1,5 @@
 /*******************************************************************************
-* Copyright (c) 2019 Contributors to the Eclipse Foundation
+* Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
 *
 * See the NOTICE file(s) distributed with this work for additional
 * information regarding copyright ownership.
@@ -23,8 +23,8 @@ import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.Util;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
@@ -97,22 +97,26 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final JsonObject payload = getRequestPayload(request.getJsonPayload());
         final SpanContext spanContext = request.getSpanContext();
 
+        final Span span = Util.newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
+
+        final Future<EventBusMessage> resultFuture;
         if (isValidRequestPayload(payload)) {
             log.debug("creating tenant [{}]", tenantId.orElse("<auto>"));
 
-            final Span span = Util.newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
-            final Promise<OperationResult<Id>> addResult = Promise.promise();
-
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
+
+            final Promise<OperationResult<Id>> addResult = Promise.promise();
             getService().add(tenantId, payload, span, addResult);
-            return addResult.future().map(res -> {
+            resultFuture = addResult.future().map(res -> {
                 final String createdTenantId = Optional.ofNullable(res.getPayload()).map(Id::getId).orElse(null);
                 return res.createResponse(request, JsonObject::mapFrom).setTenant(createdTenantId);
             });
         } else {
             log.debug("request contains malformed payload");
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            TracingHelper.logError(span, "request contains malformed payload");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     private Future<EventBusMessage> processUpdateRequest(final EventBusMessage request) {
@@ -122,26 +126,28 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
+        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
-            log.debug("request does not contain mandatory property [{}]",
-                    MessageHelper.APP_PROPERTY_TENANT_ID);
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            log.debug("missing tenant ID");
+            TracingHelper.logError(span, "missing tenant ID");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (isValidRequestPayload(payload)) {
             log.debug("updating tenant [{}]", tenantId);
 
-            final Promise<OperationResult<Void>> updateResult = Promise.promise();
-            final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
-
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
-            getService().update(tenantId, payload, resourceVersion, span, updateResult);
-            return updateResult.future().map(res -> {
-                return res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId);
 
-            });
+            final Promise<OperationResult<Void>> updateResult = Promise.promise();
+            getService().update(tenantId, payload, resourceVersion, span, updateResult);
+            resultFuture = updateResult.future()
+                    .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         } else {
             log.debug("request contains malformed payload");
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            TracingHelper.logError(span, "request contains malformed payload");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         }
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     private Future<EventBusMessage> processDeleteRequest(final EventBusMessage request) {
@@ -150,21 +156,22 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
+        final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
-            log.debug("request does not contain mandatory property [{}]",
-                    MessageHelper.APP_PROPERTY_TENANT_ID);
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            log.debug("missing tenant ID");
+            TracingHelper.logError(span, "missing tenant ID");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("deleting tenant [{}]", tenantId);
+
             final Promise<Result<Void>> removeResult = Promise.promise();
-            final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
-
             getService().remove(tenantId, resourceVersion, span, removeResult);
-            return removeResult.future().map(res -> {
-                return res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId);
-
-            });
+            resultFuture = removeResult.future()
+                    .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         }
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     private Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
@@ -172,20 +179,21 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final String tenantId = request.getTenant();
         final SpanContext spanContext = request.getSpanContext();
 
+        final Span span = Util.newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null ) {
-            log.debug("request does not contain any query parameters");
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            log.debug("missing tenant ID");
+            TracingHelper.logError(span, "missing tenant ID");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-
             log.debug("retrieving tenant [id: {}]", tenantId);
-            final Promise<OperationResult<Tenant>> getResult = Promise.promise();
-            final Span span = Util.newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
-
-            getService().read(tenantId, span, getResult);
-            return getResult.future().map(res -> {
-                return res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId);
-            });
+            final Promise<OperationResult<Tenant>> readResult = Promise.promise();
+            getService().read(tenantId, span, readResult);
+            resultFuture = readResult.future()
+                    .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         }
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     /**

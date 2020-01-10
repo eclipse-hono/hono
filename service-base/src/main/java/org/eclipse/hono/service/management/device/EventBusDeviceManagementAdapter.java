@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.Util;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -125,19 +126,20 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final Optional<String> deviceId = Optional.ofNullable(request.getDeviceId());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Future<Device> deviceFuture = deviceFromPayload(request);
         final Span span = Util.newChildSpan(SPAN_NAME_CREATE_DEVICE, spanContext, tracer, tenantId, deviceId.orElse("unspecified"), getClass().getSimpleName());
 
-        return deviceFuture.compose(device -> {
-            log.debug("registering device [{}] for tenant [{}]", deviceId.orElse("<auto>"), tenantId);
-            final Promise<OperationResult<Id>> result = Promise.promise();
-            getService().createDevice(tenantId, deviceId, device, span, result);
-            return result.future().map(res -> {
-                final String createdDeviceId = Optional.ofNullable(res.getPayload()).map(Id::getId).orElse(null);
-                return res.createResponse(request, JsonObject::mapFrom).setDeviceId(createdDeviceId);
-            });
-        });
-
+        final Future<EventBusMessage> resultFuture = deviceFromPayload(request)
+                .compose(device -> {
+                    log.debug("registering device [{}] for tenant [{}]", deviceId.orElse("<auto>"), tenantId);
+                    final Promise<OperationResult<Id>> result = Promise.promise();
+                    getService().createDevice(tenantId, deviceId, device, span, result);
+                    return result.future().map(res -> {
+                        final String createdDeviceId = Optional.ofNullable(res.getPayload()).map(Id::getId)
+                                .orElse(null);
+                        return res.createResponse(request, JsonObject::mapFrom).setDeviceId(createdDeviceId);
+                    });
+                });
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     private Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
@@ -148,16 +150,19 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
 
         final Span span = Util.newChildSpan(SPAN_NAME_GET_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            log.debug("missing tenant and/or device id");
+            TracingHelper.logError(span, "missing tenant and/or device id");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
+            final Promise<OperationResult<Device>> readDeviceResult = Promise.promise();
+            getService().readDevice(tenantId, deviceId, span, readDeviceResult);
+            resultFuture = readDeviceResult.future()
+                    .map(res -> res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId));
         }
-
-        log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-        final Promise<OperationResult<Device>> result = Promise.promise();
-        getService().readDevice(tenantId, deviceId, span, result);
-        return result.future().map(res -> {
-            return res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId);
-        });
+        return finishSpanOnFutureCompletion(span, resultFuture);
 
     }
 
@@ -170,22 +175,22 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
 
         final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            log.debug("missing tenant and/or device id");
+            TracingHelper.logError(span, "missing tenant and/or device id");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            resultFuture = deviceFromPayload(request)
+                    .compose(device -> {
+                        log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
+                        final Promise<OperationResult<Id>> updateResult = Promise.promise();
+                        getService().updateDevice(tenantId, deviceId, device, resourceVersion, span, updateResult);
+                        return updateResult.future()
+                                .map(res -> res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId));
+                    });
         }
-
-        final Future<Device> deviceFuture = deviceFromPayload(request);
-
-        return deviceFuture.compose(device -> {
-
-            log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
-            final Promise<OperationResult<Id>> result = Promise.promise();
-            getService().updateDevice(tenantId, deviceId, device, resourceVersion, span, result);
-            return result.future().map(res -> {
-                return res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId);
-            });
-
-        });
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     private Future<EventBusMessage> processDeleteRequest(final EventBusMessage request) {
@@ -197,17 +202,19 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
 
         final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            log.debug("missing tenant and/or device id");
+            TracingHelper.logError(span, "missing tenant and/or device id");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            log.debug("deleting device [{}] of tenant [{}]", deviceId, tenantId);
+            final Promise<Result<Void>> result = Promise.promise();
+            getService().deleteDevice(tenantId, deviceId, resourceVersion, span, result);
+            resultFuture = result.future()
+                    .map(res -> res.createResponse(request, id -> null).setDeviceId(deviceId));
         }
-
-        log.debug("deleting device [{}] of tenant [{}]", deviceId, tenantId);
-        final Promise<Result<Void>> result = Promise.promise();
-        getService().deleteDevice(tenantId, deviceId, resourceVersion, span, result);
-        return result.future().map(res -> {
-            return res.createResponse(request, id -> null).setDeviceId(deviceId);
-        });
-
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
 }
