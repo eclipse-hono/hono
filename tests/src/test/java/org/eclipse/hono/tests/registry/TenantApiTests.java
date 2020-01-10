@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.TrustAnchor;
 import java.time.Instant;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
@@ -34,11 +35,9 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.DataVolumePeriod;
 import org.eclipse.hono.util.ResourceLimits;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
@@ -74,9 +73,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         final JsonObject defaults = new JsonObject().put("ttl", 30);
 
-        final JsonObject httpAdapterExtensions = new JsonObject()
-                .put("deployment", new JsonObject()
-                        .put("maxInstances", 4));
+        final Map<String, Object> httpAdapterExtensions = Map.of("deployment", Map.of("maxInstances", 4));
 
         final ResourceLimits resourceLimits = new ResourceLimits()
                 .setMaxConnections(100000)
@@ -102,23 +99,19 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
            .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
                 .setEnabled(true)
                 .setDeviceAuthenticationRequired(true)
-                .setExtensions(httpAdapterExtensions.getMap()));
+                .setExtensions(httpAdapterExtensions));
 
         // expected tenant object
         final TenantObject expectedTenantObject = TenantObject.from(tenantId, true)
                 .setDefaults(defaults)
                 .setResourceLimits(resourceLimits)
-                .setAdapterConfigurations(new JsonArray()
-                        .add(new JsonObject()
-                                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                                .put(TenantConstants.FIELD_ENABLED, true)
-                                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, false))
-                        .add(new JsonObject()
-                                .put(TenantConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                                .put(TenantConstants.FIELD_ENABLED, true)
-                                .put(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true)
-                                .put("ext", httpAdapterExtensions))
-                        );
+                .addAdapter(new org.eclipse.hono.util.Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                        .setEnabled(Boolean.TRUE)
+                        .setDeviceAuthenticationRequired(Boolean.FALSE))
+                .addAdapter(new org.eclipse.hono.util.Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                        .setEnabled(Boolean.TRUE)
+                        .setDeviceAuthenticationRequired(Boolean.TRUE)
+                        .setExtensions(httpAdapterExtensions));
 
         getHelper().registry
         .addTenant(tenantId, tenant)
@@ -126,7 +119,9 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .setHandler(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getDefaults()).isEqualTo(expectedTenantObject.getDefaults());
-                assertThat(tenantObject.getAdapterConfigurations()).isEqualTo(expectedTenantObject.getAdapterConfigurations());
+                assertThat(tenantObject.getAdapters())
+                    .usingRecursiveFieldByFieldElementComparator()
+                    .containsAll(expectedTenantObject.getAdapters());
                 assertThat(tenantObject.getResourceLimits().getMaxConnections())
                         .isEqualTo(expectedTenantObject.getResourceLimits().getMaxConnections());
                 assertThat(tenantObject.getResourceLimits().getMaxTtl())
