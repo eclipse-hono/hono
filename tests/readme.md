@@ -26,3 +26,11 @@ This starts the following Docker containers and runs the test cases against them
 * Hono MQTT adapter
 * Hono AMQP adapter
 * Hono CoAP adapter
+
+To run a single test, set the `it.test` property:
+
+    $ mvn verify -Prun-tests -Dit.test=TelemetryHttpIT
+
+The `logging.profile` property with a value of either `prod`, `dev` or `trace` can be used to set the log level in the Hono Docker containers:
+
+    $ mvn verify -Prun-tests -Dlogging.profile=trace
