@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -556,7 +556,9 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param type The adapter type.
      * @param enabled {@code true} if the adapter should be enabled.
      * @return The configuration properties.
+     * @deprecated Use {@link Adapter#Adapter(String)} instead.
      */
+    @Deprecated
     public static JsonObject newAdapterConfig(final String type, final boolean enabled) {
 
         Objects.requireNonNull(type);

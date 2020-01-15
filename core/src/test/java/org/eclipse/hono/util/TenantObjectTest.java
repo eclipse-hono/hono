@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,6 +35,7 @@ import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
@@ -172,7 +173,7 @@ public class TenantObjectTest {
     public void testIsAdapterEnabledForDisabledTenant() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.FALSE);
-        obj.addAdapterConfiguration(TenantObject.newAdapterConfig("type-one", true));
+        obj.addAdapter(new Adapter("type-one").setEnabled(Boolean.TRUE));
         assertFalse(obj.isAdapterEnabled("type-one"));
         assertFalse(obj.isAdapterEnabled("any-other-type"));
     }
@@ -185,7 +186,7 @@ public class TenantObjectTest {
     public void testIsAdapterEnabledForNonEmptyConfiguration() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
-        obj.addAdapterConfiguration(TenantObject.newAdapterConfig("type-one", true));
+        obj.addAdapter(new Adapter("type-one").setEnabled(Boolean.TRUE));
         assertTrue(obj.isAdapterEnabled("type-one"));
         assertFalse(obj.isAdapterEnabled("any-other-type"));
     }
@@ -220,33 +221,14 @@ public class TenantObjectTest {
     @Test
     public void testAddingListOfAdapterConfigurationsOfSameTypeFails() {
         final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
-        tenantConfig.addAdapterConfiguration(new JsonObject().put("type", "type-1"));
-        final JsonArray adapterConfigurations = new JsonArray()
-                .add(new JsonObject().put("type", "type-2"))
-                .add(new JsonObject().put("type", "type-2"));
+        tenantConfig.addAdapter(new Adapter("type-1"));
+        final List<Adapter> adapterConfigurations = new ArrayList<>();
+        adapterConfigurations.add(new Adapter("type-2"));
+        adapterConfigurations.add(new Adapter("type-2"));
         assertThrows(IllegalArgumentException.class,
-                () -> tenantConfig.setAdapterConfigurations(adapterConfigurations));
-        assertEquals(1, tenantConfig.getAdapterConfigurations().size());
-        assertNotNull(tenantConfig.getAdapterConfiguration("type-1"));
-    }
-
-    /**
-     * Verifies that adding invalid adapter configuration fails. In addition,
-     * it is also verified that the existing adapter configurations in the tenant configuration remain unchanged.
-     */
-    @Test
-    public void testAddingListOfAdapterConfigurationsWithNoTypeFails() {
-        final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
-        tenantConfig.addAdapterConfiguration(new JsonObject().put("type", "type-1"));
-        final JsonArray adapterConfigurations = new JsonArray()
-                // No adapter type is specified, which makes this adapter configuration invalid.
-                .add(new JsonObject().put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED,
-                        true))
-                .add(new JsonObject().put("type", "type-2"));
-        assertThrows(IllegalArgumentException.class,
-                () -> tenantConfig.setAdapterConfigurations(adapterConfigurations));
-        assertEquals(1, tenantConfig.getAdapterConfigurations().size());
-        assertNotNull(tenantConfig.getAdapterConfiguration("type-1"));
+                () -> tenantConfig.setAdapters(adapterConfigurations));
+        assertEquals(1, tenantConfig.getAdapters().size());
+        assertNotNull(tenantConfig.getAdapter("type-1"));
     }
 
     /**
@@ -354,10 +336,8 @@ public class TenantObjectTest {
     @Test
     public void testGetMaxTTDFromAdapterConfiguration() {
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenantObject.addAdapterConfiguration(
-                TenantObject.newAdapterConfig("custom", true)
-                        .put(TenantConstants.FIELD_EXT, new JsonObject()
-                                .put(TenantConstants.FIELD_MAX_TTD, 10)));
+        tenantObject.addAdapter(new Adapter("custom").setEnabled(Boolean.TRUE)
+                .putExtension(TenantConstants.FIELD_MAX_TTD, 10));
         assertThat(tenantObject.getMaxTimeUntilDisconnect("custom"), is(10));
     }
 
@@ -377,10 +357,8 @@ public class TenantObjectTest {
     @Test
     public void testGetMaxTTDReturnsDefaultValueInsteadOfIllegalValue() {
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        tenantObject.addAdapterConfiguration(
-                TenantObject.newAdapterConfig("custom", true)
-                        .put(TenantConstants.FIELD_EXT, new JsonObject()
-                                .put(TenantConstants.FIELD_MAX_TTD, -10)));
+        tenantObject.addAdapter(new Adapter("custom").setEnabled(Boolean.TRUE)
+                .putExtension(TenantConstants.FIELD_MAX_TTD, -10));
         assertThat(tenantObject.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
     }
 
