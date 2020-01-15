@@ -109,13 +109,7 @@
 
     <module name="JavadocMethod">
       <property name="scope" value="protected"/>
-      <property name="allowUndeclaredRTE" value="true"/>
-      <property name="allowThrowsTagsForSubclasses" value="true"/>
-      <!--
-        prevent failing the check if checkstyle is unable to load an exception class
-        which might happen occasionally
-      -->
-      <property name="suppressLoadErrors" value="true"/>
+      <property name="validateThrows" value="true"/>
     </module>
     <module name="JavadocStyle"/>
     <module name="JavadocType"/>

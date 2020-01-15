@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -1169,13 +1169,15 @@ public final class IntegrationTestSupport {
      */
     public Future<X509Certificate> getCertificate(final String path) {
 
-        return loadFile(path).map(buffer -> {
+        return loadFile(path).compose(buffer -> {
+            final Promise<X509Certificate> result = Promise.promise();
             try (InputStream is = new ByteArrayInputStream(buffer.getBytes())) {
                 final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-                return (X509Certificate) factory.generateCertificate(is);
+                result.complete((X509Certificate) factory.generateCertificate(is));
             } catch (final Exception e) {
-                throw new IllegalArgumentException("file cannot be parsed into X.509 certificate");
+                result.fail(new IllegalArgumentException("file cannot be parsed into X.509 certificate"));
             }
+            return result.future();
         });
     }
 

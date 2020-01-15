@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,6 +33,7 @@ import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -131,17 +132,22 @@ public class JmsBasedCredentialsClient extends JmsBasedRequestResponseClient<Cre
                 }
             }
 
-            return send(request).map(credentialsResult -> {
-                switch(credentialsResult.getStatus()) {
-                case HttpURLConnection.HTTP_OK:
-                case HttpURLConnection.HTTP_CREATED:
-                    return credentialsResult.getPayload();
-                case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new ClientErrorException(credentialsResult.getStatus(), "no such credentials");
-                default:
-                    throw StatusCodeMapper.from(credentialsResult);
-                }
-            });
+            return send(request)
+                    .compose(credentialsResult -> {
+                        final Promise<CredentialsObject> result = Promise.promise();
+                        switch(credentialsResult.getStatus()) {
+                        case HttpURLConnection.HTTP_OK:
+                        case HttpURLConnection.HTTP_CREATED:
+                            result.complete(credentialsResult.getPayload());
+                            break;
+                        case HttpURLConnection.HTTP_NOT_FOUND:
+                            result.fail(new ClientErrorException(credentialsResult.getStatus(), "no such credentials"));
+                            break;
+                        default:
+                            result.fail(StatusCodeMapper.from(credentialsResult));
+                        }
+                        return result.future();
+                    });
         } catch (JMSException e) {
             return Future.failedFuture(getServiceInvocationException(e));
         }

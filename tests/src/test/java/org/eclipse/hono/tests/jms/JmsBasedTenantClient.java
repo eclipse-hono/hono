@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,6 +31,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -113,16 +114,21 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantRe
                 request.setJMSType(operation);
             }
 
-            return send(request).map(tenantResult -> {
-                switch(tenantResult.getStatus()) {
-                case HttpURLConnection.HTTP_OK:
-                    return tenantResult.getPayload();
-                case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new ClientErrorException(tenantResult.getStatus(), "no such tenant");
-                default:
-                    throw StatusCodeMapper.from(tenantResult);
-                }
-            });
+            return send(request)
+                    .compose(tenantResult -> {
+                        final Promise<TenantObject> result = Promise.promise();
+                        switch(tenantResult.getStatus()) {
+                        case HttpURLConnection.HTTP_OK:
+                            result.complete(tenantResult.getPayload());
+                            break;
+                        case HttpURLConnection.HTTP_NOT_FOUND:
+                            result.fail(new ClientErrorException(tenantResult.getStatus(), "no such tenant"));
+                            break;
+                        default:
+                            result.fail(StatusCodeMapper.from(tenantResult));
+                        }
+                        return result.future();
+                    });
         } catch (JMSException e) {
             return Future.failedFuture(getServiceInvocationException(e));
         }

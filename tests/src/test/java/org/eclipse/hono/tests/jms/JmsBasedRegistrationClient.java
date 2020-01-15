@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,6 +33,7 @@ import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -132,16 +133,21 @@ public class JmsBasedRegistrationClient extends JmsBasedRequestResponseClient<Re
                 }
             }
 
-            return send(request).map(registrationResult -> {
-                switch(registrationResult.getStatus()) {
-                case HttpURLConnection.HTTP_OK:
-                    return registrationResult.getPayload();
-                case HttpURLConnection.HTTP_NOT_FOUND:
-                    throw new ClientErrorException(registrationResult.getStatus(), "no such device");
-                default:
-                    throw StatusCodeMapper.from(registrationResult);
-                }
-            });
+            return send(request)
+                    .compose(registrationResult -> {
+                        final Promise<JsonObject> result = Promise.promise();
+                        switch(registrationResult.getStatus()) {
+                        case HttpURLConnection.HTTP_OK:
+                            result.complete(registrationResult.getPayload());
+                            break;
+                        case HttpURLConnection.HTTP_NOT_FOUND:
+                            result.fail(new ClientErrorException(registrationResult.getStatus(), "no such device"));
+                            break;
+                        default:
+                            result.fail(StatusCodeMapper.from(registrationResult));
+                        }
+                        return result.future();
+                    });
         } catch (JMSException e) {
             return Future.failedFuture(getServiceInvocationException(e));
         }
