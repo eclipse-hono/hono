@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -966,7 +966,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
-                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
+                .add(Constants.HEADER_TIME_TILL_DISCONNECT, "5");
 
         final MultiMap cmdResponseRequestHeaders = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
@@ -1026,7 +1026,7 @@ public abstract class HttpTestBase {
                 },
                 count -> {
                     final Buffer buffer = Buffer.buffer("hello " + count);
-                    return sendHttpRequestForGatewayOrDevice(buffer, requestHeaders, endpointConfig, commandTargetDeviceId)
+                    return sendHttpRequestForGatewayOrDevice(buffer, requestHeaders, endpointConfig, commandTargetDeviceId, true)
                             .map(responseHeaders -> {
 
                                 final String requestId = responseHeaders.get(Constants.HEADER_COMMAND_REQUEST_ID);
@@ -1125,21 +1125,7 @@ public abstract class HttpTestBase {
                 },
                 count -> {
                     final Buffer payload = Buffer.buffer("hello " + count);
-                    return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId)
-                    .recover(t -> {
-
-                        // we probably sent the request before the
-                        // HTTP adapter was able to close the command
-                        // consumer for the previous request
-                        // wait a little and try again
-                        final Promise<MultiMap> retryResult = Promise.promise();
-                        VERTX.setTimer(300, retry -> {
-                            logger.info("re-trying request [{}], failure was: {}", count, t.getMessage());
-                            sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId)
-                            .setHandler(retryResult);
-                        });
-                        return retryResult.future();
-                    })
+                    return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId, true)
                     .map(responseHeaders -> {
                         ctx.verify(() -> {
                             // assert that the response contains a one-way command
@@ -1154,8 +1140,12 @@ public abstract class HttpTestBase {
                 });
     }
 
-    private Future<MultiMap> sendHttpRequestForGatewayOrDevice(final Buffer payload, final MultiMap requestHeaders,
-            final HttpCommandEndpointConfiguration endpointConfig, final String requestDeviceId) {
+    private Future<MultiMap> sendHttpRequestForGatewayOrDevice(
+            final Buffer payload,
+            final MultiMap requestHeaders,
+            final HttpCommandEndpointConfiguration endpointConfig,
+            final String requestDeviceId) {
+
         if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
             final String uri = getEndpointUri() + "/" + tenantId + "/" + requestDeviceId;
             // GW uses PUT when acting on behalf of a device
@@ -1164,6 +1154,33 @@ public abstract class HttpTestBase {
             return httpClient.create(getEndpointUri(), payload, requestHeaders,
                     response -> response.statusCode() == HttpURLConnection.HTTP_OK);
         }
+    }
+
+    private Future<MultiMap> sendHttpRequestForGatewayOrDevice(
+            final Buffer payload,
+            final MultiMap requestHeaders,
+            final HttpCommandEndpointConfiguration endpointConfig,
+            final String requestDeviceId,
+            final boolean retry) {
+
+        return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId)
+                .recover(t -> {
+                    if (retry) {
+                        // we probably sent the request before the
+                        // HTTP adapter was able to close the command
+                        // consumer for the previous request
+                        // wait a little and try again
+                        final Promise<MultiMap> retryResult = Promise.promise();
+                        VERTX.setTimer(300, timerId -> {
+                            logger.info("re-trying request, failure was: {}", t.getMessage());
+                            sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId)
+                                .setHandler(retryResult);
+                        });
+                        return retryResult.future();
+                    } else {
+                        return Future.failedFuture(t);
+                    }
+                });
     }
 
     private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
