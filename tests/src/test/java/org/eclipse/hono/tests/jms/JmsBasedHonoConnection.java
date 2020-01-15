@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -190,6 +190,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
      * @param destination The destination. 
      * @return The producer.
      * @throws JMSException if the producer could not be created.
+     * @throws IllegalStateException if the JMS Session hasn't been established yet.
      */
     public MessageProducer createProducer(final Destination destination) throws JMSException {
         if (session == null) {
@@ -228,6 +229,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
      * @param destination The destination. 
      * @return The consumer.
      * @throws JMSException if the consumer could not be created.
+     * @throws IllegalStateException if the JMS Session hasn't been established yet.
      */
     public MessageConsumer createConsumer(final Destination destination) throws JMSException {
         if (session == null) {

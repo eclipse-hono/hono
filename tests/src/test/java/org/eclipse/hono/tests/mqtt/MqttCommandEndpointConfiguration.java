@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -61,6 +61,7 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
      * @param deviceId The device id to subscribe to if subscribing as a gateway for commands to a single device.
      *                 May be {@code null} otherwise.
      * @return The filter.
+     * @throws IllegalStateException if the subscriber role is unsupported.
      */
     public final String getCommandTopicFilter(final String deviceId) {
         switch (getSubscriberRole()) {

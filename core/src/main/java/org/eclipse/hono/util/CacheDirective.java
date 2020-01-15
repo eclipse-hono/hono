@@ -40,6 +40,7 @@ public final class CacheDirective {
      * 
      * @param maxAge The maximum age in number of seconds.
      * @return The directive.
+     * @throws IllegalArgumentException if the given value is less or equal to zero.
      */
     public static CacheDirective maxAgeDirective(final long maxAge) {
         if (maxAge <= 0) {
