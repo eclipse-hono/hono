@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,17 +12,26 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry;
 
+import java.io.ByteArrayInputStream;
 import java.net.HttpURLConnection;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import io.opentracing.noop.NoopSpan;
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.device.AutoProvisioningEnabledDeviceBackend;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.DeviceBackend;
+import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +57,7 @@ import io.vertx.core.json.JsonObject;
 @Repository
 @Qualifier("backend")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public class FileBasedDeviceBackend implements DeviceBackend {
+public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend {
 
     /**
      * The name of the JSON array containing device registration information for a tenant.
@@ -179,14 +188,73 @@ public class FileBasedDeviceBackend implements DeviceBackend {
     @Override
     public final void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        credentialsService.get(tenantId, type, authId, clientContext, resultHandler);
+        get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE, resultHandler);
     }
 
     @Override
     public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
             final Span span,
             final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        credentialsService.get(tenantId, type, authId, clientContext, span, resultHandler);
+        credentialsService.get(tenantId, type, authId, clientContext, span, ar -> {
+            if (ar.succeeded() && ar.result().getStatus() == HttpURLConnection.HTTP_NOT_FOUND
+                    && isAutoProvisioningEnabled(type, clientContext)) {
+                provisionDevice(tenantId, authId, clientContext, span, resultHandler);
+            } else {
+                resultHandler.handle(ar);
+            }
+        });
+    }
+
+    /**
+     * Parses certificate, provisions device and returns the new credentials.
+     */
+    private void provisionDevice(final String tenantId, final String authId, final JsonObject clientContext,
+            final Span span, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+
+        final X509Certificate cert;
+        try {
+            final byte[] bytes = clientContext.getBinary(CredentialsConstants.FIELD_CLIENT_CERT);
+            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes));
+
+            if (!cert.getSubjectX500Principal().getName(X500Principal.RFC2253).equals(authId)) {
+                throw new IllegalArgumentException("Subject DN of the client certificate does not match authId");
+            }
+        } catch (final CertificateException | ClassCastException | IllegalArgumentException e) {
+            TracingHelper.logError(span, e);
+            final int status = HttpURLConnection.HTTP_BAD_REQUEST;
+            resultHandler.handle(Future.succeededFuture(createErrorCredentialsResult(status, e.getMessage())));
+            return;
+        }
+
+        final Future<OperationResult<String>> provisionFuture = provisionDevice(tenantId, cert, span);
+        provisionFuture.compose(r -> {
+            if (r.isError()) {
+                TracingHelper.logError(span, r.getPayload());
+                return Future.succeededFuture(createErrorCredentialsResult(r.getStatus(), r.getPayload()));
+            } else {
+                return getNewCredentials(tenantId, authId, span);
+            }
+        }).setHandler(resultHandler);
+    }
+
+    private Future<CredentialsResult<JsonObject>> getNewCredentials(final String tenantId, final String authId,
+            final Span span) {
+
+        final Promise<CredentialsResult<JsonObject>> promise = Promise.promise();
+        credentialsService.get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, span, promise);
+        return promise.future()
+                .map(r -> r.isOk() ? CredentialsResult.from(HttpURLConnection.HTTP_CREATED, r.getPayload()) : r);
+    }
+
+    private boolean isAutoProvisioningEnabled(final String type, final JsonObject clientContext) {
+        return type.equals(CredentialsConstants.SECRETS_TYPE_X509_CERT)
+                && clientContext != null
+                && clientContext.containsKey(CredentialsConstants.FIELD_CLIENT_CERT);
+    }
+
+    private CredentialsResult<JsonObject> createErrorCredentialsResult(final int status, final String message) {
+        return CredentialsResult.from(status, new JsonObject().put("description", message));
     }
 
     @Override

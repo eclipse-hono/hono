@@ -16,7 +16,12 @@ package org.eclipse.hono.tests.registry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.net.HttpURLConnection;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -25,10 +30,13 @@ import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -38,6 +46,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
 
@@ -103,6 +112,56 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                             2));
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that if no credentials are found and the client context in the Get request contains a serialized X.509
+     * certificate, the credentials and device are created (i.e., automatic provisioning is performed).
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateException if the self signed certificate cannot be created.
+     * @throws FileNotFoundException if the self signed certificate cannot be read.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testGetCredentialsWithAutoProvisioning(final VertxTestContext ctx)
+            throws CertificateException, FileNotFoundException {
+
+        // GIVEN a client context that contains a client certificate to allow auto-provisioning
+        // while device has not been registered and no credentials are stored yet
+        final X509Certificate cert = createCertificate();
+        final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
+        final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+
+        getClient(Constants.DEFAULT_TENANT)
+                // WHEN getting credentials
+                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx))
+                .setHandler(ctx.succeeding(result -> {
+                    // THEN the newly created credentials are returned...
+                    ctx.verify(() -> {
+                        assertThat(result).isNotNull();
+                        assertThat(result.isEnabled()).isTrue();
+                        assertThat(result.getDeviceId()).isNotNull();
+                        assertThat(result.getAuthId()).isEqualTo(authId);
+                        assertThat(result.getType()).isEqualTo(CredentialsConstants.SECRETS_TYPE_X509_CERT);
+                        assertThat(result.getSecrets()).isNotNull();
+                        assertThat(result.getSecrets()).hasSize(1);
+                    });
+
+                    getHelper().registry.getRegistrationInfo(Constants.DEFAULT_TENANT, result.getDeviceId())
+                            .setHandler(ctx.succeeding(device -> {
+                                // AND the device has been registered as well
+                                ctx.verify(() -> assertThat(device.toJsonObject().mapTo(Device.class).getEnabled())
+                                        .isTrue());
+                                ctx.completeNow();
+                            }));
+                }));
+    }
+
+    private X509Certificate createCertificate() throws CertificateException, FileNotFoundException {
+        final SelfSignedCertificate ssc = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+        return (X509Certificate) factory.generateCertificate(new FileInputStream(ssc.certificatePath()));
     }
 
     /**
