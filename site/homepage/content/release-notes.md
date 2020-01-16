@@ -9,9 +9,9 @@ title = "Release Notes"
 * The Sigfox and LoRaWAN adapters now report metrics analogously to the other protocol
   adapters.
 * With the release of [Eclipse Californium](https://www.eclipse.org/californium) 2.0.0,
-  the CoAP adapter becomes an official part of the Hono release. The adapter now supports
+  the CoAP adapter became an official part of the Hono release. The adapter also supports
   tracking of request processing using OpenTracing but is still considered *experimental*.
-* A lorawan provider has been added for the loriot network provider.
+* A lorawan provider has been added for the *loriot* network provider.
 * Hono's protocol adapters now support Server Name Indication in order
   to allow devices to establish a TLS connection with adapters using a tenant specific
   server certificate and host name. Please refer to the *Secure Communication* admin
@@ -24,6 +24,16 @@ title = "Release Notes"
 * The Hono Auth Server and Device Registry components now support configuring the SASL
   mechanisms advertised to a client connecting to these components. This can be used to
   restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both. 
+
+### Fixes & Enhancements
+
+* Hono's Helm Chart now correctly configures Prometheus based resource limit checks if
+  a Prometheus server is being used for collecting metrics.
+* Some OpenTracing spans used for tracking processing of messages haven't properly been finished.
+  This has been fixed.
+* Protocol adapters are now able to process messages while still trying to re-establish connections
+  to other services after a connection loss. This might result in fewer messages being rejected
+  in such situations.
 
 ## 1.0.2
 
