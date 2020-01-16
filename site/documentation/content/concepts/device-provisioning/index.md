@@ -73,11 +73,9 @@ certificate to create both credentials and device registration data for it.
 The Device Registry is expected to perform the following steps: 
 
 1. Generate a unique device-id
-2. Create device, disabled
-3. Create credentials, disabled
+2. Create device
+3. Create credentials
 4. Optional: Provision device in external systems
-5. Enable device
-6. Enable credentials
 
 The newly created credentials are returned to the protocol adapter in the response as if they had been present before.
 
