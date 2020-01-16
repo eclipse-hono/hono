@@ -19,7 +19,6 @@ import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.service.tenant.TenantTraceSamplingHelper;
 
 import io.opentracing.Span;
-import io.opentracing.contrib.vertx.ext.web.TracingHandler;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
