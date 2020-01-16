@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.hono.adapter.amqp;
 
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -31,7 +32,6 @@ import javax.net.ssl.SSLSession;
 import javax.security.auth.login.CredentialException;
 import javax.security.auth.x500.X500Principal;
 
-import io.opentracing.SpanContext;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
@@ -54,12 +54,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.sasl.ProtonSaslAuthenticator;
@@ -384,9 +386,20 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                         }
                     })
                     .compose(tenant -> {
+                        final JsonObject clientContext = new JsonObject();
+                        final String issuerDn = deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253);
+                        if (tenant.isAutoProvisioningEnabled(issuerDn)) {
+                            try {
+                                clientContext.put(CredentialsConstants.FIELD_CLIENT_CERT, deviceCert.getEncoded());
+                            } catch (final CertificateEncodingException e) {
+                                LOG.error("Encoding of device certificate failed [subject DN: {}]", subjectDn, e);
+                                return Future.failedFuture(e);
+                            }
+                        }
+
                         final Promise<DeviceUser> authResult = Promise.promise();
                         final SubjectDnCredentials credentials = SubjectDnCredentials.create(tenant.getTenantId(),
-                                deviceCert.getSubjectX500Principal());
+                                deviceCert.getSubjectX500Principal(), clientContext);
                         clientCertAuthProvider.authenticate(credentials, currentSpan.context(), authResult);
                         return authResult.future();
                     });
