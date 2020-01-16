@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -99,6 +99,54 @@ public class MqttConnectionIT extends MqttTestBase {
                 })
                 .compose(ok -> connectToAdapter(deviceCert))
                 .setHandler(ctx.completing());
+    }
+
+    /**
+     * Verifies that the adapter opens a connection if auto-provisioning is enabled for the device certificate.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectSucceedsWithAutoProvisioning(final VertxTestContext ctx) {
+        helper.getCertificate(deviceCert.certificatePath())
+                .compose(cert -> {
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
+                    return helper.registry.addTenant(tenantId, tenant);
+                })
+                .compose(ok -> connectToAdapter(deviceCert))
+                .setHandler(ctx.completing());
+    }
+
+    /**
+     * Verifies that the adapter rejects connection attempts from an unknown device for which auto-provisioning is
+     * disabled.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectFailsIfAutoProvisioningIsDisabled(final VertxTestContext ctx) {
+
+        // GIVEN a tenant configured with a trust anchor that does not allow auto-provisioning
+        // WHEN an unknown device tries to connect
+        helper.getCertificate(deviceCert.certificatePath())
+                .compose(cert -> {
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(false);
+                    return helper.registry.addTenant(tenantId, tenant);
+                })
+                // WHEN a unknown device tries to connect to the adapter
+                // using a client certificate with the trust anchor registered for the device's tenant
+                .compose(ok -> connectToAdapter(deviceCert))
+                .setHandler(ctx.failing(t -> {
+                    // THEN the connection is refused
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(MqttConnectionException.class);
+                        assertThat(((MqttConnectionException) t).code())
+                                .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

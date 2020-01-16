@@ -391,6 +391,84 @@ public abstract class HttpTestBase {
     }
 
     /**
+     * Verifies that the adapter opens a connection if auto-provisioning is enabled for the device certificate.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testConnectSucceedsWithAutoProvisioning(final VertxTestContext ctx) throws InterruptedException {
+
+        final VertxTestContext setup = new VertxTestContext();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.getCertificate(deviceCert.certificatePath())
+                .compose(cert -> {
+
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
+                    return helper.registry.addTenant(tenantId, tenant);
+
+                })
+                .setHandler(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        testUploadMessages(ctx, tenantId, count -> httpClientWithClientCert.create(
+                getEndpointUri(),
+                Buffer.buffer("hello " + count),
+                requestHeaders,
+                response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
+                        && hasAccessControlExposedHeaders(response.headers())));
+    }
+
+    /**
+     * Verifies that the adapter rejects connection attempts from an unknown device for which auto-provisioning is
+     * disabled.
+     * 
+     * @param ctx The test context.
+     */
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    public void testConnectFailsIfAutoProvisioningIsDisabled(final VertxTestContext ctx) {
+
+        // GIVEN a tenant configured with a trust anchor that does not allow auto-provisioning
+        helper.getCertificate(deviceCert.certificatePath())
+                .compose(cert -> {
+                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                    tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(false);
+                    return helper.registry.addTenant(tenantId, tenant);
+                })
+                // WHEN a unknown device tries to connect to the adapter
+                // using a client certificate with the trust anchor registered for the device's tenant
+                .compose(ok -> {
+                    final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                            .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                            .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+                    return httpClientWithClientCert.create(
+                            getEndpointUri(),
+                            Buffer.buffer("hello"),
+                            requestHeaders,
+                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                })
+                // THEN the connection is refused
+                .setHandler(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(ServiceInvocationException.class);
+                        assertThat(((ServiceInvocationException) t).getErrorCode())
+                                .isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Uploads messages to the HTTP endpoint.
      *
      * @param ctx The test context to run on.
