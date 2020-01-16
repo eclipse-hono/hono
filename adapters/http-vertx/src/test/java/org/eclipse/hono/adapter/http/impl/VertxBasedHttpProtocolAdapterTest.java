@@ -69,7 +69,6 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -131,7 +130,6 @@ public class VertxBasedHttpProtocolAdapterTest {
     @BeforeClass
     public static void deployAdapter(final TestContext ctx) {
 
-        System.setProperty("vertx.logger-delegate-factory-class-name", SLF4JLogDelegateFactory.class.getName());
         vertx = Vertx.vertx();
 
         tenantClientFactory = mock(TenantClientFactory.class);
