@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,8 +23,9 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Util;
-import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -93,31 +94,26 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final JsonObject payload = request.getJsonPayload();
         final SpanContext spanContext = request.getSpanContext();
 
+        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+
+        final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_BAD_REQUEST,
-                    "missing tenant ID"));
+            log.debug("missing tenant ID");
+            TracingHelper.logError(span, "missing tenant ID");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "missing tenant ID"));
         } else if (payload == null) {
-            return Future.failedFuture(new ClientErrorException(
-                    HttpURLConnection.HTTP_BAD_REQUEST,
-                    "missing payload"));
+            log.debug("missing payload");
+            TracingHelper.logError(span, "missing payload");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "missing payload"));
+        } else {
+            resultFuture = credentialsFromPayload(request)
+                    .compose(secrets -> {
+                        final Future<OperationResult<Void>> result = Future.future();
+                        getService().set(tenantId, deviceId, resourceVersion, secrets, span, result);
+                        return result.map(res -> res.createResponse(request, id -> null).setDeviceId(deviceId));
+                    });
         }
-        try {
-            final Future<List<CommonCredential>> secretsFuture = credentialsFromPayload(request);
-
-            final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
-            final Future<OperationResult<Void>> result = Future.future();
-
-            return secretsFuture.compose(secrets -> {
-                getService().set(tenantId, deviceId, resourceVersion, secrets, span, result);
-                        return result.map(res -> {
-                            return res.createResponse(request, id -> null).setDeviceId(deviceId);
-                        });
-                    }
-            );
-        } catch (final IllegalStateException e) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e.getMessage(), e));
-        }
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
     /**
@@ -126,6 +122,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
      * @param object The object to device from.
      * @return The decoded secret. Or {@code null} if the provided JSON object was {@code null}.
      * @throws IllegalStateException if the {@code type} field was not set.
+     * @throws IllegalArgumentException If the credential object is invalid.
      */
     protected CommonCredential decodeCredential(final JsonObject object) {
 
@@ -135,11 +132,11 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
 
         final String type = object.getString("type");
         if (type == null || type.isEmpty()) {
+            // TODO this should rather be an IllegalArgumentException
             throw new IllegalStateException("'type' field must be set");
         }
 
-        final CommonCredential credential = decodeCredential(type, object);
-        return credential;
+        return decodeCredential(type, object);
     }
 
     /**
@@ -148,6 +145,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
      * @param type The type of the secret. Will never be {@code null}.
      * @param object The JSON object to decode. Will never be {@code null}.
      * @return The decoded secret.
+     * @throws IllegalArgumentException If the credential object is invalid.
      */
     protected CommonCredential decodeCredential(final String type, final JsonObject object) {
         switch (type) {
@@ -170,6 +168,8 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
      * @param objects The JSON array.
      * @return The list of decoded secrets.
      * @throws NullPointerException in the case the {@code objects} parameter is {@code null}.
+     * @throws IllegalStateException if the {@code type} field was not set in a credentials object.
+     * @throws IllegalArgumentException If a credentials object is invalid.
      */
     protected List<CommonCredential> decodeCredentials(final JsonArray objects) {
         return objects
@@ -191,11 +191,9 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
     protected Future<List<CommonCredential>> credentialsFromPayload(final EventBusMessage request) {
         try {
             return Future.succeededFuture(Optional.ofNullable(request.getJsonPayload())
-                    .map(json -> {
-                        return decodeCredentials(json.getJsonArray(RegistryManagementConstants.CREDENTIALS_OBJECT));
-                    })
+                    .map(json -> decodeCredentials(json.getJsonArray(RegistryManagementConstants.CREDENTIALS_OBJECT)))
                     .orElseGet(ArrayList::new));
-        } catch (final IllegalArgumentException e) {
+        } catch (final IllegalArgumentException | IllegalStateException e) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e));
         }
     }
@@ -206,21 +204,21 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final SpanContext spanContext = request.getSpanContext();
 
         final Span span = Util.newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
-        final Future<OperationResult<List<CommonCredential>>> result = Future.future();
 
-        getService().get(tenantId, deviceId, span, result);
-
-        return result.map(res -> {
-            return res.createResponse(request, credentials -> {
-                final JsonObject ret = new JsonObject();
-                final JsonArray credentialsArray = new JsonArray();
-                for (final CommonCredential credential : credentials) {
-                    credentialsArray.add(JsonObject.mapFrom(credential));
-                }
-                ret.put(RegistryManagementConstants.CREDENTIALS_OBJECT, credentialsArray);
-                return ret;
-            }).setDeviceId(deviceId);
-        });
+        final Future<OperationResult<List<CommonCredential>>> getResult = Future.future();
+        getService().get(tenantId, deviceId, span, getResult);
+        final Future<EventBusMessage> resultFuture = getResult.map(res -> {
+                    return res.createResponse(request, credentials -> {
+                        final JsonObject ret = new JsonObject();
+                        final JsonArray credentialsArray = new JsonArray();
+                        for (final CommonCredential credential : credentials) {
+                            credentialsArray.add(JsonObject.mapFrom(credential));
+                        }
+                        ret.put(RegistryManagementConstants.CREDENTIALS_OBJECT, credentialsArray);
+                        return ret;
+                    }).setDeviceId(deviceId);
+                });
+        return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
 }
