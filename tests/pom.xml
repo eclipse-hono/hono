@@ -233,6 +233,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-service-auth-test</name>
                   <alias>auth</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.image.org-name}/hono-service-auth:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
@@ -319,6 +320,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-service-device-registry-test</name>
                   <alias>device-registry</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.image.org-name}/${deviceregistry.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
@@ -399,6 +401,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-artemis-test:${project.version}</name>
                   <alias>artemis</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${artemis.image.name}</from>
                     <ports>
                       <port>5671</port>
@@ -462,6 +465,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-dispatch-router-test:${project.version}</name>
                   <alias>qdrouter</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${dispatch-router.image.name}</from>
                     <ports>
                       <port>5671</port>
@@ -529,6 +533,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-adapter-http-test</name>
                   <alias>http-adapter</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.image.org-name}/hono-adapter-http-vertx:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
@@ -615,6 +620,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-adapter-mqtt-test</name>
                   <alias>mqtt-adapter</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.image.org-name}/hono-adapter-mqtt-vertx:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
@@ -701,6 +707,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-adapter-amqp-test</name>
                   <alias>amqp-adapter</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.image.org-name}/hono-adapter-amqp-vertx:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
@@ -780,6 +787,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <name>${docker.image.org-name}/hono-adapter-coap-test</name>
                   <alias>coap-adapter</alias>
                   <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.image.org-name}/hono-adapter-coap-vertx:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
