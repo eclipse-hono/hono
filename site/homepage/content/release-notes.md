@@ -24,6 +24,13 @@ title = "Release Notes"
   mechanisms advertised to a client connecting to these components. This can be used to
   restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both. 
 
+### Fixes & Enhancements
+
+* Hono's Helm chart now supports configuring resource requests and limits of the container images.
+* The MQTT adapter now includes a device's MQTT client ID in its request to retrieve the device's
+  credentials. This additional information can be used by device registry implementations when determining
+  the device identity.
+
 ## 1.0.3
 
 ### Fixes & Enhancements
