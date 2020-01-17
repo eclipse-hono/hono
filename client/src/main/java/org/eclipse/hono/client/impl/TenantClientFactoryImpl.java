@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -59,16 +59,17 @@ public class TenantClientFactoryImpl extends AbstractHonoClientFactory implement
     @Override
     public Future<TenantClient> getOrCreateTenantClient() {
 
-        return connection.executeOrRunOnContext(result -> {
-            tenantClientFactory.getOrCreateClient(
-                    TenantClientImpl.getTargetAddress(),
-                    () -> TenantClientImpl.create(
-                            cacheProvider,
-                            connection,
-                            this::removeTenantClient,
-                            this::removeTenantClient),
-                    result);
-        });
+        return connection.isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> connection.executeOrRunOnContext(result -> {
+                    tenantClientFactory.getOrCreateClient(
+                            TenantClientImpl.getTargetAddress(),
+                            () -> TenantClientImpl.create(
+                                    cacheProvider,
+                                    connection,
+                                    this::removeTenantClient,
+                                    this::removeTenantClient),
+                            result);
+                }));
     }
 
     private void removeTenantClient(final String tenantId) {

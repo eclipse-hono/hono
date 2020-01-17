@@ -68,6 +68,8 @@ public class DownstreamSenderFactoryImplTest {
             return 1L;
         });
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
+        when(connection.isConnected()).thenReturn(Future.succeededFuture());
+        when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         when(vertx.eventBus()).thenReturn(mock(EventBus.class));
         factory = new DownstreamSenderFactoryImpl(connection);
     }

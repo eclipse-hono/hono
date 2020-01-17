@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -67,17 +67,18 @@ public class CredentialsClientFactoryImpl extends AbstractHonoClientFactory impl
             final String tenantId) {
 
         Objects.requireNonNull(tenantId);
-        return connection.executeOrRunOnContext(result -> {
-            credentialsClientFactory.getOrCreateClient(
-                    CredentialsClientImpl.getTargetAddress(tenantId),
-                    () -> CredentialsClientImpl.create(
-                            cacheProvider,
-                            connection,
-                            tenantId,
-                            this::removeCredentialsClient,
-                            this::removeCredentialsClient),
-                    result);
-        });
+        return connection.isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> connection.executeOrRunOnContext(result -> {
+                    credentialsClientFactory.getOrCreateClient(
+                            CredentialsClientImpl.getTargetAddress(tenantId),
+                            () -> CredentialsClientImpl.create(
+                                    cacheProvider,
+                                    connection,
+                                    tenantId,
+                                    this::removeCredentialsClient,
+                                    this::removeCredentialsClient),
+                            result);
+                }));
     }
 
     private void removeCredentialsClient(final String tenantId) {

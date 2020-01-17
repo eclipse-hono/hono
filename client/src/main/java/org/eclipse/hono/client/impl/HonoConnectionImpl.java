@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -109,6 +109,8 @@ public class HonoConnectionImpl implements HonoConnection {
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
 
+    private final DeferredConnectionCheckHandler deferredConnectionCheckHandler;
+
     private ProtonClientOptions clientOptions;
     private AtomicInteger connectAttempts;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
@@ -149,6 +151,7 @@ public class HonoConnectionImpl implements HonoConnection {
         } else {
             this.vertx = Vertx.vertx();
         }
+        deferredConnectionCheckHandler = new DeferredConnectionCheckHandler(vertx);
         if (connectionFactory != null) {
             this.connectionFactory = connectionFactory;
         } else {
@@ -223,7 +226,7 @@ public class HonoConnectionImpl implements HonoConnection {
     public final <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
 
         if (context == null) {
-            // this means that the connection to the peer is not established (yet)
+            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
         } else {
             return HonoProtonHelper.executeOrRunOnContext(context, codeToRun);
@@ -252,6 +255,33 @@ public class HonoConnectionImpl implements HonoConnection {
     private void checkConnected(final Handler<AsyncResult<Void>> resultHandler) {
         if (isConnectedInternal()) {
             resultHandler.handle(Future.succeededFuture());
+        } else {
+            resultHandler.handle(Future.failedFuture(
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+        return executeOrRunOnContext(result -> checkConnected(result, waitForCurrentConnectAttemptTimeout));
+    }
+
+    private void checkConnected(final Handler<AsyncResult<Void>> resultHandler, final long waitForCurrentConnectAttemptTimeout) {
+        if (isConnectedInternal()) {
+            resultHandler.handle(Future.succeededFuture());
+        } else if (waitForCurrentConnectAttemptTimeout > 0 && deferredConnectionCheckHandler.isConnectionAttemptInProgress()) {
+            // connect attempt in progress - let its completion complete the resultHandler here
+            log.debug("connection attempt to server [{}:{}] in progress, connection check will be completed with its result",
+                    connectionFactory.getHost(), connectionFactory.getPort());
+            final boolean added = deferredConnectionCheckHandler.addConnectionCheck(resultHandler,
+                    waitForCurrentConnectAttemptTimeout);
+            if (!added) {
+                // connection attempt was finished in between
+                checkConnected(resultHandler);
+            }
         } else {
             resultHandler.handle(Future.failedFuture(
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
@@ -344,6 +374,11 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<AsyncResult<HonoConnection>> connectionHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
+        // make sure concurrently invoked connection checks get completed along with the given connectionHandler
+        final Handler<AsyncResult<HonoConnection>> wrappedConnectionHandler = connectionHandler instanceof ConnectMethodConnectionHandler
+                ? connectionHandler
+                : new ConnectMethodConnectionHandler(connectionHandler, deferredConnectionCheckHandler::setConnectionAttemptFinished);
+
         context = vertx.getOrCreateContext();
         log.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
 
@@ -354,8 +389,9 @@ public class HonoConnectionImpl implements HonoConnection {
             if (isConnectedInternal()) {
                 log.debug("already connected to server [{}:{}]", connectionFactory.getHost(),
                         connectionFactory.getPort());
-                connectionHandler.handle(Future.succeededFuture(this));
+                wrappedConnectionHandler.handle(Future.succeededFuture(this));
             } else if (connecting.compareAndSet(false, true)) {
+                deferredConnectionCheckHandler.setConnectionAttemptInProgress();
 
                 log.debug("starting attempt [#{}] to connect to server [{}:{}]",
                         connectAttempts.get() + 1, connectionFactory.getHost(), connectionFactory.getPort());
@@ -368,7 +404,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         conAttempt -> {
                             connecting.compareAndSet(true, false);
                             if (conAttempt.failed()) {
-                                reconnect(conAttempt.cause(), connectionHandler, disconnectHandler);
+                                reconnect(conAttempt.cause(), wrappedConnectionHandler, disconnectHandler);
                             } else {
                                 final ProtonConnection newConnection = conAttempt.result();
                                 if (shuttingDown.get()) {
@@ -379,7 +415,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                     newConnection.close();
                                     // make sure we try to re-connect as often as we tried to connect initially
                                     connectAttempts = new AtomicInteger(0);
-                                    connectionHandler.handle(Future.failedFuture(
+                                    wrappedConnectionHandler.handle(Future.failedFuture(
                                             new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
                                                     "client is already shut down")));
                                 } else {
@@ -387,13 +423,13 @@ public class HonoConnectionImpl implements HonoConnection {
                                             connectAttempts.get() + 1, connectionFactory.getHost(),
                                             connectionFactory.getPort(), newConnection.getRemoteContainer());
                                     setConnection(newConnection);
-                                    connectionHandler.handle(Future.succeededFuture(this));
+                                    wrappedConnectionHandler.handle(Future.succeededFuture(this));
                                 }
                             }
                         });
             } else {
                 log.debug("already trying to connect to server ...");
-                connectionHandler.handle(Future.failedFuture(
+                wrappedConnectionHandler.handle(Future.failedFuture(
                         new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already connecting to server")));
             }
         });
@@ -480,7 +516,9 @@ public class HonoConnectionImpl implements HonoConnection {
         if (shuttingDown.get()) {
             // no need to try to re-connect
             log.info("client is shutting down, giving up attempt to connect");
-            connectionHandler.handle(Future.failedFuture(new IllegalStateException("client is shut down")));
+            final ClientErrorException ex = new ClientErrorException(
+                    HttpURLConnection.HTTP_CONFLICT, "client is already shut down");
+            connectionHandler.handle(Future.failedFuture(ex));
             return;
         }
         final int reconnectAttempt = connectAttempts.getAndIncrement();
@@ -491,6 +529,7 @@ public class HonoConnectionImpl implements HonoConnection {
             failConnectionAttempt(connectionFailureCause, connectionHandler);
 
         } else {
+            deferredConnectionCheckHandler.setConnectionAttemptInProgress();
             if (connectionFailureCause != null) {
                 logConnectionError(connectionFailureCause);
             }
@@ -544,26 +583,25 @@ public class HonoConnectionImpl implements HonoConnection {
         log.info("stopping connection attempt to server [host: {}, port: {}] due to terminal error",
                 connectionFactory.getHost(), connectionFactory.getPort(), connectionFailureCause);
 
+        final ServiceInvocationException serviceInvocationException;
         if (connectionFailureCause == null) {
-            connectionHandler.handle(Future.failedFuture(
-                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect")));
+            serviceInvocationException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "failed to connect");
         } else if (connectionFailureCause instanceof AuthenticationException) {
             // wrong credentials?
-            connectionHandler.handle(Future.failedFuture(
-                    new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with server")));
+            serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "failed to authenticate with server");
         } else if (connectionFailureCause instanceof MechanismMismatchException) {
-            connectionHandler.handle(Future.failedFuture(
-                    new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "no suitable SASL mechanism found for authentication with server")));
+            serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "no suitable SASL mechanism found for authentication with server");
         } else if (connectionFailureCause instanceof SSLException) {
-            connectionHandler.handle(Future.failedFuture(
-                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                            "TLS handshake with server failed: " + connectionFailureCause.getMessage(),
-                            connectionFailureCause)));
+            serviceInvocationException = new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "TLS handshake with server failed: " + connectionFailureCause.getMessage(), connectionFailureCause);
         } else {
-            connectionHandler.handle(Future.failedFuture(
-                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect",
-                            connectionFailureCause)));
+            serviceInvocationException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "failed to connect", connectionFailureCause);
         }
+        connectionHandler.handle(Future.failedFuture(serviceInvocationException));
     }
 
     /**
@@ -581,7 +619,12 @@ public class HonoConnectionImpl implements HonoConnection {
             final ProtonLink<?> link,
             final Handler<Void> closeHandler) {
 
-        HonoProtonHelper.closeAndFree(context, link, closeHandler);
+        if (context == null) {
+            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
+            closeHandler.handle(null);
+        } else {
+            HonoProtonHelper.closeAndFree(context, link, closeHandler);
+        }
     }
 
     /**
@@ -596,7 +639,12 @@ public class HonoConnectionImpl implements HonoConnection {
             final long detachTimeOut,
             final Handler<Void> closeHandler) {
 
-        HonoProtonHelper.closeAndFree(context, link, detachTimeOut, closeHandler);
+        if (context == null) {
+            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
+            closeHandler.handle(null);
+        } else {
+            HonoProtonHelper.closeAndFree(context, link, detachTimeOut, closeHandler);
+        }
     }
 
     /**
@@ -970,6 +1018,27 @@ public class HonoConnectionImpl implements HonoConnection {
                 log.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
                 handler.handle(Future.succeededFuture());
             }
+        }
+    }
+
+    /**
+     * Wrapped connection handler used in the {@link #connect()} method. Allows adding an additional handler.
+     */
+    private static class ConnectMethodConnectionHandler implements Handler<AsyncResult<HonoConnection>> {
+
+        private final Handler<AsyncResult<HonoConnection>> connectionHandler;
+        private final Handler<AsyncResult<HonoConnection>> additionalHandler;
+
+        ConnectMethodConnectionHandler(final Handler<AsyncResult<HonoConnection>> connectionHandler,
+                final Handler<AsyncResult<HonoConnection>> additionalHandler) {
+            this.connectionHandler = connectionHandler;
+            this.additionalHandler = additionalHandler;
+        }
+
+        @Override
+        public void handle(final AsyncResult<HonoConnection> event) {
+            connectionHandler.handle(event);
+            additionalHandler.handle(event);
         }
     }
 }

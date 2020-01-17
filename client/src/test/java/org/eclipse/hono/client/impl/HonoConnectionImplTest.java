@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -55,6 +57,7 @@ import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -333,6 +336,114 @@ public class HonoConnectionImplTest {
         }).setHandler(ctx.asyncAssertSuccess(success -> {
             // THEN the connection succeeds
         }));
+    }
+
+    /**
+     * Verifies that {@link HonoConnectionImpl#isConnected(long)} only completes once a concurrent
+     * connection attempt (which eventually succeeds here) is finished.
+     *
+     * @param ctx The test execution context.
+     */
+    @Test
+    public void testIsConnectedWithTimeoutSucceedsAfterConcurrentReconnectSucceeded(final TestContext ctx) {
+
+        final long isConnectedTimeout = 44444L;
+        // let the vertx timer for the isConnectedTimeout do nothing
+        when(vertx.setTimer(eq(isConnectedTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        final AtomicBoolean isConnectedInvocationsDone = new AtomicBoolean(false);
+        final AtomicReference<Future<Void>> isConnected1FutureRef = new AtomicReference<>();
+        final AtomicReference<Future<Void>> isConnected2FutureRef = new AtomicReference<>();
+        // GIVEN a client that is configured to connect to a peer
+        // to which the connection can be established on the third attempt only
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
+            @Override
+            public void connect(final ProtonClientOptions options, final String username, final String password,
+                                final Handler<AsyncResult<ProtonConnection>> closeHandler,
+                                final Handler<ProtonConnection> disconnectHandler,
+                                final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                // and GIVEN "isConnected" invocations done while the "connect" invocation is still in progress
+                if (isConnectedInvocationsDone.compareAndSet(false, true)) {
+                    isConnected1FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    isConnected2FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    // assert "isConnected" invocations have not completed yet
+                    ctx.assertFalse(isConnected1FutureRef.get().isComplete());
+                    ctx.assertFalse(isConnected2FutureRef.get().isComplete());
+                }
+                super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
+            }
+        };
+        connectionFactory.setExpectedFailingConnectionAttempts(2);
+        props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+
+        // WHEN trying to connect
+        honoConnection.connect()
+                // THEN the "isConnected" futures succeed
+                .compose(v -> CompositeFuture.all(isConnected1FutureRef.get(), isConnected2FutureRef.get()))
+                .setHandler(ctx.asyncAssertSuccess());
+
+        // and the client fails twice to connect
+        assertTrue(connectionFactory.awaitFailure());
+        // and succeeds to connect on the third attempt
+        assertTrue(connectionFactory.await());
+    }
+
+    /**
+     * Verifies that {@link HonoConnectionImpl#isConnected(long)} only completes once a concurrent
+     * connection attempt (which eventually fails here) is finished.
+     *
+     * @param ctx The vert.x test client.
+     */
+    @Test
+    public void testIsConnectedWithTimeoutFailsAfterConcurrentReconnectFailed(final TestContext ctx) {
+
+        final long isConnectedTimeout = 44444L;
+        // let the vertx timer for the isConnectedTimeout do nothing
+        when(vertx.setTimer(eq(isConnectedTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        final AtomicBoolean isConnectedInvocationsDone = new AtomicBoolean(false);
+        final AtomicReference<Future<Void>> isConnected1FutureRef = new AtomicReference<>();
+        final AtomicReference<Future<Void>> isConnectedTimeoutForcedFutureRef = new AtomicReference<>();
+        final AtomicReference<Future<Void>> isConnected2FutureRef = new AtomicReference<>();
+        // GIVEN a client that is configured to connect to a peer
+        // to which the connection can be established on the third attempt only
+        connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
+            @Override
+            public void connect(final ProtonClientOptions options, final String username, final String password,
+                                final Handler<AsyncResult<ProtonConnection>> closeHandler,
+                                final Handler<ProtonConnection> disconnectHandler,
+                                final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+                // and GIVEN "isConnected" invocations done while the "connect" invocation is still in progress
+                if (isConnectedInvocationsDone.compareAndSet(false, true)) {
+                    isConnected1FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    isConnectedTimeoutForcedFutureRef.set(honoConnection.isConnected(1L));
+                    isConnected2FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
+                    // assert "isConnected" invocations have not completed yet, apart from the one with the forced timeout
+                    ctx.assertFalse(isConnected1FutureRef.get().isComplete());
+                    ctx.assertTrue(isConnectedTimeoutForcedFutureRef.get().failed());
+                    ctx.assertFalse(isConnected2FutureRef.get().isComplete());
+                }
+                super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
+            }
+        };
+        connectionFactory.setExpectedFailingConnectionAttempts(3);
+        props.setReconnectAttempts(2);
+        props.setConnectTimeout(10);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+
+        // WHEN the client tries to connect
+        honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
+            // THEN the connection attempt fails and the "isConnected" futures fail as well
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
+
+            ctx.assertTrue(isConnected1FutureRef.get().failed());
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) isConnected1FutureRef.get().cause()).getErrorCode());
+
+            ctx.assertTrue(isConnected2FutureRef.get().failed());
+            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) isConnected2FutureRef.get().cause()).getErrorCode());
+        }));
+        // and the client has indeed tried three times in total before giving up
+        assertTrue(connectionFactory.awaitFailure());
     }
 
     /**
