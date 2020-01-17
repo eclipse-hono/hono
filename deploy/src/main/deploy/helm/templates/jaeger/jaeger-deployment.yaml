@@ -1,6 +1,6 @@
 {{- if .Values.jaegerBackendExample.enabled }}
 #
-# Copyright (c) 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,13 +26,15 @@ spec:
       {{- include "hono.metadata" $args | nindent 6 }}
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "16686"
+        prometheus.io/port: {{ .Values.healthCheckPort | quote }}
     spec:
       containers:
       - env:
         - name: MEMORY_MAX_TRACES
           value: "100000"
-        image: {{ default "jaegertracing/all-in-one:1.13.1" .Values.jaegerBackendExample.allInOneImage }}
+        - name: ADMIN_HTTP_PORT
+          value: {{ .Values.healthCheckPort | quote }}
+        image: {{ .Values.jaegerBackendExample.allInOneImage }}
         name: jaeger
         ports:
         - containerPort: 5775
@@ -43,15 +45,23 @@ spec:
           protocol: UDP
         - containerPort: 5778
           protocol: TCP
+        - name: health
+          containerPort: {{ .Values.healthCheckPort }}
+          protocol: TCP
         - containerPort: 16686
           protocol: TCP
         {{- with .Values.jaegerBackendExample.resources }}
         resources:
           {{- . | toYaml | nindent 10 }}
         {{- end }}
+        livenessProbe:
+          httpGet:
+            path: "/"
+            port: health
+          initialDelaySeconds: 180
         readinessProbe:
           httpGet:
             path: "/"
-            port: 14269
+            port: health
           initialDelaySeconds: 5
 {{- end }}
