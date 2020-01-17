@@ -2,6 +2,18 @@
 title = "Release Notes"
 +++
 
+## 1.0.3
+
+### Fixes & Enhancements
+
+* Hono's Helm Chart now correctly configures Prometheus based resource limit checks if
+  a Prometheus server is being used for collecting metrics.
+* Some OpenTracing spans used for tracking processing of messages haven't properly been finished.
+  This has been fixed.
+* Protocol adapters are now able to process messages while still trying to re-establish connections
+  to other services after a connection loss. This might result in fewer messages being rejected
+  in such situations.
+
 ## 1.0.2
 
 ### Fixes & Enhancements
@@ -35,6 +47,7 @@ title = "Release Notes"
   command consumer. The time period after which the adapter should consider a connection stale
   can be configured using an environment variable. Please refer to the AMQP adapter's
   admin guide for details.
+* The example deployment using the Helm chart correctly creates the `DEFAULT_TENANT` again.
 
 ## 1.0.0
 
