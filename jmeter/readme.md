@@ -5,7 +5,7 @@ This module contains load tests for Hono. The load tests can be executed against
 The load tests can be executed as:
 
 * local bash script with local installation of Apache JMeter 5.1.1 with MQTT XMeter 1.0.1 and Hono JMeter Plugin [Load Tests with JMeter on the project web site](https://www.eclipse.org/hono/docs/user-guide/jmeter_load_tests/)
-* within a docker container created with maven build flag `-Pbuild-docker-image`. See the [Getting Started guide on the project web site](https://www.eclipse.org/hono/getting-started/) for instructions on building the Docker images.
+* within a docker container created with maven build flag `-Pbuild-jmeter-image`. See the [Getting Started guide on the project web site](https://www.eclipse.org/hono/getting-started/) for instructions on building the Docker images.
 
 ## Load test scenarios
 

@@ -80,12 +80,7 @@
 
   <profiles>
     <profile>
-      <id>build-docker-image</id>
-      <activation>
-        <property>
-          <name>docker.host</name>
-        </property>
-      </activation>
+      <id>build-jmeter-image</id>
       <build>
         <plugins>
           <plugin>
