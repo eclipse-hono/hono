@@ -249,6 +249,7 @@
                     <tag>latest</tag>
                     <tag>${docker.image.additional.tag}</tag>
                   </tags>
+                  <imagePullPolicy>Always</imagePullPolicy>
                 </build>
               </image>
             </images>
