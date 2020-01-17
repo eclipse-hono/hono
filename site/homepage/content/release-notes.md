@@ -25,6 +25,8 @@ title = "Release Notes"
   mechanisms advertised to a client connecting to these components. This can be used to
   restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both. 
 
+## 1.0.3
+
 ### Fixes & Enhancements
 
 * Hono's Helm Chart now correctly configures Prometheus based resource limit checks if
