@@ -7,6 +7,9 @@ canonifyurls = false
 googleAnalytics = "GTM-5WLCZXC"
 pluralizeListTitles = "false"
 
+[markup.goldmark.renderer]
+    unsafe = true
+
 [[menu.main]]
     name = "Documentation"
     weight = 120

@@ -9,6 +9,9 @@ canonifyurls = false
 googleAnalytics = "GTM-5WLCZXC"
 pluralizeListTitles = "false"
 
+[markup.goldmark.renderer]
+    unsafe = true
+
 [params]
   # General information
   author = "The Eclipse Hono Project"
