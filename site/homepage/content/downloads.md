@@ -36,6 +36,8 @@ be used in a production environment.
 
 Installation works the same way as for the latest stable release.
 
+* [Eclipse Hono 1.1.0-M2 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.1.0-M2-chart.tar.gz)
+* [Eclipse Hono 1.1.0-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.1.0-M2-exec.jar)
 * [Eclipse Hono 1.1.0-M1 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.1.0-M1-chart.tar.gz)
 * [Eclipse Hono 1.1.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.1.0-M1-exec.jar)
 
