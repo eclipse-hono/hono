@@ -199,7 +199,7 @@
      -->
     <docker.image.additional.tag></docker.image.additional.tag>
 
-    <jacoco.version>0.8.2</jacoco.version>
+    <jacoco.version>0.8.5</jacoco.version>
   </properties>
 
   <modules>
@@ -509,7 +509,7 @@
       <plugin>
         <groupId>de.dentrassi.maven</groupId>
         <artifactId>jacoco-extras</artifactId>
-        <version>0.1.4</version>
+        <version>0.1.6</version>
         <executions>
           <execution>
             <!--
@@ -524,7 +524,6 @@
           </execution>
         </executions>
       </plugin>
-
     </plugins>
   </build>
 
