@@ -49,7 +49,7 @@ a few standard ports only.
 You can verify if you can access the relevant ports of the Sandbox by running the following command and comparing the output:
 
 ~~~sh
-curl -sIX GET http://hono.eclipse.org:28080/v1/tenants/DEFAULT_TENANT
+curl -sIX GET http://hono.eclipseprojects.io:28080/v1/tenants/DEFAULT_TENANT
 ~~~
 
 If you get output like this
@@ -64,9 +64,9 @@ content-length: 260
 you can use the Sandbox. Run the following commands to set some environment variables which will be used during the guide
 
 ~~~sh
-export REGISTRY_IP=hono.eclipse.org
-export HTTP_ADAPTER_IP=hono.eclipse.org
-export MQTT_ADAPTER_IP=hono.eclipse.org
+export REGISTRY_IP=hono.eclipseprojects.io
+export HTTP_ADAPTER_IP=hono.eclipseprojects.io
+export MQTT_ADAPTER_IP=hono.eclipseprojects.io
 ~~~
 
 and then proceed to the [Overview of Hono Components]({{< relref "#overview-of-hono-components" >}}).
@@ -207,7 +207,7 @@ Open a new terminal window and set the `AMQP_NETWORK_IP` environment variable.
 If you are using the Sandbox server:
 
 ~~~sh
-export AMQP_NETWORK_IP=hono.eclipse.org
+export AMQP_NETWORK_IP=hono.eclipseprojects.io
 ~~~
 
 Otherwise, if you are using a local Minikube cluster:
@@ -318,7 +318,7 @@ The application used the AMQP 1.0 protocol to receive messages regardless of the
 **What to try next?**
 
 * Continue with the next sections to learn how applications can send commands to devices by means of the [Command & Control API]({{% doclink "/api/command-and-control/" %}}).
-* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipse.org:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard]({{% doclink "/deployment/helm-based-deployment/#accessing-the-grafana-dashboard" %}}) for instructions.
+* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox server the dashboard is available at https://hono.eclipseprojects.io:3000. When running a local Minikube cluster, please refer to [Opening the Dashboard]({{% doclink "/deployment/helm-based-deployment/#accessing-the-grafana-dashboard" %}}) for instructions.
 * Check out the [User Guides]({{% doclink "/user-guide/" %}}) to explore more options for devices to connect to Hono using different transport protocols.
 * Learn more about the managing tenants, devices and credentials using the [Device Registry's HTTP API]({{% doclink "/user-guide/device-registry/" %}}).
 {{% /note %}}

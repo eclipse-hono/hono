@@ -4,8 +4,13 @@ menu = "main"
 weight = 160
 +++
 
-We are providing a publicly accessible Eclipse Hono&trade; *sandbox* environment at `hono.eclipse.org`.
+We are providing a publicly accessible Eclipse Hono&trade; *sandbox* environment at `hono.eclipseprojects.io`.
 The main purpose of the system is to provide an environment for experimenting with devices and how to connect them to Hono without the need for setting up a local instance.
+
+{{% note title="Deprecated domain name" %}}
+The sandbox used to be available at `hono.eclipse.org`. That domain name will still work for some time but
+will eventually be disabled. Please update your URLs accordingly.
+{{% /note %}}
 
 The sandbox hosts a Hono instance consisting of the same components as described in the [Getting started Guide]({{< relref "getting-started" >}}).
 All services are exposed via the same ports as used in the guide.
@@ -40,8 +45,8 @@ All services are exposed via the same ports as used in the guide.
   The command line client binary is available from the [downloads page]({{< relref "downloads#binaries" >}}) and
   can be used to consume telemetry/event messages from the sandbox as below:
   
-        java -jar hono-cli-*-exec.jar --hono.client.host=hono.eclipse.org --hono.client.port=15671 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver`
-  Note that  only the *receiver* profile is activated but not the *ssl* profile.
+        java -jar hono-cli-*-exec.jar --hono.client.host=hono.eclipseprojects.io --hono.client.port=15671 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver`
+  Note that only the *receiver* profile is activated but not the *ssl* profile.
 
 
 {{% warning %}}
