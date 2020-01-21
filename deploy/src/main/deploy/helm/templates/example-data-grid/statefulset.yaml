@@ -1,6 +1,6 @@
 {{- if .Values.dataGridExample.enabled }}
 #
-# Copyright (c) 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,19 +26,13 @@ spec:
     metadata:
       {{- include "hono.metadata" $args | nindent 6 }}
     spec:
-      serviceAccountName: {{ printf "%s-%s" .Release.Name $args.name }}
       containers:
       - args:
         - -c
         - hono/hono-data-grid.xml
-        - -Djboss.default.jgroups.stack=kubernetes
+        - -Djboss.default.jgroups.stack=dns-ping
+        - {{ printf "-Djgroups.dns_ping.dns_query=%s-%s" .Release.Name $args.name }}
         env:
-        - name: KUBERNETES_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-        - name: KUBERNETES_LABELS
-          value: {{ printf "app.kubernetes.io/component=%s" $args.component }}
         - name: JDK_JAVA_OPTIONS
           value: "-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80"
         - name: APP_USER
@@ -69,11 +63,11 @@ spec:
           exec:
             command:
             - /usr/local/bin/is_healthy.sh
-          failureThreshold: 5
           initialDelaySeconds: 10
           periodSeconds: 10
           successThreshold: 1
-          timeoutSeconds: 80
+          failureThreshold: 5
+          timeoutSeconds: 3
         {{- with .Values.dataGridExample.resources }}
         resources:
           {{- . | toYaml | nindent 10 }}
