@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -72,6 +72,13 @@ public class Config extends AbstractAdapterConfig {
 
     @Override
     protected void customizeTenantClientFactoryConfig(final RequestResponseClientConfigProperties config) {
+        if (config != null) {
+            config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
+        }
+    }
+
+    @Override
+    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties config) {
         if (config != null) {
             config.setName(CONTAINER_ID_HONO_AMQP_ADAPTER);
         }

@@ -79,6 +79,13 @@ public class Config extends AbstractAdapterConfig {
         }
     }
 
+    @Override
+    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties props) {
+        if (props.getName() == null) {
+            props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
+        }
+    }
+
     /**
      * Exposes the COAP adapter's configuration properties as a Spring bean.
      *

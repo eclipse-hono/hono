@@ -84,6 +84,16 @@ public class Config extends AbstractAdapterConfig {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void customizeDeviceConnectionClientFactoryConfig(final RequestResponseClientConfigProperties props) {
+        if (props.getName() == null) {
+            props.setName(CONTAINER_ID_HONO_MQTT_ADAPTER);
+        }
+    }
+
+    /**
      * Exposes the MQTT adapter's configuration properties as a Spring bean.
      * 
      * @return The configuration properties.
