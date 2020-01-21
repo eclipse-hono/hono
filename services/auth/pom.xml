@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-services</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.1.0-M2</version>
   </parent>
   <artifactId>hono-service-auth</artifactId>
   <name>Hono Auth</name>
