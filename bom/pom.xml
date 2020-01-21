@@ -58,7 +58,7 @@
     <qpid-jms.version>0.47.0</qpid-jms.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.23</snakeyaml.version>
-    <spring.version>5.1.12.RELEASE</spring.version>
+    <spring.version>5.2.3.RELEASE</spring.version>
     <spring-boot.version>2.1.11.RELEASE</spring-boot.version>
     <spring-security-crypto.version>5.1.7.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
