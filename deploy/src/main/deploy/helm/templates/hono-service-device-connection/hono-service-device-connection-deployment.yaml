@@ -1,6 +1,6 @@
 {{- if .Values.deviceConnectionService.enabled }}
 #
-# Copyright (c) 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -68,12 +68,14 @@ spec:
             port: health
             scheme: HTTPS
           initialDelaySeconds: 60
+          timeoutSeconds: 3
         readinessProbe:
           httpGet:
             path: /readiness
             port: health
             scheme: HTTPS
           initialDelaySeconds: 20
+          timeoutSeconds: 3
           periodSeconds: 5
           failureThreshold: 2
       volumes:

@@ -26,6 +26,7 @@ import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
 import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
+import org.infinispan.client.hotrod.ServerStatistics;
 import org.infinispan.commons.api.BasicCache;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -265,26 +266,49 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
      * {@inheritDoc}
      * <p>
      * Registers a check for an established connection to the remote cache.
+     * The check times out (and fails) after 1000ms.
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register("remote-cache-connection", this::checkForCacheAvailability);
+        readinessHandler.register("remote-cache-connection", 1000, this::checkForCacheAvailability);
     }
 
     private void checkForCacheAvailability(final Promise<Status> status) {
 
         if (cacheManager.isStarted() && cache instanceof RemoteCache) {
+            pingRemoteCache(status);
+        } else {
+            // try to (re-)establish connection
+            connectToGrid();
+            final JsonObject result = new JsonObject()
+                    .put("error", "not connected to remote cache");
+            status.complete(Status.KO(result));
+        }
+    }
+
+    private void pingRemoteCache(final Promise<Status> resultHandler) {
+
+        final JsonObject status = new JsonObject();
+        context.executeBlocking(result -> {
             try {
-                ((RemoteCache<String, String>) cache).serverStatistics();
-                status.complete(Status.OK());
-                return;
+                final ServerStatistics stats = ((RemoteCache<String, String>) cache).serverStatistics();
+                status.put("entries", stats.getIntStatistic(ServerStatistics.CURRENT_NR_OF_ENTRIES));
+                result.complete(Status.OK(status));
             } catch (RuntimeException e) {
                 // cannot interact with data grid
+                log.debug("error retrieving cache stats", e);
+                status.put("error", "could not retrieve remote cache stats");
+                status.put("cause", e.getMessage());
+                result.complete(Status.KO(status));
             }
-        }
-        // try to (re-)establish connection
-        connectToGrid();
-        status.complete(Status.KO());
+        }, (AsyncResult<Status> result) -> {
+            if (result.succeeded()) {
+                // probe might already have timed out
+                resultHandler.tryComplete(result.result());
+            } else {
+                resultHandler.tryFail(result.cause());
+            }
+        });
     }
 
     /**
