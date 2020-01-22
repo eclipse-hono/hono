@@ -74,7 +74,7 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @Timeout(value = 2, timeUnit = TimeUnit.SECONDS)
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     public void testConnectInvokesHandlerOnFailureToConnect(final VertxTestContext ctx) {
 
         // GIVEN a factory configured to connect to a non-existing server
@@ -94,7 +94,7 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @Timeout(value = 2, timeUnit = TimeUnit.SECONDS)
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     public void testConnectInvokesHandlerOnConnectTimeout(final VertxTestContext ctx) {
 
         // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
