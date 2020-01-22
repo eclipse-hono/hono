@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.config.ServerConfig;
+import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +27,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -39,7 +43,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class VertxBasedHealthCheckServerTest {
 
-    private static final String HOST = "localhost";
+    private static final String HOST = Constants.LOOPBACK_DEVICE_ADDRESS;
     private static final String KEY_STORE_PATH = "target/certs/authServerKeyStore.p12";
     private static final String STORE_PASSWORD = "authkeys";
     private VertxBasedHealthCheckServer server = null;
@@ -53,7 +57,8 @@ class VertxBasedHealthCheckServerTest {
     }
 
     /**
-     * Tests that a health check server can be configured with an insecure port.
+     * Tests that a health check server fails to start if it is configured
+     * to bind to the loop back device.
      *
      * @param ctx The test context.
      */
@@ -82,12 +87,18 @@ class VertxBasedHealthCheckServerTest {
         config.setInsecurePortBindAddress(HOST);
 
         server = new VertxBasedHealthCheckServer(vertx, config);
+        server.setBindToLoopbackDeviceAllowed(false, true);
         registerHealthChecks(ctx, server, 1);
 
-        server.start().compose(result -> Future.succeededFuture(getWebClient(vertx, server, false)))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-                .setHandler(ctx.completing());
+        server.start()
+            .map(ok -> {
+                ctx.verify(() -> assertThat(server.getPort()).isEqualTo(Constants.PORT_UNCONFIGURED));
+                return ok;
+            })
+            .map(ok -> getWebClient(vertx, server, false))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
+            .setHandler(ctx.completing());
     }
 
     /**
@@ -105,12 +116,18 @@ class VertxBasedHealthCheckServerTest {
         config.setKeyStorePassword(STORE_PASSWORD);
 
         server = new VertxBasedHealthCheckServer(vertx, config);
+        server.setBindToLoopbackDeviceAllowed(true, false);
         registerHealthChecks(ctx, server, 1);
 
-        server.start().compose(result -> Future.succeededFuture(getWebClient(vertx, server, true)))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-                .setHandler(ctx.completing());
+        server.start()
+            .map(ok -> {
+                ctx.verify(() -> assertThat(server.getInsecurePort()).isEqualTo(Constants.PORT_UNCONFIGURED));
+                return ok;
+            })
+            .map(ok -> getWebClient(vertx, server, true))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
+            .setHandler(ctx.completing());
     }
 
     /**
@@ -130,19 +147,22 @@ class VertxBasedHealthCheckServerTest {
         config.setKeyStorePassword(STORE_PASSWORD);
 
         server = new VertxBasedHealthCheckServer(vertx, config);
+        server.setBindToLoopbackDeviceAllowed(true, true);
         registerHealthChecks(ctx, server, 2);
 
-        server.start().compose(result -> Future.succeededFuture(getWebClient(vertx, server, true)))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-                .compose(result -> Future.succeededFuture(getWebClient(vertx, server, false)))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
-                .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-                .setHandler(ctx.completing());
+        server.start()
+            .map(ok -> getWebClient(vertx, server, true))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
+            .compose(result -> Future.succeededFuture(getWebClient(vertx, server, false)))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
+            .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
+            .setHandler(ctx.completing());
     }
 
     private void registerHealthChecks(final VertxTestContext ctx, final VertxBasedHealthCheckServer server,
             final int checkpoints) {
+
         final Checkpoint callLivenessCheckpoint = ctx.checkpoint(checkpoints);
         final Checkpoint callReadinessCheckpoint = ctx.checkpoint(checkpoints);
 
@@ -152,7 +172,7 @@ class VertxBasedHealthCheckServerTest {
             public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
                 readinessHandler.register("readiness-insecure", event -> {
                     callReadinessCheckpoint.flag();
-                    event.complete();
+                    event.complete(Status.OK());
                 });
             }
 
@@ -160,7 +180,7 @@ class VertxBasedHealthCheckServerTest {
             public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
                 livenessHandler.register("liveness-insecure", event -> {
                     callLivenessCheckpoint.flag();
-                    event.complete();
+                    event.complete(Status.OK());
                 });
             }
         });
@@ -182,10 +202,12 @@ class VertxBasedHealthCheckServerTest {
     }
 
     private WebClient getWebClient(final Vertx vertx, final VertxBasedHealthCheckServer server, final boolean secure) {
+
         final WebClientOptions options = new WebClientOptions()
                 .setDefaultHost(HOST)
                 .setDefaultPort(secure ? server.getPort() : server.getInsecurePort())
                 .setTrustAll(secure)
+                .setVerifyHost(false)
                 .setSsl(secure);
 
         return WebClient.create(vertx, options);

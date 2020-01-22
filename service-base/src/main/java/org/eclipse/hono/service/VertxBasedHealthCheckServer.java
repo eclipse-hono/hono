@@ -16,6 +16,7 @@ package org.eclipse.hono.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.util.Constants;
@@ -53,7 +54,8 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     private static final String URI_READINESS_PROBE = "/readiness";
     private static final int DEFAULT_PORT = 8088;
 
-
+    private boolean bindSecureServerToLoopbackDeviceAllowed = false;
+    private boolean bindInsecureServerToLoopbackDeviceAllowed = false;
     private HttpServer server;
     private HttpServer insecureServer;
 
@@ -81,6 +83,12 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
         livenessHandler = HealthCheckHandler.create(this.vertx);
         router = Router.router(this.vertx);
     }
+
+    void setBindToLoopbackDeviceAllowed(final boolean secureServerAllowed, final boolean insecureServerAllowed) {
+        this.bindSecureServerToLoopbackDeviceAllowed = secureServerAllowed;
+        this.bindInsecureServerToLoopbackDeviceAllowed = insecureServerAllowed;
+    }
+
 
     /**
      * Registers the readiness and liveness checks of the given service.
@@ -123,7 +131,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
                 .map(ok -> (Void) null)
                 .recover(error -> {
                     LOG.error("failed to start Health Check server", error);
-                    return Future.failedFuture("could not start Health Check server");
+                    return Future.failedFuture(error);
                 });
     }
 
@@ -132,42 +140,51 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
         final Promise<Void> result = Promise.promise();
 
         if (Constants.LOOPBACK_DEVICE_ADDRESS.equals(config.getInsecurePortBindAddress())) {
-            LOG.info("won't start insecure health checks HTTP server: no bind address configured.");
-            return Future.failedFuture("no bind address configured for insecure server");
-        } else {
-
-            final HttpServerOptions options = new HttpServerOptions()
-                    .setPort(config.getInsecurePort(DEFAULT_PORT))
-                    .setHost(config.getInsecurePortBindAddress());
-            insecureServer = vertx.createHttpServer(options);
-
-            router.get(URI_READINESS_PROBE).handler(readinessHandler);
-            router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
-
-            insecureServer.requestHandler(router).listen(startAttempt -> {
-                if (startAttempt.succeeded()) {
-                    LOG.info("successfully started insecure health checks HTTP server");
-                    LOG.info("readiness probe available at http://{}:{}{}", options.getHost(), insecureServer.actualPort(),
-                            URI_READINESS_PROBE);
-                    LOG.info("liveness probe available at http://{}:{}{}", options.getHost(), insecureServer.actualPort(),
-                            URI_LIVENESS_PROBE);
-                    result.complete();
-                } else {
-                    LOG.warn("failed to start insecure health checks HTTP server: {}",
-                            startAttempt.cause().getMessage());
-                    result.fail(startAttempt.cause());
-                }
-            });
-            return result.future();
+            if (bindInsecureServerToLoopbackDeviceAllowed) {
+                LOG.warn("insecure health checks HTTP server will bind to loopback device only");
+            } else {
+                LOG.info("won't start insecure health checks HTTP server: no bind address configured.");
+                return Future.failedFuture("no bind address configured for insecure server");
+            }
         }
+
+        final HttpServerOptions options = new HttpServerOptions()
+                .setPort(config.getInsecurePort(DEFAULT_PORT))
+                .setHost(config.getInsecurePortBindAddress());
+        insecureServer = vertx.createHttpServer(options);
+
+        router.get(URI_READINESS_PROBE).handler(readinessHandler);
+        router.get(URI_LIVENESS_PROBE).handler(livenessHandler);
+
+        insecureServer.requestHandler(router).listen(startAttempt -> {
+            if (startAttempt.succeeded()) {
+                LOG.info("successfully started insecure health checks HTTP server");
+                LOG.info("readiness probe available at http://{}:{}{}", options.getHost(), insecureServer.actualPort(),
+                        URI_READINESS_PROBE);
+                LOG.info("liveness probe available at http://{}:{}{}", options.getHost(), insecureServer.actualPort(),
+                        URI_LIVENESS_PROBE);
+                result.complete();
+            } else {
+                LOG.warn("failed to start insecure health checks HTTP server: {}",
+                        startAttempt.cause().getMessage());
+                result.fail(startAttempt.cause());
+            }
+        });
+        return result.future();
     }
 
     private Future<Void> bindSecureHttpServer() {
 
-        if (Constants.LOOPBACK_DEVICE_ADDRESS.equals(config.getBindAddress())) {
-            LOG.info("won't start secure health checks HTTP server: no bind address configured.");
-            return Future.failedFuture("no bind address configured for secure server");
-        } else if (config.isSecurePortEnabled()) {
+        if (config.isSecurePortEnabled()) {
+
+            if (Constants.LOOPBACK_DEVICE_ADDRESS.equals(config.getBindAddress())) {
+                if (bindSecureServerToLoopbackDeviceAllowed) {
+                    LOG.warn("secure health checks HTTP server will bind to loopback device only");
+                } else {
+                    LOG.info("won't start secure health checks HTTP server: no bind address configured.");
+                    return Future.failedFuture("no bind address configured for secure server");
+                }
+            }
 
             final Promise<Void> result = Promise.promise();
 
@@ -243,11 +260,15 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     }
 
     int getInsecurePort() {
-        return insecureServer.actualPort();
+        return Optional.ofNullable(insecureServer)
+                .map(s -> s.actualPort())
+                .orElse(Constants.PORT_UNCONFIGURED);
     }
 
     int getPort() {
-        return server.actualPort();
+        return Optional.ofNullable(server)
+                .map(s -> s.actualPort())
+                .orElse(Constants.PORT_UNCONFIGURED);
     }
 
 }
