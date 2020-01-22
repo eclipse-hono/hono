@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
@@ -49,14 +50,14 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,13 +71,14 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.User;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.ext.web.client.predicate.ResponsePredicateResult;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonReceiver;
 
@@ -84,40 +86,29 @@ import io.vertx.proton.ProtonReceiver;
  * Verifies behavior of {@link VertxBasedHttpProtocolAdapter}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@TestInstance(Lifecycle.PER_CLASS)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class VertxBasedHttpProtocolAdapterTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedHttpProtocolAdapterTest.class);
     private static final String HOST = "127.0.0.1";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
 
-    private static TenantClientFactory tenantClientFactory;
-    private static CredentialsClientFactory credentialsClientFactory;
-    private static DownstreamSenderFactory downstreamSenderFactory;
-    private static DownstreamSender telemetrySender;
-    private static DownstreamSender eventSender;
-    private static RegistrationClientFactory registrationClientFactory;
-    private static HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
-    private static HttpProtocolAdapterProperties config;
-    private static VertxBasedHttpProtocolAdapter httpAdapter;
-    private static CommandConsumerFactory commandConsumerFactory;
-    private static CommandResponseSender commandResponseSender;
-    private static DeviceConnectionClientFactory deviceConnectionClientFactory;
-    private static Vertx vertx;
-    private static String deploymentId;
-    private static WebClient httpClient;
-
-    /**
-     * Time out all tests after 10 seconds (some timer based functionality need a slightly higher timeout in
-     * slow environments).
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(10);
-    /**
-     * Provides access to the currently running test method.
-     */
-    @Rule
-    public TestName testName = new TestName();
+    private TenantClientFactory tenantClientFactory;
+    private CredentialsClientFactory credentialsClientFactory;
+    private DownstreamSenderFactory downstreamSenderFactory;
+    private DownstreamSender telemetrySender;
+    private DownstreamSender eventSender;
+    private RegistrationClientFactory registrationClientFactory;
+    private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
+    private HttpProtocolAdapterProperties config;
+    private VertxBasedHttpProtocolAdapter httpAdapter;
+    private CommandConsumerFactory commandConsumerFactory;
+    private CommandResponseSender commandResponseSender;
+    private DeviceConnectionClientFactory deviceConnectionClientFactory;
+    private Vertx vertx;
+    private WebClient httpClient;
 
     /**
      * Prepare the adapter by configuring it.
@@ -127,8 +118,9 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
-    @BeforeClass
-    public static void deployAdapter(final TestContext ctx) {
+    @BeforeAll
+    public void deployAdapter(final VertxTestContext ctx) {
+
         vertx = Vertx.vertx();
 
         tenantClientFactory = mock(TenantClientFactory.class);
@@ -180,8 +172,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(deviceConnectionClientFactory).disconnect(any(Handler.class));
 
         commandResponseSender = mock(CommandResponseSender.class);
-        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString())).thenReturn(
-                Future.succeededFuture(commandResponseSender));
+        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
+            .thenReturn(Future.succeededFuture(commandResponseSender));
 
         usernamePasswordAuthProvider = mock(HonoClientBasedAuthProvider.class);
 
@@ -200,23 +192,25 @@ public class VertxBasedHttpProtocolAdapterTest {
         httpAdapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         httpAdapter.setUsernamePasswordAuthProvider(usernamePasswordAuthProvider);
 
-        vertx.deployVerticle(httpAdapter, ctx.asyncAssertSuccess(id -> {
-            deploymentId = id;
+        vertx.deployVerticle(httpAdapter, ctx.succeeding(deploymentId -> {
             final WebClientOptions options = new WebClientOptions()
                     .setDefaultHost(HOST)
                     .setDefaultPort(httpAdapter.getInsecurePort());
             httpClient = WebClient.create(vertx, options);
+            ctx.completeNow();
         }));
     }
 
     /**
      * Sets up the fixture.
+     * 
+     * @param testInfo The test meta data.
      */
     @SuppressWarnings("unchecked")
-    @Before
-    public void setUp() {
+    @BeforeEach
+    public void setUp(final TestInfo testInfo) {
 
-        LOG.info("running test case [{}]", testName.getMethodName());
+        LOG.info("running test case [{}]", testInfo.getDisplayName());
 
         final RegistrationClient regClient = mock(RegistrationClient.class);
         when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(new JsonObject()));
@@ -265,9 +259,9 @@ public class VertxBasedHttpProtocolAdapterTest {
      *
      * @param ctx The vert.x test context.
      */
-    @AfterClass
-    public static void finishTest(final TestContext ctx) {
-        vertx.undeploy(deploymentId, ctx.asyncAssertSuccess(ok -> vertx.close()));
+    @AfterAll
+    public void finishTest(final VertxTestContext ctx) {
+        vertx.close(ctx.completing());
     }
 
     /**
@@ -277,12 +271,12 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetryFailsForMissingBasicAuthHeader(final TestContext ctx) {
+    public void testPostTelemetryFailsForMissingBasicAuthHeader(final VertxTestContext ctx) {
 
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
-                .send(ctx.asyncAssertSuccess());
+                .send(ctx.completing());
     }
 
     /**
@@ -293,13 +287,13 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetryFailsForInvalidCredentials(final TestContext ctx) {
+    public void testPostTelemetryFailsForInvalidCredentials(final VertxTestContext ctx) {
 
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
-                .send(ctx.asyncAssertSuccess());
+                .send(ctx.completing());
     }
 
     /**
@@ -310,7 +304,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testPostTelemetryFailsForUnreachableCredentialsService(final TestContext ctx) {
+    public void testPostTelemetryFailsForUnreachableCredentialsService(final VertxTestContext ctx) {
 
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
@@ -322,7 +316,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE))
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -333,7 +327,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetrySucceedsForValidCredentials(final TestContext ctx) {
+    public void testPostTelemetrySucceedsForValidCredentials(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -343,7 +337,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -354,7 +348,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPutTelemetrySucceedsForValidCredentials(final TestContext ctx) {
+    public void testPutTelemetrySucceedsForValidCredentials(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -364,7 +358,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -374,7 +368,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetryFailsForNotSupportedQoSLevel(final TestContext ctx) {
+    public void testPostTelemetryFailsForNotSupportedQoSLevel(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -383,7 +377,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(2))
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_BAD_REQUEST))
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
 
     }
 
@@ -394,7 +388,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetrySucceedsForQoS1(final TestContext ctx) {
+    public void testPostTelemetrySucceedsForQoS1(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -405,8 +399,9 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(1))
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess(r -> {
-                    verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                    ctx.verify(() -> verify(telemetrySender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class)));
+                    ctx.completeNow();
                 }));
     }
 
@@ -418,7 +413,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPutEventSucceedsForValidCredentials(final TestContext ctx) {
+    public void testPutEventSucceedsForValidCredentials(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -428,7 +423,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -437,7 +432,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostTelemetrySendsMessageDownstream(final TestContext ctx) {
+    public void testPostTelemetrySendsMessageDownstream(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -447,8 +442,9 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess(r -> {
-                    verify(telemetrySender).send(any(Message.class), any(SpanContext.class));
+                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                    ctx.verify(() -> verify(telemetrySender).send(any(Message.class), any(SpanContext.class)));
+                    ctx.completeNow();
                 }));
     }
 
@@ -458,7 +454,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostEventSendsMessageDownstream(final TestContext ctx) {
+    public void testPostEventSendsMessageDownstream(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -468,8 +464,9 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess(r -> {
-                    verify(eventSender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
+                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                    ctx.verify(() -> verify(eventSender).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class)));
+                    ctx.completeNow();
                 }));
     }
 
@@ -481,7 +478,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testPostTelemetryWithTtdSucceedsWithCommandInResponse(final TestContext ctx) {
+    public void testPostTelemetryWithTtdSucceedsWithCommandInResponse(final VertxTestContext ctx) {
 
         // GIVEN an device for which a command is pending
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
@@ -514,11 +511,14 @@ public class VertxBasedHttpProtocolAdapterTest {
                     }
                     return ResponsePredicateResult.success();
                 })
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess(r -> {
-                    verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                            any(Handler.class), any(Handler.class));
-                    // and the command consumer has been closed again
-                    verify(commandConsumer).close(any());
+                .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
+                    ctx.verify(() -> {
+                        verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
+                                any(Handler.class), any(Handler.class));
+                        // and the command consumer has been closed again
+                        verify(commandConsumer).close(any());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -529,7 +529,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostCmdResponseForInvalidCommandRequestIdResultsIn400(final TestContext ctx) {
+    public void testPostCmdResponseForInvalidCommandRequestIdResultsIn400(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -539,7 +539,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -549,7 +549,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostCmdResponseForInvalidCommandStatusIdResultsIn400(final TestContext ctx) {
+    public void testPostCmdResponseForInvalidCommandStatusIdResultsIn400(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -559,7 +559,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -569,7 +569,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostCmdResponseForMissingCommandStatusIdResultsIn400(final TestContext ctx) {
+    public void testPostCmdResponseForMissingCommandStatusIdResultsIn400(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -578,7 +578,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -588,7 +588,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostCmdResponseForNotExistingCommandResponseLinkResultsIn503(final TestContext ctx) {
+    public void testPostCmdResponseForNotExistingCommandResponseLinkResultsIn503(final VertxTestContext ctx) {
 
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
@@ -601,7 +601,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     /**
@@ -611,7 +611,7 @@ public class VertxBasedHttpProtocolAdapterTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testPostCmdResponseForExistingCommandResponseLinkResultsInAccepted(final TestContext ctx) {
+    public void testPostCmdResponseForExistingCommandResponseLinkResultsInAccepted(final VertxTestContext ctx) {
 
         final ProtonDelivery remotelySettledDelivery = mock(ProtonDelivery.class);
         when(remotelySettledDelivery.remotelySettled()).thenReturn(Boolean.TRUE);
@@ -627,7 +627,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
                 .expect(ResponsePredicate.SC_ACCEPTED)
-                .sendJsonObject(new JsonObject(), ctx.asyncAssertSuccess());
+                .sendJsonObject(new JsonObject(), ctx.completing());
     }
 
     private String getCommandResponsePath(final String wrongCommandRequestId) {
@@ -660,7 +660,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static void mockSuccessfulAuthentication(final String tenantId, final String deviceId) {
+    private void mockSuccessfulAuthentication(final String tenantId, final String deviceId) {
         doAnswer(invocation -> {
             final Handler<AsyncResult<User>> resultHandler = invocation.getArgument(1);
             resultHandler.handle(Future.succeededFuture(new DeviceUser(tenantId, deviceId)));

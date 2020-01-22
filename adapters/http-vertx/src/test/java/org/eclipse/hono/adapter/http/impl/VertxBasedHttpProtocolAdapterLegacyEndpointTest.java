@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,15 +13,10 @@
 
 package org.eclipse.hono.adapter.http.impl;
 
-import org.junit.runner.RunWith;
-
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-
 /**
  * Verifies behavior of {@link VertxBasedHttpProtocolAdapter} using the legacy Command & Control endpoint.
  *
  */
-@RunWith(VertxUnitRunner.class)
 public class VertxBasedHttpProtocolAdapterLegacyEndpointTest extends VertxBasedHttpProtocolAdapterTest {
 
     @Override

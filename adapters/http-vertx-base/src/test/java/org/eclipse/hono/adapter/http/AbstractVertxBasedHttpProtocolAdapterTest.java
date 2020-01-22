@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,7 @@
 
 package org.eclipse.hono.adapter.http;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -30,6 +26,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -61,17 +59,16 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -89,30 +86,26 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.ParsedHeaderValues;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedHttpProtocolAdapter}.
  * 
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     private static final String ADAPTER_TYPE = "http";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
-
-    /**
-     * Global timeout for all test cases.
-     */
-    @Rule
-    public Timeout globalTimeout = Timeout.seconds(6);
 
     private CredentialsClientFactory      credentialsClientFactory;
     private TenantClientFactory           tenantClientFactory;
@@ -133,7 +126,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * Sets up common fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setup() {
 
         context = mock(Context.class);
@@ -200,24 +193,23 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testStartUsesClientProvidedHttpServer(final TestContext ctx) {
+    public void testStartUsesClientProvidedHttpServer(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided HTTP server
         final HttpServer server = getHttpServer(false);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
         // WHEN starting the adapter
-        final Async startup = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
+        startupTracker.future().setHandler(ctx.succeeding(s -> {
+            // THEN the client provided HTTP server has been configured and started
+            ctx.verify(() -> {
+                verify(server).requestHandler(any(Handler.class));
+                verify(server).listen(any(Handler.class));
+            });
+            ctx.completeNow();
         }));
         adapter.start(startupTracker);
-
-        // THEN the client provided HTTP server has been configured and started
-        startup.await();
-        verify(server).requestHandler(any(Handler.class));
-        verify(server).listen(any(Handler.class));
     }
 
     /**
@@ -227,26 +219,21 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testStartInvokesOnStartupSuccess(final TestContext ctx) {
+    public void testStartInvokesOnStartupSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server
         final HttpServer server = getHttpServer(false);
-        final Async onStartupSuccess = ctx.async();
-
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server,
-                s -> onStartupSuccess.complete());
+        final Checkpoint onStartupSuccess = ctx.checkpoint();
 
         // WHEN starting the adapter
-        final Async startup = ctx.async();
-        final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
-        adapter.start(startupTracker);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(
+                server,
+                // THEN the onStartupSuccess method has been invoked
+                s -> onStartupSuccess.flag());
 
-        // THEN the onStartupSuccess method has been invoked
-        startup.await();
-        onStartupSuccess.await();
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.completing());
+        adapter.start(startupTracker);
     }
 
     /**
@@ -256,16 +243,16 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final TestContext ctx) {
+    public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
         final HttpServer server = getHttpServer(true);
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server,
-                s -> ctx.fail("should not invoke onStartupSuccess"));
+                s -> ctx.failNow(new IllegalStateException("should not invoke onStartupSuccess")));
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertFailure());
+        startupTracker.future().setHandler(ctx.failing(t -> ctx.completeNow()));
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has not been invoked
@@ -286,9 +273,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
-        myTenantConfig.addAdapterConfiguration(new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
-                .put(TenantConstants.FIELD_ENABLED, false));
+        myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), any())).thenReturn(Future.succeededFuture(myTenantConfig));
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
@@ -488,7 +473,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // verifies that the downstream message contains the time to live value
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertEquals(10L * 1000, messageCaptor.getValue().getTtl());
+        assertThat(messageCaptor.getValue().getTtl()).isEqualTo(10L * 1000);
     }
 
     /**
@@ -551,7 +536,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // GIVEN an adapter that is not enabled for a device's tenant
         final TenantObject to = TenantObject.from("tenant", true);
-        to.addAdapterConfiguration(TenantObject.newAdapterConfig(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, false));
+        to.addAdapter(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
 
         final HttpServer server = getHttpServer(false);
@@ -590,9 +575,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final TenantObject to = TenantObject.from("tenant", true);
 
         // Given an adapter that is enabled for a device's tenant
-        to.addAdapterConfiguration(new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
-                .put(TenantConstants.FIELD_ENABLED, true));
+        to.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.TRUE));
         when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
 
         // which is connected to a Credentials service that has credentials on record for device 9999
@@ -738,7 +721,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // and the downstream message does not contain any TTD value
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), (SpanContext) any());
-        assertNull(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()));
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isNull();
     }
 
     /**
@@ -806,11 +789,11 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final DeviceUser deviceUser = new DeviceUser(tenantId, deviceId);
 
         // assert that gateway mapping is enabled for a tenant with standard configuration
-        assertThat(adapter.isGatewayMappingEnabled(tenantId, deviceId, deviceUser).result(), is(true));
+        assertThat(adapter.isGatewayMappingEnabled(tenantId, deviceId, deviceUser).result()).isTrue();
 
         // assert that gateway mapping is disabled for a tenant having the 'support-concurrent-gateway-device-command-requests' option set
         givenATenantWithSupportConcurrentGatewayDeviceCommandRequestsSet();
-        assertThat(adapter.isGatewayMappingEnabled(tenantId, deviceId, deviceUser).result(), is(false));
+        assertThat(adapter.isGatewayMappingEnabled(tenantId, deviceId, deviceUser).result()).isFalse();
     }
 
     /**
@@ -957,10 +940,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // a max TTD of 20 secs
         when(tenantClient.get(eq("tenant"), any())).thenReturn(
                 Future.succeededFuture(TenantObject.from("tenant", true)
-                        .addAdapterConfiguration(
-                                TenantObject.newAdapterConfig(ADAPTER_TYPE, true)
-                                        .put(TenantConstants.FIELD_EXT, new JsonObject()
-                                                .put(TenantConstants.FIELD_MAX_TTD, 20)))));
+                        .addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.TRUE)
+                                .setExtensions(Map.of(TenantConstants.FIELD_MAX_TTD, 20)))));
 
         // and includes a TTD value of 40 in its request
         final Buffer payload = Buffer.buffer("some payload");
@@ -977,7 +958,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // and the downstream message contains the configured max TTD
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), (SpanContext) any());
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), is(20));
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(20);
     }
 
     /**
@@ -1233,16 +1214,14 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     private void givenATenantWithSupportConcurrentGatewayDeviceCommandRequestsSet() {
         when(tenantClient.get(anyString(), any())).thenAnswer(invocation -> {
+
+            final Adapter adapterConfig = new Adapter(ADAPTER_TYPE).setEnabled(Boolean.TRUE);
+            adapterConfig.setExtensions(Map.of(
+                    AbstractVertxBasedHttpProtocolAdapter.FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS,
+                    Boolean.TRUE));
+
             final TenantObject tenantObject = TenantObject.from(invocation.getArgument(0), true);
-
-            final JsonObject adapterConfig = new JsonObject();
-            adapterConfig.put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE);
-            adapterConfig.put(TenantConstants.FIELD_ENABLED, true);
-            final JsonObject extConfig = new JsonObject();
-            extConfig.put(AbstractVertxBasedHttpProtocolAdapter.FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS, true);
-            adapterConfig.put(TenantConstants.FIELD_EXT, extConfig);
-
-            tenantObject.addAdapterConfiguration(adapterConfig);
+            tenantObject.addAdapter(adapterConfig);
             return Future.succeededFuture(tenantObject);
         });
     }
@@ -1250,7 +1229,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private static void assertContextFailedWithClientError(final RoutingContext ctx, final int statusCode) {
         final ArgumentCaptor<Throwable> exceptionCaptor = ArgumentCaptor.forClass(Throwable.class);
         verify(ctx).fail(exceptionCaptor.capture());
-        assertThat(exceptionCaptor.getValue(), instanceOf(ClientErrorException.class));
-        assertThat(((ClientErrorException) exceptionCaptor.getValue()).getErrorCode(), is(statusCode));
+        assertThat(exceptionCaptor.getValue()).isInstanceOf(ClientErrorException.class);
+        assertThat(((ClientErrorException) exceptionCaptor.getValue()).getErrorCode()).isEqualTo(statusCode);
     }
 }
