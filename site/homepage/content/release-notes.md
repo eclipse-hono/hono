@@ -23,6 +23,9 @@ title = "Release Notes"
 * The Hono Auth Server and Device Registry components now support configuring the SASL
   mechanisms advertised to a client connecting to these components. This can be used to
   restrict the support to only one of the SASL PLAIN and EXTERNAL mechanisms instead of both. 
+* A new metric namely *hono.connections.authenticated.duration* has been introduced to track the 
+  connection duration of the authenticated devices. Please refer to the 
+  [Metrics API]({{% doclink "/api/metrics/" %}}) for more details.
 
 ### Fixes & Enhancements
 
