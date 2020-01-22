@@ -48,7 +48,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <default.java.options>
       -XX:MinRAMPercentage=80
       -XX:MaxRAMPercentage=90
-      -javaagent:/opt/hono/agent/org.jacoco.agent.jar=destfile=/opt/hono/jacoco.result/jacoco.part
       -DenableForcedCommandRerouting=true
     </default.java.options>
     <amqp.java.options></amqp.java.options>
@@ -198,26 +197,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <excludeTransitive>true</excludeTransitive>
                 </configuration>
               </execution>
-              <execution>
-                <id>copy_jacoco_agent</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>copy</goal>
-                </goals>
-                <configuration>
-                  <artifactItems>
-                    <artifactItem>
-                      <groupId>org.jacoco</groupId>
-                      <artifactId>org.jacoco.agent</artifactId>
-                      <version>${jacoco.version}</version>
-                      <classifier>runtime</classifier>
-                    </artifactItem>
-                  </artifactItems>
-                  <outputDirectory>${project.build.directory}/agent</outputDirectory>
-                  <stripVersion>true</stripVersion>
-                  <stripClassifier>true</stripClassifier>
-                </configuration>
-              </execution>
             </executions>
           </plugin>
           <plugin>
@@ -255,18 +234,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>auth-server-*.pem</include>
                             </includes>
                           </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/agent</directory>
-                            <outputDirectory>opt/hono/agent</outputDirectory>
-                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
-                    <runCmds>
-                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
-                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
-                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
-                    </runCmds>
                   </build>
                   <run>
                     <ports>
@@ -300,11 +270,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>AUTH</prefix>
                       <color>cyan</color>
                     </log>
-                    <volumes>
-                      <bind>
-                        <volume>${project.build.directory}/jacoco.result/auth:/opt/hono/jacoco.result:z</volume>
-                      </bind>
-                    </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <http>
@@ -344,18 +309,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/agent</directory>
-                            <outputDirectory>opt/hono/agent</outputDirectory>
-                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
-                    <runCmds>
-                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
-                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
-                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
-                    </runCmds>
                   </build>
                   <run>
                     <ports>
@@ -381,11 +337,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>REGISTRY</prefix>
                       <color>yellow</color>
                     </log>
-                    <volumes>
-                      <bind>
-                        <volume>${project.build.directory}/jacoco.result/registry:/opt/hono/jacoco.result:z</volume>
-                      </bind>
-                    </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <http>
@@ -564,18 +515,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/agent</directory>
-                            <outputDirectory>opt/hono/agent</outputDirectory>
-                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
-                    <runCmds>
-                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
-                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
-                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
-                    </runCmds>
                   </build>
                   <run>
                     <ports>
@@ -600,11 +542,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <log>
                       <prefix>HTTP</prefix>
                     </log>
-                    <volumes>
-                      <bind>
-                        <volume>${project.build.directory}/jacoco.result/http:/opt/hono/jacoco.result:z</volume>
-                      </bind>
-                    </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <http>
@@ -651,18 +588,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/agent</directory>
-                            <outputDirectory>opt/hono/agent</outputDirectory>
-                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
-                    <runCmds>
-                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
-                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
-                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
-                    </runCmds>
                   </build>
                   <run>
                     <ports>
@@ -687,11 +615,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <log>
                       <prefix>MQTT</prefix>
                     </log>
-                    <volumes>
-                      <bind>
-                        <volume>${project.build.directory}/jacoco.result/mqtt:/opt/hono/jacoco.result:z</volume>
-                      </bind>
-                    </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <http>
@@ -730,18 +653,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/agent</directory>
-                            <outputDirectory>opt/hono/agent</outputDirectory>
-                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
-                    <runCmds>
-                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
-                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
-                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
-                    </runCmds>
                   </build>
                   <run>
                     <ports>
@@ -767,11 +681,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>AMQP</prefix>
                       <color>RED</color>
                     </log>
-                    <volumes>
-                      <bind>
-                        <volume>${project.build.directory}/jacoco.result/amqp:/opt/hono/jacoco.result:z</volume>
-                      </bind>
-                    </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <http>
@@ -810,18 +719,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/agent</directory>
-                            <outputDirectory>opt/hono/agent</outputDirectory>
-                          </fileSet>
                         </fileSets>
                       </inline>
                     </assembly>
-                    <runCmds>
-                      <runCmd>install -m 0777 -d /opt/hono/jacoco.result</runCmd>
-                      <runCmd>touch /opt/hono/jacoco.result/jacoco.part</runCmd>
-                      <runCmd>chmod 0666 /opt/hono/jacoco.result/jacoco.part</runCmd>
-                    </runCmds>
                   </build>
                   <run>
                     <ports>
@@ -846,11 +746,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <log>
                       <prefix>COAP</prefix>
                     </log>
-                    <volumes>
-                      <bind>
-                        <volume>${project.build.directory}/jacoco.result/coap:/opt/hono/jacoco.result:z</volume>
-                      </bind>
-                    </volumes>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <http>
@@ -887,50 +782,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <configuration>
                   <removeVolumes>true</removeVolumes>
                   <removeMode>all</removeMode>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <!--
-              - The Maven Antrun plugin has to be defined after the fabric8
-              - plugin so that this plugin's 'post-integration-test' runs
-              - after the containers are stopped. But before the 'verify'
-              - phase of the jacoco extras plugin.
-              -->
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>create_dirs</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <mkdir dir="${project.build.directory}/jacoco.result" />
-                    <mkdir dir="${project.build.directory}/jacoco.result/auth" />
-                    <mkdir dir="${project.build.directory}/jacoco.result/registry" />
-                    <mkdir dir="${project.build.directory}/jacoco.result/amqp" />
-                    <mkdir dir="${project.build.directory}/jacoco.result/coap" />
-                    <mkdir dir="${project.build.directory}/jacoco.result/http" />
-                    <mkdir dir="${project.build.directory}/jacoco.result/mqtt" />
-                  </target>
-                </configuration>
-              </execution>
-              <execution>
-                <id>concat-jacoco-exec</id>
-                <phase>post-integration-test</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <concat destfile="${project.build.directory}/jacoco.exec" append="yes" binary="yes">
-                      <fileset dir="${project.build.directory}/jacoco.result" includes="**/jacoco.part"/>
-                    </concat>
-                  </target>
                 </configuration>
               </execution>
             </executions>

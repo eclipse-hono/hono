@@ -198,8 +198,6 @@
       Additional tag which can be defined for custom builds
      -->
     <docker.image.additional.tag></docker.image.additional.tag>
-
-    <jacoco.version>0.8.5</jacoco.version>
   </properties>
 
   <modules>
@@ -489,38 +487,6 @@
             <phase>verify</phase>
             <goals>
               <goal>jar-no-fork</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
-        <version>${jacoco.version}</version>
-        <executions>
-          <execution>
-            <!-- enable test execution with jacoco -->
-            <id>default-prepare-agent</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>de.dentrassi.maven</groupId>
-        <artifactId>jacoco-extras</artifactId>
-        <version>0.1.6</version>
-        <executions>
-          <execution>
-            <!--
-              - Build enhanced jacoco report including classes outside of current module
-              - This is required to measure coverage where module A tests functionality
-              - of module B
-              -->
-            <id>build-enhanced-xml-report</id>
-            <goals>
-              <goal>xml</goal>
             </goals>
           </execution>
         </executions>
