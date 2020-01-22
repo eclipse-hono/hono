@@ -30,7 +30,8 @@ title = "Release Notes"
 * The MQTT adapter now includes a device's MQTT client ID in its request to retrieve the device's
   credentials. This additional information can be used by device registry implementations when determining
   the device identity.
-* The domain name of the [Hono Sandbox]({{< relref "/Sandbox" >}}) has been changed to `hono.eclipseprojects.io`.
+* The domain name of the [Hono Sandbox]({{< relref "/sandbox.md" >}}) has been changed to
+  `hono.eclipseprojects.io`.
   It will still be available at the old domain name for some time as well, though.
 * Hono's OpenTracing instrumentation has been upgraded to Opentracing 0.33.0.
   The example deployment now uses the Jaeger Java client in version 0.35.2 and the
