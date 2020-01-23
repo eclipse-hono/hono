@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +50,7 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-
+import org.mockito.Mockito;
 
 /**
  * Verifies behavior of {@link MicrometerBasedMetrics}.
@@ -203,6 +204,24 @@ public class MicrometerBasedMetricsTest {
 
         assertEquals(4 * 1024,
                 registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).summary().totalAmount());
+    }
+
+    /**
+     * Verifies that the connection time duration is recorded for the given tenant when devices get connected and
+     * disconnected.
+     *
+     * @param registry The registry that the tests should be run against.
+     */
+    @ParameterizedTest
+    @MethodSource("registries")
+    public void testConnectionTimeDuration(final MeterRegistry registry) {
+        final MeterRegistry meterRegistry = Mockito.spy(registry);
+        final Metrics metrics = new MicrometerBasedMetrics(meterRegistry, mock(Vertx.class));
+        metrics.incrementConnections("TEST_TENANT");
+        metrics.decrementConnections("TEST_TENANT");
+        verify(meterRegistry, times(1)).timer(
+                MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED_DURATION,
+                Tags.of(MetricsTags.getTenantTag("TEST_TENANT")));
     }
 
     /**
