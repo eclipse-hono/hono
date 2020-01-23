@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -29,7 +28,6 @@ import java.util.function.Consumer;
  */
 public final class DeviceConnectionDurationTracker {
 
-    private static final long DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(10);
     protected final Logger log = LoggerFactory.getLogger(DeviceConnectionDurationTracker.class);
     private final AtomicLong noOfDeviceConnections;
     private final Consumer<Long> recorder;
@@ -41,13 +39,14 @@ public final class DeviceConnectionDurationTracker {
     private DeviceConnectionDurationTracker(
             final String tenantId, final Vertx vertx,
             final long noOfDeviceConnections,
-            final Consumer<Long> recorder) {
+            final Consumer<Long> recorder,
+            final long recordingIntervalInMs) {
         this.tenantId = tenantId;
         this.noOfDeviceConnections = new AtomicLong(noOfDeviceConnections);
         this.recorder = recorder;
         this.startInstant.set(Instant.now());
         this.vertx = vertx;
-        this.timerId = this.vertx.setPeriodic(DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS, id -> report());
+        this.timerId = this.vertx.setPeriodic(recordingIntervalInMs, id -> report());
         log.trace("Started a device connection duration tracker for the tenant [{}].", tenantId);
     }
 
@@ -90,9 +89,10 @@ public final class DeviceConnectionDurationTracker {
     public static final class Builder {
 
         private long noOfDeviceConnections;
-        private Vertx vertx;
         private Consumer<Long> recorder;
+        private long recordingIntervalInMs;
         private String tenantId;
+        private Vertx vertx;
 
         private Builder() {
             // prevent instantiation
@@ -109,6 +109,21 @@ public final class DeviceConnectionDurationTracker {
             final Builder builder = new Builder();
             builder.tenantId = Objects.requireNonNull(tenantId);
             return builder;
+        }
+
+        /**
+         * Sets the recording interval for the device connection duration.
+         * 
+         * @param recordingIntervalInMs The recording interval in milliseconds.
+         * @return an instance of the Builder.
+         * @throws IllegalArgumentException if the recording interval is negative.
+         */
+        public Builder withRecordingInterval(final long recordingIntervalInMs) {
+            if (recordingIntervalInMs < 0) {
+                throw new IllegalArgumentException("recording interval must be >= 0");
+            }
+            this.recordingIntervalInMs = recordingIntervalInMs;
+            return this;
         }
 
         /**
@@ -156,7 +171,8 @@ public final class DeviceConnectionDurationTracker {
          * @return an instance of the {@link DeviceConnectionDurationTracker}.
          */
         public DeviceConnectionDurationTracker start() {
-            return new DeviceConnectionDurationTracker(tenantId, vertx, noOfDeviceConnections, recorder);
+            return new DeviceConnectionDurationTracker(tenantId, vertx, noOfDeviceConnections, recorder,
+                    recordingIntervalInMs);
         }
     }
 }

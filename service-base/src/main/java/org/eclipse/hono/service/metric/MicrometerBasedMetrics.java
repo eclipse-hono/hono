@@ -78,6 +78,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
     private static final long DEFAULT_TENANT_IDLE_TIMEOUT = ProtocolAdapterProperties.DEFAULT_TENANT_IDLE_TIMEOUT
             .toMillis();
+    private static final long DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(10);
 
     /**
      * The meter registry.
@@ -425,6 +426,7 @@ public class MicrometerBasedMetrics implements Metrics {
                                         .forTenant(tenant)
                                         .withVertx(vertx)
                                         .withNumberOfDeviceConnections(deviceConnectionsCount)
+                                        .withRecordingInterval(DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS)
                                         .recordUsing(connectionDuration -> registry
                                                 .timer(METER_CONNECTIONS_AUTHENTICATED_DURATION,
                                                         Tags.of(MetricsTags.getTenantTag(tenantId)))
