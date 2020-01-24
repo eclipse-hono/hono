@@ -103,6 +103,7 @@ public class HonoConnectionImpl implements HonoConnection {
     protected volatile Context context;
 
     private final List<DisconnectListener<HonoConnection>> disconnectListeners = new ArrayList<>();
+    private final List<DisconnectListener<HonoConnection>> oneTimeDisconnectListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<ReconnectListener<HonoConnection>> reconnectListeners = new ArrayList<>();
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
@@ -237,7 +238,7 @@ public class HonoConnectionImpl implements HonoConnection {
     /**
      * Executes some code on the vert.x Context that has been used to establish the
      * connection to the peer.
-     * 
+     *
      * @param <T> The type of the result that the code produces.
      * @param codeToRun The code to execute. The code is required to either complete or
      *                  fail the future that is passed into the handler.
@@ -523,9 +524,20 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     private void notifyDisconnectHandlers() {
-
         for (final DisconnectListener<HonoConnection> listener : disconnectListeners) {
+            notifyDisconnectHandler(listener);
+        }
+        oneTimeDisconnectListeners.removeIf(listener -> {
+            notifyDisconnectHandler(listener);
+            return true;
+        });
+    }
+
+    private void notifyDisconnectHandler(final DisconnectListener<HonoConnection> listener) {
+        try {
             listener.onDisconnect(this);
+        } catch (final Exception ex) {
+            log.warn("error running disconnectHandler", ex);
         }
     }
 
@@ -708,14 +720,19 @@ public class HonoConnectionImpl implements HonoConnection {
                 final ProtonSender sender = connection.createSender(targetAddress);
                 sender.setQoS(qos);
                 sender.setAutoSettle(true);
+                final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = (con) -> {
+                    log.debug("opening sender [{}] failed: got disconnected", targetAddress);
+                    senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
+                };
+                oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
                 sender.openHandler(senderOpen -> {
 
-                    // we only "try" to complete/fail the result future because
-                    // it may already have been failed if the connection broke
-                    // away after we have sent our attach frame but before we have
-                    // received the peer's attach frame
+                    oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
 
-                    if (senderOpen.failed()) {
+                    // the result future may have already been completed here in case of a link establishment timeout
+                    if (senderPromise.future().isComplete()) {
+                        log.debug("ignoring server response for opening sender [{}]: sender creation already timed out", targetAddress);
+                    } else if (senderOpen.failed()) {
                         // this means that we have received the peer's attach
                         // and the subsequent detach frame in one TCP read
                         final ErrorCondition error = sender.getRemoteCondition();
@@ -768,7 +785,12 @@ public class HonoConnectionImpl implements HonoConnection {
                         remoteClosed -> onRemoteDetach(sender, connection.getRemoteContainer(), true, closeHook));
                 sender.open();
                 vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
-                        tid -> onTimeOut(sender, clientConfigProperties, senderPromise));
+                        tid -> {
+                            final boolean notOpenedAndNotDisconnectedYet = oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
+                            if (notOpenedAndNotDisconnectedYet) {
+                                onLinkEstablishmentTimeout(sender, clientConfigProperties, senderPromise);
+                            }
+                        });
                 return senderPromise.future();
             }).setHandler(result);
         });
@@ -829,14 +851,19 @@ public class HonoConnectionImpl implements HonoConnection {
                         ProtonHelper.released(delivery, true);
                     }
                 });
+                final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = (con) -> {
+                    log.debug("opening receiver [{}] failed: got disconnected", sourceAddress);
+                    receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
+                };
+                oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
                 receiver.openHandler(recvOpen -> {
 
-                    // we only "try" to complete/fail the result future because
-                    // it may already have been failed if the connection broke
-                    // away after we have sent our attach frame but before we have
-                    // received the peer's attach frame
+                    oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
 
-                    if (recvOpen.failed()) {
+                    // the result future may have already been completed here in case of a link establishment timeout
+                    if (receiverPromise.future().isComplete()) {
+                        log.debug("ignoring server response for opening receiver [{}]: receiver creation already timed out", sourceAddress);
+                    } else if (recvOpen.failed()) {
                         // this means that we have received the peer's attach
                         // and the subsequent detach frame in one TCP read
                         final ErrorCondition error = receiver.getRemoteCondition();
@@ -865,13 +892,18 @@ public class HonoConnectionImpl implements HonoConnection {
                         connection.getRemoteContainer(), true, remoteCloseHook));
                 receiver.open();
                 vertx.setTimer(clientConfigProperties.getLinkEstablishmentTimeout(),
-                        tid -> onTimeOut(receiver, clientConfigProperties, receiverPromise));
+                        tid -> {
+                            final boolean notOpenedAndNotDisconnectedYet = oneTimeDisconnectListeners.remove(disconnectBeforeOpenListener);
+                            if (notOpenedAndNotDisconnectedYet) {
+                                onLinkEstablishmentTimeout(receiver, clientConfigProperties, receiverPromise);
+                            }
+                        });
                 return receiverPromise.future();
             }).setHandler(result);
         });
     }
 
-    private void onTimeOut(
+    private void onLinkEstablishmentTimeout(
             final ProtonLink<?> link,
             final ClientConfigProperties clientConfig,
             final Promise<?> result) {
@@ -880,7 +912,8 @@ public class HonoConnectionImpl implements HonoConnection {
             log.info("link establishment [peer: {}] timed out after {}ms",
                     clientConfig.getHost(), clientConfig.getLinkEstablishmentTimeout());
             link.close();
-            link.free();
+            // don't free the link here - this may result in an inconsistent session state (see PROTON-2177)
+            // instead the link will be freed when the detach from the server is received
             result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
         }
     }

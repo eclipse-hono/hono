@@ -14,6 +14,9 @@ package org.eclipse.hono.util;
 
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -34,6 +37,8 @@ public final class HonoProtonHelper {
      * The default number of milliseconds to wait for a remote peer to send a detach frame after client closed a link.
      */
     public static final long DEFAULT_FREE_LINK_AFTER_CLOSE_INTERVAL_MILLIS = 3000;
+
+    private static final Logger LOG = LoggerFactory.getLogger(HonoProtonHelper.class);
 
     private HonoProtonHelper() {
         // prevent instantiation
@@ -60,7 +65,11 @@ public final class HonoProtonHelper {
         Objects.requireNonNull(handler);
 
         final Handler<AsyncResult<T>> wrappedHandler = remoteDetach -> {
-            handler.handle(remoteDetach);
+            try {
+                handler.handle(remoteDetach);
+            } catch (final Exception ex) {
+                LOG.warn("error running detachHandler", ex);
+            }
             link.free();
         };
         link.detachHandler(wrappedHandler);
@@ -88,7 +97,11 @@ public final class HonoProtonHelper {
         Objects.requireNonNull(handler);
 
         final Handler<AsyncResult<T>> wrappedHandler = remoteClose -> {
-            handler.handle(remoteClose);
+            try {
+                handler.handle(remoteClose);
+            } catch (final Exception ex) {
+                LOG.warn("error running closeHandler", ex);
+            }
             link.free();
         };
         link.closeHandler(wrappedHandler);

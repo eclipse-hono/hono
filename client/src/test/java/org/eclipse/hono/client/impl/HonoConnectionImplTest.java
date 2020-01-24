@@ -673,9 +673,53 @@ public class HonoConnectionImplTest {
                     assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                     verify(receiver).open();
                     verify(receiver).close();
-                    verify(receiver).free();
                     verify(remoteCloseHook, never()).handle(anyString());
                 });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the attempt to create a receiver fails with a
+     * {@code ServerErrorException} if the connection gets disconnected
+     * before the remote peer has sent its attach frame. It is verified
+     * that this is done before the link establishment timeout.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateReceiverFailsOnDisconnectBeforeOpen(final VertxTestContext ctx) {
+
+        final long linkEstablishmentTimeout = 444L; // choose a distinct value here
+        props.setLinkEstablishmentTimeout(linkEstablishmentTimeout);
+        // don't run linkEstablishmentTimeout timer handler
+        when(vertx.setTimer(eq(linkEstablishmentTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+
+        final Source source = mock(Source.class);
+        when(source.getAddress()).thenReturn("source/address");
+        final ProtonReceiver receiver = mock(ProtonReceiver.class);
+        when(receiver.isOpen()).thenReturn(Boolean.TRUE);
+        when(receiver.getSource()).thenReturn(source);
+        when(receiver.getRemoteSource()).thenReturn(source);
+        when(con.createReceiver(anyString())).thenReturn(receiver);
+
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        honoConnection.connect()
+            .compose(c -> {
+                // WHEN creating a receiver link with a close hook
+                final Future<ProtonReceiver> result = honoConnection.createReceiver("source", ProtonQoS.AT_LEAST_ONCE,
+                        mock(ProtonMessageHandler.class), remoteCloseHook);
+                // THEN the result is not completed at first
+                ctx.verify(() -> assertThat(result.isComplete()).isFalse());
+                // WHEN the downstream connection fails
+                connectionFactory.getDisconnectHandler().handle(con);
+                return result;
+            })
+            // THEN the attempt is failed
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
                 ctx.completeNow();
             }));
     }
@@ -779,7 +823,6 @@ public class HonoConnectionImplTest {
                     assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                     verify(sender).open();
                     verify(sender).close();
-                    verify(sender).free();
                     verify(remoteCloseHook, never()).handle(anyString());
                 });
                 ctx.completeNow();
@@ -941,5 +984,49 @@ public class HonoConnectionImplTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the attempt to create a sender fails with a
+     * {@code ServerErrorException} if the connection gets disconnected
+     * before the remote peer has sent its attach frame. It is verified
+     * that this is done before the link establishment timeout.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateSenderFailsOnDisconnectBeforeOpen(final VertxTestContext ctx) {
+        final long linkEstablishmentTimeout = 444L; // choose a distinct value here
+        props.setLinkEstablishmentTimeout(linkEstablishmentTimeout);
+        // don't run linkEstablishmentTimeout timer handler
+        when(vertx.setTimer(eq(linkEstablishmentTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+
+        final ProtonSender sender = mock(ProtonSender.class);
+        when(sender.isOpen()).thenReturn(Boolean.TRUE);
+        when(con.createSender(anyString())).thenReturn(sender);
+        final Target target = new Target();
+        target.setAddress("someAddress");
+        when(sender.getRemoteTarget()).thenReturn(target);
+        when(sender.getCredit()).thenReturn(0);
+        // mock handlers
+        final Handler<String> remoteCloseHook = mock(Handler.class);
+
+        // GIVEN an established connection
+        honoConnection.connect()
+            .compose(c -> {
+                // WHEN creating a sender link with a close hook
+                final Future<ProtonSender> result = honoConnection.createSender(
+                        "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
+                // THEN the result is not completed at first
+                ctx.verify(() -> assertThat(result.isComplete()).isFalse());
+                // WHEN the downstream connection fails
+                connectionFactory.getDisconnectHandler().handle(con);
+                return result;
+            })
+            // THEN the attempt is failed
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+                ctx.completeNow();
+            }));
     }
 }
