@@ -197,7 +197,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     @Override
     public final void doStart(final Promise<Void> startPromise) {
 
-        checkPortConfiguration()
+        checkCoapPortConfiguration()
         .compose(s -> preStartup())
         .compose(s -> {
             final Future<NetworkConfig> secureConfig = getSecureNetworkConfig();
@@ -234,6 +234,33 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             return result.future();
         })
         .setHandler(startPromise);
+    }
+
+    private Future<Void> checkCoapPortConfiguration() {
+
+        final Promise<Void> result = Promise.promise();
+
+        final boolean securePortEnabled = getConfig().isSecurePortEnabled() || getConfig().getPort() > Constants.PORT_UNCONFIGURED;
+        final int securePort = securePortEnabled ? getConfig().getPort(getPortDefaultValue()) : Constants.PORT_UNCONFIGURED;
+
+        if (!securePortEnabled) {
+            if (getConfig().isInsecurePortEnabled()) {
+                result.complete();
+            } else {
+                log.error("configuration must have at least one of secure or insecure port set to start up");
+                result.fail("no ports configured");
+            }
+        } else if (getConfig().isInsecurePortEnabled() && securePort == getConfig().getInsecurePort(getInsecurePortDefaultValue())) {
+            log.error("secure and insecure ports must be configured to bind to different port numbers");
+            result.fail("secure and insecure ports configured to bind to same port number");
+        } else {
+            if (getConfig().getKeyCertOptions() == null) {
+                log.warn("secure port configured, but no certificate/key is set. Will only enable ciphers that do not require server certificate!");
+            }
+            result.complete();
+        }
+
+        return result.future();
     }
 
     private void addResources(final CoapServer startingServer) {
