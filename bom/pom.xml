@@ -35,7 +35,7 @@
     <guava.version>28.0-jre</guava.version>
     <caffeine.version>2.8.0</caffeine.version>
     <hamcrest-core.version>2.1</hamcrest-core.version>
-    <infinispan.version>9.4.16.Final</infinispan.version>
+    <infinispan.version>9.4.17.Final</infinispan.version>
     <infinispan.image.name>jboss/infinispan-server:9.4.11.Final</infinispan.image.name>
     <jackson.version>2.9.10</jackson.version>
     <jaeger.version>0.35.2</jaeger.version>
@@ -550,6 +550,11 @@
         <artifactId>jackson-datatype-jsr310</artifactId>
         <version>${jackson.version}</version>
         <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>client-device-connection-infinispan</artifactId>
+        <version>${project.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

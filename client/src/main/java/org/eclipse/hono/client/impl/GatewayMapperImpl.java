@@ -16,9 +16,9 @@ package org.eclipse.hono.client.impl;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.GatewayMapper;
 import org.eclipse.hono.client.HonoConnection;
@@ -48,12 +48,12 @@ import io.vertx.core.json.JsonObject;
 /**
  * A component that maps a given device to the gateway through which data was last published for the given device.
  */
-public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<HonoConnection> {
+public class GatewayMapperImpl implements GatewayMapper {
 
     private static final Logger LOG = LoggerFactory.getLogger(GatewayMapperImpl.class);
 
     private final RegistrationClientFactory registrationClientFactory;
-    private final DeviceConnectionClientFactory deviceConnectionClientFactory;
+    private final BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
     private final Tracer tracer;
 
     /**
@@ -64,8 +64,11 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public GatewayMapperImpl(final RegistrationClientFactory registrationClientFactory,
-            final DeviceConnectionClientFactory deviceConnectionClientFactory, final Tracer tracer) {
+    public GatewayMapperImpl(
+            final RegistrationClientFactory registrationClientFactory,
+            final BasicDeviceConnectionClientFactory deviceConnectionClientFactory,
+            final Tracer tracer) {
+
         this.registrationClientFactory = Objects.requireNonNull(registrationClientFactory);
         this.deviceConnectionClientFactory = Objects.requireNonNull(deviceConnectionClientFactory);
         this.tracer = Objects.requireNonNull(tracer);
@@ -156,50 +159,80 @@ public class GatewayMapperImpl implements GatewayMapper, ConnectionLifecycle<Hon
     @Override
     public Future<HonoConnection> connect() {
         final Future<HonoConnection> registrationFuture = registrationClientFactory.connect();
-        final Future<HonoConnection> deviceConnectionFuture = deviceConnectionClientFactory.connect();
-        return CompositeFuture.all(registrationFuture, deviceConnectionFuture).map(cf -> deviceConnectionFuture.result());
+        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+            final Future<?> deviceConnectionFuture = ((ConnectionLifecycle<?>) deviceConnectionClientFactory).connect();
+            return CompositeFuture.all(registrationFuture, deviceConnectionFuture)
+                    .map(ok -> registrationFuture.result());
+        } else {
+            return registrationFuture;
+        }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
         registrationClientFactory.addDisconnectListener(listener);
-        deviceConnectionClientFactory.addDisconnectListener(listener);
+        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+            ((ConnectionLifecycle<HonoConnection>) deviceConnectionClientFactory).addDisconnectListener(listener);
+        }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
         registrationClientFactory.addReconnectListener(listener);
-        deviceConnectionClientFactory.addReconnectListener(listener);
+        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+            ((ConnectionLifecycle<HonoConnection>) deviceConnectionClientFactory).addReconnectListener(listener);
+        }
     }
 
     @Override
     public Future<Void> isConnected() {
         final Future<Void> registrationFuture = registrationClientFactory.isConnected();
-        final Future<Void> deviceConnectionFuture = deviceConnectionClientFactory.isConnected();
-        return CompositeFuture.all(registrationFuture, deviceConnectionFuture).mapEmpty();
+        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+            final Future<Void> deviceConnectionFuture = ((ConnectionLifecycle<?>) deviceConnectionClientFactory).isConnected();
+            return CompositeFuture.all(registrationFuture, deviceConnectionFuture)
+                    .mapEmpty();
+        } else {
+            return registrationFuture;
+        }
     }
 
     @Override
     public Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
         final Future<Void> registrationFuture = registrationClientFactory.isConnected(waitForCurrentConnectAttemptTimeout);
-        final Future<Void> deviceConnectionFuture = deviceConnectionClientFactory.isConnected(waitForCurrentConnectAttemptTimeout);
-        return CompositeFuture.all(registrationFuture, deviceConnectionFuture).mapEmpty();
+        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+            final Future<?> deviceConnectionFuture = ((ConnectionLifecycle<?>) deviceConnectionClientFactory).isConnected(waitForCurrentConnectAttemptTimeout);
+            return CompositeFuture.all(registrationFuture, deviceConnectionFuture).mapEmpty();
+        } else {
+            return registrationFuture;
+        }
     }
 
     @Override
     public void disconnect() {
         registrationClientFactory.disconnect();
-        deviceConnectionClientFactory.disconnect();
+        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+            ((ConnectionLifecycle<?>) deviceConnectionClientFactory).disconnect();
+        }
     }
 
     @Override
     public void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
 
         final Promise<Void> registrationDisconnectPromise = Promise.promise();
-        registrationClientFactory.disconnect(registrationDisconnectPromise);
         final Promise<Void> deviceConnectionDisconnectPromise = Promise.promise();
-        deviceConnectionClientFactory.disconnect(deviceConnectionDisconnectPromise);
+
+        registrationClientFactory.disconnect(registrationDisconnectPromise);
+
+        if (deviceConnectionClientFactory instanceof ConnectionLifecycle) {
+            ((ConnectionLifecycle<?>) deviceConnectionClientFactory).disconnect(deviceConnectionDisconnectPromise);
+        } else {
+            deviceConnectionDisconnectPromise.complete();
+        }
+
         CompositeFuture.all(registrationDisconnectPromise.future(), deviceConnectionDisconnectPromise.future())
-                .map(obj -> deviceConnectionDisconnectPromise.future().result()).setHandler(completionHandler);
+        .map(ok -> (Void) null)
+        .setHandler(completionHandler);
     }
 }
