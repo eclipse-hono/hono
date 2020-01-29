@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,9 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 /**
  * Data volume period definition of the tenant resource limits .
+ * @deprecated This class will be removed in Hono 2.0.0. Use {@link org.eclipse.hono.util.ResourceLimitsPeriod} instead.
  */
+@Deprecated
 @JsonInclude(Include.NON_DEFAULT)
 public class DataVolumePeriod {
 
