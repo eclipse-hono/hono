@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -91,7 +91,10 @@ public class DataVolume {
      * Gets the period for the data usage calculation.
      *
      * @return The period for the data usage calculation.
+     * @deprecated From Hono 2.0.0, this method will return {@link org.eclipse.hono.util.ResourceLimitsPeriod} 
+     * instead of {@link org.eclipse.hono.util.DataVolumePeriod}.
      */
+    @Deprecated
     public final DataVolumePeriod getPeriod() {
         return period;
     }
@@ -101,7 +104,10 @@ public class DataVolume {
      *
      * @param period The period for the data usage calculation.
      * @return  a reference to this for fluent use.
+     * @deprecated From Hono 2.0.0, this method will take {@link org.eclipse.hono.util.ResourceLimitsPeriod}
+     * as an argument instead of {@link org.eclipse.hono.util.DataVolumePeriod}.
      */
+    @Deprecated
     public final DataVolume setPeriod(final DataVolumePeriod period) {
         this.period = period;
         return this;
