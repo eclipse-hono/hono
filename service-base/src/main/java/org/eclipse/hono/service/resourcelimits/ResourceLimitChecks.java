@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -86,4 +86,22 @@ public interface ResourceLimitChecks {
      *         if the check could not be performed.
      */
     Future<Boolean> isMessageLimitReached(TenantObject tenantObject, long payloadSize, SpanContext spanContext);
+
+    /**
+     * Checks if the maximum limit of device connection duration configured for a tenant
+     * have been reached.
+     *
+     * @param tenantObject The tenant configuration to check the limit against.
+     * @param spanContext The currently active OpenTracing span context that is used to
+     *                    trace the limits verification or {@code null}
+     *                    if no span is currently active.
+     * @return A future indicating the outcome of the check.
+     *         <p>
+     *         The future will be failed with a {@link ServiceInvocationException}
+     *         if the check could not be performed.
+     * @throws NullPointerException if the tenant object is null.
+     */
+    default Future<Boolean> isConnectionDurationLimitReached(TenantObject tenantObject, SpanContext spanContext) {
+        return Future.succeededFuture(Boolean.FALSE);
+    }
 }

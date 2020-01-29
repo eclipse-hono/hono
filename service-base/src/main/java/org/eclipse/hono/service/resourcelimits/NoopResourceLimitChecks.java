@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,6 +40,12 @@ public class NoopResourceLimitChecks implements ResourceLimitChecks {
 
     @Override
     public Future<Boolean> isMessageLimitReached(final TenantObject tenantObject, final long payloadSize,
+            final SpanContext spanContext) {
+        return Future.succeededFuture(Boolean.FALSE);
+    }
+
+    @Override
+    public Future<Boolean> isConnectionDurationLimitReached(final TenantObject tenantObject,
             final SpanContext spanContext) {
         return Future.succeededFuture(Boolean.FALSE);
     }
