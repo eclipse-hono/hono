@@ -168,6 +168,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
         if (payload == null) {
             final String msg = "Missing request body";
             TracingHelper.logError(span, msg);
+            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
             HttpUtils.badRequest(ctx, msg);
             span.finish();
             return;
