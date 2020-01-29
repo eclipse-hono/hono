@@ -32,9 +32,11 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.DataVolumePeriod;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceLimitsPeriod;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
@@ -66,6 +68,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
     private static final String COMMANDS_PAYLOAD_SIZE_METRIC_NAME = String.format("%s_bytes_sum",
             MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD.replace(".", "_"));
+    private static final String CONNECTIONS_DURATION_METRIC_NAME = String.format("%s_seconds_sum",
+            MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED_DURATION.replace(".", "_"));
     private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
     private static final String QUERY_URI = "/api/v1/query";
     private static final String LIMITS_CACHE_NAME = "resource-limits";
@@ -292,6 +296,108 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 });
     }
 
+    @Override
+    public Future<Boolean> isConnectionDurationLimitReached(
+            final TenantObject tenant,
+            final SpanContext spanContext) {
+
+        Objects.requireNonNull(tenant);
+
+        final Span span = createSpan("verify connection duration limit", spanContext, tenant);
+        final Map<String, Object> items = new HashMap<>();
+
+        final Promise<Boolean> result = Promise.promise();
+
+        if (tenant.getResourceLimits() == null) {
+            items.put(Fields.EVENT, "no resource limits configured");
+            log.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
+            result.complete(Boolean.FALSE);
+        } else if (tenant.getResourceLimits().getConnectionDuration() == null) {
+            items.put(Fields.EVENT, "no connection duration limit configured");
+            log.trace("no connection duration limit configured for tenant [{}]", tenant.getTenantId());
+            result.complete(Boolean.FALSE);
+        } else {
+            checkConnectionDurationLimit(tenant, items, span, result);
+        }
+
+        return result.future()
+                .map(b -> {
+                    items.put("limit exceeded", b);
+                    span.log(items);
+                    span.finish();
+                    return b;
+                });
+    }
+
+    private void checkConnectionDurationLimit(final TenantObject tenant, final Map<String, Object> items,
+            final Span span, final Promise<Boolean> result) {
+        final ConnectionDuration connectionDurationConfig = tenant.getResourceLimits().getConnectionDuration();
+        final long maxConnectionDurationInMinutes = connectionDurationConfig.getMaxMinutes();
+        final Instant effectiveSince = connectionDurationConfig.getEffectiveSince();
+        final PeriodMode periodMode = PeriodMode.from(connectionDurationConfig.getPeriod().getMode());
+        final long periodInDays = Optional.ofNullable(connectionDurationConfig.getPeriod())
+                .map(ResourceLimitsPeriod::getNoOfDays)
+                .orElse(0);
+
+        log.trace("connection duration config for the tenant [{}] is [{}:{}, {}:{}, {}:{}, {}:{}]",
+                tenant.getTenantId(),
+                TenantConstants.FIELD_MAX_MINUTES, maxConnectionDurationInMinutes,
+                TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
+                TenantConstants.FIELD_PERIOD_MODE, periodMode,
+                TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
+
+        if (maxConnectionDurationInMinutes == TenantConstants.UNLIMITED_MINUTES || effectiveSince == null || PeriodMode.UNKNOWN.equals(periodMode)) {
+            result.complete(Boolean.FALSE);
+        } else {
+            final long allowedMaxMinutes = getOrAddToCache(limitsCache,
+                    String.format("%s_allowed_max_minutes", tenant.getTenantId()),
+                    () -> calculateEffectiveLimit(
+                            OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                            OffsetDateTime.now(ZoneOffset.UTC),
+                            periodMode,
+                            maxConnectionDurationInMinutes));
+            final long connectionDurationUsagePeriod = getOrAddToCache(limitsCache,
+                    String.format("%s_conn_duration_usage_period", tenant.getTenantId()),
+                    () -> calculateResourceUsagePeriod(
+                            OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                            OffsetDateTime.now(ZoneOffset.UTC),
+                            periodMode,
+                            periodInDays));
+
+            items.put("current period connection duration limit in minutes", allowedMaxMinutes);
+
+            if (connectionDurationUsagePeriod <= 0) {
+                result.complete(Boolean.FALSE);
+            } else {
+                final String queryParams = String.format("minute( sum( increase( %s {tenant=\"%s\"} [%sd])))",
+                        CONNECTIONS_DURATION_METRIC_NAME,
+                        tenant.getTenantId(),
+                        connectionDurationUsagePeriod);
+                final String key = String.format("%s_minutes_consumed", tenant.getTenantId());
+
+                Optional.ofNullable(limitsCache)
+                        .map(ok -> limitsCache.get(key))
+                        .map(cachedValue -> Future.succeededFuture((long) cachedValue))
+                        .orElseGet(() -> executeQuery(queryParams, span)
+                                .map(minutesConnected -> addToCache(limitsCache, key, minutesConnected)))
+                        .map(minutesConnected -> {
+                            items.put("current period's connection duration in minutes", minutesConnected);
+                            final boolean isExceeded = minutesConnected >= allowedMaxMinutes;
+                            log.trace(
+                                    "connection duration limit {} exceeded [tenant: {}, connection duration consumed: {}, allowed max-duration: {}, {}: {}, {}: {}, {}: {}]",
+                                    isExceeded ? "" : "not ",
+                                    tenant.getTenantId(), minutesConnected, allowedMaxMinutes,
+                                    TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
+                                    TenantConstants.FIELD_PERIOD_MODE, periodMode,
+                                    TenantConstants.FIELD_PERIOD_NO_OF_DAYS, periodInDays);
+                            return isExceeded;
+                        })
+                        .otherwise(failed -> Boolean.FALSE)
+                        .setHandler(result);
+            }
+        }
+    }
+
     private void checkMessageLimit(
             final TenantObject tenant,
             final long payloadSize,
@@ -319,11 +425,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
             final long allowedMaxBytes = getOrAddToCache(limitsCache,
                     String.format("%s_allowed_max_bytes", tenant.getTenantId()),
-                    () -> calculateDataVolume(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                    () -> calculateEffectiveLimit(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
                             OffsetDateTime.now(ZoneOffset.UTC), periodMode, maxBytes));
             final long dataUsagePeriod = getOrAddToCache(limitsCache,
                     String.format("%s_data_usage_period", tenant.getTenantId()),
-                    () -> calculateDataUsagePeriod(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
+                    () -> calculateResourceUsagePeriod(OffsetDateTime.ofInstant(effectiveSince, ZoneOffset.UTC),
                             OffsetDateTime.now(ZoneOffset.UTC), periodMode, periodInDays));
 
             items.put("current period bytes limit", allowedMaxBytes);
@@ -470,69 +576,61 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     /**
-     * Calculates the data volume (in bytes) that is allowed for a tenant for 
-     * the current period based on the mode defined by 
-     * {@link TenantConstants#FIELD_PERIOD_MODE}.
+     * Calculates the effective resource limit for a tenant for the given period from the configured values.
      * <p>
-     * In <em>monthly</em> mode, if the effectiveSince date doesn't fall on the 
-     * first day of the month then the allowed data volume for the tenant is 
-     * calculated as below. For rest of the months and the <em>days</em> mode,
-     * the maxBytes defined by {@link TenantConstants#FIELD_MAX_BYTES} is used directly.
+     * In the <em>monthly</em> mode, if the effectiveSince date doesn't fall on the 
+     * first day of the month then the effective resource limit for the tenant is 
+     * calculated as below.
      * <pre>
-     *             maxBytes 
+     *             configured limit 
      *   ---------------------------------- x No. of days from effectiveSince till lastDay of the targetDateMonth.
      *    No. of days in the current month
      * </pre>
      * <p>
-     * 
-     * @param effectiveSince The point of time on which the data volume limit 
-     *                       came into effect.
-     * @param targetDateTime The target point of time used for the data usage period 
-     *                       calculation.
+     * For rest of the months and the <em>days</em> mode, the configured limit is used directly.
+     *
+     * @param effectiveSince The point of time on which the given resource limit came into effect.
+     * @param targetDateTime The target date and time.
      * @param mode The mode of the period. 
-     * @param maxBytes The maximum allowed bytes defined in configuration by 
-     *                 {@link TenantConstants#FIELD_MAX_BYTES}. 
-     * @return The allowed data-volume in bytes.
+     * @param configuredLimit The configured limit. 
+     * @return The effective resource limit that has been calculated.
      */
-    long calculateDataVolume(
+    long calculateEffectiveLimit(
             final OffsetDateTime effectiveSince,
             final OffsetDateTime targetDateTime,
             final PeriodMode mode,
-            final long maxBytes) {
+            final long configuredLimit) {
         if (PeriodMode.MONTHLY.equals(mode)
-                && maxBytes > 0
+                && configuredLimit > 0
                 && !targetDateTime.isBefore(effectiveSince)
                 && YearMonth.from(targetDateTime).equals(YearMonth.from(effectiveSince))
                 && effectiveSince.getDayOfMonth() != 1) {
             final OffsetDateTime lastDayOfMonth = effectiveSince.with(TemporalAdjusters.lastDayOfMonth());
             final long daysBetween = ChronoUnit.DAYS
                     .between(effectiveSince, lastDayOfMonth) + 1;
-            return Double.valueOf(Math.ceil(daysBetween * maxBytes / lastDayOfMonth.getDayOfMonth())).longValue();
+            return Double.valueOf(Math.ceil(daysBetween * configuredLimit / lastDayOfMonth.getDayOfMonth()))
+                    .longValue();
         }
-        return maxBytes;
+        return configuredLimit;
     }
 
     /**
-     * Calculates the period for which the data usage is to be retrieved from the
-     * prometheus server based on the mode defined by 
+     * Calculates the period for which the resource usage like volume of used data, connection duration etc. 
+     * is to be retrieved from the Prometheus server based on the mode defined by 
      * {@link TenantConstants#FIELD_PERIOD_MODE}.
      *
-     * @param effectiveSince The point of time on which the data volume limit came
-     *                      into effect.
-     * @param targetDateTime The target point of time used for the data usage period 
-     *                       calculation.
-     * @param mode The mode of the period defined by
-     *                   {@link TenantConstants#FIELD_PERIOD_MODE}.
-     * @param periodInDays The number of days defined by 
-     *                     {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}. 
-     * @return The period in days for which the data usage is to be calculated.
+     * @param effectiveSince The point of time on which the resource limit came into effect.
+     * @param currentDateTime The current date and time used for the resource usage period calculation.
+     * @param mode The mode of the period defined by {@link TenantConstants#FIELD_PERIOD_MODE}.
+     * @param periodInDays The number of days defined by {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS}. 
+     * @return The period in days for which the resource usage is to be calculated.
      */
-    long calculateDataUsagePeriod(
+    long calculateResourceUsagePeriod(
             final OffsetDateTime effectiveSince,
-            final OffsetDateTime targetDateTime,
+            final OffsetDateTime currentDateTime,
             final PeriodMode mode,
             final long periodInDays) {
-        final long inclusiveDaysBetween = ChronoUnit.DAYS.between(effectiveSince, targetDateTime) + 1;
+        final long inclusiveDaysBetween = ChronoUnit.DAYS.between(effectiveSince, currentDateTime) + 1;
         switch (mode) {
         case DAYS:
             if (inclusiveDaysBetween > 0 && periodInDays > 0) {
@@ -541,11 +639,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             }
             return 0L;
         case MONTHLY:
-            if (YearMonth.from(targetDateTime).equals(YearMonth.from(effectiveSince))
+            if (YearMonth.from(currentDateTime).equals(YearMonth.from(effectiveSince))
                     && effectiveSince.getDayOfMonth() != 1) {
                 return inclusiveDaysBetween;
             }
-            return targetDateTime.getDayOfMonth();
+            return currentDateTime.getDayOfMonth();
         default:
             return 0L;
         }
