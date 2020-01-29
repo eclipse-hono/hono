@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,6 +34,9 @@ public class ResourceLimits {
 
     @JsonProperty(TenantConstants.FIELD_DATA_VOLUME)
     private DataVolume dataVolume;
+
+    @JsonProperty(TenantConstants.FIELD_CONNECTION_DURATION)
+    private ConnectionDuration connectionDuration;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(Include.NON_EMPTY)
@@ -107,6 +110,26 @@ public class ResourceLimits {
      */
     public final ResourceLimits setDataVolume(final DataVolume dataVolume) {
         this.dataVolume = dataVolume;
+        return this;
+    }
+
+    /**
+     * Gets the properties that are required for the connection duration verification.
+     *
+     * @return The connection duration properties.
+     */
+    public final ConnectionDuration getConnectionDuration() {
+        return connectionDuration;
+    }
+
+    /**
+     * Sets the properties that are required for the connection duration verification.
+     *
+     * @param connectionDuration the connection duration properties.
+     * @return a reference to this for fluent use.
+     */
+    public final ResourceLimits setConnectionDuration(final ConnectionDuration connectionDuration) {
+        this.connectionDuration = connectionDuration;
         return this;
     }
 
