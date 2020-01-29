@@ -36,10 +36,12 @@ import java.util.Map;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
+import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.DataVolumePeriod;
 import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.ResourceLimitsPeriod;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -260,11 +262,11 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
-     * Verifies the calculated data volume for various scenarios.
+     * Verifies the effective resource limit calculation for various scenarios.
      *
      */
     @Test
-    public void testCalculateDataVolume() {
+    public void verifyEffectiveResourceLimitCalculation() {
         final long maxBytes = 9300;
 
         // Monthly mode
@@ -426,12 +428,103 @@ public class PrometheusBasedResourceLimitChecksTest {
                 }));
     }
 
+    /**
+     *
+     * Verifies that the connection duration limit check returns {@code false} if the limit is not exceeded.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testConnectionDurationLimitNotExceeded(final VertxTestContext ctx) {
+
+        givenDeviceConnectionDurationInMinutes(90);
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setConnectionDuration(new ConnectionDuration()
+                                .setMaxDuration(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new ResourceLimitsPeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
+        limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     *
+     * Verifies that the connection duration limit check returns {@code true} if the limit is exceeded.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testConnectionDurationLimitExceeded(final VertxTestContext ctx) {
+
+        givenDeviceConnectionDurationInMinutes(100);
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setConnectionDuration(new ConnectionDuration()
+                                .setMaxDuration(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new ResourceLimitsPeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
+        limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertTrue(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the connection duration limit check returns {@code false} if no metrics are
+     * available (yet).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testConnectionDurationLimitNotExceededForMissingMetrics(final VertxTestContext ctx) {
+
+        givenDeviceConnectionDurationInMinutes(null);
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setConnectionDuration(new ConnectionDuration()
+                                .setMaxDuration(100L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new ResourceLimitsPeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
+        limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        // THEN the limit is not exceeded
+                        assertFalse(response);
+                        verify(webClient).get(eq(DEFAULT_PORT), eq(DEFAULT_HOST), anyString());
+                        // AND the span is not marked as erroneous
+                        verify(span).log(argThat((Map<String, ?> map) -> !"error".equals(map.get(Fields.EVENT))));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
     private void givenCurrentConnections(final Integer currentConnections) {
         givenResponseWithValue(currentConnections);
     }
 
     private void givenDataVolumeUsageInBytes(final Integer consumedBytes) {
         givenResponseWithValue(consumedBytes);
+    }
+
+    private void givenDeviceConnectionDurationInMinutes(final Integer consumedMinutes) {
+        givenResponseWithValue(consumedMinutes);
     }
 
     @SuppressWarnings("unchecked")

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -218,7 +218,12 @@ public class TenantTest {
                                 .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
                                 .put(TenantConstants.FIELD_PERIOD, new JsonObject()
                                         .put(TenantConstants.FIELD_PERIOD_MODE, "days")
-                                        .put(TenantConstants.FIELD_PERIOD_NO_OF_DAYS, 90))));
+                                        .put(TenantConstants.FIELD_PERIOD_NO_OF_DAYS, 90)))
+                        .put(TenantConstants.FIELD_CONNECTION_DURATION, new JsonObject()
+                                .put(TenantConstants.FIELD_MAX_MINUTES, 20_000_000)
+                                .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
+                                .put(TenantConstants.FIELD_PERIOD, new JsonObject()
+                                        .put(TenantConstants.FIELD_PERIOD_MODE, "monthly"))));
 
         final Tenant tenant = tenantSpec.mapTo(Tenant.class);
         assertNotNull(tenant);
@@ -236,6 +241,14 @@ public class TenantTest {
         assertNotNull(limits.getDataVolume().getPeriod());
         assertEquals("days", limits.getDataVolume().getPeriod().getMode());
         assertEquals(90, limits.getDataVolume().getPeriod().getNoOfDays());
+        assertNotNull(limits.getConnectionDuration());
+        assertEquals(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00+02:00", OffsetDateTime::from)
+                        .toInstant(),
+                limits.getConnectionDuration().getEffectiveSince());
+        assertEquals(20_000_000, limits.getConnectionDuration().getMaxMinutes());
+        assertNotNull(limits.getConnectionDuration().getPeriod());
+        assertEquals("monthly", limits.getConnectionDuration().getPeriod().getMode());
     }
 
     /**
