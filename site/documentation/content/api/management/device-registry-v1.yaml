@@ -642,6 +642,8 @@ components:
                   to use milliseconds.
             "data-volume":
                $ref: '#/components/schemas/DataVolume'
+            "connection-duration":
+               $ref: '#/components/schemas/ConnectionDuration'
             "ext":
                $ref: '#/components/schemas/Extensions'
 
@@ -712,6 +714,26 @@ components:
                description: The maximum number of bytes to be allowed for a tenant for the
                             defined period.
                             A value of -1 (the default) indicates that no limit is set.
+            "period":
+               $ref: '#/components/schemas/Period'
+
+      ConnectionDuration:
+         type: object
+         additionalProperties: false
+         required:
+            - effective-since
+            - period
+         properties:
+            "effective-since":
+               type: string
+               format: date-time
+               description: The date-time on which the connection duration limit came into effect.
+            "max-minutes":
+               type: integer
+               default: -1
+               description: The maximum number of minutes to be allowed for a tenant for the
+                  defined period.
+                  A value of -1 (the default) indicates that no limit is set.
             "period":
                $ref: '#/components/schemas/Period'
 

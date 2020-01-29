@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,6 +38,10 @@ public final class TenantConstants extends RequestResponseApiConstants {
      */
     public static final int UNLIMITED_CONNECTIONS = -1;
     /**
+     * The value indicating an <em>unlimited</em> number of minutes to be allowed for a tenant.
+     */
+    public static final long UNLIMITED_MINUTES = -1;
+    /**
      * The value indicating <em>unlimited</em> time-to-live for downstream events.
      */
     public static final long UNLIMITED_TTL = -1;
@@ -61,6 +65,13 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * automatically provision new devices. 
      */
     public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
+
+    /**
+     * The name of the property that contains the configuration options to limit 
+     * the device connection duration of tenants.
+     */
+    public static final String FIELD_CONNECTION_DURATION = "connection-duration";
+
     /**
      * The name of the property that contains the configuration options for the data volume.
      */
@@ -80,7 +91,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
     /**
      * The name of the property that contains the maximum number of connections to be allowed for a tenant.
      */
-    public static final String FIELD_MAX_CONNECTIONS = "max-connections";    
+    public static final String FIELD_MAX_CONNECTIONS = "max-connections";
+    /**
+     * The name of the property that contains the maximum connection duration in minutes to be allowed for a tenant.
+     */
+    public static final String FIELD_MAX_MINUTES = "max-minutes";
     /**
      * The name of the property that contains the maximum <em>time til disconnect</em> (seconds) that protocol
      * adapters should use for a tenant.
