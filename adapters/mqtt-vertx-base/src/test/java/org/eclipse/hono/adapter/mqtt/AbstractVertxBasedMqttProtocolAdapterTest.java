@@ -192,6 +192,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(resourceLimitChecks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
 
@@ -1103,6 +1105,32 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(authHandler.authenticateDevice(any(MqttContext.class)))
                 .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
         when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
+        adapter.handleEndpointConnection(endpoint);
+
+        // THEN the adapter has tried to authenticate the device
+        verify(authHandler).authenticateDevice(any(MqttContext.class));
+        // THEN the connection request is rejected
+        verify(endpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
+    }
+
+    /**
+     * Verifies that the connection is rejected due to the connection duration limit exceeded.
+     */
+    @Test
+    public void testConnectionDurationLimitExceeded() {
+
+        // GIVEN an adapter requiring devices to authenticate endpoint
+        final MqttServer server = getMqttServer(false);
+        config.setAuthenticationRequired(true);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+        forceClientMocksToConnected();
+
+        // WHEN a device tries to establish a connection
+        when(authHandler.authenticateDevice(any(MqttContext.class)))
+                .thenReturn(Future.succeededFuture(new DeviceUser("DEFAULT_TENANT", "4711")));
+        when(resourceLimitChecks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final MqttEndpoint endpoint = getMqttEndpointAuthenticated();
         adapter.handleEndpointConnection(endpoint);
