@@ -43,6 +43,10 @@ The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT`
 
 After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the MQTT adapter.  If the limit is exceeded then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
 
+## Connection Duration Limits
+
+Before accepting any connection requests from the devices, the MQTT adapter verifies that the configured [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) is not exceeded. If the limit has been already reached, then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+
 ## Message Limits
 
 Before accepting any telemetry or event or command messages, the MQTT adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 

@@ -14,6 +14,8 @@ The Kura adapter by default requires devices (gateways) to authenticate during c
 
 Please refer to the [Eclipse Kura documentation](http://eclipse.github.io/kura/config/cloud-services.html) on how to configure the gateway's cloud service connection accordingly. It is important to set the gateway's *topic.context.account-name* to the ID of the Hono tenant that the gateway has been registered with whereas the gateway's *client-id* needs to be set to the corresponding Hono device ID. The *auth-id* used as part of the gateway's *username* property needs to match the authentication identifier of a set of credentials registered for the device ID in Hono's Credentials service. In other words, the credentials configured on the gateway need to belong to the corresponding device ID.
 
+After verifying the credentials, the number of existing connections and the overall amount of time that the devices have already been connected are checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the Kura adapter.  If the limit is exceeded then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+
 Once the gateway has established a connection to the Kura adapter, all *control* and *data* messages published by applications running on the gateway are sent to the adapter and mapped to Hono's Telemetry and Event API endpoints as follows:
 
 1. The adapter treats all messages that are published to a topic starting with the configured `HONO_KURA_CONTROL_PREFIX` as control messages. All other messages are considered to be data messages.
