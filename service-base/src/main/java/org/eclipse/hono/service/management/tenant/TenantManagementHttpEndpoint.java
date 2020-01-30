@@ -38,11 +38,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 /**
  * An {@code HttpEndpoint} for managing tenant information.
  * <p>
- * This endpoint implements the <em>tenant</em> resources of Hono's
- * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
- * It receives HTTP requests representing operation invocations and sends them to an address on
- * the vertx event bus for processing. The outcome is then returned to the peer in the HTTP response.
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a>.
+ * It receives HTTP requests representing operation invocations and sends them to an address on the vertx
+ * event bus for processing. The outcome is then returned to the peer in the HTTP response.
+ * @deprecated This class will be removed in future versions. Please use {@link AbstractTenantManagementHttpEndpoint} based implementation in the future.
  */
+@Deprecated(forRemoval = true)
 public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
     /**
