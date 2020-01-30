@@ -15,10 +15,12 @@ package org.eclipse.hono.service.management;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -108,20 +110,22 @@ public class Util {
     }
 
     /**
-     * Creates a response based on generic result.
+     * Writes a response based on generic result.
      * <p>
      * The behavior is as follows:
      * <ol>
      * <li>Set the status code on the response.</li>
      * <li>If the status code represents an error condition (i.e. the code is &gt;= 400),
-     * then the JSON object passed in to the returned handler is written to the response body.</li>
-     * <li>Otherwise, the JSON object is written to the response body and the given custom handler is
+     * then the JSON object passed in the result is written to the response body.</li>
+     * <li>If the result is created (the code is = 201), the JSON object is written to the response body and the given custom handler is
      * invoked (if not {@code null}).</li>
+     * <li>Sets the status of the tracing span and finishes it.</li>
+     * <li>Ends a response.</li>
      * </ol>
      *
      * @param ctx The routing context of the request.
      * @param result The generic result of the operation.
-     * @param customHandler An (optional) handler for post processing the HTTP response, e.g. to set any additional HTTP
+     * @param customHandler An (optional) handler for post processing successful HTTP response, e.g. to set any additional HTTP
      *                      headers. The handler <em>must not</em> write to response body. May be {@code null}.
      * @param span The active OpenTracing span for this operation. The status of the response is logged and span is finished.
      */
@@ -143,19 +147,41 @@ public class Util {
     }
 
     /**
-     * Creates a response based on operation result (including resource version).
+     * Writes a response based on operation result (including the resource version).
      * <p>
      * Sets ETAG header and then calls {@link #writeResponse}
      *
      * @param ctx The routing context of the request.
      * @param result The operation result of the operation.
-     * @param customHandler An (optional) handler for post processing the HTTP response, e.g. to set any additional HTTP
+     * @param customHandler An (optional) handler for post processing successful HTTP response, e.g. to set any additional HTTP
      *                      headers. The handler <em>must not</em> write to response body. May be {@code null}.
      * @param span The active OpenTracing span for this operation. The status of the response is logged and span is finished.
      */
     public static final void writeOperationResponse(final RoutingContext ctx, final OperationResult<?> result, final Handler<HttpServerResponse> customHandler, final Span span) {
         result.getResourceVersion().ifPresent(v -> ctx.response().putHeader(HttpHeaders.ETAG, v));
         writeResponse(ctx, result, customHandler, span);
+    }
+
+    /**
+     * Gets the payload from a request body.
+     * <p>
+     * The returned JSON object contains the given payload (if not {@code null}).
+     * If the given payload does not contain an <em>enabled</em> property, then
+     * it is added with value {@code true} to the returned object.
+     *
+     * @param payload The payload from the request message.
+     * @return The payload (never {@code null}).
+     */
+    public static final JsonObject getRequestPayload(final JsonObject payload) {
+
+        return Optional.ofNullable(payload).map(pl -> {
+            final Object obj = pl.getValue(RegistryManagementConstants.FIELD_ENABLED);
+            if (obj instanceof Boolean) {
+                return pl;
+            } else {
+                return pl.copy().put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
+            }
+        }).orElse(new JsonObject().put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE));
     }
 
 }

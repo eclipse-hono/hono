@@ -31,7 +31,7 @@ import org.eclipse.hono.service.management.credentials.CredentialsManagementHttp
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.tenant.TenantManagementHttpEndpoint;
+import org.eclipse.hono.service.management.tenant.AbstractTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
@@ -224,8 +224,8 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(TenantManagementService.class)
-    public HttpEndpoint tenantHttpEndpoint() {
-        return new TenantManagementHttpEndpoint(vertx());
+    public AbstractTenantManagementHttpEndpoint tenantHttpEndpoint() {
+        return new AutowiredTenantManagementHttpEndpoint(vertx());
     }
 
     /**

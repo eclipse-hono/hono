@@ -40,7 +40,10 @@ import io.vertx.core.json.JsonObject;
  * In particular, this base class provides support for receiving service invocation request messages
  * via vert.x' event bus and route them to specific methods corresponding to the operation indicated
  * in the message.
+ * @deprecated This class will be removed in future versions as HTTP endpoint does not use event bus anymore.
+ *             Please use {@link org.eclipse.hono.service.management.tenant.AbstractTenantManagementHttpEndpoint} based implementation in the future.
  */
+@Deprecated(forRemoval = true)
 public abstract class EventBusTenantManagementAdapter extends EventBusService {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
