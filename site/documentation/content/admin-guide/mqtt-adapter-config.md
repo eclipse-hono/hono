@@ -89,6 +89,14 @@ The adapter requires a connection to the *AMQP 1.0 Messaging Network* in order t
 The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
 
+## Command & Control Connection Configuration
+
+The adapter requires an additional connection to the *AMQP 1.0 Messaging Network* in order to receive
+commands from downstream applications and send responses to commands back to applications.
+
+The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+with `HONO_COMMAND` being used as `${PREFIX}`. The properties for configuring response caching can be ignored.
+
 ## Tenant Service Connection Configuration
 
 The adapter requires a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}}) in order to retrieve information for a tenant.
