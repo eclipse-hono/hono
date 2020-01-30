@@ -36,9 +36,9 @@ import io.vertx.core.Verticle;
  * and <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
  * </p>
  */
-@ComponentScan("org.eclipse.hono.service.auth")
-@ComponentScan("org.eclipse.hono.service.metric")
-@ComponentScan("org.eclipse.hono.deviceregistry")
+@ComponentScan(basePackages = "org.eclipse.hono.service.auth", excludeFilters = @ComponentScan.Filter(Deprecated.class))
+@ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
+@ComponentScan(basePackages = "org.eclipse.hono.deviceregistry", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @Configuration
 @EnableAutoConfiguration
 
