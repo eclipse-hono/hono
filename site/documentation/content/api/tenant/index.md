@@ -231,6 +231,7 @@ The table below contains the properties which are used to configure a tenant's r
 | :------------------ | :-------: | :------------ | :------------ | :---------- |
 | *max-connections*   | *no*      | *number*      | `-1`          | The maximum number of concurrent connections allowed from devices of this tenant. The default value `-1` indicates that no limit is set. |
 | *max-ttl*           | *no*      | *number*      | `-1`          | The maximum time-to-live (in seconds) to use for events published by devices of this tenant. Any default TTL value specified at either the tenant or device level will be limited to the max value specified here. If this property is set to a value greater than `-1` and no default TTL is specified for a device, the max value will be used for events published by the device. A value of `-1` (the default) indicates that no limit is set. **Note** that this property contains the TTL in *seconds* whereas the AMQP 1.0 specification defines a message's *ttl* header to use milliseconds. |
+| *connection-duration*| *no*      | *object*      | `-`           | The maximum connection duration allowed for the given tenant. Refer to  [Connection Duration Configuration Format]({{< relref "#connection-duration-configuration-format" >}}) for details.|
 | *data-volume*       | *no*      | *object*      | `-`           | The maximum data volume allowed for the given tenant. Refer to  [Data Volume Configuration Format]({{< relref "#data-volume-configuration-format" >}}) for details.|
 
 Protocol adapters SHOULD use the *max-connections* property to determine if a device's connection request should be accepted or rejected.
@@ -248,6 +249,27 @@ Protocol adapters SHOULD use the *max-ttl* property to determine the *effective 
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
 This allows for future *well-known* additions and also allows to add further information which might be relevant to a *custom* adapter only.
+
+### Connection Duration Configuration Format
+
+The table below contains the properties which are used to configure a tenant's connection duration limit:
+
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *effective-since*        | *yes*     | *string*      | `-`           | The point in time at which the current settings became effective, i.e. the start of the first accounting period based on these settings. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).|
+| *max-minutes*            | *no*      | *number*      | `-1`        | The maximum connection duration in minutes allowed for the tenant for each accounting period. MUST be an integer. Minus one indicates that no limit is set. |
+| *period*                 | *no*      | *object*      | `-`          | The mode and length of an accounting period, i.e. the resource usage is calculated based on the defined number of days or on a monthly basis. |
+
+Protocol adapters that maintain *connection state* SHOULD use this information to determine if a connection request from a device should be accepted or not. For more information, please refer to the [connection duration limit concept]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}).
+
+### Resource Limits Period Configuration Format
+
+The table below contains the properties that are used to configure a tenant's resource limits period:
+
+| Name                     | Mandatory | JSON Type     | Default Value | Description |
+| :------------------------| :-------: | :------------ | :------------ | :---------- |
+| *mode*                   | *yes*     | *string*      | `-`           | The mode of the resource usage calculation. The default implementation supports two modes namely `days` and `monthly`. |
+| *no-of-days*             | *no*      | *number*      | `-`           | When the mode is set as `days`, then this value represents the length of an accounting period , i.e. the number of days over which the resource usage is to be limited. MUST be a positive integer.|
 
 ### Data Volume Configuration Format
 

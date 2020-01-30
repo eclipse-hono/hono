@@ -26,6 +26,10 @@ title = "Release Notes"
 * A new metric namely *hono.connections.authenticated.duration* has been introduced to track the 
   connection duration of the authenticated devices. Please refer to the 
   [Metrics API]({{% doclink "/api/metrics/" %}}) for more details.
+* The protocol adapters that maintain *connection state* can now be configured to verify the *connection 
+  duration limit* for each tenant before accepting any new connection request from the devices. Please 
+  refer to the [resource-limits]({{% doclink "/concepts/resource-limits/#connection-duration-limit" %}}) 
+  section for more details.
 
 ### Fixes & Enhancements
 
