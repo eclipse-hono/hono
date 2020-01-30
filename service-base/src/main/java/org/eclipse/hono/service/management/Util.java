@@ -132,10 +132,10 @@ public class Util {
         if (status >= 400) {
             HttpUtils.setResponseBody(response, JsonObject.mapFrom(result.getPayload()));
         } else if (status == HttpURLConnection.HTTP_CREATED) {
-            HttpUtils.setResponseBody(response, JsonObject.mapFrom(result.getPayload()));
             if (customHandler != null) {
                 customHandler.handle(response);
             }
+            HttpUtils.setResponseBody(response, JsonObject.mapFrom(result.getPayload()));
         }
         Tags.HTTP_STATUS.set(span, status);
         span.finish();
