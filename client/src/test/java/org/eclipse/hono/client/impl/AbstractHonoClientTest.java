@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,47 +13,38 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
 
 
 /**
  * Tests verifying behavior of {@link AbstractHonoClient}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class AbstractHonoClientTest {
-
-    /**
-     * Time out each test after five seconds.
-     */
-    @Rule
-    public final Timeout timeout = Timeout.seconds(5);
 
     /**
      * Verifies that the given application properties are propagated to
      * the message.
-     *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testApplicationPropertiesAreSetAtTheMessage(final TestContext ctx) {
+    public void testApplicationPropertiesAreSetAtTheMessage() {
 
         final Message msg = mock(Message.class);
         final Map<String, Object> applicationProps = new HashMap<>();
@@ -66,6 +57,6 @@ public class AbstractHonoClientTest {
         AbstractHonoClient.setApplicationProperties(msg, applicationProps);
 
         verify(msg).setApplicationProperties(applicationPropsCaptor.capture());
-        assertThat(applicationPropsCaptor.getValue().getValue(), is(applicationProps));
+        assertThat(applicationPropsCaptor.getValue().getValue()).isEqualTo(applicationProps);
     }
 }

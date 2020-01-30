@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,16 +30,13 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import io.vertx.proton.ProtonSender;
@@ -48,7 +45,6 @@ import io.vertx.proton.ProtonSender;
  * Tests verifying behavior of {@link TelemetrySenderImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
 public class TelemetrySenderImplTest {
 
     private Vertx vertx;
@@ -59,7 +55,7 @@ public class TelemetrySenderImplTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         vertx = mock(Vertx.class);
@@ -71,11 +67,9 @@ public class TelemetrySenderImplTest {
     /**
      * Verifies that the sender does not wait for the peer to settle and
      * accept a message before succeeding.
-     * 
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testSendMessageDoesNotWaitForAcceptedOutcome(final TestContext ctx) {
+    public void testSendMessageDoesNotWaitForAcceptedOutcome() {
 
         // GIVEN a sender that has credit
         when(sender.sendQueueFull()).thenReturn(Boolean.FALSE);

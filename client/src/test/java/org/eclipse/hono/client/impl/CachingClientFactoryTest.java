@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.client.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.mock;
@@ -25,24 +26,23 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Tests verifying behavior of CachingClientFactory.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class CachingClientFactoryTest {
 
     private Vertx vertx;
@@ -50,7 +50,7 @@ public class CachingClientFactoryTest {
     /**
      * Sets up common fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -68,7 +68,7 @@ public class CachingClientFactoryTest {
      * @param ctx The helper to use for running async tests.
      */
     @Test
-    public void testGetOrCreateClientFailsIfSupplierFails(final TestContext ctx) {
+    public void testGetOrCreateClientFailsIfSupplierFails(final VertxTestContext ctx) {
 
         // GIVEN a factory
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
@@ -76,11 +76,12 @@ public class CachingClientFactoryTest {
         factory.getOrCreateClient(
                 "bumlux",
                 () -> Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
-                ctx.asyncAssertFailure(t -> {
+                ctx.failing(t -> {
                     // THEN the creation fails with the exception conveyed by the supplier
-                    ctx.assertEquals(
-                            HttpURLConnection.HTTP_UNAVAILABLE,
-                            ((ServerErrorException) t).getErrorCode());
+                    ctx.verify(() -> {
+                        assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -91,7 +92,7 @@ public class CachingClientFactoryTest {
      * @param ctx The helper to use for running async tests.
      */
     @Test
-    public void testGetOrCreateClientFailsIfInvokedConcurrently(final TestContext ctx) {
+    public void testGetOrCreateClientFailsIfInvokedConcurrently(final VertxTestContext ctx) {
 
         // GIVEN a factory that already creates a client for key "bumlux" (and never completes doing so)
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
@@ -105,15 +106,16 @@ public class CachingClientFactoryTest {
         factory.getOrCreateClient(
                 "bumlux",
                 () -> {
-                    ctx.fail("should not create client concurrently");
+                    ctx.failNow(new AssertionError("should not create client concurrently"));
                     return Future.succeededFuture();
-                }, ctx.asyncAssertFailure(t -> {
-                    // THEN the concurrent attempt fails after having done the default number of retries.
-                    ctx.assertTrue(t instanceof ServerErrorException);
-                    ctx.assertEquals(
-                            HttpURLConnection.HTTP_UNAVAILABLE,
-                            ServiceInvocationException.extractStatusCode(t));
-                    verify(vertx, times(CachingClientFactory.MAX_CREATION_RETRIES)).setTimer(anyLong(), notNull());
+                }, ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the concurrent attempt fails after having done the default number of retries.
+                        assertThat(t).isInstanceOf(ServerErrorException.class);
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                        verify(vertx, times(CachingClientFactory.MAX_CREATION_RETRIES)).setTimer(anyLong(), notNull());
+                    });
+                    ctx.completeNow();
                 }));
     }
 
@@ -125,7 +127,7 @@ public class CachingClientFactoryTest {
      * @param ctx The helper to use for running async tests.
      */
     @Test
-    public void testGetOrCreateClientSucceedsOnRetry(final TestContext ctx) {
+    public void testGetOrCreateClientSucceedsOnRetry(final VertxTestContext ctx) {
 
         // GIVEN a factory that already creates a client for key "bumlux"
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
@@ -148,11 +150,13 @@ public class CachingClientFactoryTest {
         factory.getOrCreateClient(
                 "bumlux",
                 () -> {
-                    ctx.fail("should not create new client (cached one shall be used)");
+                    ctx.failNow(new AssertionError("should not create new client (cached one shall be used)"));
                     return Future.succeededFuture();
                 },
-                ctx.asyncAssertSuccess());
-        verify(vertx).setTimer(anyLong(), notNull());
+                ctx.succeeding(s -> {
+                    ctx.verify(() -> verify(vertx).setTimer(anyLong(), notNull()));
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -162,31 +166,29 @@ public class CachingClientFactoryTest {
      * @param ctx The Vertx test context.
      */
     @Test
-    public void testGetOrCreateClientFailsWhenStateIsCleared(final TestContext ctx) {
+    public void testGetOrCreateClientFailsWhenStateIsCleared(final VertxTestContext ctx) {
 
         // GIVEN a factory that tries to create a client for key "tenant"
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
-        final Async supplierInvocation = ctx.async();
-
         final Promise<Object> creationAttempt = Promise.promise();
         factory.getOrCreateClient(
                 "tenant",
                 () -> {
-                    supplierInvocation.complete();
+                    // WHEN the factory's state is being cleared while the client
+                    // is being created
+                    factory.clearState();
                     return Promise.promise().future();
                 }, creationAttempt);
 
-        // WHEN the factory's state is being cleared
-        supplierInvocation.await();
-        factory.clearState();
 
         // THEN all creation requests are failed
-        ctx.assertTrue(creationAttempt.future().failed());
+        creationAttempt.future().setHandler(ctx.failing(t -> {
+            // and the next request to create a client for the same key succeeds
+            factory.getOrCreateClient(
+                    "tenant",
+                    () -> Future.succeededFuture(new Object()),
+                    ctx.completing());
+        }));
 
-        // and the next request to create a client for the same key succeeds
-        factory.getOrCreateClient(
-                "tenant",
-                () -> Future.succeededFuture(new Object()),
-                ctx.asyncAssertSuccess());
     }
 }

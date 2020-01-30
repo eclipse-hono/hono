@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,6 +28,7 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapResource;
@@ -57,14 +57,12 @@ import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
-import org.eclipse.hono.util.TenantConstants;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.TenantObject;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.SpanContext;
@@ -75,26 +73,22 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedCoapAdapter}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class AbstractVertxBasedCoapAdapterTest {
 
     private static final String ADAPTER_TYPE = "coap";
 
     private static final Vertx vertx = Vertx.vertx();
-
-    /**
-     * Global timeout for all test cases.
-     */
-    @Rule
-    public final Timeout globalTimeout = Timeout.seconds(500);
 
     private CredentialsClientFactory credentialsClientFactory;
     private TenantClientFactory tenantClientFactory;
@@ -111,7 +105,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     /**
      * Sets up common fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
 
         config = new CoapAdapterProperties();
@@ -158,7 +152,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     /**
      * Cleans up fixture.
      */
-    @AfterClass
+    @AfterAll
     public static void shutDown() {
         vertx.close();
     }
@@ -169,26 +163,21 @@ public class AbstractVertxBasedCoapAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testStartInvokesOnStartupSuccess(final TestContext ctx) {
+    public void testStartInvokesOnStartupSuccess(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         final CoapServer server = getCoapServer(false);
-        final Async onStartupSuccess = ctx.async();
+        final Checkpoint onStartupSuccess = ctx.checkpoint();
 
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true,
-                s -> onStartupSuccess.complete());
+                s -> onStartupSuccess.flag());
 
         // WHEN starting the adapter
-        final Async startup = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
+        startupTracker.future().setHandler(ctx.completing());
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked
-        startup.await();
-        onStartupSuccess.await();
     }
 
     /**
@@ -197,7 +186,7 @@ public class AbstractVertxBasedCoapAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testStartRegistersResources(final TestContext ctx) {
+    public void testStartRegistersResources(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         final CoapServer server = getCoapServer(false);
@@ -208,18 +197,18 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.setResources(Collections.singleton(resource));
 
         // WHEN starting the adapter
-        final Async startup = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
+        startupTracker.future().setHandler(ctx.succeeding(s -> {
+            // THEN the resources have been registered with the server
+            final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
+            ctx.verify(() -> {
+                verify(server).add(resourceCaptor.capture());
+                assertThat(resourceCaptor.getValue().getWrappedResource()).isEqualTo(resource);
+            });
+            ctx.completeNow();
         }));
         adapter.start(startupTracker);
-        startup.await();
 
-        // THEN the resources have been registered with the server
-        final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
-        verify(server).add(resourceCaptor.capture());
-        ctx.assertEquals(resource, resourceCaptor.getValue().getWrappedResource());
     }
 
     /**
@@ -229,18 +218,18 @@ public class AbstractVertxBasedCoapAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testResourcesAreRunOnVertxContext(final TestContext ctx) {
+    public void testResourcesAreRunOnVertxContext(final VertxTestContext ctx) {
 
         // GIVEN an adapter
         final Context context = vertx.getOrCreateContext();
         final CoapServer server = getCoapServer(false);
         // with a resource
-        final Async resourceInvocation = ctx.async();
+        final Promise<Void> resourceInvocation = Promise.promise();
         final Resource resource = new CoapResource("test") {
 
             @Override
             public void handleGET(final CoapExchange exchange) {
-                ctx.assertEquals(context, Vertx.currentContext());
+                ctx.verify(() -> assertThat(Vertx.currentContext()).isEqualTo(context));
                 resourceInvocation.complete();
             }
         };
@@ -248,23 +237,22 @@ public class AbstractVertxBasedCoapAdapterTest {
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, s -> {});
         adapter.setResources(Collections.singleton(resource));
 
-        final Async startup = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertSuccess(s -> {
-            startup.complete();
-        }));
         adapter.init(vertx, context);
         adapter.start(startupTracker);
-        startup.await();
 
-        // WHEN the resource receives a GET request
-        final Request request = new Request(Code.GET);
-        final Exchange getExchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
-        final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
-        verify(server).add(resourceCaptor.capture());
-        resourceCaptor.getValue().handleRequest(getExchange);
-        // THEN the resource's handler has been run on the adapter's vert.x event loop
-        resourceInvocation.await();
+        startupTracker.future()
+            .compose(ok -> {
+                // WHEN the resource receives a GET request
+                final Request request = new Request(Code.GET);
+                final Exchange getExchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+                final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
+                verify(server).add(resourceCaptor.capture());
+                resourceCaptor.getValue().handleRequest(getExchange);
+                // THEN the resource's handler has been run on the adapter's vert.x event loop
+                return resourceInvocation.future();
+            })
+            .setHandler(ctx.completing());
     }
 
     /**
@@ -274,7 +262,7 @@ public class AbstractVertxBasedCoapAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testStartUpFailsIfCredentialsClientFactoryIsNotSet(final TestContext ctx) {
+    public void testStartUpFailsIfCredentialsClientFactoryIsNotSet(final VertxTestContext ctx) {
 
         // GIVEN an adapter that has not all required service clients set
         final CoapServer server = getCoapServer(false);
@@ -283,17 +271,16 @@ public class AbstractVertxBasedCoapAdapterTest {
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, false, successHandler);
 
         // WHEN starting the adapter
-        final Async startupFailure = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertFailure(s -> {
-            startupFailure.complete();
-        }));
         adapter.start(startupTracker);
 
         // THEN startup has failed
-        startupFailure.await();
-        // and the onStartupSuccess method has not been invoked
-        verify(successHandler, never()).handle(any());
+        startupTracker.future().setHandler(ctx.failing(t -> {
+            // and the onStartupSuccess method has not been invoked
+            ctx.verify(() -> verify(successHandler, never()).handle(any()));
+            ctx.completeNow();
+        }));
+
     }
 
     /**
@@ -303,23 +290,20 @@ public class AbstractVertxBasedCoapAdapterTest {
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
-    public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final TestContext ctx) {
+    public void testStartDoesNotInvokeOnStartupSuccessIfStartupFails(final VertxTestContext ctx) {
 
         // GIVEN an adapter with a client provided http server that fails to bind to a socket when started
         final CoapServer server = getCoapServer(true);
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true,
-                s -> ctx.fail("should not have invoked onStartupSuccess"));
+                s -> ctx.failNow(new AssertionError("should not have invoked onStartupSuccess")));
 
         // WHEN starting the adapter
-        final Async startup = ctx.async();
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.asyncAssertFailure(s -> {
-            startup.complete();
-        }));
         adapter.start(startupTracker);
-
-        // THEN the onStartupSuccess method has been invoked, see ctx.fail
-        startup.await();
+        // THEN the onStartupSuccess method has not been invoked, see ctx.fail
+        startupTracker.future().setHandler(ctx.failing(s -> {
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -334,9 +318,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(sender));
         // which is disabled for tenant "my-tenant"
         final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
-        myTenantConfig.addAdapterConfiguration(new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, ADAPTER_TYPE)
-                .put(TenantConstants.FIELD_ENABLED, false));
+        myTenantConfig.addAdapter(new Adapter(ADAPTER_TYPE).setEnabled(Boolean.FALSE));
         when(tenantClient.get(eq("my-tenant"), any(SpanContext.class))).thenReturn(Future.succeededFuture(myTenantConfig));
         final CoapServer server = getCoapServer(false);
         final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
@@ -353,7 +335,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
         verify(coapExchange).respond(captor.capture());
-        assertThat("response with forbidden", captor.getValue().getCode(), is(ResponseCode.FORBIDDEN));
+        assertThat(captor.getValue().getCode()).isEqualTo(ResponseCode.FORBIDDEN);
 
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
@@ -431,8 +413,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         // THEN the device gets a 4.00
         final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
         verify(coapExchange).respond(captor.capture());
-        assertThat("response with bad request", captor.getValue().getCode(),
-                is(ResponseCode.BAD_REQUEST));
+        assertThat(captor.getValue().getCode()).isEqualTo(ResponseCode.BAD_REQUEST);
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.EVENT),
                 eq("tenant"),
@@ -547,7 +528,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         // THEN the device gets a 4.29
         final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
         verify(coapExchange).respond(captor.capture());
-        assertThat(captor.getValue().getCode(), is(ResponseCode.TOO_MANY_REQUESTS));
+        assertThat(captor.getValue().getCode()).isEqualTo(ResponseCode.TOO_MANY_REQUESTS);
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
@@ -586,7 +567,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         // THEN the device gets a 4.29
         final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
         verify(coapExchange).respond(captor.capture());
-        assertThat(captor.getValue().getCode(), is(ResponseCode.TOO_MANY_REQUESTS));
+        assertThat(captor.getValue().getCode()).isEqualTo(ResponseCode.TOO_MANY_REQUESTS);
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.EVENT),
                 eq("tenant"),

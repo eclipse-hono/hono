@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,14 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
@@ -32,8 +36,8 @@ import org.eclipse.hono.client.DelegatedCommandSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
@@ -55,7 +59,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
     /**
      * Sets up common fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
         final String tenantId = "testTenant";
         final String deviceId = "testDevice";
@@ -100,7 +104,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // THEN the command context delivery is updated with the 'accepted' outcome
         final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
-        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Accepted.class)));
+        assertThat(deliveryStateArgumentCaptor.getValue()).isInstanceOf(Accepted.class);
     }
 
     /**
@@ -125,8 +129,8 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // THEN the command context delivery is updated with the 'rejected' outcome
         final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
-        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Rejected.class)));
-        assertThat(((Rejected) deliveryStateArgumentCaptor.getValue()).getError(), is(error));
+        assertThat(deliveryStateArgumentCaptor.getValue()).isInstanceOf(Rejected.class);
+        assertThat(((Rejected) deliveryStateArgumentCaptor.getValue()).getError()).isEqualTo(error);
     }
 
     /**
@@ -151,7 +155,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // THEN the command context delivery is updated with the 'modified' outcome
         final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
-        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Modified.class)));
+        assertThat(deliveryStateArgumentCaptor.getValue()).isInstanceOf(Modified.class);
     }
 
     /**
@@ -173,7 +177,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // THEN the command context delivery is updated with the 'released' outcome
         final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
-        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Released.class)));
+        assertThat(deliveryStateArgumentCaptor.getValue()).isInstanceOf(Released.class);
     }
 
     /**
@@ -192,7 +196,7 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // THEN the command context delivery is updated with the 'released' outcome
         final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
-        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Released.class)));
+        assertThat(deliveryStateArgumentCaptor.getValue()).isInstanceOf(Released.class);
     }
 
     /**
@@ -211,6 +215,6 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         // THEN the command context delivery is updated with the 'released' outcome
         final ArgumentCaptor<DeliveryState> deliveryStateArgumentCaptor = ArgumentCaptor.forClass(DeliveryState.class);
         verify(commandDelivery).disposition(deliveryStateArgumentCaptor.capture(), anyBoolean());
-        assertThat(deliveryStateArgumentCaptor.getValue(), is(instanceOf(Released.class)));
+        assertThat(deliveryStateArgumentCaptor.getValue()).isInstanceOf(Released.class);
     }
 }

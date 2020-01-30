@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,25 +18,22 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.eclipse.hono.adapter.kura.impl.KuraAdapterProperties;
-import org.eclipse.hono.adapter.kura.impl.KuraProtocolAdapter;
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -44,14 +41,9 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
  * Verifies behavior of {@link KuraProtocolAdapter}.
  * 
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class KuraProtocolAdapterTest {
-
-    /**
-     * Time out each test after 5 seconds.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(5);
 
     private KuraAdapterProperties config;
     private KuraProtocolAdapter adapter;
@@ -59,7 +51,7 @@ public class KuraProtocolAdapterTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         config = new KuraAdapterProperties();
@@ -74,23 +66,21 @@ public class KuraProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicMapsKuraControlMessagesToEventApi(final TestContext ctx) {
+    public void testMapTopicMapsKuraControlMessagesToEventApi(final VertxTestContext ctx) {
 
         // GIVEN an adapter configured to use the standard topic.control-prefix $EDC
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
         final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "$EDC/my-scope/4711");
-        final Async determineAddressSuccess = ctx.async();
-        final Future<ResourceIdentifier> addressTracker = adapter.mapTopic(context).map(msg -> {
-            determineAddressSuccess.complete();
-            return msg;
-        });
-
-        // THEN the message is mapped to the event API
-        determineAddressSuccess.await();
-        assertAddress(addressTracker.result(), EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
-        // and has the control message content type
-        assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
+        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+                ctx.verify(() -> {
+                    // THEN the message is mapped to the event API
+                    assertAddress(msg, EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
+                    // and has the control message content type
+                    assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -100,7 +90,7 @@ public class KuraProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicMapsKuraControlMessagesToTelemetryApi(final TestContext ctx) {
+    public void testMapTopicMapsKuraControlMessagesToTelemetryApi(final VertxTestContext ctx) {
 
         // GIVEN an adapter configured to use the standard topic.control-prefix $EDC
         // and a custom control message content type
@@ -108,17 +98,16 @@ public class KuraProtocolAdapterTest {
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "$EDC/my-scope/4711");
-        final Async determineAddressSuccess = ctx.async();
-        final Future<ResourceIdentifier> addressTracker = adapter.mapTopic(context).map(msg -> {
-            determineAddressSuccess.complete();
-            return msg;
-        });
+        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+            ctx.verify(() -> {
+                // THEN the message is mapped to the telemetry API
+                assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
+                // and has the custom control message content type
+                assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
+            });
+            ctx.completeNow();
+        }));
 
-        // THEN the message is mapped to the telemetry API
-        determineAddressSuccess.await();
-        assertAddress(addressTracker.result(), TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
-        // and has the custom control message content type
-        assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
     }
 
     /**
@@ -127,24 +116,23 @@ public class KuraProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicRecognizesControlMessagesWithCustomControlPrefix(final TestContext ctx) {
+    public void testMapTopicRecognizesControlMessagesWithCustomControlPrefix(final VertxTestContext ctx) {
 
         // GIVEN an adapter configured to use a custom topic.control-prefix
         config.setControlPrefix("bumlux");
 
         // WHEN a message is published to a topic with the custom prefix as endpoint
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "bumlux/my-scope/4711");
-        final Async determineAddressSuccess = ctx.async();
-        final Future<ResourceIdentifier> addressTracker = adapter.mapTopic(context).map(msg -> {
-            determineAddressSuccess.complete();
-            return msg;
-        });
+        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+            ctx.verify(() -> {
+                // THEN the message is mapped to the event API
+                assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
+                // and is recognized as a control message
+                assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
+            });
+            ctx.completeNow();
+        }));
 
-        // THEN the message is mapped to the event API
-        determineAddressSuccess.await();
-        assertAddress(addressTracker.result(), TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
-        // and is recognized as a control message
-        assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
     }
 
     /**
@@ -154,24 +142,23 @@ public class KuraProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicMapsKuraDataMessagesToTelemetryApi(final TestContext ctx) {
+    public void testMapTopicMapsKuraDataMessagesToTelemetryApi(final VertxTestContext ctx) {
 
         // GIVEN an adapter configured with a custom data message content type
         config.setDataMsgContentType("data-msg");
 
         // WHEN a message is published to an application topic with QoS 0
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "my-scope/4711");
-        final Async determineAddressSuccess = ctx.async();
-        final Future<ResourceIdentifier> addressTracker = adapter.mapTopic(context).map(msg -> {
-            determineAddressSuccess.complete();
-            return msg;
-        });
+        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+            ctx.verify(() -> {
+                // THEN the message is mapped to the telemetry API
+                assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
+                // and has the configured data message content type
+                assertThat(context.contentType(), is(config.getDataMsgContentType()));
+            });
+            ctx.completeNow();
+        }));
 
-        // THEN the message is mapped to the telemetry API
-        determineAddressSuccess.await();
-        assertAddress(addressTracker.result(), TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
-        // and has the configured data message content type
-        assertThat(context.contentType(), is(config.getDataMsgContentType()));
     }
 
     /**
@@ -181,23 +168,22 @@ public class KuraProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicMapsKuraDataMessagesToEventApi(final TestContext ctx) {
+    public void testMapTopicMapsKuraDataMessagesToEventApi(final VertxTestContext ctx) {
 
         // GIVEN an adapter
 
         // WHEN a message is published to an application topic with QoS 1
         final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "my-scope/4711");
-        final Async determineAddressSuccess = ctx.async();
-        final Future<ResourceIdentifier> addressTracker = adapter.mapTopic(context).map(msg -> {
-            determineAddressSuccess.complete();
-            return msg;
-        });
+        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+            ctx.verify(() -> {
+                // THEN the message is forwarded to the event API
+                assertAddress(msg, EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
+                // and is recognized as a data message
+                assertThat(context.contentType(), is(config.getDataMsgContentType()));
+            });
+            ctx.completeNow();
+        }));
 
-        // THEN the message is forwarded to the event API
-        determineAddressSuccess.await();
-        assertAddress(addressTracker.result(), EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
-        // and is recognized as a data message
-        assertThat(context.contentType(), is(config.getDataMsgContentType()));
     }
 
     private void assertAddress(final ResourceIdentifier address, final String endpoint, final String tenantId, final String deviceId) {

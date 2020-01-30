@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -34,8 +31,8 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -59,7 +56,7 @@ public class GatewayMapperImplTest {
     /**
      * Sets up common fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
         final SpanContext spanContext = mock(SpanContext.class);
         span = mock(Span.class);
@@ -96,8 +93,8 @@ public class GatewayMapperImplTest {
         final Future<String> mappedGatewayDeviceFuture = gatewayMapper.getMappedGatewayDevice(tenantId, deviceId, null);
 
         // THEN the returned Future is complete and contains the deviceId
-        assertThat(mappedGatewayDeviceFuture.isComplete(), is(true));
-        assertThat(mappedGatewayDeviceFuture.result(), is(deviceId));
+        assertThat(mappedGatewayDeviceFuture.isComplete()).isTrue();
+        assertThat(mappedGatewayDeviceFuture.result()).isEqualTo(deviceId);
         verify(span).finish();
     }
 
@@ -123,8 +120,8 @@ public class GatewayMapperImplTest {
         final Future<String> mappedGatewayDeviceFuture = gatewayMapper.getMappedGatewayDevice(tenantId, deviceId, null);
 
         // THEN the returned Future is complete and contains the gatewayId
-        assertThat(mappedGatewayDeviceFuture.isComplete(), is(true));
-        assertThat(mappedGatewayDeviceFuture.result(), is(gatewayId));
+        assertThat(mappedGatewayDeviceFuture.isComplete()).isTrue();
+        assertThat(mappedGatewayDeviceFuture.result()).isEqualTo(gatewayId);
         verify(span).finish();
     }
 
@@ -149,8 +146,8 @@ public class GatewayMapperImplTest {
         final Future<String> mappedGatewayDeviceFuture = gatewayMapper.getMappedGatewayDevice(tenantId, deviceId, null);
 
         // THEN the returned Future is complete and contains the gatewayId
-        assertThat(mappedGatewayDeviceFuture.isComplete(), is(true));
-        assertThat(mappedGatewayDeviceFuture.result(), is(gatewayId));
+        assertThat(mappedGatewayDeviceFuture.isComplete()).isTrue();
+        assertThat(mappedGatewayDeviceFuture.result()).isEqualTo(gatewayId);
         verify(span).finish();
     }
 
@@ -178,10 +175,10 @@ public class GatewayMapperImplTest {
         final Future<String> mappedGatewayDeviceFuture = gatewayMapper.getMappedGatewayDevice(tenantId, deviceId, null);
 
         // THEN the returned Future is failed
-        assertThat(mappedGatewayDeviceFuture.isComplete(), is(true));
-        assertThat(mappedGatewayDeviceFuture.result(), is(nullValue()));
-        assertThat(mappedGatewayDeviceFuture.cause(), instanceOf(ClientErrorException.class));
-        assertThat(((ClientErrorException) mappedGatewayDeviceFuture.cause()).getErrorCode(), is(HttpURLConnection.HTTP_NOT_FOUND));
+        assertThat(mappedGatewayDeviceFuture.isComplete()).isTrue();
+        assertThat(mappedGatewayDeviceFuture.result()).isNull();
+        assertThat(mappedGatewayDeviceFuture.cause()).isInstanceOf(ClientErrorException.class);
+        assertThat(((ClientErrorException) mappedGatewayDeviceFuture.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
         verify(span).finish();
     }
 
@@ -207,10 +204,10 @@ public class GatewayMapperImplTest {
         final Future<String> mappedGatewayDeviceFuture = gatewayMapper.getMappedGatewayDevice(tenantId, deviceId, null);
 
         // THEN the returned Future is failed
-        assertThat(mappedGatewayDeviceFuture.isComplete(), is(true));
-        assertThat(mappedGatewayDeviceFuture.result(), is(nullValue()));
-        assertThat(mappedGatewayDeviceFuture.cause(), instanceOf(ClientErrorException.class));
-        assertThat(((ClientErrorException) mappedGatewayDeviceFuture.cause()).getErrorCode(), is(HttpURLConnection.HTTP_NOT_FOUND));
+        assertThat(mappedGatewayDeviceFuture.isComplete()).isTrue();
+        assertThat(mappedGatewayDeviceFuture.result()).isNull();;
+        assertThat(mappedGatewayDeviceFuture.cause()).isInstanceOf(ClientErrorException.class);
+        assertThat(((ClientErrorException) mappedGatewayDeviceFuture.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
         verify(span).finish();
     }
 
@@ -235,10 +232,10 @@ public class GatewayMapperImplTest {
         final Future<String> mappedGatewayDeviceFuture = gatewayMapper.getMappedGatewayDevice(tenantId, deviceId, null);
 
         // THEN the returned Future is failed
-        assertThat(mappedGatewayDeviceFuture.isComplete(), is(true));
-        assertThat(mappedGatewayDeviceFuture.result(), is(nullValue()));
-        assertThat(mappedGatewayDeviceFuture.cause(), instanceOf(ServerErrorException.class));
-        assertThat(((ServerErrorException) mappedGatewayDeviceFuture.cause()).getErrorCode(), is(HttpURLConnection.HTTP_INTERNAL_ERROR));
+        assertThat(mappedGatewayDeviceFuture.isComplete()).isTrue();
+        assertThat(mappedGatewayDeviceFuture.result()).isNull();;
+        assertThat(mappedGatewayDeviceFuture.cause()).isInstanceOf(ServerErrorException.class);
+        assertThat(((ServerErrorException) mappedGatewayDeviceFuture.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
         verify(span).finish();
     }
 }

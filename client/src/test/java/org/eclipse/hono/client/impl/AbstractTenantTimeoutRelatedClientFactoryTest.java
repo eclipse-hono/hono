@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,16 +20,18 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.util.Constants;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
@@ -38,7 +40,8 @@ import io.vertx.proton.ProtonSender;
  * 
  * @param <T> The type of the client that the factory builds.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
 
     private static long TIMEOUT = 1000L;
@@ -58,26 +61,23 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testLinksCloseOnTenantTimeout(final TestContext ctx) {
+    public void testLinksCloseOnTenantTimeout(final VertxTestContext ctx) {
 
         final String tenantId = "tenant";
 
         // GIVEN a client factory that manages a client with a tenant-scoped link
         final HonoConnection connection = createConnection();
-        final Future<T> clientFuture = getClientFuture(connection, tenantId);
-
-        final Async async = ctx.async();
-        clientFuture.setHandler(ar -> {
-            ctx.assertTrue(ar.succeeded());
+        getClientFuture(connection, tenantId).setHandler(ctx.succeeding(r -> {
 
             // WHEN a tenant timeout event occurs for this tenant
             connection.getVertx().eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
 
             // THEN the link is closed
-            verify(connection, timeout(TIMEOUT)).closeAndFree(any(ProtonSender.class), VertxMockSupport.anyHandler());
-            async.complete();
-        });
-        async.await();
+            ctx.verify(() -> {
+                verify(connection, timeout(TIMEOUT)).closeAndFree(any(ProtonSender.class), VertxMockSupport.anyHandler());
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -86,27 +86,24 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDontCloseLinksForOtherTenants(final TestContext ctx) {
+    public void testDontCloseLinksForOtherTenants(final VertxTestContext ctx) {
 
         final String tenantId = "tenant";
         final String otherTenant = "otherTenant";
 
         // GIVEN a client factory that manages a client with a tenant-scoped link
         final HonoConnection connection = createConnection();
-        final Future<T> clientFuture = getClientFuture(connection, tenantId);
-
-        final Async async = ctx.async();
-        clientFuture.setHandler(ar -> {
-            ctx.assertTrue(ar.succeeded());
+        getClientFuture(connection, tenantId).setHandler(ctx.succeeding(r -> {
 
             // WHEN a tenant timeout event occurs for another tenant
             connection.getVertx().eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, otherTenant);
 
-            // THEN the link is not closed
-            verify(connection, timeout(TIMEOUT).times(0)).closeAndFree(any(ProtonSender.class), VertxMockSupport.anyHandler());
-            async.complete();
-        });
-        async.await();
+            ctx.verify(() -> {
+                // THEN the link is not closed
+                verify(connection, timeout(TIMEOUT).times(0)).closeAndFree(any(ProtonSender.class), VertxMockSupport.anyHandler());
+            });
+            ctx.completeNow();
+        }));
     }
 
     private HonoConnection createConnection() {

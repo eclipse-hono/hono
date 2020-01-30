@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.Device;
@@ -41,11 +42,9 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
@@ -53,8 +52,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -64,14 +64,9 @@ import io.vertx.proton.ProtonReceiver;
  * Verifies behavior of {@link CommandConsumerFactoryImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class CommandConsumerFactoryImplTest {
-
-    /**
-     * Global timeout for each test case.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(300);
 
     private Vertx vertx;
     private Context context;
@@ -92,7 +87,7 @@ public class CommandConsumerFactoryImplTest {
     /**
      * Sets up fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         vertx = mock(Vertx.class);
@@ -150,7 +145,7 @@ public class CommandConsumerFactoryImplTest {
      * @param ctx The test context.
      */
     @Test
-    public void testCreateCommandConsumerFailsIfPeerRejectsLink(final TestContext ctx) {
+    public void testCreateCommandConsumerFailsIfPeerRejectsLink(final VertxTestContext ctx) {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
@@ -165,8 +160,9 @@ public class CommandConsumerFactoryImplTest {
         .thenReturn(Future.failedFuture(ex));
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler)
-        .setHandler(ctx.asyncAssertFailure(t -> {
-                ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+                ctx.completeNow();
             }));
     }
 
@@ -177,23 +173,21 @@ public class CommandConsumerFactoryImplTest {
      * @param ctx The test context.
      */
     @Test
-    public void testCreateCommandConsumerSucceeds(final TestContext ctx) {
+    public void testCreateCommandConsumerSucceeds(final VertxTestContext ctx) {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, closeHandler)
-        .setHandler(ctx.asyncAssertSuccess());
+            .setHandler(ctx.completing());
     }
 
     /**
      * Verifies that the close handler passed as an argument when creating
      * a command consumer is invoked when the peer closes the link.
-     *
-     * @param ctx The test context.
      */
     @Test
-    public void testCreateCommandConsumerSetsRemoteCloseHandler(final TestContext ctx) {
+    public void testCreateCommandConsumerSetsRemoteCloseHandler() {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
@@ -215,11 +209,9 @@ public class CommandConsumerFactoryImplTest {
     /**
      * Verifies that the close handler passed as an argument when creating
      * a command consumer with a gateway id is invoked when the peer closes the link.
-     *
-     * @param ctx The test context.
      */
     @Test
-    public void testCreateCommandConsumerWithGatewaySetsRemoteCloseHandler(final TestContext ctx) {
+    public void testCreateCommandConsumerWithGatewaySetsRemoteCloseHandler() {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Handler<Void> closeHandlerDeviceA = VertxMockSupport.mockHandler();
@@ -253,7 +245,7 @@ public class CommandConsumerFactoryImplTest {
      * @param ctx The test context.
      */
     @Test
-    public void testLocalCloseRemovesCommandConsumerFromCache(final TestContext ctx) {
+    public void testLocalCloseRemovesCommandConsumerFromCache(final VertxTestContext ctx) {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Source source = mock(Source.class);
@@ -266,40 +258,38 @@ public class CommandConsumerFactoryImplTest {
         // GIVEN a command consumer
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, 5000L)
         .map(consumer -> {
-                    verify(vertx).setPeriodic(eq(5000L), VertxMockSupport.anyHandler());
+            ctx.verify(() -> verify(vertx).setPeriodic(eq(5000L), VertxMockSupport.anyHandler()));
             // WHEN closing the link locally
             final Promise<Void> localCloseHandler = Promise.promise();
             consumer.close(localCloseHandler);
-                    final ArgumentCaptor<Handler<Void>> closeHandler = VertxMockSupport.argumentCaptorHandler();
-            verify(connection).closeAndFree(eq(deviceSpecificCommandReceiver), closeHandler.capture());
+            final ArgumentCaptor<Handler<Void>> closeHandler = VertxMockSupport.argumentCaptorHandler();
+            ctx.verify(() -> verify(connection).closeAndFree(eq(deviceSpecificCommandReceiver), closeHandler.capture()));
             // and the peer sends its detach frame
             closeHandler.getValue().handle(null);
             return null;
         }).map(ok -> {
             // THEN the liveness check is canceled
-            verify(vertx).cancelTimer(10L);
+            ctx.verify(() -> verify(vertx).cancelTimer(10L));
             // and the next attempt to create a command consumer for the same address
             final Future<MessageConsumer> newConsumer = commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null);
             // results in a new link to be opened
-            verify(connection, times(2)).createReceiver(
+            ctx.verify(() -> verify(connection, times(2)).createReceiver(
                     eq(deviceSpecificCommandAddress),
                     eq(ProtonQoS.AT_LEAST_ONCE),
                     any(ProtonMessageHandler.class),
                     eq(props.getInitialCredits()),
                     eq(false),
-                    VertxMockSupport.anyHandler());
+                    VertxMockSupport.anyHandler()));
             return newConsumer;
-        }).setHandler(ctx.asyncAssertSuccess());
+        }).setHandler(ctx.completing());
     }
 
     /**
      * Verifies that a command consumer link that has been created with a check
      * interval is re-created if the underlying connection to the peer is lost.
-     *
-     * @param ctx The test context.
      */
     @Test
-    public void testConsumerIsRecreatedOnConnectionFailure(final TestContext ctx) {
+    public void testConsumerIsRecreatedOnConnectionFailure() {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         final Handler<Void> closeHandler = VertxMockSupport.mockHandler();
@@ -321,7 +311,7 @@ public class CommandConsumerFactoryImplTest {
         final long livenessCheckInterval = CommandConsumerFactoryImpl.MIN_LIVENESS_CHECK_INTERVAL_MILLIS - 1;
         final Future<MessageConsumer> commandConsumer = commandConsumerFactory.createCommandConsumer(
                 tenantId, deviceId, commandHandler, closeHandler, livenessCheckInterval);
-        assertTrue(commandConsumer.isComplete());
+        assertThat(commandConsumer.isComplete()).isTrue();
         final ArgumentCaptor<Handler<Long>> livenessCheck = VertxMockSupport.argumentCaptorHandler();
         // the liveness check is registered with the minimum interval length
         verify(vertx).setPeriodic(eq(CommandConsumerFactoryImpl.MIN_LIVENESS_CHECK_INTERVAL_MILLIS), livenessCheck.capture());
@@ -354,11 +344,9 @@ public class CommandConsumerFactoryImplTest {
      * Verifies that consecutive invocations of the liveness check created
      * for a command consumer do not start a new re-creation attempt if another
      * attempt is still ongoing.
-     *
-     * @param ctx The test context.
      */
     @Test
-    public void testLivenessCheckLocksRecreationAttempt(final TestContext ctx) {
+    public void testLivenessCheckLocksRecreationAttempt() {
 
         // GIVEN a liveness check for a command consumer
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();

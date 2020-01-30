@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -28,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,11 +47,9 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.AdditionalAnswers;
 import org.mockito.ArgumentCaptor;
 
@@ -63,9 +60,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonMessageHandler;
@@ -78,14 +75,9 @@ import io.vertx.proton.sasl.SaslSystemException;
  * Test cases verifying the behavior of {@link HonoConnection}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class HonoConnectionImplTest {
-
-    /**
-     * Global timeout for each test case.
-     */
-    @Rule
-    public Timeout timeout = Timeout.seconds(4);
 
     private Vertx vertx;
     private ProtonConnection con;
@@ -97,7 +89,7 @@ public class HonoConnectionImplTest {
      * Sets up fixture.
      */
     @SuppressWarnings("unchecked")
-    @Before
+    @BeforeEach
     public void setUp() {
         vertx = mock(Vertx.class);
         final Context context = HonoClientUnitTestHelper.mockContext(vertx);
@@ -122,7 +114,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test client.
      */
     @Test
-    public void testConnectFailsAfterMaxConnectionAttempts(final TestContext ctx) {
+    public void testConnectFailsAfterMaxConnectionAttempts(final VertxTestContext ctx) {
 
         // GIVEN a client that is configured to reconnect
         // two times before failing
@@ -134,12 +126,13 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
+        honoConnection.connect().setHandler(ctx.failing(t -> {
             // THEN the connection attempt fails
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
+            ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
         }));
         // and the client has indeed tried three times in total before giving up
-        assertTrue(connectionFactory.awaitFailure());
+        ctx.verify(() -> assertThat(connectionFactory.awaitFailure()).isTrue());
+        ctx.completeNow();
     }
 
     /**
@@ -149,7 +142,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test client.
      */
     @Test
-    public void testReconnectDelay(final TestContext ctx) {
+    public void testReconnectDelay(final VertxTestContext ctx) {
 
         // GIVEN a client that is configured to reconnect 5 times with custom delay times.
         final int reconnectAttempts = 5;
@@ -164,16 +157,19 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
+        honoConnection.connect().setHandler(ctx.failing(t -> {
             // THEN the connection attempt fails
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
+            ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
         }));
         // and the client has indeed tried 6 times in total before giving up
-        assertTrue(connectionFactory.awaitFailure());
-        final ArgumentCaptor<Long> delayValueCaptor = ArgumentCaptor.forClass(Long.class);
-        verify(vertx, times(reconnectAttempts)).setTimer(delayValueCaptor.capture(), VertxMockSupport.anyHandler());
-        // and the first delay period is the minDelay value
-        ctx.assertEquals(10L, delayValueCaptor.getAllValues().get(0));
+        ctx.verify(() -> {
+            assertThat(connectionFactory.awaitFailure()).isTrue();
+            final ArgumentCaptor<Long> delayValueCaptor = ArgumentCaptor.forClass(Long.class);
+            verify(vertx, times(reconnectAttempts)).setTimer(delayValueCaptor.capture(), VertxMockSupport.anyHandler());
+            // and the first delay period is the minDelay value
+            assertThat(delayValueCaptor.getAllValues().get(0)).isEqualTo(10L);
+        });
+        ctx.completeNow();
     }
 
     /**
@@ -183,7 +179,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test client.
      */
     @Test
-    public void testConnectFailsWithClientErrorForTransientSaslSystemException(final TestContext ctx) {
+    public void testConnectFailsWithClientErrorForTransientSaslSystemException(final VertxTestContext ctx) {
 
         // GIVEN a client that is configured to connect
         // to a peer that always throws a SaslSystemException with permanent=false
@@ -195,12 +191,13 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
+        honoConnection.connect().setHandler(ctx.failing(t -> {
             // THEN the connection attempt fails
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServiceInvocationException) t).getErrorCode());
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
         }));
         // and the client has indeed tried three times in total
-        assertTrue(connectionFactory.awaitFailure());
+        ctx.verify(() -> assertThat(connectionFactory.awaitFailure()).isTrue());
+        ctx.completeNow();
     }
 
     /**
@@ -209,7 +206,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testDownstreamDisconnectTriggersReconnect(final TestContext ctx) {
+    public void testDownstreamDisconnectTriggersReconnect(final VertxTestContext ctx) {
 
         // GIVEN an client that is connected to a peer to which the
         // connection can be established on the third attempt only
@@ -218,22 +215,23 @@ public class HonoConnectionImplTest {
         final ProtonClientOptions options = new ProtonClientOptions()
                 .setReconnectAttempts(0);
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
-        honoConnection.connect(options).setHandler(ctx.asyncAssertSuccess());
-        assertTrue(connectionFactory.await());
+        honoConnection.connect(options).setHandler(ctx.succeeding());
+        ctx.verify(() -> assertThat(connectionFactory.await()).isTrue());
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
         // WHEN the downstream connection fails
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN the adapter reconnects to the downstream container
-        assertTrue(connectionFactory.await());
+        ctx.verify(() -> assertThat(connectionFactory.await()).isTrue());
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
         // and when the downstream connection fails again
         connectionFactory.getDisconnectHandler().handle(con);
 
         // THEN the adapter reconnects to the downstream container again
-        assertTrue(connectionFactory.await());
+        ctx.verify(() -> assertThat(connectionFactory.await()).isTrue());
+        ctx.completeNow();
     }
 
     /**
@@ -242,7 +240,7 @@ public class HonoConnectionImplTest {
      * @param ctx The test context.
      */
     @Test
-    public void testConnectTriesToReconnectOnFailedConnectAttempt(final TestContext ctx) {
+    public void testConnectTriesToReconnectOnFailedConnectAttempt(final VertxTestContext ctx) {
 
         // GIVEN a client that is configured to connect to a peer
         // to which the connection can be established on the third attempt only
@@ -253,12 +251,15 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN trying to connect
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess());
+        honoConnection.connect().setHandler(ctx.succeeding());
 
-        // THEN the client fails twice to connect
-        assertTrue(connectionFactory.awaitFailure());
-        // and succeeds to connect on the third attempt
-        assertTrue(connectionFactory.await());
+        ctx.verify(() -> {
+            // THEN the client fails twice to connect
+            assertThat(connectionFactory.awaitFailure()).isTrue();
+            // and succeeds to connect on the third attempt
+            assertThat(connectionFactory.await()).isTrue();
+        });
+        ctx.completeNow();
     }
 
     /**
@@ -269,28 +270,32 @@ public class HonoConnectionImplTest {
      *
      */
     @Test
-    public void testOnRemoteCloseTriggersReconnection(final TestContext ctx) {
+    public void testOnRemoteCloseTriggersReconnection(final VertxTestContext ctx) {
 
         // GIVEN a client that is connected to a server
-        final Async connected = ctx.async();
+        final Promise<HonoConnection> connected = Promise.promise();
         @SuppressWarnings("unchecked")
         final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
         honoConnection.addDisconnectListener(disconnectListener);
         honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(1))
-            .setHandler(ctx.asyncAssertSuccess(ok -> connected.complete()));
-        connected.await();
+            .setHandler(connected);
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
-        // WHEN the peer closes the connection
-        connectionFactory.getCloseHandler().handle(Future.failedFuture("shutting down for maintenance"));
+        connected.future().setHandler(ctx.succeeding(c -> {
+            // WHEN the peer closes the connection
+            connectionFactory.getCloseHandler().handle(Future.failedFuture("shutting down for maintenance"));
 
-        // THEN the client invokes the registered disconnect handler
-        verify(disconnectListener).onDisconnect(honoConnection);
-        // and the original connection has been closed locally
-        verify(con).close();
-        verify(con).disconnectHandler(null);
-        // and the connection is re-established
-        assertTrue(connectionFactory.await());
+            ctx.verify(() -> {
+                // THEN the client invokes the registered disconnect handler
+                verify(disconnectListener).onDisconnect(honoConnection);
+                // and the original connection has been closed locally
+                verify(con).close();
+                verify(con).disconnectHandler(null);
+                // and the connection is re-established
+                assertThat(connectionFactory.await()).isTrue();
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -300,16 +305,18 @@ public class HonoConnectionImplTest {
      *
      */
     @Test
-    public void testConnectFailsAfterShutdown(final TestContext ctx) {
+    public void testConnectFailsAfterShutdown(final VertxTestContext ctx) {
 
         honoConnection.connect().compose(ok -> {
             // GIVEN a client that is in the process of shutting down
             honoConnection.shutdown(Promise.<Void>promise().future());
             // WHEN the client tries to reconnect before shut down is complete
             return honoConnection.connect();
-        }).setHandler(ctx.asyncAssertFailure(cause -> {
+        })
+        .setHandler(ctx.failing(cause -> {
             // THEN the connection attempt fails
-            ctx.assertEquals(HttpURLConnection.HTTP_CONFLICT, ((ClientErrorException) cause).getErrorCode());
+            ctx.verify(() -> assertThat(((ClientErrorException) cause).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_CONFLICT));
+            ctx.completeNow();
         }));
     }
 
@@ -319,27 +326,26 @@ public class HonoConnectionImplTest {
      * @param ctx The test execution context.
      */
     @Test
-    public void testConnectSucceedsAfterDisconnect(final TestContext ctx) {
+    public void testConnectSucceedsAfterDisconnect(final VertxTestContext ctx) {
 
         honoConnection.connect()
-        .compose(ok -> {
-            // GIVEN a client that is connected to a server
-            final Promise<Void> disconnected = Promise.promise();
-            // WHEN the client disconnects
-            honoConnection.disconnect(disconnected);
-            @SuppressWarnings("unchecked")
-            final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
-            verify(con).closeHandler(closeHandler.capture());
-            closeHandler.getValue().handle(Future.succeededFuture(con));
-            return disconnected.future();
-        })
-        .compose(d -> {
-            // AND tries to reconnect again
-            return honoConnection.connect(new ProtonClientOptions());
-        })
-        .setHandler(ctx.asyncAssertSuccess(success -> {
+            .compose(ok -> {
+                // GIVEN a client that is connected to a server
+                final Promise<Void> disconnected = Promise.promise();
+                // WHEN the client disconnects
+                honoConnection.disconnect(disconnected);
+                @SuppressWarnings("unchecked")
+                final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> closeHandler = ArgumentCaptor.forClass(Handler.class);
+                ctx.verify(() -> verify(con).closeHandler(closeHandler.capture()));
+                closeHandler.getValue().handle(Future.succeededFuture(con));
+                return disconnected.future();
+            })
+            .compose(d -> {
+                // AND tries to reconnect again
+                return honoConnection.connect(new ProtonClientOptions());
+            })
             // THEN the connection succeeds
-        }));
+            .setHandler(ctx.completing());
     }
 
     /**
@@ -348,8 +354,9 @@ public class HonoConnectionImplTest {
      *
      * @param ctx The test execution context.
      */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testIsConnectedWithTimeoutSucceedsAfterConcurrentReconnectSucceeded(final TestContext ctx) {
+    public void testIsConnectedWithTimeoutSucceedsAfterConcurrentReconnectSucceeded(final VertxTestContext ctx) {
 
         final long isConnectedTimeout = 44444L;
         // let the vertx timer for the isConnectedTimeout do nothing
@@ -372,9 +379,11 @@ public class HonoConnectionImplTest {
                     isConnectedTimeoutForcedFutureRef.set(honoConnection.isConnected(1L));
                     isConnected2FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
                     // assert "isConnected" invocations have not completed yet, apart from the one with the forced timeout
-                    ctx.assertFalse(isConnected1FutureRef.get().isComplete());
-                    ctx.assertTrue(isConnectedTimeoutForcedFutureRef.get().failed());
-                    ctx.assertFalse(isConnected2FutureRef.get().isComplete());
+                    ctx.verify(() -> {
+                        assertThat(isConnected1FutureRef.get().isComplete()).isFalse();
+                        assertThat(isConnectedTimeoutForcedFutureRef.get().failed()).isTrue();
+                        assertThat(isConnected2FutureRef.get().isComplete()).isFalse();
+                    });
                 }
                 super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
             }
@@ -388,12 +397,15 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
                 // THEN the "isConnected" futures succeed
                 .compose(v -> CompositeFuture.all(isConnected1FutureRef.get(), isConnected2FutureRef.get()))
-                .setHandler(ctx.asyncAssertSuccess());
+                .setHandler(ctx.succeeding());
 
-        // and the client fails twice to connect
-        assertTrue(connectionFactory.awaitFailure());
-        // and succeeds to connect on the third attempt
-        assertTrue(connectionFactory.await());
+        ctx.verify(() -> {
+            // and the client fails twice to connect
+            assertThat(connectionFactory.awaitFailure()).isTrue();
+            // and succeeds to connect on the third attempt
+            assertThat(connectionFactory.await()).isTrue();
+        });
+        ctx.completeNow();
     }
 
     /**
@@ -402,8 +414,9 @@ public class HonoConnectionImplTest {
      *
      * @param ctx The vert.x test client.
      */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testIsConnectedWithTimeoutFailsAfterConcurrentReconnectFailed(final TestContext ctx) {
+    public void testIsConnectedWithTimeoutFailsAfterConcurrentReconnectFailed(final VertxTestContext ctx) {
 
         final long isConnectedTimeout = 44444L;
         // let the vertx timer for the isConnectedTimeout do nothing
@@ -424,8 +437,10 @@ public class HonoConnectionImplTest {
                     isConnected1FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
                     isConnected2FutureRef.set(honoConnection.isConnected(isConnectedTimeout));
                     // assert "isConnected" invocations have not completed yet
-                    ctx.assertFalse(isConnected1FutureRef.get().isComplete());
-                    ctx.assertFalse(isConnected2FutureRef.get().isComplete());
+                    ctx.verify(() -> {
+                        assertThat(isConnected1FutureRef.get().isComplete()).isFalse();
+                        assertThat(isConnected2FutureRef.get().isComplete()).isFalse();
+                    });
                 }
                 super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
             }
@@ -436,18 +451,21 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.asyncAssertFailure(t -> {
-            // THEN the connection attempt fails and the "isConnected" futures fail as well
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) t).getErrorCode());
+        honoConnection.connect().setHandler(ctx.failing(t -> {
+            ctx.verify(() -> {
+                // THEN the connection attempt fails and the "isConnected" futures fail as well
+                assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
 
-            ctx.assertTrue(isConnected1FutureRef.get().failed());
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) isConnected1FutureRef.get().cause()).getErrorCode());
+                assertThat(isConnected1FutureRef.get().failed()).isTrue();
+                assertThat(((ServerErrorException) isConnected1FutureRef.get().cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
 
-            ctx.assertTrue(isConnected2FutureRef.get().failed());
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAVAILABLE, ((ServerErrorException) isConnected2FutureRef.get().cause()).getErrorCode());
+                assertThat(isConnected2FutureRef.get().failed()).isTrue();
+                assertThat(((ServerErrorException) isConnected2FutureRef.get().cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+            });
         }));
         // and the client has indeed tried three times in total before giving up
-        assertTrue(connectionFactory.awaitFailure());
+        ctx.verify(() -> assertThat(connectionFactory.awaitFailure()).isTrue());
+        ctx.completeNow();
     }
 
     /**
@@ -457,7 +475,7 @@ public class HonoConnectionImplTest {
      *
      */
     @Test
-    public void testClientDoesNotTriggerReconnectionAfterShutdown(final TestContext ctx) {
+    public void testClientDoesNotTriggerReconnectionAfterShutdown(final VertxTestContext ctx) {
 
         // GIVEN a client that tries to connect to a server but does not succeed
         final AtomicInteger connectAttempts = new AtomicInteger(0);
@@ -474,10 +492,10 @@ public class HonoConnectionImplTest {
             return null;
         }).when(factory).connect(any(), VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
         honoConnection = new HonoConnectionImpl(vertx, factory, props);
-        honoConnection.connect().setHandler(
-                ctx.asyncAssertFailure(cause -> {
+        honoConnection.connect().setHandler(ctx.failing(cause -> {
                     // THEN three attempts have been made to connect
-                    ctx.assertTrue(connectAttempts.get() == 3);
+                    ctx.verify(() -> assertThat(connectAttempts.get()).isEqualTo(3));
+                    ctx.completeNow();
                 }));
     }
 
@@ -488,7 +506,7 @@ public class HonoConnectionImplTest {
      * @param ctx The test context.
      */
     @Test
-    public void testCloseHandlerCallsCloseHook(final TestContext ctx) {
+    public void testCloseHandlerCallsCloseHook(final VertxTestContext ctx) {
         testHandlerCallsCloseHook(ctx, (receiver, captor) -> verify(receiver).closeHandler(captor.capture()));
     }
 
@@ -499,19 +517,16 @@ public class HonoConnectionImplTest {
      * @param ctx The test context.
      */
     @Test
-    public void testDetachHandlerCallsCloseHook(final TestContext ctx) {
+    public void testDetachHandlerCallsCloseHook(final VertxTestContext ctx) {
         testHandlerCallsCloseHook(ctx, (receiver, captor) -> verify(receiver).detachHandler(captor.capture()));
     }
 
     @SuppressWarnings("unchecked")
     private void testHandlerCallsCloseHook(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final BiConsumer<ProtonReceiver, ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>>> handlerCaptor) {
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
         final Source source = mock(Source.class);
         when(source.getAddress()).thenReturn("source/address");
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
@@ -520,33 +535,44 @@ public class HonoConnectionImplTest {
         when(receiver.getRemoteSource()).thenReturn(source);
         when(con.createReceiver(anyString())).thenReturn(receiver);
 
-        // WHEN creating a receiver link with a close hook
         final Handler<String> remoteCloseHook = mock(Handler.class);
         final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> captor = ArgumentCaptor.forClass(Handler.class);
 
-        final Async consumerCreation = ctx.async();
-        honoConnection.createReceiver(
-                "source",
-                ProtonQoS.AT_LEAST_ONCE,
-                mock(ProtonMessageHandler.class),
-                remoteCloseHook).setHandler(ctx.asyncAssertSuccess(rec -> consumerCreation.complete()));
+        honoConnection.connect()
+            .compose(c -> {
 
-        // wait for peer's attach frame
-        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-        verify(receiver).openHandler(openHandlerCaptor.capture());
-        openHandlerCaptor.getValue().handle(Future.succeededFuture(receiver));
-        consumerCreation.await();
+                // WHEN creating a receiver link with a close hook
 
-        // WHEN the peer sends a detach frame
-        handlerCaptor.accept(receiver, captor);
-        captor.getValue().handle(Future.succeededFuture(receiver));
+                final Future<ProtonReceiver> r = c.createReceiver(
+                        "source",
+                        ProtonQoS.AT_LEAST_ONCE,
+                        mock(ProtonMessageHandler.class),
+                        remoteCloseHook);
 
-        // THEN the close hook is called
-        verify(remoteCloseHook).handle(any());
+                // wait for peer's attach frame
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+                ctx.verify(() -> verify(receiver).openHandler(openHandlerCaptor.capture()));
+                openHandlerCaptor.getValue().handle(Future.succeededFuture(receiver));
 
-        // and the receiver link is closed
-        verify(receiver).close();
-        verify(receiver).free();
+                return r;
+            })
+            .setHandler(ctx.succeeding(recv -> {
+
+                // WHEN the peer sends a detach frame
+                handlerCaptor.accept(receiver, captor);
+                captor.getValue().handle(Future.succeededFuture(receiver));
+
+                ctx.verify(() -> {
+                    // THEN the close hook is called
+                    verify(remoteCloseHook).handle(any());
+
+                    // and the receiver link is closed
+                    verify(receiver).close();
+                    verify(receiver).free();
+                });
+                ctx.completeNow();
+            }));
+
     }
 
     /**
@@ -557,7 +583,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateReceiverFailsForErrorCondition(final TestContext ctx) {
+    public void testCreateReceiverFailsForErrorCondition(final VertxTestContext ctx) {
 
         testCreateReceiverFails(ctx, () -> new ErrorCondition(AmqpError.RESOURCE_LIMIT_EXCEEDED, "unauthorized"), cause -> {
             return cause instanceof ServiceInvocationException;
@@ -572,7 +598,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateReceiverFailsWithoutErrorCondition(final TestContext ctx) {
+    public void testCreateReceiverFailsWithoutErrorCondition(final VertxTestContext ctx) {
 
         testCreateReceiverFails(ctx, () -> null, cause -> {
             return cause instanceof ClientErrorException &&
@@ -581,7 +607,7 @@ public class HonoConnectionImplTest {
     }
 
     private void testCreateReceiverFails(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final Supplier<ErrorCondition> errorSupplier,
             final Predicate<Throwable> failureAssertion) {
 
@@ -596,26 +622,31 @@ public class HonoConnectionImplTest {
         });
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
+        honoConnection.connect()
+        .compose(c -> {
 
-        // WHEN creating a receiver
-        final Future<ProtonReceiver> result = honoConnection.createReceiver(
-                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
-
-        // THEN link establishment is failed after the configured amount of time
-        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), VertxMockSupport.anyHandler());
-        // and when the peer rejects to open the link
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(receiver).openHandler(openHandler.capture());
-        openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
-        // THEN the attempt is failed
-        assertTrue(result.failed());
-        // with the expected error condition
-        assertTrue(failureAssertion.test(result.cause()));
-        verify(remoteCloseHook, never()).handle(anyString());
+            // WHEN creating a receiver
+            final Future<ProtonReceiver> r = c.createReceiver(
+                    "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
+            ctx.verify(() -> {
+                // and when the peer rejects to open the link
+                @SuppressWarnings("unchecked")
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+                verify(receiver).openHandler(openHandler.capture());
+                openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
+            });
+            return r;
+        })
+        .setHandler(ctx.failing(t -> {
+            ctx.verify(() -> {
+                // THEN link establishment is failed after the configured amount of time
+                verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), VertxMockSupport.anyHandler());
+                // with the expected error condition
+                assertThat(failureAssertion.test(t)).isTrue();
+                verify(remoteCloseHook, never()).handle(anyString());
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -626,7 +657,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateReceiverFailsOnTimeout(final TestContext ctx) {
+    public void testCreateReceiverFailsOnTimeout(final VertxTestContext ctx) {
 
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.isOpen()).thenReturn(Boolean.TRUE);
@@ -634,18 +665,19 @@ public class HonoConnectionImplTest {
         final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
-
-        final Future<ProtonReceiver> result = honoConnection.createReceiver(
-                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook);
-        assertTrue(result.failed());
-        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
-        verify(receiver).open();
-        verify(receiver).close();
-        verify(receiver).free();
-        verify(remoteCloseHook, never()).handle(anyString());
+        honoConnection.connect()
+            .compose(c -> honoConnection.createReceiver(
+                "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook))
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    verify(receiver).open();
+                    verify(receiver).close();
+                    verify(receiver).free();
+                    verify(remoteCloseHook, never()).handle(anyString());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -656,7 +688,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateSenderFailsForErrorCondition(final TestContext ctx) {
+    public void testCreateSenderFailsForErrorCondition(final VertxTestContext ctx) {
 
         testCreateSenderFails(
                 ctx,
@@ -674,7 +706,7 @@ public class HonoConnectionImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testCreateSenderFailsWithoutErrorCondition(final TestContext ctx) {
+    public void testCreateSenderFailsWithoutErrorCondition(final VertxTestContext ctx) {
 
         testCreateSenderFails(
                 ctx,
@@ -687,7 +719,7 @@ public class HonoConnectionImplTest {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void testCreateSenderFails(
-            final TestContext ctx,
+            final VertxTestContext ctx,
             final Supplier<ErrorCondition> errorSupplier,
             final Predicate<Throwable> failureAssertion) {
 
@@ -701,20 +733,25 @@ public class HonoConnectionImplTest {
         });
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
-
-        final Future<ProtonSender> result = honoConnection.createSender(
-                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
-
-        verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
-        final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(sender).openHandler(openHandler.capture());
-        openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
-        assertTrue(result.failed());
-        assertTrue(failureAssertion.test(result.cause()));
-        verify(remoteCloseHook, never()).handle(anyString());
+        honoConnection.connect()
+            .compose(c -> {
+                final Future<ProtonSender> s = honoConnection.createSender(
+                        "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
+                ctx.verify(() -> {
+                    verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
+                    final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
+                    verify(sender).openHandler(openHandler.capture());
+                    openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
+                });
+                return s;
+            })
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(failureAssertion.test(t)).isTrue();
+                    verify(remoteCloseHook, never()).handle(anyString());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -726,7 +763,7 @@ public class HonoConnectionImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testCreateSenderFailsOnTimeout(final TestContext ctx) {
+    public void testCreateSenderFailsOnTimeout(final VertxTestContext ctx) {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
@@ -734,18 +771,19 @@ public class HonoConnectionImplTest {
         final Handler<String> remoteCloseHook = mock(Handler.class);
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
-
-        final Future<ProtonSender> result = honoConnection.createSender(
-                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
-        assertTrue(result.failed());
-        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
-        verify(sender).open();
-        verify(sender).close();
-        verify(sender).free();
-        verify(remoteCloseHook, never()).handle(anyString());
+        honoConnection.connect()
+            .compose(c -> honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    verify(sender).open();
+                    verify(sender).close();
+                    verify(sender).free();
+                    verify(remoteCloseHook, never()).handle(anyString());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -757,25 +795,25 @@ public class HonoConnectionImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testCreateSenderFailsForUnsupportedAnonTerminus(final TestContext ctx) {
+    public void testCreateSenderFailsForUnsupportedAnonTerminus(final VertxTestContext ctx) {
 
         when(con.getRemoteOfferedCapabilities()).thenReturn(new Symbol[] {Symbol.valueOf("some-feature")});
         final Handler<String> remoteCloseHook = mock(Handler.class);
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
+        honoConnection.connect()
+            .compose(c -> honoConnection.createSender(
+                null, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    // THEN the attempt fails
+                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+                    // and the remote close hook is not invoked
+                    verify(remoteCloseHook, never()).handle(anyString());
+                });
+                ctx.completeNow();
+            }));
 
-        // WHEN a client tries to open a sender for the anonymous terminus
-        final Future<ProtonSender> result = honoConnection.createSender(
-                null, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
-
-        // THEN the attempt fails
-        assertTrue(result.failed());
-        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
-        // and the remote close hook is not invoked
-        verify(remoteCloseHook, never()).handle(anyString());
     }
 
 
@@ -788,7 +826,7 @@ public class HonoConnectionImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testCreateSenderFailsIfPeerDoesNotCreateTerminus(final TestContext ctx) {
+    public void testCreateSenderFailsIfPeerDoesNotCreateTerminus(final VertxTestContext ctx) {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.getRemoteTarget()).thenReturn(null);
@@ -796,24 +834,31 @@ public class HonoConnectionImplTest {
         final Handler<String> remoteCloseHook = mock(Handler.class);
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
+        honoConnection.connect()
+            .compose(c -> {
+                // WHEN the client tries to open a sender link
+                final Future<ProtonSender> s = c.createSender(
+                        TelemetryConstants.TELEMETRY_ENDPOINT, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
+                ctx.verify(() -> {
+                    final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+                    verify(sender).open();
+                    verify(sender).openHandler(openHandler.capture());
+                    // and the peer does not allocate a local terminus for the link
+                    openHandler.getValue().handle(Future.succeededFuture(sender));
+                });
+                return s;
+            })
+            .setHandler(ctx.failing(t -> {
+                ctx.verify(() -> {
 
-        // WHEN the client tries to open a sender link
-        final Future<ProtonSender> result = honoConnection.createSender(
-                TelemetryConstants.TELEMETRY_ENDPOINT, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
-        final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> openHandler = ArgumentCaptor.forClass(Handler.class);
-        verify(sender).open();
-        verify(sender).openHandler(openHandler.capture());
-        // and the peer does not allocate a local terminus for the link
-        openHandler.getValue().handle(Future.succeededFuture(sender));
+                    // THEN the link does not get established
+                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    // and the remote close hook does not get invoked
+                    verify(remoteCloseHook, never()).handle(anyString());
+                });
+                ctx.completeNow();
+            }));
 
-        // THEN the link does not get established
-        assertTrue(result.failed());
-        assertThat(((ServerErrorException) result.cause()).getErrorCode(), is(HttpURLConnection.HTTP_UNAVAILABLE));
-        // and the remote close hook does not get invoked
-        verify(remoteCloseHook, never()).handle(anyString());
     }
 
     /**
@@ -823,7 +868,7 @@ public class HonoConnectionImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testCreateSenderThatGetsNoCredits(final TestContext ctx) {
+    public void testCreateSenderThatGetsNoCredits(final VertxTestContext ctx) {
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
         when(con.createSender(anyString())).thenReturn(sender);
@@ -838,21 +883,17 @@ public class HonoConnectionImplTest {
         final Handler<String> remoteCloseHook = mock(Handler.class);
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
-
-        final Async senderCreation = ctx.async();
-        honoConnection.createSender(
-                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
-                .setHandler(createSenderResult -> {
-                    ctx.assertEquals(sender, createSenderResult.result());
-                    ctx.verify(v -> {
+        honoConnection.connect()
+            .compose(c -> honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
+            .setHandler(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        assertThat(s).isEqualTo(sender);
                         // sendQueueDrainHandler gets unset
                         verify(sender).sendQueueDrainHandler(null);
-                        senderCreation.complete();
                     });
-                });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -862,7 +903,7 @@ public class HonoConnectionImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testCreateSenderThatGetsDelayedCredits(final TestContext ctx) {
+    public void testCreateSenderThatGetsDelayedCredits(final VertxTestContext ctx) {
         // We need to delay timer task. In this case simply forever.
         final long waitOnCreditsTimerId = 23;
         when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
@@ -888,21 +929,17 @@ public class HonoConnectionImplTest {
         final Handler<String> remoteCloseHook = mock(Handler.class);
 
         // GIVEN an established connection
-        final Async connectAttempt = ctx.async();
-        honoConnection.connect().setHandler(ctx.asyncAssertSuccess(ok -> connectAttempt.complete()));
-        connectAttempt.await();
-
-        final Async senderCreation = ctx.async();
-        honoConnection.createSender(
-                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
-                .setHandler(createSenderResult -> {
-                    ctx.assertEquals(sender, createSenderResult.result());
-                    ctx.verify(v -> {
+        honoConnection.connect()
+            .compose(c -> honoConnection.createSender(
+                "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
+            .setHandler(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        assertThat(s).isEqualTo(sender);
                         // sendQueueDrainHandler gets unset
                         verify(sender).sendQueueDrainHandler(null);
                         verify(vertx).cancelTimer(waitOnCreditsTimerId);
-                        senderCreation.complete();
                     });
-                });
+                    ctx.completeNow();
+                }));
     }
 }

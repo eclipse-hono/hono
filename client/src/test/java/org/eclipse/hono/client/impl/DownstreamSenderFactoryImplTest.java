@@ -14,8 +14,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,9 +28,9 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Future;
@@ -39,8 +38,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonSender;
 
@@ -49,7 +48,7 @@ import io.vertx.proton.ProtonSender;
  * Tests verifying behavior of {@link DownstreamSenderFactoryImpl}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class DownstreamSenderFactoryImplTest {
 
     private Vertx vertx;
@@ -59,7 +58,7 @@ public class DownstreamSenderFactoryImplTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -82,23 +81,26 @@ public class DownstreamSenderFactoryImplTest {
      * @param ctx The helper to use for running async tests.
      */
     @Test
-    public void testGetTelemetrySenderFailsIfInvokedConcurrently(final TestContext ctx) {
+    public void testGetTelemetrySenderFailsIfInvokedConcurrently(final VertxTestContext ctx) {
 
         // GIVEN a factory that already tries to create a telemetry sender for "tenant" (and never completes doing so)
         final Promise<ProtonSender> sender = Promise.promise();
         when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
         .thenReturn(sender.future());
         final Future<DownstreamSender> result = factory.getOrCreateTelemetrySender("telemetry/tenant");
-        assertFalse(result.isComplete());
+        assertThat(result.isComplete()).isFalse();
 
         // WHEN an additional, concurrent attempt is made to create a telemetry sender for "tenant"
-        factory.getOrCreateTelemetrySender("telemetry/tenant").setHandler(ctx.asyncAssertFailure(t -> {
+        factory.getOrCreateTelemetrySender("telemetry/tenant").setHandler(ctx.failing(t -> {
             // THEN the concurrent attempt fails after having done the default number of retries.
-            ctx.assertTrue(ServerErrorException.class.isInstance(t));
-            verify(vertx, times(CachingClientFactory.MAX_CREATION_RETRIES)).setTimer(anyLong(), notNull());
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                verify(vertx, times(CachingClientFactory.MAX_CREATION_RETRIES)).setTimer(anyLong(), notNull());
+            });
         }));
         sender.complete(mock(ProtonSender.class));
-        assertTrue(result.isComplete());
+        ctx.verify(() -> assertThat(result.isComplete()).isTrue());
+        ctx.completeNow();
     }
 
     /**
@@ -111,18 +113,18 @@ public class DownstreamSenderFactoryImplTest {
         // GIVEN a factory that tries to create a telemetry sender for "tenant"
         final Promise<ProtonSender> sender = Promise.promise();
         when(connection.createSender(anyString(), any(ProtonQoS.class), VertxMockSupport.anyHandler()))
-        .thenReturn(sender.future());
+            .thenReturn(sender.future());
         @SuppressWarnings("unchecked")
         final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandler = ArgumentCaptor.forClass(DisconnectListener.class);
         verify(connection).addDisconnectListener(disconnectHandler.capture());
 
         final Future<DownstreamSender> result = factory.getOrCreateTelemetrySender("telemetry/tenant");
-        assertFalse(result.isComplete());
+        assertThat(result.isComplete()).isFalse();
 
         // WHEN the underlying connection fails
         disconnectHandler.getValue().onDisconnect(connection);
 
         // THEN all creation requests are failed
-        assertTrue(result.failed());
+        assertThat(result.failed()).isTrue();
     }
 }

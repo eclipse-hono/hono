@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,14 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
@@ -32,8 +36,8 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
@@ -63,7 +67,7 @@ public class GatewayMappingCommandHandlerTest {
     /**
      * Sets up common fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
         final SpanContext spanContext = mock(SpanContext.class);
         final Span span = mock(Span.class);
@@ -114,7 +118,7 @@ public class GatewayMappingCommandHandlerTest {
         // THEN the nextCommandHandler is called with the original commandContext
         final ArgumentCaptor<CommandContext> commandContextArgumentCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(nextCommandHandler).handle(commandContextArgumentCaptor.capture());
-        assertThat(commandContextArgumentCaptor.getValue(), is(commandContext));
+        assertThat(commandContextArgumentCaptor.getValue()).isEqualTo(commandContext);
     }
 
     /**
@@ -141,7 +145,7 @@ public class GatewayMappingCommandHandlerTest {
         // THEN the nextCommandHandler is called with an adapted commandContext (with gatewayId)
         final ArgumentCaptor<CommandContext> commandContextArgumentCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(nextCommandHandler).handle(commandContextArgumentCaptor.capture());
-        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(gatewayId));
+        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId()).isEqualTo(gatewayId);
     }
 
     /**
@@ -178,8 +182,8 @@ public class GatewayMappingCommandHandlerTest {
         // THEN the nextCommandHandler is called with an adapted commandContext (with gatewayId) and original reply-to id
         final ArgumentCaptor<CommandContext> commandContextArgumentCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(nextCommandHandler).handle(commandContextArgumentCaptor.capture());
-        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(gatewayId));
-        assertThat(commandContextArgumentCaptor.getValue().getCommand().getCommandMessage().getReplyTo(), is(replyTo));
+        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId()).isEqualTo(gatewayId);
+        assertThat(commandContextArgumentCaptor.getValue().getCommand().getCommandMessage().getReplyTo()).isEqualTo(replyTo);
     }
 
     /**
@@ -205,7 +209,7 @@ public class GatewayMappingCommandHandlerTest {
         // THEN the nextCommandHandler is called with an adapted commandContext (with gatewayId)
         final ArgumentCaptor<CommandContext> commandContextArgumentCaptor = ArgumentCaptor.forClass(CommandContext.class);
         verify(nextCommandHandler).handle(commandContextArgumentCaptor.capture());
-        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId(), is(gatewayId));
+        assertThat(commandContextArgumentCaptor.getValue().getCommand().getDeviceId()).isEqualTo(gatewayId);
     }
 
     /**

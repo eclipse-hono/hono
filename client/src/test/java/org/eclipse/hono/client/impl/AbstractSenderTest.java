@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,11 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -32,8 +31,8 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.MessageHelper;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
@@ -59,7 +58,7 @@ public class AbstractSenderTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         protonSender = HonoClientUnitTestHelper.mockProtonSender();
         vertx = mock(Vertx.class);
@@ -147,9 +146,9 @@ public class AbstractSenderTest {
     public void testCredits() {
         final AbstractSender sender = newSender("tenant", "endpoint");
         when(protonSender.getCredit()).thenReturn(10);
-        assertThat(sender.getCredit(), is(10));
+        assertThat(sender.getCredit()).isEqualTo(10);
         when(protonSender.getCredit()).thenReturn(0);
-        assertThat(sender.getCredit(), is(0));
+        assertThat(sender.getCredit()).isEqualTo(0);
     }
 
     private AbstractSender newSender(final String tenantId, final String targetAddress) {
