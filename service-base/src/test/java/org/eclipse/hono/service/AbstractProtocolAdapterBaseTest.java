@@ -521,12 +521,14 @@ public class AbstractProtocolAdapterBaseTest {
     @Test
     public void testCheckConnectionLimitFailsIfConnectionLimitIsReached(final VertxTestContext ctx) {
 
-        // GIVEN an tenant for which the maximum number of connections has been reached
+        // GIVEN a tenant for which the maximum number of connections has been reached
         final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
         final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
         when(checks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         when(checks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(checks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
         adapter.setResourceLimitChecks(checks);
 
@@ -546,13 +548,15 @@ public class AbstractProtocolAdapterBaseTest {
     @Test
     public void testCheckConnectionLimitFailsIfMessageLimitIsReached(final VertxTestContext ctx) {
 
-        // GIVEN an tenant for which the message limit has been reached
+        // GIVEN a tenant for which the message limit has been reached
         final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
         final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
         when(checks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
         when(checks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(checks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
         adapter.setResourceLimitChecks(checks);
 
         // WHEN a device tries to connect
@@ -561,6 +565,60 @@ public class AbstractProtocolAdapterBaseTest {
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
             ctx.completeNow();
         }));
+    }
+
+    /**
+     * Verifies that the connection limit check fails if the tenant's connection duration limit has been reached.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCheckConnectionLimitFailsIfConnectionDurationLimitIsReached(final VertxTestContext ctx) {
+
+        // GIVEN a tenant for which the connection duration limit has been reached
+        final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
+        final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
+        when(checks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(checks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(checks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        adapter.setResourceLimitChecks(checks);
+
+        // WHEN a device tries to connect
+        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
+            // THEN the connection limit check fails
+            ctx.verify(
+                    () -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            ctx.completeNow();
+        }));
+    }
+
+    /**
+     * Verifies that the connection duration check fails if the tenant's connection duration
+     * limit has been already reached.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void verifyConnectionDurationLimitIsReached(final VertxTestContext ctx) {
+
+        //Given a tenant for which the maximum connection duration usage already exceeds the limit.
+        final TenantObject tenant = TenantObject.from("tenant", Boolean.TRUE);
+        final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
+        when(checks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        adapter.setResourceLimitChecks(checks);
+
+        //When a device tries to connect
+        adapter.checkConnectionDurationLimit(tenant, mock(SpanContext.class))
+                .setHandler(ctx.failing(t -> {
+                    //Then the connection duration limit check fails
+                    ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(),
+                            is(HttpURLConnection.HTTP_FORBIDDEN)));
+                    ctx.completeNow();
+                }));
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {

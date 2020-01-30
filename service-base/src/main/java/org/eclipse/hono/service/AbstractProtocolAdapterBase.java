@@ -584,7 +584,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject, SpanContext)} method
      * to verify if the tenant's overall connection limit across all adapters
      * has been reached and also invokes {@link #checkMessageLimit(TenantObject, long, SpanContext)}
-     * to check if the tenant's message limit has been exceeded.
+     * and  {@link #checkConnectionDurationLimit(TenantObject, SpanContext)} to check 
+     * if the tenant's message and connection duration limits have been exceeded or not.
      *
      * @param tenantConfig The tenant to check the connection limit for.
      * @param spanContext The currently active OpenTracing span context that is used to
@@ -618,7 +619,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     return Future.failedFuture(t);
                 });
 
-        return CompositeFuture.all(connectionLimitCheckResult, messageLimitCheckResult)
+        return CompositeFuture
+                .all(connectionLimitCheckResult, checkConnectionDurationLimit(tenantConfig, spanContext),
+                        messageLimitCheckResult)
                 .map(ok -> null);
     }
 
@@ -672,6 +675,41 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     if (isExceeded) {
                         return Future.failedFuture(
                                 new ClientErrorException(HttpResponseStatus.TOO_MANY_REQUESTS.code()));
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                });
+    }
+
+    /**
+     * Checks if the maximum connection duration across all protocol adapters 
+     * for a particular tenant has been reached.
+     * <p>
+     * This default implementation uses the
+     * {@link ResourceLimitChecks#isConnectionDurationLimitReached(TenantObject, SpanContext)} 
+     * method to verify if the tenant's overall connection duration across all adapters
+     * has been reached.
+     *
+     * @param tenantConfig The tenant to check the connection duration limit for.
+     * @param spanContext The currently active OpenTracing span context that is used to
+     *                    trace the limits verification or {@code null}
+     *                    if no span is currently active.
+     * @return A succeeded future if the connection duration limit has not yet been reached
+     *         or if the limit could not be checked.
+     *         Otherwise, the future will be failed with a {@link ClientErrorException}
+     *         containing the 403 Forbidden status code.
+     * @throws NullPointerException if tenantConfig is {@code null}.
+     */
+    protected Future<Void> checkConnectionDurationLimit(final TenantObject tenantConfig,
+            final SpanContext spanContext) {
+
+        Objects.requireNonNull(tenantConfig);
+
+        return resourceLimitChecks.isConnectionDurationLimitReached(tenantConfig, spanContext)
+                .recover(t -> Future.succeededFuture(Boolean.FALSE))
+                .compose(isExceeded -> {
+                    if (isExceeded) {
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN));
                     } else {
                         return Future.succeededFuture();
                     }
