@@ -128,8 +128,7 @@ public class DeviceRegistrationHttpIT {
                         assertThat(locations).hasSize(1);
                         final String location = locations.get(0);
                         assertThat(location).isNotNull();
-                        final String[] toks = location.split("/");
-                        assertThat(toks).hasSize(4);
+                        assertThat(location.matches("/(.*)/(.*)/(.*)/(.*)"));
                     });
                     ctx.completeNow();
                 }));

@@ -174,7 +174,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
             return;
         }
 
-        logger.info("creating device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId,
+        logger.debug("creating device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId,
                 payload);
 
         final Device device = fromPayload(payload);
