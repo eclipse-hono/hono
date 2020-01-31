@@ -20,6 +20,8 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
@@ -27,6 +29,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,20 +149,26 @@ public final class DestinationCommandConsumer extends CommandConsumer {
 
     private void handleCommandMessage(final Message msg, final ProtonDelivery delivery) {
         // command could have been mapped to a gateway, but the original address stays the same in the message address in that case
-        // TODO reject message with missing address
         final String originalDeviceId = msg.getAddress() != null
                 ? ResourceIdentifier.fromString(msg.getAddress()).getResourceId()
                 : null;
+        if (originalDeviceId == null) {
+            LOG.debug("address of command message is invalid: {}", msg.getAddress());
+            final Rejected rejected = new Rejected();
+            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "invalid command target address"));
+            delivery.disposition(rejected, true);
+            return;
+        }
         // look for a handler with the original device id first
         final CommandHandlerWrapper commandHandler = getCommandHandlerOrDefault(originalDeviceId);
         if (commandHandler != null) {
             final Command command = Command.from(msg, tenantId, gatewayOrDeviceId);
+            // command.isValid() check not done here - it is to be done in the command handler
             final Tracer tracer = connection.getTracer();
             // try to extract Span context from incoming message
             final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
-            final String targetDeviceId = originalDeviceId != null ? originalDeviceId : gatewayOrDeviceId;
-            final String gatewayId = gatewayOrDeviceId.equals(targetDeviceId) ? null : gatewayOrDeviceId;
-            final Span currentSpan = createSpan("send command", tenantId, targetDeviceId,
+            final String gatewayId = gatewayOrDeviceId.equals(originalDeviceId) ? null : gatewayOrDeviceId;
+            final Span currentSpan = createSpan("send command", tenantId, originalDeviceId,
                     gatewayId, tracer, spanContext);
             logReceivedCommandToSpan(command, currentSpan);
             commandHandler.handleCommand(CommandContext.from(command, delivery, this.receiver, currentSpan));

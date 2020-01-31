@@ -636,6 +636,8 @@ public class VertxBasedHttpProtocolAdapterTest {
 
     private static Message newMockMessage(final String tenantId, final String deviceId, final String name) {
         final Message msg = mock(Message.class);
+        when(msg.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
         when(msg.getSubject()).thenReturn(name);
         when(msg.getCorrelationId()).thenReturn("the-correlation-id");
         when(msg.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,

@@ -66,6 +66,8 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         final String replyTo = String.format("%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, "the-reply-to-id");
 
         final Message commandMessage = mock(Message.class);
+        when(commandMessage.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
         when(commandMessage.getSubject()).thenReturn("testSubject");
         when(commandMessage.getCorrelationId()).thenReturn("testCorrelationId");
         when(commandMessage.getReplyTo()).thenReturn(replyTo);

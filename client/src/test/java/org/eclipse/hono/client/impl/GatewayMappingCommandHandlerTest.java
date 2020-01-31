@@ -93,6 +93,8 @@ public class GatewayMappingCommandHandlerTest {
         gatewayMappingCommandHandler = new GatewayMappingCommandHandler(gatewayMapper, nextCommandHandler);
 
         commandMessage = mock(Message.class);
+        when(commandMessage.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
         when(commandMessage.getSubject()).thenReturn("testSubject");
         when(commandMessage.getCorrelationId()).thenReturn("testCorrelationId");
         final Command command = Command.from(commandMessage, tenantId, deviceId);
