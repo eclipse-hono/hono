@@ -24,8 +24,6 @@ import org.eclipse.hono.util.CommandConstants;
 public class CommandEndpointConfiguration {
 
     private final SubscriberRole subscriberRole;
-    private final boolean legacySouthboundEndpoint;
-    private final boolean legacyNorthboundEndpoint;
 
     /**
      * Defines the different ways in which to subscribe for commands.
@@ -49,17 +47,9 @@ public class CommandEndpointConfiguration {
      * Creates a new configuration.
      * 
      * @param subscriberRole The way in which to subscribe for commands.
-     * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
-     * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
      */
-    public CommandEndpointConfiguration(
-            final SubscriberRole subscriberRole,
-            final boolean useLegacySouthboundEndpoint,
-            final boolean useLegacyNorthboundEndpoint) {
-
+    public CommandEndpointConfiguration(final SubscriberRole subscriberRole) {
         this.subscriberRole = subscriberRole;
-        this.legacySouthboundEndpoint = useLegacySouthboundEndpoint;
-        this.legacyNorthboundEndpoint = useLegacyNorthboundEndpoint;
     }
 
     /**
@@ -77,7 +67,7 @@ public class CommandEndpointConfiguration {
      * @return The command endpoint name.
      */
     public final String getSouthboundEndpoint() {
-        return legacySouthboundEndpoint ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+        return CommandConstants.COMMAND_ENDPOINT;
     }
 
     /**
@@ -118,22 +108,13 @@ public class CommandEndpointConfiguration {
     }
 
     /**
-     * Checks if applications use the legacy command endpoint.
-     * 
-     * @return {@code true} if applications send commands via the legacy endpoint.
-     */
-    public final boolean isLegacyNorthboundEndpoint() {
-        return legacyNorthboundEndpoint;
-    }
-
-    /**
      * Gets the name of the endpoint that applications use for sending
      * commands to devices.
      * 
      * @return The endpoint name.
      */
     public final String getNorthboundEndpoint() {
-        return legacyNorthboundEndpoint ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+        return CommandConstants.COMMAND_ENDPOINT;
     }
 
     /**
@@ -153,15 +134,10 @@ public class CommandEndpointConfiguration {
      * to devices.
      * 
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device identifier.
      * @return The target address.
      */
-    public final String getSenderLinkTargetAddress(final String tenantId, final String deviceId) {
+    public final String getSenderLinkTargetAddress(final String tenantId) {
 
-        if (legacyNorthboundEndpoint) {
-            return String.format("%s/%s/%s", CommandConstants.COMMAND_LEGACY_ENDPOINT, tenantId, deviceId);
-        } else {
-            return String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId);
-        }
+        return String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, tenantId);
     }
 }

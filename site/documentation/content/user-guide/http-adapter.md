@@ -475,10 +475,6 @@ content-length: 0
 
 This is the preferred way for devices to respond to commands. It is available only if the protocol adapter is configured to require devices to authenticate (which is the default).
 
-{{% note title="Deprecation" %}}
-Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
-{{% /note %}}
-
 **Example**
 
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4711`:
@@ -514,10 +510,6 @@ content-length: 0
          * The application has already given up on waiting for a response.
 
 This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the `HONO_HTTP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
-
-{{% note title="Deprecation" %}}
-Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
-{{% /note %}}
 
 **Examples**
 
@@ -559,10 +551,6 @@ content-length: 0
 This resource can be used by *gateway* components to send the response to a command *on behalf of* other devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). In this case the credentials provided by the gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the parameters from the URI are used to identify the device that the gateway publishes data for.
 
 The protocol adapter checks the gateway's authority to send responses to a command on behalf of the device implicitly by means of retrieving a *registration assertion* for the device from the [configured Device Registration service]({{< relref "/admin-guide/http-adapter-config#device-registration-service-connection-configuration" >}}).
-
-{{% note title="Deprecation" %}}
-Previous versions of Hono used `control` instead of `command` as prefix in the command response URI. Using the `control` prefix is still supported but deprecated. 
-{{% /note %}}
 
 **Examples**
 

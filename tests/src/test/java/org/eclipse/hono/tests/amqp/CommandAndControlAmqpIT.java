@@ -81,16 +81,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     static Stream<AmqpCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
-                new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE, true, true),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE, false, true),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false),
-
-                // gateway devices are supported with north bound "command" endpoint only
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false)
+                new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE),
+                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES),
+                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE)
                 );
     }
 
@@ -247,22 +240,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                             IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend/2),
-                            200,
-                            endpointConfig.isLegacyNorthboundEndpoint());
+                            200);
                 }, commandsToSend);
-    }
-
-    static Stream<AmqpCommandEndpointConfiguration> testSendAsyncCommandsSucceeds() {
-        return Stream.of(
-                new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false),
-
-                // gateway devices are supported with north bound "command" endpoint only
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false),
-                new AmqpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false)
-                );
     }
 
     /**
@@ -274,7 +253,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
-    @MethodSource
+    @MethodSource("allCombinations")
     public void testSendAsyncCommandsSucceeds(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -390,8 +369,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                             IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend/2),
-                            200,
-                            endpointConfig.isLegacyNorthboundEndpoint())
+                            200)
                             .map(response -> {
                                 ctx.verify(() -> {
                                     assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(deviceId);
@@ -477,7 +455,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 : deviceId;
 
         final AtomicReference<MessageSender> sender = new AtomicReference<>();
-        final String targetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId, commandTargetDeviceId);
+        final String targetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint preconditions = setup.checkpoint(2);

@@ -135,7 +135,6 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             addTelemetryApiRoutes(router, authHandler);
             addEventApiRoutes(router, authHandler);
             addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, authHandler);
-            addCommandResponseRoutes(CommandConstants.COMMAND_LEGACY_ENDPOINT, router, authHandler);
         } else {
 
             log.warn("device authentication has been disabled");
@@ -143,7 +142,6 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             addTelemetryApiRoutes(router, null);
             addEventApiRoutes(router, null);
             addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, null);
-            addCommandResponseRoutes(CommandConstants.COMMAND_LEGACY_ENDPOINT, router, null);
         }
     }
 

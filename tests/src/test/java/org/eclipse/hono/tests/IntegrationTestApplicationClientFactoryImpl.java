@@ -51,20 +51,4 @@ public class IntegrationTestApplicationClientFactoryImpl extends ApplicationClie
                 s -> {});
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<LegacyCommandClient> createLegacyCommandClient(final String tenantId, final String deviceId) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        return LegacyCommandClientImpl.create(
-                connection,
-                tenantId,
-                deviceId,
-                "replies",
-                null,
-                null);
-    }
 }

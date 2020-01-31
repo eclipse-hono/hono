@@ -45,7 +45,7 @@ public class CommandResponseTest {
     public void testFromResponseSucceeds() {
 
         final CommandResponse resp = CommandResponse.from(
-                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID, false),
+                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
                 TENANT_ID,
                 DEVICE_ID,
                 null,
@@ -155,7 +155,7 @@ public class CommandResponseTest {
     @Test
     public void testDeviceInReply() {
         final CommandResponse resp = CommandResponse.from(
-                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID_WITH_DEVICE, DEVICE_ID, false),
+                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID_WITH_DEVICE, DEVICE_ID),
                 TENANT_ID,
                 DEVICE_ID,
                 null,
@@ -171,7 +171,7 @@ public class CommandResponseTest {
     @Test
     public void testDeviceNotInReply() {
         final CommandResponse resp = CommandResponse.from(
-                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID, false),
+                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
                 TENANT_ID,
                 DEVICE_ID,
                 null,
@@ -186,8 +186,7 @@ public class CommandResponseTest {
     @Test
     public void testForDeviceIdInReplyToId() {
         final boolean replyToContainedDeviceId = true;
-        final boolean replyToLegacyEndpointUsed = false;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, replyToLegacyEndpointUsed);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
                 .from("control", TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
@@ -196,7 +195,6 @@ public class CommandResponseTest {
         final CommandResponse response = CommandResponse.from(message);
         assertThat(response, notNullValue());
         assertThat(response.getReplyToId(), is("4711/rid-1"));
-        assertThat(response.isReplyToLegacyEndpointUsed(), is(replyToLegacyEndpointUsed));
     }
 
     /**
@@ -205,7 +203,7 @@ public class CommandResponseTest {
     @Test
     public void testFromMessageFailsForMissingCorrelationId() {
         final boolean replyToContainedDeviceId = true;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
                 .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
@@ -232,7 +230,7 @@ public class CommandResponseTest {
     @Test
     public void testFromMessageFailsForMissingStatus() {
         final boolean replyToContainedDeviceId = true;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
                 .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
@@ -247,7 +245,7 @@ public class CommandResponseTest {
     @Test
     public void testFromMessageFailsForInvalidStatus() {
         final boolean replyToContainedDeviceId = true;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
                 .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
@@ -278,7 +276,7 @@ public class CommandResponseTest {
     @Test
     public void testFromMessageFailsForInvalidAddressWithOnlyReplyToOptionsBit() {
         final boolean replyToContainedDeviceId = true;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
                 .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%s", DEVICE_ID, replyToOptionsBitFlag)).toString());
@@ -310,7 +308,7 @@ public class CommandResponseTest {
     @Test
     public void testForNoDeviceIdInReplyToId() {
         final boolean replyToContainedDeviceId = false;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
                 .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
@@ -327,7 +325,7 @@ public class CommandResponseTest {
     @Test
     public void testForDeviceAndTenantIds() {
         final CommandResponse response = CommandResponse.from(
-                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID, false),
+                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
                 TENANT_ID,
                 DEVICE_ID,
                 null,
@@ -336,46 +334,6 @@ public class CommandResponseTest {
         assertNotNull(response.toMessage());
         assertThat(MessageHelper.getTenantId(response.toMessage()), is(TENANT_ID));
         assertThat(MessageHelper.getDeviceId(response.toMessage()), is(DEVICE_ID));
-        assertThat(response.isReplyToLegacyEndpointUsed(), is(false));
-    }
-
-    /**
-     * Verifies the return value of the <em>isReplyToLegacyEndpointUsed</em> method for a response initialized
-     * with a request id that signals that the legacy reply-to endpoint address was used.
-     */
-    @Test
-    public void testFromWithReplyToLegacyEndpointUsed() {
-        final boolean replyToLegacyEndpointUsed = true;
-        final CommandResponse response = CommandResponse.from(
-                Command.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID, replyToLegacyEndpointUsed),
-                TENANT_ID,
-                DEVICE_ID,
-                null,
-                null,
-                HttpURLConnection.HTTP_OK);
-        assertNotNull(response.toMessage());
-        assertThat(MessageHelper.getTenantId(response.toMessage()), is(TENANT_ID));
-        assertThat(MessageHelper.getDeviceId(response.toMessage()), is(DEVICE_ID));
-        assertThat(response.isReplyToLegacyEndpointUsed(), is(replyToLegacyEndpointUsed));
-    }
-
-    /**
-     * Verifies the return value of the <em>isReplyToLegacyEndpointUsed</em> method for a response message with a
-     * legacy endpoint address.
-     */
-    @Test
-    public void testFromMessageWithReplyToLegacyEndpointUsed() {
-        final boolean replyToLegacyEndpointUsed = true;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(true, replyToLegacyEndpointUsed);
-        final Message message = ProtonHelper.message();
-        message.setAddress(ResourceIdentifier
-                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
-        message.setCorrelationId(CORRELATION_ID);
-        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        final CommandResponse response = CommandResponse.from(message);
-        assertThat(response, notNullValue());
-        assertThat(response.getReplyToId(), is("4711/rid-1"));
-        assertThat(response.isReplyToLegacyEndpointUsed(), is(replyToLegacyEndpointUsed));
     }
 
     private String getCommandResponseEndpoint() {

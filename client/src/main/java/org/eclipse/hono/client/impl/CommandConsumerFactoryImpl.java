@@ -562,30 +562,6 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * This implementation always creates a new sender link.
-     */
-    @Deprecated
-    @Override
-    public Future<CommandResponseSender> getLegacyCommandResponseSender(
-            final String tenantId,
-            final String replyId) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(replyId);
-
-        return connection.executeOnContext(result -> {
-            LegacyCommandResponseSenderImpl.create(
-                    connection,
-                    tenantId,
-                    replyId,
-                    onRemoteClose -> {})
-                    .setHandler(result);
-        });
-    }
-
-    /**
      * Only used for testing.
      */
     Map<String, LivenessCheckData> getDestinationCommandConsumerLivenessChecks() {

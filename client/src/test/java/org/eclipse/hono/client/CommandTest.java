@@ -55,7 +55,7 @@ public class CommandTest {
         message.setReplyTo(String.format("%s/%s/%s/%s",
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final boolean replyToContainedDeviceId = true;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
         assertThat(cmd.getName(), is("doThis"));
@@ -81,7 +81,7 @@ public class CommandTest {
         message.setReplyTo(String.format("%s/%s/%s",
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, replyToId));
         final boolean replyToContainedDeviceId = false;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
         assertThat(cmd.getReplyToId(), is(replyToId));
@@ -104,34 +104,10 @@ public class CommandTest {
         message.setCorrelationId(correlationId);
         message.setReplyTo(String.format("%s/%s/%s/%s",
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(true, false);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(true);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
         assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
-        assertNotNull(cmd.getCommandMessage());
-        assertNotNull(cmd.getCommandMessage().getReplyTo());
-        assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
-    }
-
-    /**
-     * Verifies that a command can be created from a valid message having the legacy endpoint used in the reply-to
-     * address.
-     */
-    @Test
-    public void testForReplyToWithLegacyEndpointUsed() {
-        final String replyToId = "the-reply-to-id";
-        final String correlationId = "the-correlation-id";
-        final Message message = ProtonHelper.message("input data");
-        message.setSubject("doThis");
-        message.setCorrelationId(correlationId);
-        message.setReplyTo(String.format("%s/%s/%s/%s",
-                CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(true, true);
-        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
-        assertTrue(cmd.isValid());
-        assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
-        assertThat(cmd.getReplyToEndpoint(), is(CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT));
         assertNotNull(cmd.getCommandMessage());
         assertNotNull(cmd.getCommandMessage().getReplyTo());
         assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
@@ -300,15 +276,11 @@ public class CommandTest {
     @Test
     public void testEncodeDecodeReplyToOptions() {
         final boolean replyToContainedDeviceId = false;
-        final boolean replyToLegacyEndpointUsed = false;
-        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId, replyToLegacyEndpointUsed);
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         assertThat(Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag), is(replyToContainedDeviceId));
-        assertThat(Command.isReplyToLegacyEndpointUsed(replyToOptionsBitFlag), is(replyToLegacyEndpointUsed));
 
         final boolean replyToContainedDeviceId2 = true;
-        final boolean replyToLegacyEndpointUsed2 = true;
-        final String replyToOptions2 = Command.encodeReplyToOptions(replyToContainedDeviceId2, replyToLegacyEndpointUsed2);
+        final String replyToOptions2 = Command.encodeReplyToOptions(replyToContainedDeviceId2);
         assertThat(Command.isReplyToContainedDeviceIdOptionSet(replyToOptions2), is(replyToContainedDeviceId2));
-        assertThat(Command.isReplyToLegacyEndpointUsed(replyToOptions2), is(replyToLegacyEndpointUsed2));
     }
 }

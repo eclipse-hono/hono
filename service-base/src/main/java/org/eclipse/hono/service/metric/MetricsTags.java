@@ -102,7 +102,6 @@ public final class MetricsTags {
                 return EVENT;
             case CommandConstants.COMMAND_ENDPOINT:
             case CommandConstants.COMMAND_ENDPOINT_SHORT:
-            case CommandConstants.COMMAND_LEGACY_ENDPOINT:
                 return COMMAND;
             case CommandConstants.COMMAND_RESPONSE_ENDPOINT:
                 return COMMAND_RESPONSE;

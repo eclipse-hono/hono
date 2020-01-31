@@ -32,17 +32,13 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
      * Creates a new configuration.
      * 
      * @param subscriberRole The way in which to subscribe for commands.
-     * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
-     * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
      * @param useLegacyTopicFilter {@code true} if the device uses the legacy topic filter for subscribing to commands.
      */
     public MqttCommandEndpointConfiguration(
             final SubscriberRole subscriberRole,
-            final boolean useLegacySouthboundEndpoint,
-            final boolean useLegacyNorthboundEndpoint,
             final boolean useLegacyTopicFilter) {
 
-        super(subscriberRole, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
+        super(subscriberRole);
         this.legacyTopicFilter = useLegacyTopicFilter;
     }
 

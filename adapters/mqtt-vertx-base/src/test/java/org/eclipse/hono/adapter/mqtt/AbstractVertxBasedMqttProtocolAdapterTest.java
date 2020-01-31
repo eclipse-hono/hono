@@ -1233,7 +1233,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         adapter.uploadMessage(newMqttContext(msg, mockEndpoint()),
                 ResourceIdentifier.fromString(String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(),
-                        Command.getRequestId("cmd123", "to", "deviceId", false))),
+                        Command.getRequestId("cmd123", "to", "deviceId"))),
                 msg)
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -1338,19 +1338,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
     }
 
     private String getCommandEndpoint() {
-        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
-    }
-
-    /**
-     * Checks whether the legacy Command & Control endpoint shall be used.
-     * <p>
-     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
-     * command endpoint.
-     * 
-     * @return {@code true} if the legacy command endpoint shall be used.
-     */
-    protected boolean useLegacyCommandEndpoint() {
-        return false;
+        return CommandConstants.COMMAND_ENDPOINT;
     }
 
     private void forceClientMocksToConnected() {
