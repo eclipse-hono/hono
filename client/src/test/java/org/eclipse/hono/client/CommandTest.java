@@ -50,6 +50,8 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
         final Message message = ProtonHelper.message("input data");
+        message.setAddress(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         message.setSubject("doThis");
         message.setCorrelationId(correlationId);
         message.setReplyTo(String.format("%s/%s/%s/%s",
@@ -76,6 +78,8 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
         final Message message = ProtonHelper.message("input data");
+        message.setAddress(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         message.setSubject("doThis");
         message.setCorrelationId(correlationId);
         message.setReplyTo(String.format("%s/%s/%s",
@@ -100,6 +104,8 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
         final Message message = ProtonHelper.message("input data");
+        message.setAddress(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         message.setSubject("doThis");
         message.setCorrelationId(correlationId);
         message.setReplyTo(String.format("%s/%s/%s/%s",
@@ -122,6 +128,8 @@ public class CommandTest {
     public void testFromMessageSucceedsWithoutReplyTo() {
         final String correlationId = "the-correlation-id";
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
@@ -140,6 +148,8 @@ public class CommandTest {
     @Test
     public void testFromMessageSucceedsWithoutReplyToAndCorrelationId() {
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getSubject()).thenReturn("doThis");
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
@@ -157,6 +167,8 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String messageId = "the-message-id";
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getApplicationProperties()).thenReturn(null);
         when(message.getSubject()).thenReturn("doThis");
         when(message.getMessageId()).thenReturn(messageId);
@@ -179,6 +191,8 @@ public class CommandTest {
         applicationProperties.put("deviceId", "4711");
         applicationProperties.put("tenantId", "DEFAULT_TENANT");
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getApplicationProperties()).thenReturn(new ApplicationProperties(applicationProperties));
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
@@ -200,6 +214,8 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getApplicationProperties()).thenReturn(null);
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
@@ -218,10 +234,46 @@ public class CommandTest {
     public void testFromMessageFailsForMissingCorrelationOrMessageId() {
         final String replyToId = "the-reply-to-id";
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getSubject()).thenReturn("doThis");
         when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s/%s",
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
-        assertFalse(Command.from(message, Constants.DEFAULT_TENANT, "4711").isValid());
+        final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason(), containsString("correlation-id"));
+    }
+
+    /**
+     * Verifies that a command cannot be created from a message that contains
+     * a 'to' address without the device-id part.
+     */
+    @Test
+    public void testFromMessageFailsForMissingDeviceIdInAddress() {
+        final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT));
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getCorrelationId()).thenReturn("the-correlation-id");
+        final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason(), containsString("address"));
+    }
+
+    /**
+     * Verifies that a command cannot be created from a message that contains
+     * a 'to' address with the wrong tenant-id.
+     */
+    @Test
+    public void testFromMessageFailsForAddressWithWrongTenant() {
+        final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, "other_tenant", "4711"));
+        when(message.getSubject()).thenReturn("doThis");
+        when(message.getCorrelationId()).thenReturn("the-correlation-id");
+        final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason(), containsString("address"));
     }
 
     /**
@@ -232,11 +284,15 @@ public class CommandTest {
     public void testFromMessageFailsForMalformedReplyToAddress() {
         final String correlationId = "the-correlation-id";
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
         when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s",
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, "4711", Constants.DEFAULT_TENANT));
-        assertFalse(Command.from(message, Constants.DEFAULT_TENANT, "4711").isValid());
+        final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason(), containsString("reply-to"));
     }
 
     /**
@@ -248,11 +304,15 @@ public class CommandTest {
         final String replyToId = "the-reply-to-id";
         final String correlationId = "the-correlation-id";
         final Message message = mock(Message.class);
+        when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, "4711"));
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
         when(message.getReplyTo()).thenReturn(String.format("%s/%s",
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, replyToId));
-        assertFalse(Command.from(message, Constants.DEFAULT_TENANT, "4712").isValid());
+        final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4712");
+        assertFalse(command.isValid());
+        assertThat(command.getInvalidCommandReason(), containsString("reply-to"));
     }
 
     /**
@@ -265,6 +325,7 @@ public class CommandTest {
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4712");
         assertFalse(command.isValid());
         // verify the returned validation error contains all missing fields
+        assertThat(command.getInvalidCommandReason(), containsString("address"));
         assertThat(command.getInvalidCommandReason(), containsString("subject"));
         assertThat(command.getInvalidCommandReason(), containsString("correlation-id"));
         assertThat(command.getInvalidCommandReason(), containsString("reply-to"));

@@ -99,6 +99,18 @@ public final class Command {
         Objects.requireNonNull(deviceId);
 
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
+        if (message.getAddress() == null) {
+            validationErrorJoiner.add("address is not set");
+        } else {
+            final ResourceIdentifier addressIdentifier = ResourceIdentifier.fromString(message.getAddress());
+            if (!tenantId.equals(addressIdentifier.getTenantId())) {
+                validationErrorJoiner.add("address contains wrong tenant");
+            }
+            if (addressIdentifier.getResourceId() == null) {
+                validationErrorJoiner.add("address is missing device-id part");
+            }
+        }
+
         if (message.getSubject() == null) {
             validationErrorJoiner.add("subject not set");
         }
@@ -270,13 +282,7 @@ public final class Command {
      */
     public String getOriginalDeviceId() {
         if (isValid()) {
-            // commands directed at the legacy control endpoint didn't have to have the message address set
-            // (and its content didn't get checked), that's why the 'deviceId' field is used as fallback here
-            // TODO fail command validation in case of missing address
-            final String addressDeviceId = message.getAddress() != null
-                    ? ResourceIdentifier.fromString(message.getAddress()).getResourceId()
-                    : null;
-            return addressDeviceId != null ? addressDeviceId : deviceId;
+            return ResourceIdentifier.fromString(message.getAddress()).getResourceId();
         } else {
             throw new IllegalStateException("command is invalid");
         }

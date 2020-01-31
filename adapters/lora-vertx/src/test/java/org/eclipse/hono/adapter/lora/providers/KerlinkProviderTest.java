@@ -437,6 +437,8 @@ public class KerlinkProviderTest {
 
     private Command getValidDownlinkCommand() {
         final Message message = Message.Factory.create();
+        message.setAddress(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, "bumlux", "bumlux"));
         message.setSubject("subject");
         message.setCorrelationId("correlation_id");
         message.setReplyTo(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT + "/bumlux");

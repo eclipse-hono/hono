@@ -388,7 +388,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                     if (deviceId == null) {
                         log.debug("address of command message is invalid: {}", message.getAddress());
                         final Rejected rejected = new Rejected();
-                        rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed command message"));
+                        rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "invalid command target address"));
                         originalMessageDelivery.disposition(rejected, true);
                         return;
                     }
