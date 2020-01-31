@@ -37,7 +37,9 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * Adapter to bind {@link CredentialsManagementService} to the vertx event bus.
+ * @deprecated as it's now included in @link{AbstractCredentialsManagementHttpEndpoint}.
  */
+@Deprecated(forRemoval = true)
 public abstract class EventBusCredentialsManagementAdapter extends EventBusService
         implements Verticle {
 
@@ -209,6 +211,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
 
         final Promise<OperationResult<List<CommonCredential>>> getResult = Promise.promise();
         getService().get(tenantId, deviceId, span, getResult);
+
         final Future<EventBusMessage> resultFuture = getResult.future()
                 .map(res -> {
                     return res.createResponse(request, credentials -> {

@@ -42,7 +42,9 @@ import io.vertx.ext.web.handler.BodyHandler;
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  * It receives HTTP requests representing operation invocations and sends them to an address on
  * the vertx event bus for processing. The outcome is then returned to the peer in the HTTP response.
+ * @deprecated This class will be removed in future versions. Please use {@link org.eclipse.hono.service.management.credentials.AbstractCredentialsManagementHttpEndpoint} based implementation in the future.
  */
+@Deprecated(forRemoval = true)
 public final class CredentialsManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
 
     /**

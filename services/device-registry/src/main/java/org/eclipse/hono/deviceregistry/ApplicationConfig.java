@@ -27,7 +27,7 @@ import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpoint;
-import org.eclipse.hono.service.management.credentials.CredentialsManagementHttpEndpoint;
+import org.eclipse.hono.service.management.credentials.AbstractCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -210,8 +210,8 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(CredentialsManagementService.class)
-    public HttpEndpoint credentialsHttpEndpoint() {
-        return new CredentialsManagementHttpEndpoint(vertx());
+    public AbstractCredentialsManagementHttpEndpoint credentialsHttpEndpoint() {
+        return new AutowiredCredentialsManagementHttpEndpoint(vertx());
     }
 
     /**
