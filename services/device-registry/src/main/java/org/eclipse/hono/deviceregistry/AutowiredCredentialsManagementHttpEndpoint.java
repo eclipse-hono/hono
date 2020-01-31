@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,30 +10,39 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
 package org.eclipse.hono.deviceregistry;
 
+import io.vertx.core.Vertx;
+import org.eclipse.hono.service.management.credentials.AbstractCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
-import org.eclipse.hono.service.management.credentials.EventBusCredentialsManagementAdapter;
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
 
 /**
- * A default event bus based service implementation of the {@link CredentialsManagementService}.
+ * A default http endpoint implementation of the {@link AbstractCredentialsManagementHttpEndpoint}.
  * <p>
- * This wires up the actual service instance with the mapping to the event bus implementation. It is intended to be used
- * in a Spring Boot environment.
- * @deprecated This class will be removed in future versions as HTTP endpoint does not use event bus anymore.
- *              Please use {@link org.eclipse.hono.service.management.credentials.AbstractCredentialsManagementHttpEndpoint} based implementation in the future.
+ * This wires up the actual service instance with the mapping to the http endpoint implementation.
+ * It is intended to be used in a Spring Boot environment.
  */
 @Component
-@ConditionalOnBean(CredentialsManagementService.class)
-@Deprecated(forRemoval = true)
-public final class AutowiredCredentialsManagementAdapter extends EventBusCredentialsManagementAdapter {
+@ConditionalOnBean(TenantManagementService.class)
+public class AutowiredCredentialsManagementHttpEndpoint extends AbstractCredentialsManagementHttpEndpoint {
 
     private CredentialsManagementService service;
+
+    /**
+     * Creates an endpoint for a Vertx instance.
+     *
+     * @param vertx The Vertx instance to use.
+     * @throws NullPointerException if vertx is {@code null};
+     */
+    @Autowired
+    public AutowiredCredentialsManagementHttpEndpoint(final Vertx vertx) {
+        super(vertx);
+    }
 
     @Autowired
     @Qualifier("backend")
@@ -45,6 +54,4 @@ public final class AutowiredCredentialsManagementAdapter extends EventBusCredent
     protected CredentialsManagementService getService() {
         return this.service;
     }
-
 }
-

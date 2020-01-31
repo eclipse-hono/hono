@@ -42,6 +42,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.RoutingContext;
@@ -188,12 +189,7 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      */
     protected final void extractRequiredJsonArrayPayload(final RoutingContext ctx) {
         extractRequiredJson(ctx, body -> {
-            final var payload = body.getBodyAsJsonArray();
-            if (payload != null && payload.getList() == null) {
-                // work around eclipse-vertx/vert.x#2993
-                return null;
-            }
-            return payload;
+            return body.getBodyAsJsonArray();
         });
     }
 
@@ -390,6 +386,41 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         } else {
             span.setTag(paramName, value);
             return value;
+        }
+    }
+
+    /**
+     * Get request payload object. If it is null, fail the request.
+     *
+     * @param ctx The routing context of the request.
+     * @param span The active OpenTracing span for this operation. In case of an empty payload, the error is logged and the span is finished.
+     * @return The payload as a JsonObject if it's set or {@code null} otherwise.
+     * @throws NullPointerException If ctx is {@code null}.
+     */
+    protected final JsonArray getMandatoryRequestBody(final RoutingContext ctx, final Span span) {
+        return getRequestBody(ctx, span, false);
+    }
+
+    /**
+     * Get request payload object. Optionally, if it is null, fail the request.
+     *
+     * @param ctx The routing context of the request.
+     * @param span The active OpenTracing span for this operation. In case of a null payload, the error is logged and the span is finished.
+     * @param optional Whether to check if payload has been set or not.
+     * @return The payload as a JsonObject if it's set or {@code null} otherwise.
+     * @throws NullPointerException If ctx is {@code null}.
+     */
+    protected final JsonArray getRequestBody(final RoutingContext ctx, final Span span, final boolean optional) {
+        final JsonArray body = ctx.get(KEY_REQUEST_BODY);
+        if (!optional && body == null) {
+            final String msg = String.format("Missing request payload");
+            TracingHelper.logError(span, msg);
+            HttpUtils.badRequest(ctx, msg);
+            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
+            span.finish();
+            return null;
+        } else {
+            return body;
         }
     }
 
