@@ -136,7 +136,7 @@ If the response doesn't contain a *cache directive* no data will be cached.
 The adapter requires a connection to an implementation of Hono's [Device Connection API]({{< relref "/api/device-connection" >}}) in order to determine the gateway that a device is connected via to a protocol adapter. This information is required in order to forward commands issued by applications to the protocol adapter instance that the gateway is connected to.
 
 The connection to the Device Connection service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_DEVICE_CONNECTION`.
+where the `${PREFIX}` is set to `HONO_DEVICECONNECTION`.
 
 Responses from the Device Connection service are never cached, so the properties for configuring the cache are ignored.
 
