@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,10 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
@@ -34,7 +35,7 @@ public class ProximusProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("proximus.uplink");
         final String deviceId = this.provider.extractDeviceId(loraMessage);
 
-        Assert.assertEquals("56FDB2B433873F4C", deviceId);
+        assertEquals("56FDB2B433873F4C", deviceId);
     }
 
     /**
@@ -45,7 +46,7 @@ public class ProximusProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("proximus.uplink");
         final String payload = this.provider.extractPayload(loraMessage);
 
-        Assert.assertEquals("2205630000328c", payload);
+        assertEquals("2205630000328c", payload);
     }
 
     /**
@@ -55,6 +56,6 @@ public class ProximusProviderTest {
     public void extractTypeFromLoraUplinkMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("proximus.uplink");
         final LoraMessageType type = this.provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UPLINK, type);
+        assertEquals(LoraMessageType.UPLINK, type);
     }
 }

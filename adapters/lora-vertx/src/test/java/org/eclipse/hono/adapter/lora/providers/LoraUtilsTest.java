@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,11 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.eclipse.hono.adapter.lora.providers.LoraUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
@@ -58,17 +59,18 @@ public class LoraUtilsTest {
     /**
      * Verifies that hex encoding that contains an odd number of characters is detected.
      */
-    @Test(expected = LoraProviderMalformedPayloadException.class)
+    @Test
     public void testOddHexInput() {
-        LoraUtils.convertFromHexToBase64("6");
+        assertThatThrownBy(() -> LoraUtils.convertFromHexToBase64("6")).isInstanceOf(LoraProviderMalformedPayloadException.class);
     }
 
     /**
      * Verifies that hex encoding that contains an invalid character is detected.
      */
-    @Test(expected = LoraProviderMalformedPayloadException.class)
+    @Test
     public void testInvalidHexInput() {
-        LoraUtils.convertFromHexToBase64("68A5K9");
+        assertThatThrownBy(() -> LoraUtils.convertFromHexToBase64("68A5K9")).isInstanceOf(LoraProviderMalformedPayloadException.class);
+        ;
     }
 
     /**

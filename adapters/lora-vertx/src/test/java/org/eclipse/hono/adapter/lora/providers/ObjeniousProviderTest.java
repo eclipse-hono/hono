@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,10 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
@@ -34,7 +35,7 @@ public class ObjeniousProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("objenious.uplink");
         final String deviceId = provider.extractDeviceId(loraMessage);
 
-        Assert.assertEquals("2032e013597bde6b", deviceId);
+        assertEquals("2032e013597bde6b", deviceId);
     }
 
     /**
@@ -45,7 +46,7 @@ public class ObjeniousProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("objenious.uplink");
         final String payload = provider.extractPayload(loraMessage);
 
-        Assert.assertEquals("00000000004000000000000000000000000000000000000000000000000000000000", payload);
+        assertEquals("00000000004000000000000000000000000000000000000000000000000000000000", payload);
     }
 
     /**
@@ -55,7 +56,7 @@ public class ObjeniousProviderTest {
     public void extractTypeFromLoraUplinkMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("objenious.uplink");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UPLINK, type);
+        assertEquals(LoraMessageType.UPLINK, type);
     }
 
     /**
@@ -65,7 +66,7 @@ public class ObjeniousProviderTest {
     public void extractTypeFromLoraJoinMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("objenious.join");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.JOIN, type);
+        assertEquals(LoraMessageType.JOIN, type);
     }
 
     /**
@@ -75,7 +76,7 @@ public class ObjeniousProviderTest {
     public void extractTypeFromLoraDownlinkMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("objenious.downlink");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.DOWNLINK, type);
+        assertEquals(LoraMessageType.DOWNLINK, type);
     }
 
     /**
@@ -86,6 +87,6 @@ public class ObjeniousProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("objenious.uplink");
         loraMessage.put("type", "bumlux");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UNKNOWN, type);
+        assertEquals(LoraMessageType.UNKNOWN, type);
     }
 }

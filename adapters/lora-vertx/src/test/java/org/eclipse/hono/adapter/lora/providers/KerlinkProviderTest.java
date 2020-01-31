@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.junit.Assert.assertEquals;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 import java.time.Instant;
@@ -26,18 +27,19 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
+import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.google.common.base.Charsets;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -59,7 +61,7 @@ public class KerlinkProviderTest {
     private static final String KERLINK_URL_DOWNLINK = "/oss/application/customers/.*/clusters/.*/endpoints/.*/txMessages";
 
     @Rule
-    public WireMockRule wireMockRule = new WireMockRule(WireMockConfiguration.wireMockConfig().dynamicPort().dynamicPort());
+    public WireMockRule wireMockRule = new WireMockRule(WireMockConfiguration.wireMockConfig().dynamicPort());
 
     private KerlinkProvider provider;
 
@@ -84,7 +86,7 @@ public class KerlinkProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("kerlink.uplink");
         final String deviceId = provider.extractDeviceId(loraMessage);
 
-        Assert.assertEquals("myBumluxDevice", deviceId);
+        assertEquals("myBumluxDevice", deviceId);
     }
 
     /**
@@ -95,7 +97,7 @@ public class KerlinkProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("kerlink.uplink");
         final String payload = provider.extractPayload(loraMessage);
 
-        Assert.assertEquals("YnVtbHV4", payload);
+        assertEquals("YnVtbHV4", payload);
     }
 
     /**
@@ -105,7 +107,7 @@ public class KerlinkProviderTest {
     public void extractTypeFromLoraUplinkMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("kerlink.uplink");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UPLINK, type);
+        assertEquals(LoraMessageType.UPLINK, type);
     }
 
     /**
@@ -115,7 +117,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void sendingDownlinkCommandIsSuccessful(final TestContext context) {
-        final Async async = context.async();
+
         stubSuccessfulTokenRequest();
         stubSuccessfulDownlinkRequest();
 
@@ -126,18 +128,17 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(downlinkResult -> {
-                    context.assertTrue(downlinkResult.succeeded());
+                .setHandler(context.asyncAssertSuccess(ok -> {
 
                     final JsonObject expectedBody = new JsonObject();
                     expectedBody.put("login", TEST_KERLINK_API_USER);
                     expectedBody.put("password", TEST_KERLINK_API_PASSWORD);
 
-                    verify(postRequestedFor(urlEqualTo("/oss/application/login"))
-                            .withRequestBody(equalToJson(expectedBody.encode())));
-
-                    async.complete();
-                });
+                    context.verify(v -> {
+                        verify(postRequestedFor(urlEqualTo("/oss/application/login"))
+                                .withRequestBody(equalToJson(expectedBody.encode())));
+                    });
+                }));
     }
 
     /**
@@ -219,7 +220,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void tokenIsRenewedAfterTokenExpiry(final TestContext context) {
-        final Async async = context.async();
+
         stubSuccessfulTokenRequest(Instant.now().plusMillis(250));
         stubSuccessfulDownlinkRequest();
 
@@ -230,18 +231,17 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(firstResponse -> {
-                    context.assertTrue(firstResponse.succeeded());
-
-                    vertx.setTimer(500,
-                            nextRequest -> provider
-                                    .sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                                    .setHandler(secondResponse -> {
-                                        context.assertTrue(secondResponse.succeeded());
-                                        LoraTestUtil.verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
-                                        async.complete();
-                                    }));
+            .compose(ok -> {
+                final Promise<Void> secondResponse = Promise.promise();
+                vertx.setTimer(500, nextRequest -> {
+                    provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                        .setHandler(secondResponse);
                 });
+                return secondResponse.future();
+            })
+            .setHandler(context.asyncAssertSuccess(ok -> {
+                context.verify(v -> WireMock.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
+            }));
     }
 
     /**
@@ -251,7 +251,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void tokenIsReusedFromCacheWhileValid(final TestContext context) {
-        final Async async = context.async();
+
         stubSuccessfulTokenRequest();
         stubSuccessfulDownlinkRequest();
 
@@ -262,18 +262,16 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(firstResponse -> {
-                    context.assertTrue(firstResponse.succeeded());
-
-                    vertx.setTimer(250,
-                            nextRequest -> provider
-                                    .sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                                    .setHandler(secondResponse -> {
-                                        context.assertTrue(secondResponse.succeeded());
-                                        LoraTestUtil.verifyAsync(context, 1, postRequestedFor(urlEqualTo("/oss/application/login")));
-                                        async.complete();
-                                    }));
-                });
+            .compose(ok -> {
+                final Promise<Void> secondResponse = Promise.promise();
+                vertx.setTimer(250, nextRequest ->
+                    provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
+                        .setHandler(secondResponse));
+                return secondResponse.future();
+            })
+            .setHandler(context.asyncAssertSuccess(ok -> {
+                context.verify(v -> WireMock.verify(1, postRequestedFor(urlEqualTo("/oss/application/login"))));
+            }));
     }
 
     /**
@@ -283,7 +281,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void tokenIsInvalidatedOnApiUnauthorized(final TestContext context) {
-        final Async async = context.async();
+
         stubSuccessfulTokenRequest();
         stubUnauthorizedDownlinkRequest();
 
@@ -293,16 +291,15 @@ public class KerlinkProviderTest {
         final String targetDeviceId = "myTestDevice";
         final Command command = getValidDownlinkCommand();
 
+        final Async firstResponseFailure = context.async();
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(firstResponse -> {
-                    context.assertTrue(firstResponse.failed());
-
-                    provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                            .setHandler(secondResponse -> {
-                                LoraTestUtil.verifyAsync(context, 2, postRequestedFor(urlEqualTo("/oss/application/login")));
-                                async.complete();
-                            });
-                });
+            .recover(t -> {
+                firstResponseFailure.complete();
+                return provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command);
+            })
+            .setHandler(context.asyncAssertFailure(t -> {
+                context.verify(v -> WireMock.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
+            }));
     }
 
     /**
@@ -312,7 +309,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void failureOnInvalidTokenResponse(final TestContext context) {
-        final Async async = context.async();
+
         stubInvalidResponseOnTokenRequest();
 
         final JsonObject loraGatewayDevice = getValidGatewayDevice();
@@ -322,10 +319,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(downlinkResult -> {
-                    context.assertTrue(downlinkResult.failed());
-                    async.complete();
-                });
+                .setHandler(context.asyncAssertFailure());
     }
 
     /**
@@ -335,7 +329,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void failureOnTokenRequest(final TestContext context) {
-        final Async async = context.async();
+
         stubFailureOnTokenRequest();
 
         final JsonObject loraGatewayDevice = getValidGatewayDevice();
@@ -345,10 +339,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(downlinkResult -> {
-                    context.assertTrue(downlinkResult.failed());
-                    async.complete();
-                });
+                .setHandler(context.asyncAssertFailure());
     }
 
     /**
@@ -358,7 +349,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void failureOnDownlinkRequest(final TestContext context) {
-        final Async async = context.async();
+
         stubSuccessfulTokenRequest();
         stubFailureOnDownlinkRequest();
 
@@ -369,10 +360,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(downlinkResult -> {
-                    context.assertTrue(downlinkResult.failed());
-                    async.complete();
-                });
+                .setHandler(context.asyncAssertFailure());
     }
 
     /**
@@ -382,7 +370,7 @@ public class KerlinkProviderTest {
      */
     @Test
     public void faultOnDownlinkRequest(final TestContext context) {
-        final Async async = context.async();
+
         stubSuccessfulTokenRequest();
         stubConnectionFaultOnDownlinkRequest();
 
@@ -393,10 +381,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(downlinkResult -> {
-                    context.assertTrue(downlinkResult.failed());
-                    async.complete();
-                });
+                .setHandler(context.asyncAssertFailure());
     }
 
     private CredentialsObject getValidGatewayCredential() {

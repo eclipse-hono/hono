@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,14 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.JsonArray;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -37,7 +39,7 @@ public class ActilityProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
         final String deviceId = provider.extractDeviceId(loraMessage);
 
-        Assert.assertEquals("actility-device", deviceId);
+        assertEquals("actility-device", deviceId);
     }
 
     /**
@@ -48,7 +50,7 @@ public class ActilityProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
         final String payload = provider.extractPayload(loraMessage);
 
-        Assert.assertEquals("00", payload);
+        assertEquals("00", payload);
     }
 
     /**
@@ -58,7 +60,7 @@ public class ActilityProviderTest {
     public void extractTypeFromLoraUplinkMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UPLINK, type);
+        assertEquals(LoraMessageType.UPLINK, type);
     }
 
     /**
@@ -69,7 +71,7 @@ public class ActilityProviderTest {
         final JsonObject loraMessage = new JsonObject();
         loraMessage.put("bumlux", "bumlux");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UNKNOWN, type);
+        assertEquals(LoraMessageType.UNKNOWN, type);
     }
 
     /**
@@ -79,8 +81,8 @@ public class ActilityProviderTest {
     public void extractRssiFromLoraMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
         final Map<String, Object> map = provider.extractNormalizedData(loraMessage);
-        Assert.assertTrue(map.containsKey(LoraConstants.APP_PROPERTY_RSS));
-        Assert.assertEquals(48.0, map.getOrDefault(LoraConstants.APP_PROPERTY_RSS, null));
+        assertTrue(map.containsKey(LoraConstants.APP_PROPERTY_RSS));
+        assertEquals(48.0, map.getOrDefault(LoraConstants.APP_PROPERTY_RSS, null));
     }
 
     /**
@@ -90,14 +92,14 @@ public class ActilityProviderTest {
     public void extractGatewaysFromLoraMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
         final Map<String, Object> map = provider.extractNormalizedData(loraMessage);
-        Assert.assertTrue(map.containsKey(LoraConstants.GATEWAYS));
+        assertTrue(map.containsKey(LoraConstants.GATEWAYS));
 
         final JsonArray expectedArray = new JsonArray();
         expectedArray.add(new JsonObject().put("gateway_id", "18035559").put("rss", 48.0).put("snr", 3.0));
         expectedArray.add(new JsonObject().put("gateway_id", "18035560").put("rss", 49.0).put("snr", 4.0));
 
         final JsonArray gateways = new JsonArray(map.get(LoraConstants.GATEWAYS).toString());
-        Assert.assertEquals(expectedArray, gateways);
+        assertEquals(expectedArray, gateways);
     }
 
 }

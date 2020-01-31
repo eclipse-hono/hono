@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,10 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
@@ -34,7 +35,7 @@ public class ThingsNetworkProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("ttn.uplink");
         final String deviceId = provider.extractDeviceId(loraMessage);
 
-        Assert.assertEquals("0352828610682633", deviceId);
+        assertEquals("0352828610682633", deviceId);
     }
 
     /**
@@ -45,7 +46,7 @@ public class ThingsNetworkProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("ttn.uplink");
         final String payload = provider.extractPayload(loraMessage);
 
-        Assert.assertEquals("YnVtbHV4", payload);
+        assertEquals("YnVtbHV4", payload);
     }
 
     /**
@@ -55,6 +56,6 @@ public class ThingsNetworkProviderTest {
     public void extractTypeFromLoraUplinkMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("ttn.uplink");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UPLINK, type);
+        assertEquals(LoraMessageType.UPLINK, type);
     }
 }

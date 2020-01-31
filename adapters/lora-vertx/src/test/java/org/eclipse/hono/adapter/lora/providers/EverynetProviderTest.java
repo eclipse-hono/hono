@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,10 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
@@ -34,7 +35,7 @@ public class EverynetProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("everynet.uplink");
         final String deviceId = this.providerPost.extractDeviceId(loraMessage);
 
-        Assert.assertEquals("85f5ab9ebc636142", deviceId);
+        assertEquals("85f5ab9ebc636142", deviceId);
     }
 
     /**
@@ -45,7 +46,7 @@ public class EverynetProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("everynet.uplink");
         final String payload = this.providerPost.extractPayload(loraMessage);
 
-        Assert.assertEquals("YnVtbHV4", payload);
+        assertEquals("YnVtbHV4", payload);
     }
 
     /**
@@ -55,7 +56,7 @@ public class EverynetProviderTest {
     public void extractTypeFromLoraUplinkMessage() {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("everynet.uplink");
         final LoraMessageType type = this.providerPost.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UPLINK, type);
+        assertEquals(LoraMessageType.UPLINK, type);
     }
 
     /**
@@ -66,6 +67,6 @@ public class EverynetProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("everynet.uplink");
         loraMessage.put("type", "bumlux");
         final LoraMessageType type = this.providerPost.extractMessageType(loraMessage);
-        Assert.assertEquals(LoraMessageType.UNKNOWN, type);
+        assertEquals(LoraMessageType.UNKNOWN, type);
     }
 }

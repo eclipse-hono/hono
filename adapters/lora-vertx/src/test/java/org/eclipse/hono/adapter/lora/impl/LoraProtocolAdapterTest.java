@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,25 +13,31 @@
 
 package org.eclipse.hono.adapter.lora.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import io.vertx.core.buffer.impl.BufferImpl;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
-import org.eclipse.hono.adapter.lora.impl.LoraProtocolAdapter;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
 
@@ -51,7 +57,7 @@ public class LoraProtocolAdapterTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         this.adapter = spy(LoraProtocolAdapter.class);
 
