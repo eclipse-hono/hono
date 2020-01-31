@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,10 @@
 
 package org.eclipse.hono.auth;
 
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -39,11 +39,11 @@ public class AuthoritiesImplTest {
         claims.put("r:registration/DEFAULT_TENANT", "RW");
         claims.put("o:credentials/*:get", "E");
         final Authorities auth = AuthoritiesImpl.from(claims);
-        assertTrue(auth.isAuthorized(ResourceIdentifier.fromString("telemetry/tenantA"), Activity.WRITE));
-        assertTrue(auth.isAuthorized(ResourceIdentifier.fromString("registration/DEFAULT_TENANT"), Activity.READ));
-        assertFalse(auth.isAuthorized(ResourceIdentifier.fromString("registration/tenantA"), Activity.READ));
-        assertTrue(auth.isAuthorized(ResourceIdentifier.fromString("credentials/DEFAULT_TENANT"), "get"));
-        assertFalse(auth.isAuthorized(ResourceIdentifier.fromString("credentials/DEFAULT_TENANT"), "add"));
+        assertThat(auth.isAuthorized(ResourceIdentifier.fromString("telemetry/tenantA"), Activity.WRITE)).isTrue();
+        assertThat(auth.isAuthorized(ResourceIdentifier.fromString("registration/DEFAULT_TENANT"), Activity.READ)).isTrue();
+        assertThat(auth.isAuthorized(ResourceIdentifier.fromString("registration/tenantA"), Activity.READ)).isFalse();
+        assertThat(auth.isAuthorized(ResourceIdentifier.fromString("credentials/DEFAULT_TENANT"), "get")).isTrue();
+        assertThat(auth.isAuthorized(ResourceIdentifier.fromString("credentials/DEFAULT_TENANT"), "add")).isFalse();
     }
 
     /**
@@ -54,7 +54,7 @@ public class AuthoritiesImplTest {
 
         final AuthoritiesImpl authorities = new AuthoritiesImpl()
                 .addOperation("endpoint", "*", "*");
-        assertFalse(authorities.isAuthorized(ResourceIdentifier.fromString("other-endpoint/tenant"), "get"));
-        assertTrue(authorities.isAuthorized(ResourceIdentifier.fromString("endpoint/tenant"), "get"));
+        assertThat(authorities.isAuthorized(ResourceIdentifier.fromString("other-endpoint/tenant"), "get")).isFalse();
+        assertThat(authorities.isAuthorized(ResourceIdentifier.fromString("endpoint/tenant"), "get")).isTrue();
     }
 }

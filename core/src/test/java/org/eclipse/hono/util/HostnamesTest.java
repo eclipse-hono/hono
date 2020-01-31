@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,9 @@
 
 package org.eclipse.hono.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link Hostnames}.
@@ -26,6 +27,6 @@ public class HostnamesTest {
      */
     @Test
     public void testNonNull() {
-        Assert.assertNotNull(Hostnames.getHostname());
+        assertThat(Hostnames.getHostname()).isNotNull();
     }
 }

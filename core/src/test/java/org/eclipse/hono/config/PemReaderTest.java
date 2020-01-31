@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.config;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -21,7 +22,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.eclipse.hono.config.PemReader.Entry;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests verifying behavior of {@link PemReader}.
@@ -107,9 +108,9 @@ public class PemReaderTest {
      * 
      * @throws IOException if the test fails.
      */
-    @Test(expected = IOException.class)
+    @Test
     public void testError1() throws IOException {
-        PemReader.readAll(this.basePath2.resolve("error1.pem"));
+        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error1.pem"))).isInstanceOf(IOException.class);
     }
 
     /**
@@ -117,9 +118,9 @@ public class PemReaderTest {
      * 
      * @throws IOException if the test fails.
      */
-    @Test(expected = IOException.class)
+    @Test
     public void testError2() throws IOException {
-        PemReader.readAll(this.basePath2.resolve("error2.pem"));
+        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error2.pem"))).isInstanceOf(IOException.class);
     }
 
     /**
@@ -127,9 +128,9 @@ public class PemReaderTest {
      * 
      * @throws IOException if the test fails.
      */
-    @Test(expected = IOException.class)
+    @Test
     public void testError3() throws IOException {
-        PemReader.readAll(this.basePath2.resolve("error3.pem"));
+        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error3.pem"))).isInstanceOf(IOException.class);
     }
 
     /**
@@ -137,9 +138,9 @@ public class PemReaderTest {
      * 
      * @throws IOException if the test fails.
      */
-    @Test(expected = IOException.class)
+    @Test
     public void testError4() throws IOException {
-        PemReader.readAll(this.basePath2.resolve("error4.pem"));
+        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error4.pem"))).isInstanceOf(IOException.class);
     }
 
     /**
@@ -147,8 +148,8 @@ public class PemReaderTest {
      * 
      * @throws IOException if the test fails.
      */
-    @Test(expected = IOException.class)
+    @Test
     public void testError5() throws IOException {
-        PemReader.readAll(this.basePath2.resolve("error5.pem"));
+        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error5.pem"))).isInstanceOf(IOException.class);
     }
 }

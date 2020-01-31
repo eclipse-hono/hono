@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,10 @@
 
 package org.eclipse.hono.util;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.qpid.proton.message.Message;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -46,6 +45,6 @@ public class RequestResponseApiConstantsTest {
         final Message reply = RequestResponseApiConstants.getAmqpReply("endpoint", response);
 
         // THEN the message contains the corresponding cache control property
-        assertThat(MessageHelper.getCacheDirective(reply), is(directive.toString()));
+        assertThat(MessageHelper.getCacheDirective(reply)).isEqualTo(directive.toString());
     }
 }

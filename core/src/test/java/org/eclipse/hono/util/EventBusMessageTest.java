@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,17 +13,15 @@
 
 package org.eclipse.hono.util;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.UnsignedLong;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -43,7 +41,7 @@ public class EventBusMessageTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
         message = EventBusMessage.forStatusCode(200);
     }
@@ -56,7 +54,7 @@ public class EventBusMessageTest {
 
         message.setCorrelationId(MSG_ID_BINARY);
         final Object id = message.getCorrelationId();
-        assertThat(id, is(MSG_ID_BINARY));
+        assertThat(id).isEqualTo(MSG_ID_BINARY);
     }
 
     /**
@@ -67,7 +65,7 @@ public class EventBusMessageTest {
 
         message.setCorrelationId(MSG_ID_STRING);
         final Object id = message.getCorrelationId();
-        assertThat(id, is(MSG_ID_STRING));
+        assertThat(id).isEqualTo(MSG_ID_STRING);
     }
 
     /**
@@ -78,7 +76,7 @@ public class EventBusMessageTest {
 
         message.setCorrelationId(MSG_ID_ULONG);
         final Object id = message.getCorrelationId();
-        assertThat(id, is(MSG_ID_ULONG));
+        assertThat(id).isEqualTo(MSG_ID_ULONG);
     }
 
     /**
@@ -89,7 +87,7 @@ public class EventBusMessageTest {
 
         message.setCorrelationId(MSG_ID_UUID);
         final Object id = message.getCorrelationId();
-        assertThat(id, is(MSG_ID_UUID));
+        assertThat(id).isEqualTo(MSG_ID_UUID);
     }
 
     /**
@@ -101,9 +99,9 @@ public class EventBusMessageTest {
 
         message = EventBusMessage.forOperation("get").setCorrelationId("4711").setReplyToAddress("reply");
         final EventBusMessage response = message.getResponse(200);
-        assertTrue(response.hasResponseProperties());
-        assertThat(response.getOperation(), is("get"));
-        assertThat(response.getCorrelationId(), is("4711"));
-        assertThat(response.getReplyToAddress(), is("reply"));
+        assertThat(response.hasResponseProperties()).isTrue();
+        assertThat(response.getOperation()).isEqualTo("get");
+        assertThat(response.getCorrelationId()).isEqualTo("4711");
+        assertThat(response.getReplyToAddress()).isEqualTo("reply");
     }
 }

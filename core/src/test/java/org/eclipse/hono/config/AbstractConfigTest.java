@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,11 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.config;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.PemKeyCertOptions;
@@ -34,7 +34,7 @@ public class AbstractConfigTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setup() {
         cfg = new AbstractConfig() {
         };
@@ -50,8 +50,8 @@ public class AbstractConfigTest {
 
         final KeyCertOptions options = cfg.getKeyCertOptions();
 
-        Assert.assertNotNull(options);
-        Assert.assertThat(options, instanceOf(PfxOptions.class));
+        assertThat(options).isNotNull();
+        assertThat(options).isInstanceOf(PfxOptions.class);
     }
 
     /**
@@ -64,8 +64,8 @@ public class AbstractConfigTest {
 
         final KeyCertOptions options = cfg.getKeyCertOptions();
 
-        Assert.assertNotNull(options);
-        Assert.assertThat(options, instanceOf(PemKeyCertOptions.class));
+        assertThat(options).isNotNull();
+        assertThat(options).isInstanceOf(PemKeyCertOptions.class);
     }
 
     /**
@@ -79,7 +79,7 @@ public class AbstractConfigTest {
 
         final KeyCertOptions options = cfg.getKeyCertOptions();
 
-        Assert.assertNull(options);
+        assertThat(options).isNull();
     }
 
     /**
@@ -94,48 +94,55 @@ public class AbstractConfigTest {
 
         final KeyCertOptions options = cfg.getKeyCertOptions();
 
-        Assert.assertNull(options);
+        assertThat(options).isNull();
     }
 
     /**
      * Specify a non existing keystore.
      */
-    @Test(expected=IllegalArgumentException.class)
-    public void testMissingFile1() {
+    @Test
+    public void testNonExistingKeyStore() {
+
         cfg.setKeyStorePath(PREFIX_KEY_PATH + "does-not-exist");
         cfg.setKeyStorePassword("authkeys");
-
-        cfg.getKeyCertOptions();
+        assertThatThrownBy(() -> cfg.getKeyCertOptions())
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
      * Specify a non existing key file.
      */
-    @Test(expected=IllegalArgumentException.class)
-    public void testMissingFile2() {
+    @Test
+    public void testNonExistingKey() {
+
         cfg.setKeyPath(PREFIX_KEY_PATH + "does-not-exist");
         cfg.setCertPath(PREFIX_KEY_PATH + "auth-server-cert.pem");
 
-        cfg.getKeyCertOptions();
+        assertThatThrownBy(() -> cfg.getKeyCertOptions())
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
      * Specify a non existing cert file.
      */
-    @Test(expected=IllegalArgumentException.class)
-    public void testMissingFile3() {
-        cfg.setKeyPath(PREFIX_KEY_PATH + "auth-server-cert.pem");
+    @Test
+    public void testNonExistingCert() {
+
+        cfg.setKeyPath(PREFIX_KEY_PATH + "auth-server-key.pem");
         cfg.setCertPath(PREFIX_KEY_PATH + "does-not-exist");
 
-        cfg.getKeyCertOptions();
+        assertThatThrownBy(() -> cfg.getKeyCertOptions())
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
      * Specify a non existing trust store file.
      */
-    @Test(expected=IllegalArgumentException.class)
-    public void testMissingFile4() {
+    @Test
+    public void testNonExistingTrustStore() {
+
         cfg.setTrustStorePath(PREFIX_KEY_PATH + "doest-not-exist");
-        cfg.getTrustOptions();
+        assertThatThrownBy(() -> cfg.getTrustOptions())
+            .isInstanceOf(IllegalArgumentException.class);
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,12 @@
 
 package org.eclipse.hono.tracing;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
 
@@ -47,7 +46,7 @@ public class JsonObjectInjectExtractAdapterTest {
 
         final JsonObjectExtractAdapter extractAdapter = new JsonObjectExtractAdapter(jsonObject);
         extractAdapter.iterator().forEachRemaining(extractedEntry -> {
-            assertThat(extractedEntry.getValue(), is(testEntries.get(extractedEntry.getKey())));
+            assertThat(extractedEntry.getValue()).isEqualTo(testEntries.get(extractedEntry.getKey()));
         });
     }
 
@@ -58,6 +57,6 @@ public class JsonObjectInjectExtractAdapterTest {
     public void testExtractWithEmptyIterator() {
         final JsonObject jsonObject = new JsonObject();
         final JsonObjectExtractAdapter extractAdapter = new JsonObjectExtractAdapter(jsonObject);
-        assertThat(extractAdapter.iterator().hasNext(), is(false));
+        assertThat(extractAdapter.iterator().hasNext()).isFalse();
     }
 }

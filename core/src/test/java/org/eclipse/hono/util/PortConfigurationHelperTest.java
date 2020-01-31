@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.util;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.eclipse.hono.util.PortConfigurationHelper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies behavior of the {@link PortConfigurationHelper}.
@@ -31,11 +31,11 @@ public class PortConfigurationHelperTest {
     @Test
     public void testIsValidPort() {
 
-        assertTrue("Lower inclusive bound", PortConfigurationHelper.isValidPort(0));
-        assertTrue("Upper inclusive bound", PortConfigurationHelper.isValidPort(65535));
+        assertTrue(PortConfigurationHelper.isValidPort(0));
+        assertTrue(PortConfigurationHelper.isValidPort(65535));
 
-        assertFalse("Lower exclusive bound", PortConfigurationHelper.isValidPort(-1));
-        assertFalse("Upper exclusive bound", PortConfigurationHelper.isValidPort(65536));
+        assertFalse(PortConfigurationHelper.isValidPort(-1));
+        assertFalse(PortConfigurationHelper.isValidPort(65536));
     }
 
 }

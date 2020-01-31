@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,10 @@
 
 package org.eclipse.hono.auth;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -29,17 +29,18 @@ public class BCryptHelperTest {
     /**
      * Verifies that the helper detects invalid BCrypt.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testGetIterationsFailsForInvalidHash() {
-        BCryptHelper.getIterations("invalid-hash");
+        assertThatThrownBy(() -> BCryptHelper.getIterations("invalid-hash")).isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
      * Verifies that the helper detects unsupported BCrypt version.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testGetIterationsFailsForUnsupportedVersion() {
-        BCryptHelper.getIterations("$2y$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q");
+        assertThatThrownBy(() -> BCryptHelper.getIterations("$2y$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
@@ -48,8 +49,7 @@ public class BCryptHelperTest {
      */
     @Test
     public void testGetIterationsSucceedsForValidHash() {
-        assertThat(
-                BCryptHelper.getIterations("$2a$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"),
-                is(10));
+        assertThat(BCryptHelper.getIterations("$2a$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"))
+            .isEqualTo(10);
     }
 }

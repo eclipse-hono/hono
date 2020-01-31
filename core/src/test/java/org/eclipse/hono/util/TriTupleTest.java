@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,10 @@
 
 package org.eclipse.hono.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for TriTuple.
@@ -28,9 +30,9 @@ public class TriTupleTest {
     public void testOrderOfArguments() {
         final TriTuple<String, String, String> t1 = TriTuple.of("Foo", "Bar", "Buz");
 
-        Assert.assertEquals("Foo", t1.one());
-        Assert.assertEquals("Bar", t1.two());
-        Assert.assertEquals("Buz", t1.three());
+        Assertions.assertEquals("Foo", t1.one());
+        Assertions.assertEquals("Bar", t1.two());
+        Assertions.assertEquals("Buz", t1.three());
     }
 
     /**
@@ -41,10 +43,10 @@ public class TriTupleTest {
         final TriTuple<String, String, String> t1 = TriTuple.of("Foo", "Bar", "Baz");
         final TriTuple<String, String, String> t2 = TriTuple.of("Foo", "Bar", "Baz");
 
-        Assert.assertEquals(t1, t2);
-        Assert.assertEquals(t2, t1);
+        Assertions.assertEquals(t1, t2);
+        Assertions.assertEquals(t2, t1);
 
-        Assert.assertEquals(t1.hashCode(), t2.hashCode());
+        Assertions.assertEquals(t1.hashCode(), t2.hashCode());
     }
 
     /**
@@ -90,14 +92,14 @@ public class TriTupleTest {
     /**
      * Test all values are null.
      */
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testAllNull() {
-        TriTuple.of(null, null, null);
+        assertThatThrownBy(() -> TriTuple.of(null, null, null)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private void expectNotEqual(final TriTuple<?, ?, ?> t1, final TriTuple<?, ?, ?> t2) {
-        Assert.assertNotEquals(t1, t2);
-        Assert.assertNotEquals(t2, t1);
+        Assertions.assertNotEquals(t1, t2);
+        Assertions.assertNotEquals(t2, t1);
 
         // Note: we are not testing the hashCode, as this might, in theory, actually be the same.
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,12 @@
 
 package org.eclipse.hono.config;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -40,8 +39,8 @@ public class ClientConfigPropertiesTest {
         final String path = resources.resolve("credentials").toString();
         final ClientConfigProperties props = new ClientConfigProperties();
         props.setCredentialsPath(path);
-        assertThat(props.getUsername(), is("foo"));
-        assertThat(props.getPassword(), is("bar"));
+        assertThat(props.getUsername()).isEqualTo("foo");
+        assertThat(props.getPassword()).isEqualTo("bar");
     }
 
 }
