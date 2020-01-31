@@ -631,23 +631,7 @@ public class VertxBasedHttpProtocolAdapterTest {
     }
 
     private String getCommandResponsePath(final String wrongCommandRequestId) {
-        return String.format("/%s/res/%s", getCommandEndpoint(), wrongCommandRequestId);
-    }
-
-    private String getCommandEndpoint() {
-        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
-    }
-
-    /**
-     * Checks whether the legacy Command & Control endpoint shall be used.
-     * <p>
-     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
-     * command endpoint.
-     *
-     * @return {@code true} if the legacy command endpoint shall be used.
-     */
-    protected boolean useLegacyCommandEndpoint() {
-        return false;
+        return String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, wrongCommandRequestId);
     }
 
     private static Message newMockMessage(final String tenantId, final String deviceId, final String name) {

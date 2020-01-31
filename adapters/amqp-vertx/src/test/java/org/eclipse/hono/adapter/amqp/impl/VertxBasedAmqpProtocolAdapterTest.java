@@ -614,8 +614,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an unauthenticated device publishes a command response
-        final String replyToAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID,
-                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE, false));
+        final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
+                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
 
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
@@ -970,8 +970,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
         // WHEN a device uploads a command response to the adapter
-        final String replyToAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID,
-                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE, false));
+        final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
+                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
         final Buffer payload = Buffer.buffer("payload");
         final Message message = getFakeMessage(replyToAddress, payload);
         when(message.getCorrelationId()).thenReturn("correlation-id");
@@ -1004,19 +1004,11 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     private String getCommandEndpoint() {
-        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+        return CommandConstants.COMMAND_ENDPOINT;
     }
 
-    /**
-     * Checks whether the legacy Command & Control endpoint shall be used.
-     * <p>
-     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
-     * command endpoint.
-     *
-     * @return {@code true} if the legacy command endpoint shall be used.
-     */
-    protected boolean useLegacyCommandEndpoint() {
-        return false;
+    private String getCommandResponseEndpoint() {
+        return CommandConstants.COMMAND_RESPONSE_ENDPOINT;
     }
 
     private Target getTarget(final ResourceIdentifier resource) {

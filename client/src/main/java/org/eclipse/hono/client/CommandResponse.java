@@ -39,11 +39,9 @@ public final class CommandResponse {
 
     private final Message message;
     private final String replyToId;
-    private final boolean replyToLegacyEndpointUsed;
 
     private CommandResponse(final String tenantId, final String deviceId, final Buffer payload,
-            final String contentType, final int status, final String correlationId, final String replyToId,
-            final boolean replyToLegacyEndpointUsed) {
+            final String contentType, final int status, final String correlationId, final String replyToId) {
         message = ProtonHelper.message();
         message.setCorrelationId(correlationId);
         MessageHelper.setCreationTime(message);
@@ -52,13 +50,11 @@ public final class CommandResponse {
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, status);
         MessageHelper.setPayload(message, contentType, payload);
         this.replyToId = replyToId;
-        this.replyToLegacyEndpointUsed = replyToLegacyEndpointUsed;
     }
 
-    private CommandResponse(final Message message, final String replyToId, final boolean replyToLegacyEndpointUsed) {
+    private CommandResponse(final Message message, final String replyToId) {
         this.message = message;
         this.replyToId = replyToId;
-        this.replyToLegacyEndpointUsed = replyToLegacyEndpointUsed;
     }
 
     /**
@@ -94,7 +90,6 @@ public final class CommandResponse {
             try {
                 final String replyToOptionsBitFlag = requestId.substring(0, 1);
                 final boolean addDeviceIdToReply = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
-                final boolean replyToLegacyEndpointUsed = Command.isReplyToLegacyEndpointUsed(replyToOptionsBitFlag);
                 final int lengthStringOne = Integer.parseInt(requestId.substring(1, 3), 16);
                 final String replyId = requestId.substring(3 + lengthStringOne);
                 return new CommandResponse(
@@ -102,8 +97,7 @@ public final class CommandResponse {
                         contentType,
                         status,
                         requestId.substring(3, 3 + lengthStringOne), // correlation ID
-                        addDeviceIdToReply ? deviceId + "/" + replyId : replyId,
-                        replyToLegacyEndpointUsed);
+                        addDeviceIdToReply ? deviceId + "/" + replyId : replyId);
             } catch (NumberFormatException | StringIndexOutOfBoundsException se) {
                 LOG.debug("error creating CommandResponse", se);
                 return null;
@@ -147,10 +141,9 @@ public final class CommandResponse {
                 // pathWithoutBase starts with deviceId/[bit flag]
                 final String replyToOptionsBitFlag = pathWithoutBase.substring(deviceId.length() + 1, deviceId.length() + 2);
                 final boolean replyToContainedDeviceId = Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag);
-                final boolean replyToLegacyEndpointUsed = Command.isReplyToLegacyEndpointUsed(replyToOptionsBitFlag);
                 final String replyToId = pathWithoutBase.replaceFirst(deviceId + "/" + replyToOptionsBitFlag,
                         replyToContainedDeviceId ? deviceId + "/" : "");
-                return new CommandResponse(message, replyToId, replyToLegacyEndpointUsed);
+                return new CommandResponse(message, replyToId);
             } catch (NullPointerException | IllegalArgumentException e) {
                 LOG.debug("error creating CommandResponse", e);
                 return null;
@@ -195,12 +188,4 @@ public final class CommandResponse {
         return message;
     }
 
-    /**
-     * Checks if the command was directed at the legacy endpoint (<em>control</em>).
-     *
-     * @return {@code true} if the command was directed at the legacy endpoint (<em>control</em>).
-     */
-    public boolean isReplyToLegacyEndpointUsed() {
-        return replyToLegacyEndpointUsed;
-    }
 }

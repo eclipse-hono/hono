@@ -27,14 +27,9 @@ public final class HttpCommandEndpointConfiguration extends CommandEndpointConfi
      * Creates a new configuration.
      * 
      * @param subscriberRole The way in which to subscribe for commands.
-     * @param useLegacySouthboundEndpoint {@code true} if the device uses the legacy command endpoint name.
-     * @param useLegacyNorthboundEndpoint {@code true} if the application uses the legacy command endpoint name.
      */
-    public HttpCommandEndpointConfiguration(
-            final SubscriberRole subscriberRole,
-            final boolean useLegacySouthboundEndpoint,
-            final boolean useLegacyNorthboundEndpoint) {
-        super(subscriberRole, useLegacySouthboundEndpoint, useLegacyNorthboundEndpoint);
+    public HttpCommandEndpointConfiguration(final SubscriberRole subscriberRole) {
+        super(subscriberRole);
     }
 
     String getCommandResponseUri(final String reqId) {

@@ -32,13 +32,9 @@ import org.slf4j.LoggerFactory;
  * Examples:
  * <ol>
  * <li>{@code command///req/#} - authenticated device and verbose format</li>
- * <li>{@code control///req/#} - authenticated device and verbose format using deprecated endpoint name</li>
  * <li>{@code c///q/#} - authenticated device with short format</li>
  * <li>{@code command/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format</li>
- * <li>{@code control/DEFAULT_TENANT/4711/req/#} unauthenticated device with verbose format using deprecated endpoint name</li>
  * </ol>
- * Note that the <em>control</em> endpoint name is deprecated in Hono but is still supported by
- * this class for backwards compatibility.
  */
 public class CommandSubscription {
 
@@ -62,13 +58,11 @@ public class CommandSubscription {
         if (resource.length() != 5 || !"#".equals(resource.elementAt(4))) {
             throw new IllegalArgumentException(
                     "topic filter does not match pattern: " + CommandConstants.COMMAND_ENDPOINT + "|"
-                            + CommandConstants.COMMAND_LEGACY_ENDPOINT + "|"
                             + CommandConstants.COMMAND_ENDPOINT_SHORT + "/+/+/req|q/#");
         }
         if (!CommandConstants.isCommandEndpoint(resource.getEndpoint())) {
             throw new IllegalArgumentException(
                     "the endpoint needs to be '" + CommandConstants.COMMAND_ENDPOINT + "' or '"
-                            + CommandConstants.COMMAND_LEGACY_ENDPOINT + "' or '"
                             + CommandConstants.COMMAND_ENDPOINT_SHORT + "'");
         }
         if (!CommandConstants.COMMAND_RESPONSE_REQUEST_PART.equals(resource.elementAt(3))

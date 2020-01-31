@@ -288,10 +288,6 @@ A device MUST use the following source address in its *attach* frame to open a l
 * `command/${tenant}/${device-id}` (unauthenticated device)
 * `command/${tenant}/${device-id}` (authenticated gateway receiving commands for a specific device it acts on behalf of)
 
-{{% note %}}
-Previous versions of Hono used `control` instead of `command` as address prefix. Using the `control` prefix is still supported but deprecated. 
-{{% /note %}}
-
 The adapter supports *AT LEAST ONCE* delivery of command messages only. A client therefore MUST use `unsettled` for the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment. All other combinations are not supported and result in the termination of the link.
 
 Once the link has been established, the adapter will send command messages having the following properties:

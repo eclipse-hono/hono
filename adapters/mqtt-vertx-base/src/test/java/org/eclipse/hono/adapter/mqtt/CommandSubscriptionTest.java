@@ -200,18 +200,7 @@ public class CommandSubscriptionTest {
     }
 
     private String getCommandEndpoint() {
-        return useLegacyCommandEndpoint() ? CommandConstants.COMMAND_LEGACY_ENDPOINT : CommandConstants.COMMAND_ENDPOINT;
+        return CommandConstants.COMMAND_ENDPOINT;
     }
 
-    /**
-     * Checks whether the legacy Command & Control endpoint shall be used.
-     * <p>
-     * Returns {@code false} by default. Subclasses may return {@code true} here to perform tests using the legacy
-     * command endpoint.
-     *
-     * @return {@code true} if the legacy command endpoint shall be used.
-     */
-    protected boolean useLegacyCommandEndpoint() {
-        return false;
-    }
 }

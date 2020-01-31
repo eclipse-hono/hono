@@ -73,29 +73,14 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     static Stream<MqttCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, true, false),
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false, false),
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, true, false),
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false),
 
-                // the following four variants can be removed once we no longer support the legacy topic filters
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, true, true),
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false, true),
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, true, true),
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false, true),
-
-                // gateway devices are supported with north bound "command" endpoint only
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false, true),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false, true),
-
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false, false),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false, false),
-
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false, true),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false, true),
-
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false, false),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false, false)
+                // the following variants can be removed once we no longer support the legacy topic filters
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true)
                 );
     }
 
@@ -174,8 +159,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND/2),
-                    200,
-                    endpointConfig.isLegacyNorthboundEndpoint());
+                    200);
         }, endpointConfig, COMMANDS_TO_SEND, MqttQoS.AT_MOST_ONCE);
     }
 
@@ -250,8 +234,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND/2),
-                    200,
-                    endpointConfig.isLegacyNorthboundEndpoint())
+                    200)
                     .map(response -> {
                         ctx.verify(() -> {
                             assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(deviceId);
@@ -382,7 +365,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .setHandler(ctx.succeeding(ok -> ready.flag()));
 
         final AtomicReference<MessageSender> sender = new AtomicReference<>();
-        final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId, commandTargetDeviceId);
+        final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
         helper.applicationClientFactory.createGenericMessageSender(linkTargetAddress)
         .map(s -> {

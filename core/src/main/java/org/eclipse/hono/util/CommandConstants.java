@@ -24,11 +24,6 @@ public class CommandConstants {
     public static final String COMMAND_ENDPOINT = "command";
 
     /**
-     * The name of the legacy Command and Control API endpoint.
-     */
-    public static final String COMMAND_LEGACY_ENDPOINT = "control";
-
-    /**
      * The short name of the control endpoint.
      */
     public static final String COMMAND_ENDPOINT_SHORT = "c";
@@ -40,9 +35,10 @@ public class CommandConstants {
     public static final String COMMAND_RESPONSE_ENDPOINT = "command_response";
 
     /**
-     * The name of the legacy Command and Control API endpoint used by northbound applications.
+     * The name of the internal Command and Control API endpoint used to forward commands to the right protocol
+     * adapter.
      */
-    public static final String NORTHBOUND_COMMAND_LEGACY_ENDPOINT = "control";
+    public static final String INTERNAL_COMMAND_ENDPOINT = "control";
 
     /**
      * The name of the northbound Command and Control API request endpoint used by northbound applications.
@@ -76,13 +72,13 @@ public class CommandConstants {
 
     /**
      * Position of the status code in the MQTT command response topic.
-     * {@code control/[tenant]/[device-id]/res/<req-id>/<status>}
+     * {@code command/[tenant]/[device-id]/res/<req-id>/<status>}
      */
     public static final int TOPIC_POSITION_RESPONSE_STATUS = 5;
 
     /**
      * Position of the request id in the MQTT command response topic.
-     * {@code control/[tenant]/[device-id]/res/<req-id>/<status>}
+     * {@code command/[tenant]/[device-id]/res/<req-id>/<status>}
      */
     public static final int TOPIC_POSITION_RESPONSE_REQ_ID = 4;
 
@@ -97,8 +93,7 @@ public class CommandConstants {
      * @return {@code true} if the endpoint is a command endpoint.
      */
     public static final boolean isCommandEndpoint(final String endpoint) {
-        return COMMAND_ENDPOINT.equals(endpoint) || COMMAND_LEGACY_ENDPOINT.equals(endpoint)
-                || COMMAND_ENDPOINT_SHORT.equals(endpoint);
+        return COMMAND_ENDPOINT.equals(endpoint) || COMMAND_ENDPOINT_SHORT.equals(endpoint);
     }
 
     /**
@@ -108,17 +103,7 @@ public class CommandConstants {
      * @return {@code true} if the endpoint is a command response endpoint.
      */
     public static boolean isNorthboundCommandResponseEndpoint(final String endpoint) {
-        return CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT.equals(endpoint)
-                || CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT.equals(endpoint);
+        return CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT.equals(endpoint);
     }
 
-    /**
-     * Checks whether the given endpoint is the command legacy endpoint.
-     * 
-     * @param endpoint The endpoint as a string.
-     * @return {@code true} if the endpoint is the command legacy endpoint.
-     */
-    public static boolean isNorthboundCommandLegacyEndpoint(final String endpoint) {
-        return NORTHBOUND_COMMAND_LEGACY_ENDPOINT.equals(endpoint);
-    }
 }

@@ -955,18 +955,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenantId The tenant that the device belongs to from which
      *                 the response has been received.
      * @param replyId The command's reply-to-id.
-     * @param isReplyToLegacyEndpointUsed {@code true} if the response sender should use
-     *                                    the legacy endpoint for command responses.
      * @return The sender.
      */
-    @SuppressWarnings("deprecation")
     protected final Future<CommandResponseSender> createCommandResponseSender(
             final String tenantId,
-            final String replyId,
-            final boolean isReplyToLegacyEndpointUsed) {
-        if (isReplyToLegacyEndpointUsed) {
-            return commandConsumerFactory.getLegacyCommandResponseSender(tenantId, replyId);
-        }
+            final String replyId) {
         return commandConsumerFactory.getCommandResponseSender(tenantId, replyId);
     }
 
@@ -995,7 +988,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(response);
 
         final Future<CommandResponseSender> senderTracker = createCommandResponseSender(tenantId,
-                response.getReplyToId(), response.isReplyToLegacyEndpointUsed());
+                response.getReplyToId());
         return senderTracker
                 .compose(sender -> sender.sendCommandResponse(response, context))
                 .map(delivery -> {

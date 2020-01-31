@@ -146,7 +146,7 @@ public final class DestinationCommandConsumer extends CommandConsumer {
 
     private void handleCommandMessage(final Message msg, final ProtonDelivery delivery) {
         // command could have been mapped to a gateway, but the original address stays the same in the message address in that case
-        // (the case of the address being null means that the message was sent by an application to the legacy control endpoint)
+        // TODO reject message with missing address
         final String originalDeviceId = msg.getAddress() != null
                 ? ResourceIdentifier.fromString(msg.getAddress()).getResourceId()
                 : null;
@@ -283,7 +283,7 @@ public final class DestinationCommandConsumer extends CommandConsumer {
 
         LOG.trace("creating new command consumer [tenant-id: {}, device-id: {}]", tenantId, gatewayOrDeviceId);
 
-        final String address = ResourceIdentifier.from(CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT, tenantId, gatewayOrDeviceId).toString();
+        final String address = ResourceIdentifier.from(CommandConstants.INTERNAL_COMMAND_ENDPOINT, tenantId, gatewayOrDeviceId).toString();
 
         final AtomicReference<DestinationCommandConsumer> consumerRef = new AtomicReference<>();
 

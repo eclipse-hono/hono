@@ -218,17 +218,9 @@ public abstract class HttpTestBase {
      */
     static Stream<HttpCommandEndpointConfiguration> commandAndControlVariants() {
         return Stream.of(
-                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, false, false),
-                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, false, true),
-                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, true, false),
-                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE, true, true),
-
-                // gateway devices are supported with north bound "command" endpoint only
-                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false, false),
-                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true, false),
-
-                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false, false),
-                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true, false)
+                new HttpCommandEndpointConfiguration(SubscriberRole.DEVICE),
+                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES),
+                new HttpCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE)
                 );
     }
 
@@ -1089,8 +1081,7 @@ public abstract class HttpTestBase {
                                         inputData.toBuffer(),
                                         // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                                         IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
-                                        notification.getMillisecondsUntilExpiry(),
-                                        endpointConfig.isLegacyNorthboundEndpoint())
+                                        notification.getMillisecondsUntilExpiry())
                                         .map(response -> {
                                             ctx.verify(() -> {
                                                 assertThat(response.getContentType()).isEqualTo("text/plain");
@@ -1196,8 +1187,7 @@ public abstract class HttpTestBase {
                                         inputData.toBuffer(),
                                         // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                                         IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
-                                        notification.getMillisecondsUntilExpiry(),
-                                        endpointConfig.isLegacyNorthboundEndpoint());
+                                        notification.getMillisecondsUntilExpiry());
                             })
                             .orElseGet(() -> Future.succeededFuture());
                 },

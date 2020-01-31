@@ -36,11 +36,6 @@ public final class Command {
      * contained the device id.
      */
     private static final byte FLAG_REPLY_TO_CONTAINED_DEVICE_ID = 1;
-    /**
-     * Bit flag value for the boolean option that defines whether the original reply-to address of the command message
-     * contained the legacy endpoint name.
-     */
-    private static final byte FLAG_REPLY_TO_LEGACY_ENDPOINT_USED = 2;
 
     /**
      * If present, the command is invalid.
@@ -51,7 +46,6 @@ public final class Command {
     private final String deviceId;
     private final String correlationId;
     private final String replyToId;
-    private final boolean replyToLegacyEndpointUsed;
     private final String requestId;
 
     private Command(
@@ -60,8 +54,7 @@ public final class Command {
             final String tenantId,
             final String deviceId,
             final String correlationId,
-            final String replyToId,
-            final boolean replyToLegacyEndpointUsed) {
+            final String replyToId) {
 
         this.validationError = validationError;
         this.message = message;
@@ -69,8 +62,7 @@ public final class Command {
         this.deviceId = deviceId;
         this.correlationId = correlationId;
         this.replyToId = replyToId;
-        this.replyToLegacyEndpointUsed = replyToLegacyEndpointUsed;
-        this.requestId = getRequestId(correlationId, replyToId, deviceId, replyToLegacyEndpointUsed);
+        this.requestId = getRequestId(correlationId, replyToId, deviceId);
     }
 
     /**
@@ -125,7 +117,6 @@ public final class Command {
         }
 
         String originalReplyToId = null;
-        boolean replyToLegacyEndpointUsed = false;
         if (message.getReplyTo() != null) {
             try {
                 final ResourceIdentifier replyTo = ResourceIdentifier.fromString(message.getReplyTo());
@@ -136,14 +127,13 @@ public final class Command {
                     // command response is targeted at wrong tenant
                     validationErrorJoiner.add("reply-to not targeted at tenant " + tenantId + ": " + message.getReplyTo());
                 } else {
-                    replyToLegacyEndpointUsed = CommandConstants.isNorthboundCommandLegacyEndpoint(replyTo.getEndpoint());
                     originalReplyToId = replyTo.getPathWithoutBase();
                     if (originalReplyToId == null) {
                         validationErrorJoiner.add("reply-to part after tenant not set: " + message.getReplyTo());
                     } else {
                         message.setReplyTo(
                                 String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId,
-                                        getDeviceFacingReplyToId(originalReplyToId, deviceId, replyToLegacyEndpointUsed)));
+                                        getDeviceFacingReplyToId(originalReplyToId, deviceId)));
                     }
                 }
             } catch (IllegalArgumentException e) {
@@ -158,8 +148,7 @@ public final class Command {
                 tenantId,
                 deviceId,
                 correlationId,
-                originalReplyToId,
-                replyToLegacyEndpointUsed);
+                originalReplyToId);
 
         return result;
     }
@@ -283,6 +272,7 @@ public final class Command {
         if (isValid()) {
             // commands directed at the legacy control endpoint didn't have to have the message address set
             // (and its content didn't get checked), that's why the 'deviceId' field is used as fallback here
+            // TODO fail command validation in case of missing address
             final String addressDeviceId = message.getAddress() != null
                     ? ResourceIdentifier.fromString(message.getAddress()).getResourceId()
                     : null;
@@ -373,8 +363,7 @@ public final class Command {
      */
     public String getReplyToEndpoint() {
         if (isValid()) {
-            return replyToLegacyEndpointUsed ? CommandConstants.NORTHBOUND_COMMAND_LEGACY_ENDPOINT
-                    : CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT;
+            return CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT;
         } else {
             throw new IllegalStateException("command is invalid");
         }
@@ -416,11 +405,9 @@ public final class Command {
      * @param correlationId The identifier to use for correlating the response with the request.
      * @param replyToId An arbitrary identifier to encode into the request ID.
      * @param deviceId The target of the command.
-     * @param replyToLegacyEndpointUsed {@code true} if the command was directed at the legacy endpoint (<em>control</em>).
      * @return The request identifier or {@code null} if any the correlationId or the deviceId is {@code null}.
      */
-    public static String getRequestId(final String correlationId, final String replyToId, final String deviceId,
-            final boolean replyToLegacyEndpointUsed) {
+    public static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
 
         if (correlationId == null || deviceId == null) {
             return null;
@@ -432,7 +419,7 @@ public final class Command {
         if (replyToContainedDeviceId) {
             replyToIdWithoutDeviceOrEmpty = replyToIdWithoutDeviceOrEmpty.substring(deviceId.length() + 1);
         }
-        return String.format("%s%02x%s%s", encodeReplyToOptions(replyToContainedDeviceId, replyToLegacyEndpointUsed),
+        return String.format("%s%02x%s%s", encodeReplyToOptions(replyToContainedDeviceId),
                 correlationIdOrEmpty.length(), correlationIdOrEmpty, replyToIdWithoutDeviceOrEmpty);
     }
 
@@ -442,16 +429,12 @@ public final class Command {
      * 
      * @param replyToContainedDeviceId Whether the original reply-to address of the command message contained the device
      *            id.
-     * @param replyToLegacyEndpointUsed {@code true} if the command was directed at the legacy endpoint (<em>control</em>).
      * @return The encoded options as a single digit string.
      */
-    static String encodeReplyToOptions(final boolean replyToContainedDeviceId, final boolean replyToLegacyEndpointUsed) {
+    static String encodeReplyToOptions(final boolean replyToContainedDeviceId) {
         int bitFlag = 0;
         if (replyToContainedDeviceId) {
             bitFlag |= FLAG_REPLY_TO_CONTAINED_DEVICE_ID;
-        }
-        if (replyToLegacyEndpointUsed) {
-            bitFlag |= FLAG_REPLY_TO_LEGACY_ENDPOINT_USED;
         }
         return String.valueOf(bitFlag);
     }
@@ -459,22 +442,12 @@ public final class Command {
     /**
      * Checks if the original reply-to address of the command message contained the device id.
      *
-     * @param replyToOptionsBitFlag The bit flag returned by {@link #encodeReplyToOptions(boolean, boolean)}.
+     * @param replyToOptionsBitFlag The bit flag returned by {@link #encodeReplyToOptions(boolean)}.
      * @return {@code true} if the original reply-to address of the command message contained the device id.
      * @throws NumberFormatException If the given replyToOptionsBitFlag can't be parsed as an integer.
      */
     static boolean isReplyToContainedDeviceIdOptionSet(final String replyToOptionsBitFlag) {
         return decodeReplyToOption(replyToOptionsBitFlag, FLAG_REPLY_TO_CONTAINED_DEVICE_ID);
-    }
-
-    /**
-     * Checks if the command was directed at the legacy endpoint (<em>control</em>).
-     *
-     * @param replyToOptionsBitFlag The bit flag returned by {@link #encodeReplyToOptions(boolean, boolean)}.
-     * @return {@code true} if the command was directed at the legacy endpoint (<em>control</em>).
-     */
-    static boolean isReplyToLegacyEndpointUsed(final String replyToOptionsBitFlag) {
-        return decodeReplyToOption(replyToOptionsBitFlag, FLAG_REPLY_TO_LEGACY_ENDPOINT_USED);
     }
 
     private static boolean decodeReplyToOption(final String replyToOptionsBitFlag, final byte optionBitConstant) {
@@ -499,15 +472,13 @@ public final class Command {
      * @param replyToId The reply-to-id as extracted from the 'reply-to' of the command AMQP message. Potentially not
      *            containing the device id.
      * @param deviceId The device id.
-     * @param replyToLegacyEndpointUsed {@code true} if the command was directed at the legacy endpoint (<em>control</em>).
      * @return The reply-to-id, starting with the device id.
      */
-    public static String getDeviceFacingReplyToId(final String replyToId, final String deviceId,
-            final boolean replyToLegacyEndpointUsed) {
+    public static String getDeviceFacingReplyToId(final String replyToId, final String deviceId) {
         final boolean replyToContainedDeviceId = replyToId.startsWith(deviceId + "/");
         final String replyToIdWithoutDeviceId = replyToContainedDeviceId ? replyToId.substring(deviceId.length() + 1)
                 : replyToId;
-        final String bitFlagString = encodeReplyToOptions(replyToContainedDeviceId, replyToLegacyEndpointUsed);
+        final String bitFlagString = encodeReplyToOptions(replyToContainedDeviceId);
         return String.format("%s/%s%s", deviceId, bitFlagString, replyToIdWithoutDeviceId);
     }
 }
