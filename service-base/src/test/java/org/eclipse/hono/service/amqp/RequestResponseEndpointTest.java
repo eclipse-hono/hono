@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.service.amqp;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -24,7 +22,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.hamcrest.MockitoHamcrest.booleanThat;
 
 import java.net.HttpURLConnection;
 import java.util.UUID;
@@ -43,12 +40,9 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -72,7 +66,6 @@ import io.vertx.proton.ProtonSession;
 /**
  * Tests verifying behavior of {@link RequestResponseEndpoint}.
  */
-@RunWith(MockitoJUnitRunner.class)
 public class RequestResponseEndpointTest {
 
     /**
@@ -83,13 +76,9 @@ public class RequestResponseEndpointTest {
     private static final ResourceIdentifier REPLY_RESOURCE = ResourceIdentifier.from("endpoint",
             Constants.DEFAULT_TENANT, "reply-to");
 
-    @Mock
     private ProtonConnection connection;
-    @Mock
     private Vertx vertx;
-    @Mock
     private EventBus eventBus;
-
     private ProtonReceiver receiver;
     private ProtonSender sender;
 
@@ -97,9 +86,12 @@ public class RequestResponseEndpointTest {
     /**
      * Initializes common fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
+        connection = mock(ProtonConnection.class);
+        vertx = mock(Vertx.class);
+        eventBus = mock(EventBus.class);
         receiver = mock(ProtonReceiver.class);
         when(receiver.handler(any())).thenReturn(receiver);
         when(receiver.closeHandler(any())).thenReturn(receiver);
@@ -177,8 +169,8 @@ public class RequestResponseEndpointTest {
 
         // THEN the link is closed and the message is rejected
         final ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
-        verify(delivery).disposition(deliveryState.capture(), booleanThat(is(Boolean.TRUE)));
-        assertThat(deliveryState.getValue(), instanceOf(Rejected.class));
+        verify(delivery).disposition(deliveryState.capture(), eq(Boolean.TRUE));
+        assertThat(deliveryState.getValue()).isInstanceOf(Rejected.class);
         verify(receiver, never()).close();
         verify(receiver).flow(1);
     }
@@ -207,8 +199,8 @@ public class RequestResponseEndpointTest {
 
         // THEN the message is accepted
         final ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
-        verify(delivery).disposition(deliveryState.capture(), booleanThat(is(Boolean.TRUE)));
-        assertThat(deliveryState.getValue(), instanceOf(Accepted.class));
+        verify(delivery).disposition(deliveryState.capture(), eq(Boolean.TRUE));
+        assertThat(deliveryState.getValue()).isInstanceOf(Accepted.class);
         verify(receiver, never()).close();
         verify(authService).isAuthorized(Constants.PRINCIPAL_ANONYMOUS, resource, "unauthorized");
         // but not forwarded to the service instance
@@ -256,7 +248,7 @@ public class RequestResponseEndpointTest {
         endpoint.handleRequestMessage(connection, receiver, resource, delivery, msg);
 
         // THEN then the message is accepted
-        verify(delivery).disposition(argThat(d -> d instanceof Accepted), booleanThat(is(Boolean.TRUE)));
+        verify(delivery).disposition(argThat(d -> d instanceof Accepted), eq(Boolean.TRUE));
         // and forwarded to the service instance
         final ArgumentCaptor<Handler<AsyncResult<io.vertx.core.eventbus.Message<Object>>>> replyHandler = ArgumentCaptor.forClass(Handler.class);
         verify(eventBus).request(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), replyHandler.capture());
@@ -292,7 +284,7 @@ public class RequestResponseEndpointTest {
         endpoint.handleRequestMessage(connection, receiver, resource, delivery, msg);
 
         // THEN then the message is accepted
-        verify(delivery).disposition(argThat(d -> d instanceof Accepted), booleanThat(is(Boolean.TRUE)));
+        verify(delivery).disposition(argThat(d -> d instanceof Accepted), eq(Boolean.TRUE));
 
         // and not forwarded to the service instance
         verify(eventBus, never()).request(eq(EVENT_BUS_ADDRESS), any(JsonObject.class), any(DeliveryOptions.class), any(Handler.class));
@@ -326,8 +318,8 @@ public class RequestResponseEndpointTest {
 
         // THEN then the message gets processed
         final ArgumentCaptor<DeliveryState> deliveryState = ArgumentCaptor.forClass(DeliveryState.class);
-        verify(delivery).disposition(deliveryState.capture(), booleanThat(is(Boolean.TRUE)));
-        assertThat(deliveryState.getValue(), instanceOf(Accepted.class));
+        verify(delivery).disposition(deliveryState.capture(), eq(Boolean.TRUE));
+        assertThat(deliveryState.getValue()).isInstanceOf(Accepted.class);
         verify(receiver, never()).close();
         verify(authService).isAuthorized(Constants.PRINCIPAL_ANONYMOUS, resource, "get");
         // and forwarded to the service instance
