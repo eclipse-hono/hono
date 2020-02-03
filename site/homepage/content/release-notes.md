@@ -43,6 +43,10 @@ title = "Release Notes"
 * Hono's OpenTracing instrumentation has been upgraded to Opentracing 0.33.0.
   The example deployment now uses the Jaeger Java client in version 0.35.2 and the
   Jaeger 1.16 agent and back end components.
+* Some of the environment variable names documented in the user guides which can be used for configuring
+  Hono components had not been recognized during start up of the components.
+  In particular, the names for configuring the connection to the Device Connection service
+  and for configuring a heath check server have been fixed.
 
 ### API Changes
 
