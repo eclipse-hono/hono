@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -31,37 +32,31 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Tests verifying behavior of {@link UsernamePasswordAuthProviderTest}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class UsernamePasswordAuthProviderTest {
 
     private static final String PWD = "the-secret";
     private static Vertx vertx;
-
-    /**
-     * Time out all tests.
-     */
-    @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private UsernamePasswordCredentials deviceCredentials = UsernamePasswordCredentials.create("device@DEFAULT_TENANT", "the-secret", false);
     private UsernamePasswordAuthProvider provider;
@@ -72,7 +67,7 @@ public class UsernamePasswordAuthProviderTest {
     /**
      * Initializes vert.x.
      */
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         vertx = Vertx.vertx();
     }
@@ -80,7 +75,7 @@ public class UsernamePasswordAuthProviderTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         credentialsClient = mock(CredentialsClient.class);
@@ -101,10 +96,11 @@ public class UsernamePasswordAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateRequiresVertxContext(final TestContext ctx) {
+    public void testAuthenticateRequiresVertxContext(final VertxTestContext ctx) {
 
-        provider.authenticate(deviceCredentials, null, ctx.asyncAssertFailure(e -> {
-            ctx.assertTrue(e instanceof IllegalStateException);
+        provider.authenticate(deviceCredentials, null, ctx.failing(e -> {
+            ctx.verify(() -> assertThat(e).isInstanceOf(IllegalStateException.class));
+            ctx.completeNow();
         }));
     }
 
@@ -115,16 +111,19 @@ public class UsernamePasswordAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateSucceedsWhenRunningOnVertxContext(final TestContext ctx) {
+    public void testAuthenticateSucceedsWhenRunningOnVertxContext(final VertxTestContext ctx) {
 
         final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.asyncAssertSuccess(device -> {
-                ctx.assertEquals("4711", device.getDeviceId());
-                ctx.assertEquals("DEFAULT_TENANT", device.getTenantId());
-            }));
+        result.future().setHandler(ctx.succeeding(device -> {
+            ctx.verify(() -> {
+                assertThat(device.getDeviceId()).isEqualTo("4711");
+                assertThat(device.getTenantId()).isEqualTo("DEFAULT_TENANT");
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -133,7 +132,7 @@ public class UsernamePasswordAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailsForWrongCredentials(final TestContext ctx) {
+    public void testAuthenticateFailsForWrongCredentials(final VertxTestContext ctx) {
 
         when(pwdEncoder.matches(eq("wrong_pwd"), any(JsonObject.class))).thenReturn(false);
         final Promise<DeviceUser> result = Promise.promise();
@@ -142,10 +141,10 @@ public class UsernamePasswordAuthProviderTest {
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.asyncAssertFailure(e -> {
-                final ClientErrorException error = (ClientErrorException) e;
-                ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, error.getErrorCode());
-            }));
+        result.future().setHandler(ctx.failing(e -> {
+            ctx.verify(() -> assertThat(((ClientErrorException) e).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -155,17 +154,18 @@ public class UsernamePasswordAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailsIfNoSecretsAreValidAnymore(final TestContext ctx) {
+    public void testAuthenticateFailsIfNoSecretsAreValidAnymore(final VertxTestContext ctx) {
 
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, null, Instant.now().minusSeconds(120)));
         final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.asyncAssertFailure(t -> {
-                // THEN authentication fails with a 401 client error
-                ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
-            }));
+        result.future().setHandler(ctx.failing(t -> {
+            // THEN authentication fails with a 401 client error
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -175,16 +175,17 @@ public class UsernamePasswordAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailsIfNoSecretsAreValidYet(final TestContext ctx) {
+    public void testAuthenticateFailsIfNoSecretsAreValidYet(final VertxTestContext ctx) {
 
         givenCredentialsOnRecord(CredentialsObject.fromClearTextPassword("4711", "device", PWD, Instant.now().plusSeconds(120), null));
         final Promise<DeviceUser> result = Promise.promise();
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.asyncAssertFailure(t -> {
+        result.future().setHandler(ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
+            ctx.completeNow();
         }));
     }
 

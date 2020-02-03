@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,16 +13,15 @@
 
 package org.eclipse.hono.service.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.util.Constants;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
@@ -30,7 +29,6 @@ import io.vertx.ext.web.RoutingContext;
 /**
  * Test verifying functionality of the {@link HttpUtils} class.
  */
-@RunWith(MockitoJUnitRunner.class)
 public class HttpUtilsTest {
 
     @Mock
@@ -41,9 +39,11 @@ public class HttpUtilsTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
+        routingContext = mock(RoutingContext.class);
+        httpServerRequest = mock(HttpServerRequest.class);
         when(routingContext.request()).thenReturn(httpServerRequest);
 
     }

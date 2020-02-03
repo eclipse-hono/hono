@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,15 +13,15 @@
 
 package org.eclipse.hono.service.cache;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.eclipse.hono.cache.ExpiringValue;
-import org.eclipse.hono.service.cache.SpringBasedExpiringValueCache;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.cache.Cache;
 
 
@@ -37,7 +37,7 @@ public class SpringBasedExpiringValueCacheTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         springCache = mock(Cache.class);
         cache = new SpringBasedExpiringValueCache<>(springCache);
@@ -60,7 +60,7 @@ public class SpringBasedExpiringValueCacheTest {
         final String result = cache.get("key");
 
         // THEN the result is not null
-        assertThat(result, is("hello"));
+        assertThat(result).isEqualTo("hello");
         // and the value has not been evicted from the cache
         verify(springCache, never()).evict("key");
     }
@@ -81,7 +81,7 @@ public class SpringBasedExpiringValueCacheTest {
         final String result = cache.get("key");
 
         // THEN the result is null
-        assertNull(result);
+        assertThat(result).isNull();
         // and the expired value has been evicted from the cache
         verify(springCache).evict("key");
     }

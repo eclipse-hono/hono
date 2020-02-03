@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,41 +25,31 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonReceiver;
 
 /**
  * Tests verifying behavior of {@link AmqpServiceBase}.
  */
-@RunWith(VertxUnitRunner.class)
 public class AmqpServiceBaseTest {
 
     private static final String CON_ID = "connection-id";
     private static final String ENDPOINT = "anEndpoint";
-
-    /**
-     * Time out each test case after five seconds.
-     * 
-     */
-    public final Timeout timeout = Timeout.seconds(5);
 
     private Vertx vertx;
 
     /**
      * Sets up common mock objects used by the test cases.
      */
-    @Before
+    @BeforeEach
     public void initMocks() {
         vertx = mock(Vertx.class);
     }

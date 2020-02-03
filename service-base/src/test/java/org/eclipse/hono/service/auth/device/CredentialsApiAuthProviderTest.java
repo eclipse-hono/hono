@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.auth.device;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,32 +30,26 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.CredentialsObject;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
  * Tests verifying behavior of {@link CredentialsApiAuthProvider}.
  *
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class CredentialsApiAuthProviderTest {
-
-    /**
-     * Time out all test after 5 secs.
-     */
-    @Rule
-    public Timeout globalTimeout = new Timeout(5, TimeUnit.SECONDS);
 
     private CredentialsApiAuthProvider<AbstractDeviceCredentials> provider;
     private CredentialsClientFactory credentialsClientFactory;
@@ -63,7 +58,7 @@ public class CredentialsApiAuthProviderTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         credentialsClient = mock(CredentialsClient.class);
@@ -80,12 +75,13 @@ public class CredentialsApiAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailsWithExceptionReportedByCredentialsClient(final TestContext ctx) {
+    public void testAuthenticateFailsWithExceptionReportedByCredentialsClient(final VertxTestContext ctx) {
 
         final ServerErrorException reportedException = new ServerErrorException(503);
         when(credentialsClient.get(anyString(), anyString(), any(JsonObject.class), any())).thenReturn(Future.failedFuture(reportedException));
-        provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
-            ctx.assertEquals(t, reportedException);
+        provider.authenticate(new JsonObject(), ctx.failing(t -> {
+            ctx.verify(() -> assertThat(t).isEqualTo(reportedException));
+            ctx.completeNow();
         }));
     }
 
@@ -96,14 +92,15 @@ public class CredentialsApiAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailsWith401ForMalformedCredentials(final TestContext ctx) {
+    public void testAuthenticateFailsWith401ForMalformedCredentials(final VertxTestContext ctx) {
 
         // WHEN trying to authenticate using malformed credentials
         // that do not contain a tenant
         provider = getProvider(null, NoopTracerFactory.create());
-        provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
+        provider.authenticate(new JsonObject(), ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
+            ctx.completeNow();
         }));
 
     }
@@ -115,14 +112,15 @@ public class CredentialsApiAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailsWith401ForNonExistingAuthId(final TestContext ctx) {
+    public void testAuthenticateFailsWith401ForNonExistingAuthId(final VertxTestContext ctx) {
 
         // WHEN trying to authenticate using an auth-id that is not known
         when(credentialsClient.get(anyString(), eq("user"), any(JsonObject.class), any()))
         .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
-        provider.authenticate(new JsonObject(), ctx.asyncAssertFailure(t -> {
+        provider.authenticate(new JsonObject(), ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
+            ctx.completeNow();
         }));
     }
 
@@ -132,7 +130,7 @@ public class CredentialsApiAuthProviderTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testValidateFailsIfCredentialsAreDisabled(final TestContext ctx) {
+    public void testValidateFailsIfCredentialsAreDisabled(final VertxTestContext ctx) {
 
         // WHEN trying to authenticate a disabled device
         final AbstractDeviceCredentials creds = getDeviceCredentials("type", "tenant", "identity");
@@ -140,9 +138,10 @@ public class CredentialsApiAuthProviderTest {
                 .addSecret(CredentialsObject.emptySecret(Instant.now().minusSeconds(120), null));
         when(credentialsClient.get(eq("type"), eq("identity"), any(JsonObject.class), any()))
         .thenReturn(Future.succeededFuture(credentialsOnRecord));
-        provider.authenticate(creds, null, ctx.asyncAssertFailure(t -> {
+        provider.authenticate(creds, null, ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ClientErrorException) t).getErrorCode());
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
+            ctx.completeNow();
         }));
     }
 

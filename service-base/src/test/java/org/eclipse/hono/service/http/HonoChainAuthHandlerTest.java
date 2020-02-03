@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,9 +26,8 @@ import java.util.Map;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -37,7 +36,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.impl.AuthHandlerImpl;
@@ -47,7 +45,6 @@ import io.vertx.ext.web.handler.impl.AuthHandlerImpl;
  * Tests verifying behavior of {@link HonoChainAuthHandler}.
  *
  */
-@RunWith(VertxUnitRunner.class)
 public class HonoChainAuthHandlerTest {
 
     private HonoChainAuthHandler authHandler;
@@ -56,7 +53,7 @@ public class HonoChainAuthHandlerTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
 
         authProvider = mock(AuthProvider.class);

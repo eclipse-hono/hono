@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,8 @@
 
 package org.eclipse.hono.service.management.device;
 
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import org.hamcrest.collection.IsEmptyIterable;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.Json;
@@ -35,8 +31,8 @@ public class DeviceTest {
     @Test
     public void testDecodeDefault() {
         final var device = Json.decodeValue("{}", Device.class);
-        assertThat(device, notNullValue());
-        assertThat(device.getEnabled(), nullValue());
+        assertThat(device).isNotNull();
+        assertThat(device.getEnabled()).isNull();
     }
 
 
@@ -46,8 +42,8 @@ public class DeviceTest {
     @Test
     public void testDecodeDisabled() {
         final var device = Json.decodeValue("{\"enabled\": false}", Device.class);
-        assertThat(device, notNullValue());
-        assertThat(device.getEnabled(), is(false));
+        assertThat(device).isNotNull();
+        assertThat(device.getEnabled()).isFalse();
     }
 
     /**
@@ -56,8 +52,8 @@ public class DeviceTest {
     @Test
     public void testDecodeEnabled() {
         final var device = Json.decodeValue("{\"enabled\": true}", Device.class);
-        assertThat(device, notNullValue());
-        assertThat(device.getEnabled(), is(true));
+        assertThat(device).isNotNull();
+        assertThat(device.getEnabled()).isTrue();
     }
 
     /**
@@ -66,12 +62,12 @@ public class DeviceTest {
     @Test
     public void testDecodeExt() {
         final var device = Json.decodeValue("{\"ext\": {\"foo\": \"bar\"}}", Device.class);
-        assertThat(device, notNullValue());
-        assertThat(device.getEnabled(), nullValue());
+        assertThat(device).isNotNull();
+        assertThat(device.getEnabled()).isNull();
 
         final var ext = device.getExtensions();
-        assertThat(ext, notNullValue());
-        assertThat(ext.get("foo"), is("bar"));
+        assertThat(ext).isNotNull();
+        assertThat(ext.get("foo")).isEqualTo("bar");
     }
 
     /**
@@ -80,10 +76,10 @@ public class DeviceTest {
     @Test
     public void testEncodeDefault() {
         final var json = JsonObject.mapFrom(new Device());
-        assertThat(json, notNullValue());
-        assertThat(json.getBoolean("enabled"), nullValue());
-        assertThat(json.getJsonObject("ext"), nullValue());
-        assertThat(json, IsEmptyIterable.emptyIterable());
+        assertThat(json).isNotNull();
+        assertThat(json.getBoolean("enabled")).isNull();
+        assertThat(json.getJsonObject("ext")).isNull();
+        assertThat(json).isEmpty();
     }
 
     /**
@@ -94,9 +90,9 @@ public class DeviceTest {
         final var device = new Device();
         device.setEnabled(true);
         final var json = JsonObject.mapFrom(device);
-        assertThat(json, notNullValue());
-        assertThat(json.getBoolean("enabled"), is(true));
-        assertThat(json.getJsonObject("ext"), nullValue());
+        assertThat(json).isNotNull();
+        assertThat(json.getBoolean("enabled")).isTrue();
+        assertThat(json.getJsonObject("ext")).isNull();
     }
 
     /**
@@ -107,9 +103,9 @@ public class DeviceTest {
         final var device = new Device();
         device.setEnabled(false);
         final var json = JsonObject.mapFrom(device);
-        assertThat(json, notNullValue());
-        assertThat(json.getBoolean("enabled"), is(false));
-        assertThat(json.getJsonObject("ext"), nullValue());
+        assertThat(json).isNotNull();
+        assertThat(json.getBoolean("enabled")).isFalse();
+        assertThat(json.getJsonObject("ext")).isNull();
     }
 
 }

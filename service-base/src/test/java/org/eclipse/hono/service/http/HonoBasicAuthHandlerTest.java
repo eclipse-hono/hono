@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,24 +13,24 @@
 
 package org.eclipse.hono.service.http;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import io.vertx.ext.web.Route;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.AsyncResult;
@@ -42,15 +42,13 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.Route;
 import io.vertx.ext.web.RoutingContext;
-import org.mockito.ArgumentCaptor;
 
 /**
  * Tests verifying behavior of {@link HonoBasicAuthHandler}.
  *
  */
-@RunWith(VertxUnitRunner.class)
 public class HonoBasicAuthHandlerTest {
 
     private HonoBasicAuthHandler authHandler;
@@ -59,7 +57,7 @@ public class HonoBasicAuthHandlerTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void setUp() {
         authProvider = mock(AuthProvider.class);
         authHandler = new HonoBasicAuthHandler(authProvider, "test", NoopTracerFactory.create()) {
@@ -132,9 +130,9 @@ public class HonoBasicAuthHandlerTest {
 
         // THEN the request context is failed with the 400 error code
         verify(ctx).fail(exceptionCaptor.capture());
-        assertThat(exceptionCaptor.getValue(), instanceOf(ClientErrorException.class));
-        assertThat(((ClientErrorException) exceptionCaptor.getValue()).getErrorCode(),
-                is(HttpURLConnection.HTTP_BAD_REQUEST));
+        assertThat(exceptionCaptor.getValue()).isInstanceOf(ClientErrorException.class);
+        assertThat(((ClientErrorException) exceptionCaptor.getValue()).getErrorCode())
+                .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
 
     }
 }

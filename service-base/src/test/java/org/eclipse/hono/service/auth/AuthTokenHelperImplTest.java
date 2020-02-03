@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,13 @@
 
 package org.eclipse.hono.service.auth;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -36,7 +36,7 @@ public class AuthTokenHelperImplTest {
     /**
      * Sets up the fixture.
      */
-    @Before
+    @BeforeEach
     public void init() {
         helper = AuthTokenHelperImpl.forSharedSecret("suzfgsuzdfgadsjfjfaksgfkadfgduzsafdsfsaf", 60);
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,25 +13,25 @@
 
 package org.eclipse.hono.service.http;
 
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.ext.web.RoutingContext;
-import org.eclipse.hono.client.ClientErrorException;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-
-import java.net.HttpURLConnection;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.net.HttpURLConnection;
+
+import org.eclipse.hono.client.ClientErrorException;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.ext.web.RoutingContext;
 
 
 /**
@@ -109,7 +109,7 @@ public class DefaultFailureHandlerTest {
         final ArgumentCaptor<Buffer> bufferCaptor = ArgumentCaptor.forClass(Buffer.class);
         verify(response).setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
         verify(response).write(bufferCaptor.capture());
-        assertThat(bufferCaptor.getValue().toString(), is(detailMessage));
+        assertThat(bufferCaptor.getValue().toString()).isEqualTo(detailMessage);
         verify(response).end();
     }
 
@@ -137,7 +137,7 @@ public class DefaultFailureHandlerTest {
         final ArgumentCaptor<Buffer> bufferCaptor = ArgumentCaptor.forClass(Buffer.class);
         verify(response).setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
         verify(response).write(bufferCaptor.capture());
-        assertThat(bufferCaptor.getValue().toString(), is(detailMessage));
+        assertThat(bufferCaptor.getValue().toString()).isEqualTo(detailMessage);
         verify(response).end();
     }
 

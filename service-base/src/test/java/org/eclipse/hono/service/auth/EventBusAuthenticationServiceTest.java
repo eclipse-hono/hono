@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,28 +15,32 @@ package org.eclipse.hono.service.auth;
 
 import java.net.HttpURLConnection;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.AuthenticationConstants;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.MessageConsumer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying behavior of {@link EventBusAuthenticationService}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
+@TestInstance(Lifecycle.PER_CLASS)
 public class EventBusAuthenticationServiceTest {
 
     private static Vertx vertx;
@@ -50,7 +54,7 @@ public class EventBusAuthenticationServiceTest {
     /**
      * Sets up vert.x.
      */
-    @BeforeClass
+    @BeforeAll
     public static void init() {
         vertx = Vertx.vertx();
         final SignatureSupportingConfigProperties props = new SignatureSupportingConfigProperties();
@@ -63,7 +67,7 @@ public class EventBusAuthenticationServiceTest {
     /**
      * Unregisters the consumer for the authentication requests.
      */
-    @After
+    @AfterEach
     public void unregisterAuthRequestConsumer() {
         if (authRequestConsumer != null) {
             authRequestConsumer.unregister();
@@ -77,21 +81,18 @@ public class EventBusAuthenticationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateSuccess(final TestContext ctx) {
+    public void testAuthenticateSuccess(final VertxTestContext ctx) {
         final String token = createTestToken();
 
         authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
             message.reply(AuthenticationConstants.getAuthenticationReply(token));
         });
 
-        final Async async = ctx.async();
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ar -> {
-            ctx.assertTrue(ar.succeeded());
-            ctx.assertEquals(token, ar.result().getToken());
-            async.complete();
-        });
-        async.await();
+        eventBusAuthService.authenticate(new JsonObject(), ctx.succeeding(t -> {
+            ctx.verify(() -> assertThat(t.getToken()).isEqualTo(token));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -101,16 +102,16 @@ public class EventBusAuthenticationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailureNoHandler(final TestContext ctx) {
-        final Async async = ctx.async();
+    public void testAuthenticateFailureNoHandler(final VertxTestContext ctx) {
+
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ar -> {
-            ctx.assertTrue(ar.failed());
-            ctx.assertTrue(ar.cause() instanceof ServerErrorException);
-            ctx.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, ((ServiceInvocationException) ar.cause()).getErrorCode());
-            async.complete();
-        });
-        async.await();
+        eventBusAuthService.authenticate(new JsonObject(), ctx.failing(t -> {
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -120,23 +121,23 @@ public class EventBusAuthenticationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailureValidStatusCode(final TestContext ctx) {
+    public void testAuthenticateFailureValidStatusCode(final VertxTestContext ctx) {
+
         final String failureMessage = "failureMessage";
 
         authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
             message.fail(HttpURLConnection.HTTP_UNAUTHORIZED, failureMessage);
         });
 
-        final Async async = ctx.async();
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ar -> {
-            ctx.assertTrue(ar.failed());
-            ctx.assertTrue(ar.cause() instanceof ClientErrorException);
-            ctx.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, ((ServiceInvocationException) ar.cause()).getErrorCode());
-            ctx.assertEquals(failureMessage, ar.cause().getMessage());
-            async.complete();
-        });
-        async.await();
+        eventBusAuthService.authenticate(new JsonObject(), ctx.failing(t -> {
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ClientErrorException.class);
+                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                assertThat(t.getMessage()).isEqualTo(failureMessage);
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -147,23 +148,23 @@ public class EventBusAuthenticationServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testAuthenticateFailureInvalidStatusCode(final TestContext ctx) {
+    public void testAuthenticateFailureInvalidStatusCode(final VertxTestContext ctx) {
+
         final String failureMessage = "failureMessage";
 
         authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, message -> {
             message.fail(200, failureMessage);
         });
 
-        final Async async = ctx.async();
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ar -> {
-            ctx.assertTrue(ar.failed());
-            ctx.assertTrue(ar.cause() instanceof ServerErrorException);
-            ctx.assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, ((ServiceInvocationException) ar.cause()).getErrorCode());
-            ctx.assertEquals(failureMessage, ar.cause().getMessage());
-            async.complete();
-        });
-        async.await();
+        eventBusAuthService.authenticate(new JsonObject(), ctx.failing(t -> {
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                assertThat(t.getMessage()).isEqualTo(failureMessage);
+            });
+            ctx.completeNow();
+        }));
     }
 
     private String createTestToken() {
