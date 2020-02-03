@@ -13,10 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,11 +45,11 @@ public class CredentialsObjectTest {
         final CredentialsObject unmarshaled = json.mapTo(CredentialsObject.class);
 
         // THEN all properties have the same value as in the original object
-        assertThat(unmarshaled.getDeviceId(), is("4711"));
-        assertThat(unmarshaled.getAuthId(), is("my-device"));
-        assertThat(unmarshaled.getType(), is(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD));
-        assertFalse(unmarshaled.isEnabled());
-        assertThat(unmarshaled.getProperty("client-id", String.class), is("MQTT-client-4523653"));
+        assertThat(unmarshaled.getDeviceId()).isEqualTo("4711");
+        assertThat(unmarshaled.getAuthId()).isEqualTo("my-device");
+        assertThat(unmarshaled.getType()).isEqualTo(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
+        assertThat(unmarshaled.isEnabled()).isFalse();
+        assertThat(unmarshaled.getProperty("client-id", String.class)).isEqualTo("MQTT-client-4523653");
     }
 
     /**

@@ -13,16 +13,8 @@
 
 package org.eclipse.hono.util;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -101,15 +93,15 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
 
         final TenantObject obj = config.mapTo(TenantObject.class);
-        assertNotNull(obj);
-        assertThat(obj.getProperty("plan", String.class), is("gold"));
+        assertThat(obj).isNotNull();
+        assertThat(obj.getProperty("plan", String.class)).isEqualTo("gold");
 
         final Adapter adapter = obj.getAdapter("custom");
-        assertNotNull(adapter);
-        assertEquals(deploymentValue, JsonObject.mapFrom(adapter.getExtensions().get("deployment")));
+        assertThat(adapter).isNotNull();
+        assertThat(JsonObject.mapFrom(adapter.getExtensions().get("deployment"))).isEqualTo(deploymentValue);
 
         final JsonObject defaultProperties = obj.getDefaults();
-        assertThat(defaultProperties.getInteger("time-to-live"), is(60));
+        assertThat(defaultProperties.getInteger("time-to-live")).isEqualTo(60);
     }
 
     /**
@@ -124,8 +116,8 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray());
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
-        assertThat(tenant.getTrustAnchors(), is(not(nullValue())));
-        assertThat(tenant.getTrustAnchors(), empty());
+        assertThat(tenant.getTrustAnchors()).isNotNull();
+        assertThat(tenant.getTrustAnchors()).isEmpty();
     }
 
     /**
@@ -147,11 +139,11 @@ public class TenantObjectTest {
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm())));
 
         final TenantObject tenant = config.mapTo(TenantObject.class);
-        assertThat(tenant.getTrustAnchors(), not(empty()));
+        assertThat(tenant.getTrustAnchors()).isNotEmpty();
         final TrustAnchor ca = tenant.getTrustAnchors().iterator().next();
-        assertThat(ca.getCA(), is(trustedCaCert.getSubjectX500Principal()));
-        assertThat(ca.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
-        assertTrue(tenant.isAutoProvisioningEnabled(ca.getCAName()));
+        assertThat(ca.getCA()).isEqualTo(trustedCaCert.getSubjectX500Principal());
+        assertThat(ca.getCAPublicKey()).isEqualTo(trustedCaCert.getPublicKey());
+        assertThat(tenant.isAutoProvisioningEnabled(ca.getCAName())).isTrue();
     }
 
     /**
@@ -162,8 +154,8 @@ public class TenantObjectTest {
     public void testIsAdapterEnabledForEmptyConfiguration() {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
-        assertTrue(obj.isAdapterEnabled("any-type"));
-        assertTrue(obj.isAdapterEnabled("any-other-type"));
+        assertThat(obj.isAdapterEnabled("any-type")).isTrue();
+        assertThat(obj.isAdapterEnabled("any-other-type")).isTrue();
     }
 
     /**
@@ -174,8 +166,8 @@ public class TenantObjectTest {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.FALSE);
         obj.addAdapter(new Adapter("type-one").setEnabled(Boolean.TRUE));
-        assertFalse(obj.isAdapterEnabled("type-one"));
-        assertFalse(obj.isAdapterEnabled("any-other-type"));
+        assertThat(obj.isAdapterEnabled("type-one")).isFalse();
+        assertThat(obj.isAdapterEnabled("any-other-type")).isFalse();
     }
 
     /**
@@ -187,8 +179,8 @@ public class TenantObjectTest {
 
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
         obj.addAdapter(new Adapter("type-one").setEnabled(Boolean.TRUE));
-        assertTrue(obj.isAdapterEnabled("type-one"));
-        assertFalse(obj.isAdapterEnabled("any-other-type"));
+        assertThat(obj.isAdapterEnabled("type-one")).isTrue();
+        assertThat(obj.isAdapterEnabled("any-other-type")).isFalse();
     }
 
     /**
@@ -198,7 +190,7 @@ public class TenantObjectTest {
     public void testAddingAdapterOfSameTypeFails() {
         final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
         tenantConfig.addAdapter(new Adapter("type-1"));
-        assertThrows(IllegalArgumentException.class, () -> tenantConfig.addAdapter(new Adapter("type-1")));
+        assertThatThrownBy(() -> tenantConfig.addAdapter(new Adapter("type-1"))).isInstanceOf(IllegalArgumentException.class);
     }
 
     /**
@@ -210,8 +202,8 @@ public class TenantObjectTest {
         final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
         tenantConfig.addAdapter(new Adapter("type-1"));
         final List<Adapter> adapters = Arrays.asList(new Adapter("type-2"), new Adapter("type-2"));
-        assertThrows(IllegalArgumentException.class, () -> tenantConfig.setAdapters(adapters));
-        assertEquals("type-1", tenantConfig.getAdapters().get(0).getType());
+        assertThatThrownBy(() -> tenantConfig.setAdapters(adapters)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(tenantConfig.getAdapters().get(0).getType()).isEqualTo("type-1");
     }
 
     /**
@@ -225,10 +217,9 @@ public class TenantObjectTest {
         final List<Adapter> adapterConfigurations = new ArrayList<>();
         adapterConfigurations.add(new Adapter("type-2"));
         adapterConfigurations.add(new Adapter("type-2"));
-        assertThrows(IllegalArgumentException.class,
-                () -> tenantConfig.setAdapters(adapterConfigurations));
-        assertEquals(1, tenantConfig.getAdapters().size());
-        assertNotNull(tenantConfig.getAdapter("type-1"));
+        assertThatThrownBy(() -> tenantConfig.setAdapters(adapterConfigurations)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(tenantConfig.getAdapters().size()).isEqualTo(1);
+        assertThat(tenantConfig.getAdapter("type-1")).isNotNull();
     }
 
     /**
@@ -239,10 +230,10 @@ public class TenantObjectTest {
     public void testSetAdaptersReplacesExistingOnes() {
         final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
         tenantConfig.setAdapters(Arrays.asList(new Adapter("type-1"), new Adapter("type-2")));
-        assertEquals(2, tenantConfig.getAdapters().size());
+        assertThat(tenantConfig.getAdapters()).hasSize(2);
         tenantConfig.setAdapters(Arrays.asList(new Adapter("type-3")));
-        assertEquals(1, tenantConfig.getAdapters().size());
-        assertEquals("type-3", tenantConfig.getAdapters().get(0).getType());
+        assertThat(tenantConfig.getAdapters()).hasSize(1);
+        assertThat(tenantConfig.getAdapters().get(0).getType()).isEqualTo("type-3");
     }
 
     /**
@@ -256,10 +247,10 @@ public class TenantObjectTest {
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
                 .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal());
 
-        assertThat(obj.getTrustAnchors(), not(empty()));
+        assertThat(obj.getTrustAnchors()).isNotEmpty();
         final TrustAnchor trustAnchor = obj.getTrustAnchors().iterator().next();
-        assertThat(trustAnchor.getCA(), is(trustedCaCert.getSubjectX500Principal()));
-        assertThat(trustAnchor.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
+        assertThat(trustAnchor.getCA()).isEqualTo(trustedCaCert.getSubjectX500Principal());
+        assertThat(trustAnchor.getCAPublicKey()).isEqualTo(trustedCaCert.getPublicKey());
     }
 
     /**
@@ -281,24 +272,24 @@ public class TenantObjectTest {
                 .addTrustAnchor(caCert1.getPublicKey(), caCert1.getSubjectX500Principal(), true)
                 .addTrustAnchor(caCert2.getPublicKey(), caCert2.getSubjectX500Principal(), false);
 
-        assertEquals(3, obj.getTrustAnchors().size());
+        assertThat(obj.getTrustAnchors()).hasSize(3);
 
         obj.getTrustAnchors().forEach(trustAnchor -> {
             switch (trustAnchor.getCAName()) {
             case "CN=" + caName1:
-                assertThat(trustAnchor.getCA(), is(caCert1.getSubjectX500Principal()));
-                assertThat(trustAnchor.getCAPublicKey(), is(caCert1.getPublicKey()));
-                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName()), is(true));
+                assertThat(trustAnchor.getCA()).isEqualTo(caCert1.getSubjectX500Principal());
+                assertThat(trustAnchor.getCAPublicKey()).isEqualTo(caCert1.getPublicKey());
+                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName())).isTrue();
                 break;
             case "CN=" + caName2:
-                assertThat(trustAnchor.getCA(), is(caCert2.getSubjectX500Principal()));
-                assertThat(trustAnchor.getCAPublicKey(), is(caCert2.getPublicKey()));
-                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName()), is(false));
+                assertThat(trustAnchor.getCA()).isEqualTo(caCert2.getSubjectX500Principal());
+                assertThat(trustAnchor.getCAPublicKey()).isEqualTo(caCert2.getPublicKey());
+                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName())).isFalse();
                 break;
             default:
-                assertThat(trustAnchor.getCA(), is(trustedCaCert.getSubjectX500Principal()));
-                assertThat(trustAnchor.getCAPublicKey(), is(trustedCaCert.getPublicKey()));
-                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName()), is(false));
+                assertThat(trustAnchor.getCA()).isEqualTo(trustedCaCert.getSubjectX500Principal());
+                assertThat(trustAnchor.getCAPublicKey()).isEqualTo(trustedCaCert.getPublicKey());
+                assertThat(obj.isAutoProvisioningEnabled(trustAnchor.getCAName())).isFalse();
             }
         });
     }
@@ -326,7 +317,7 @@ public class TenantObjectTest {
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test")
                         .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "noBase64".getBytes(StandardCharsets.UTF_8))));
 
-        assertThat(obj.getTrustAnchors(), empty());
+        assertThat(obj.getTrustAnchors()).isEmpty();
     }
 
     /**
@@ -338,7 +329,7 @@ public class TenantObjectTest {
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenantObject.addAdapter(new Adapter("custom").setEnabled(Boolean.TRUE)
                 .putExtension(TenantConstants.FIELD_MAX_TTD, 10));
-        assertThat(tenantObject.getMaxTimeUntilDisconnect("custom"), is(10));
+        assertThat(tenantObject.getMaxTimeUntilDisconnect("custom")).isEqualTo(10);
     }
 
     /**
@@ -348,7 +339,7 @@ public class TenantObjectTest {
     @Test
     public void testGetMaxTTDReturnsDefaultValue() {
         final TenantObject obj = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertThat(obj.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
+        assertThat(obj.getMaxTimeUntilDisconnect("custom")).isEqualTo(TenantConstants.DEFAULT_MAX_TTD);
     }
 
     /**
@@ -359,7 +350,7 @@ public class TenantObjectTest {
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenantObject.addAdapter(new Adapter("custom").setEnabled(Boolean.TRUE)
                 .putExtension(TenantConstants.FIELD_MAX_TTD, -10));
-        assertThat(tenantObject.getMaxTimeUntilDisconnect("custom"), is(TenantConstants.DEFAULT_MAX_TTD));
+        assertThat(tenantObject.getMaxTimeUntilDisconnect("custom")).isEqualTo(TenantConstants.DEFAULT_MAX_TTD);
     }
 
     /**
@@ -377,13 +368,13 @@ public class TenantObjectTest {
                                         .put("no-of-days", 90)));
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
         tenantObject.setResourceLimits(limitsConfig);
-        assertNotNull(tenantObject.getResourceLimits());
-        assertThat(tenantObject.getResourceLimits().getMaxConnections(), is(2));
-        assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes(), is(20_000_000L));
-        assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince(), is(
-                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00Z", OffsetDateTime::from).toInstant()));
-        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode(), is("days"));
-        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays(), is(90));
+        assertThat(tenantObject.getResourceLimits()).isNotNull();
+        assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes()).isEqualTo(20_000_000L);
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00Z", OffsetDateTime::from).toInstant());
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo("days");
+        assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays()).isEqualTo(90);
     }
 
     /**
@@ -392,7 +383,7 @@ public class TenantObjectTest {
     @Test
     public void testGetResourceLimitsWhenNotSet() {
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        assertThat(tenantObject.getResourceLimits(), is(nullValue()));
+        assertThat(tenantObject.getResourceLimits()).isNull();
     }
 
     /**
@@ -405,7 +396,7 @@ public class TenantObjectTest {
                 .from(Constants.DEFAULT_TENANT, true)
                 .setMinimumMessageSize(4 * 1024);
 
-        assertEquals(4 * 1024, tenantObject.getMinimumMessageSize());
+        assertThat(tenantObject.getMinimumMessageSize()).isEqualTo(4 * 1024);
     }
 
     /**
@@ -417,6 +408,6 @@ public class TenantObjectTest {
         final TenantObject tenantObject = TenantObject
                 .from(Constants.DEFAULT_TENANT, true);
 
-        assertEquals(TenantConstants.DEFAULT_MINIMUM_MESSAGE_SIZE, tenantObject.getMinimumMessageSize());
+        assertThat(tenantObject.getMinimumMessageSize()).isEqualTo(TenantConstants.DEFAULT_MINIMUM_MESSAGE_SIZE);
     }
 }
