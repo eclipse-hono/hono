@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.adapter.kura.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -77,7 +76,7 @@ public class KuraProtocolAdapterTest {
                     // THEN the message is mapped to the event API
                     assertAddress(msg, EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
                     // and has the control message content type
-                    assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
+                    assertThat(context.contentType()).isEqualTo(config.getCtrlMsgContentType());
                 });
                 ctx.completeNow();
             }));
@@ -103,7 +102,7 @@ public class KuraProtocolAdapterTest {
                 // THEN the message is mapped to the telemetry API
                 assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
                 // and has the custom control message content type
-                assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
+                assertThat(context.contentType()).isEqualTo(config.getCtrlMsgContentType());
             });
             ctx.completeNow();
         }));
@@ -128,7 +127,7 @@ public class KuraProtocolAdapterTest {
                 // THEN the message is mapped to the event API
                 assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
                 // and is recognized as a control message
-                assertThat(context.contentType(), is(config.getCtrlMsgContentType()));
+                assertThat(context.contentType()).isEqualTo(config.getCtrlMsgContentType());
             });
             ctx.completeNow();
         }));
@@ -154,7 +153,7 @@ public class KuraProtocolAdapterTest {
                 // THEN the message is mapped to the telemetry API
                 assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
                 // and has the configured data message content type
-                assertThat(context.contentType(), is(config.getDataMsgContentType()));
+                assertThat(context.contentType()).isEqualTo(config.getDataMsgContentType());
             });
             ctx.completeNow();
         }));
@@ -179,7 +178,7 @@ public class KuraProtocolAdapterTest {
                 // THEN the message is forwarded to the event API
                 assertAddress(msg, EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
                 // and is recognized as a data message
-                assertThat(context.contentType(), is(config.getDataMsgContentType()));
+                assertThat(context.contentType()).isEqualTo(config.getDataMsgContentType());
             });
             ctx.completeNow();
         }));
@@ -187,9 +186,9 @@ public class KuraProtocolAdapterTest {
     }
 
     private void assertAddress(final ResourceIdentifier address, final String endpoint, final String tenantId, final String deviceId) {
-        assertThat(address.getEndpoint(), is(endpoint));
-        assertThat(address.getTenantId(), is(tenantId));
-        assertThat(address.getResourceId(), is(deviceId));
+        assertThat(address.getEndpoint()).isEqualTo(endpoint);
+        assertThat(address.getTenantId()).isEqualTo(tenantId);
+        assertThat(address.getResourceId()).isEqualTo(deviceId);
     }
 
     private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {

@@ -12,9 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.amqp.impl;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -458,8 +456,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // AND sends an empty notification downstream (with a TTD of -1)
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(eventSender).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertThat(messageCaptor.getValue().getContentType(), is(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), is(-1));
+        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(-1);
     }
 
     /**
@@ -500,8 +498,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // AND sends an empty notification downstream
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(eventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertThat(messageCaptor.getValue().getContentType(), is(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), is(0));
+        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(0);
     }
 
     /**
@@ -564,7 +562,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Promise<Void> startupTracker = Promise.promise();
         startupTracker.future().setHandler(ctx.completing());
         adapter.start(startupTracker);
-        assertTrue(ctx.awaitCompletion(2, TimeUnit.SECONDS));
+        assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
 
         // to which a device is connected
         final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
@@ -593,8 +591,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // and sends an empty event with TTD = 0 downstream
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(downstreamEventSender, times(2)).sendAndWaitForOutcome(messageCaptor.capture(), any());
-        assertThat(messageCaptor.getValue().getContentType(), is(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue()), is(0));
+        assertThat(messageCaptor.getValue().getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
+        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isEqualTo(0);
     }
 
     /**
@@ -888,7 +886,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                         verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
                         verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
                         // because the message limit is exceeded
-                        assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS));
+                        assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
                         // AND notifies the device by sending back a REJECTED disposition
                         verify(delivery).disposition(any(Rejected.class), eq(true));
                         // AND has reported the message as unprocessable
@@ -935,7 +933,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                         verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
                         verify(eventSender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
                         // because the message limit is exceeded
-                        assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS));
+                        assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
                         // AND notifies the device by sending back a REJECTED disposition
                         verify(delivery).disposition(any(Rejected.class), eq(true));
                         // AND has reported the message as unprocessable
@@ -987,7 +985,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
                         verify(responseSender, never()).send(any(Message.class), any());
                         verify(responseSender, never()).sendAndWaitForOutcome(any(Message.class), any());
                         // because the message limit is exceeded
-                        assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS));
+                        assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
                         // AND notifies the device by sending back a REJECTED disposition
                         verify(delivery).disposition(any(Rejected.class), eq(true));
                         // AND has reported the message as unprocessable
