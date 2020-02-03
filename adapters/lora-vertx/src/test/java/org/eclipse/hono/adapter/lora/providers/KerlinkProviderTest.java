@@ -13,8 +13,14 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.junit.Assert.assertEquals;
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 import java.time.Instant;
 import java.util.Base64;
@@ -25,32 +31,37 @@ import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistrationConstants;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.http.Fault;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.google.common.base.Charsets;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Verifies the behavior of {@link KerlinkProvider}.
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 public class KerlinkProviderTest {
+
+    private static final Logger LOG = LoggerFactory.getLogger(KerlinkProviderTest.class);
 
     private static final String KERLINK_APPLICATION_TYPE = "application/vnd.kerlink.iot-v1+json";
 
@@ -60,22 +71,34 @@ public class KerlinkProviderTest {
     private static final String KERLINK_URL_TOKEN = "/oss/application/login";
     private static final String KERLINK_URL_DOWNLINK = "/oss/application/customers/.*/clusters/.*/endpoints/.*/txMessages";
 
-    @Rule
-    public WireMockRule wireMockRule = new WireMockRule(WireMockConfiguration.wireMockConfig().dynamicPort());
-
-    private KerlinkProvider provider;
-
-
     private final Vertx vertx = Vertx.vertx();
+    private WireMockServer kerlink;
+    private KerlinkProvider provider;
 
     /**
      * Sets up the fixture.
+     * 
+     * @param testInfo The test meta data.
      */
-    @Before
-    public void before() {
+    @BeforeEach
+    public void before(final TestInfo testInfo) {
+
+        LOG.info("running test: {}", testInfo.getDisplayName());
+        kerlink = new WireMockServer(WireMockConfiguration.wireMockConfig().bindAddress(Constants.LOOPBACK_DEVICE_ADDRESS).dynamicPort());
+        kerlink.start();
         provider = new KerlinkProvider(vertx, new ConcurrentMapCacheManager());
         // Use very small value here to avoid long running unit tests.
         provider.setTokenPreemptiveInvalidationTimeInMs(100);
+    }
+
+    /**
+     * Stops the Kerling mock server.
+     */
+    @AfterEach
+    public void stopKerlinkMock() {
+        if (kerlink != null) {
+            kerlink.stop();
+        }
     }
 
     /**
@@ -116,7 +139,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void sendingDownlinkCommandIsSuccessful(final TestContext context) {
+    public void sendingDownlinkCommandIsSuccessful(final VertxTestContext context) {
 
         stubSuccessfulTokenRequest();
         stubSuccessfulDownlinkRequest();
@@ -128,16 +151,17 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.asyncAssertSuccess(ok -> {
+                .setHandler(context.succeeding(ok -> {
 
                     final JsonObject expectedBody = new JsonObject();
                     expectedBody.put("login", TEST_KERLINK_API_USER);
                     expectedBody.put("password", TEST_KERLINK_API_PASSWORD);
 
-                    context.verify(v -> {
-                        verify(postRequestedFor(urlEqualTo("/oss/application/login"))
+                    context.verify(() -> {
+                        kerlink.verify(postRequestedFor(urlEqualTo("/oss/application/login"))
                                 .withRequestBody(equalToJson(expectedBody.encode())));
                     });
+                    context.completeNow();
                 }));
     }
 
@@ -147,7 +171,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void sendingDownlinkFailsOnMissingLoraConfig(final TestContext context) {
+    public void sendingDownlinkFailsOnMissingLoraConfig(final VertxTestContext context) {
         final JsonObject loraGatewayDevice = getValidGatewayDevice();
         loraGatewayDevice.getJsonObject(RegistrationConstants.FIELD_DATA).remove(LoraConstants.FIELD_LORA_CONFIG);
 
@@ -160,7 +184,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void sendingDownlinkFailsOnMissingVendorProperties(final TestContext context) {
+    public void sendingDownlinkFailsOnMissingVendorProperties(final VertxTestContext context) {
         final JsonObject loraGatewayDevice = getValidGatewayDevice();
         final JsonObject loraConfig = LoraUtils.getLoraConfigFromLoraGatewayDevice(loraGatewayDevice);
         loraConfig.remove(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES);
@@ -173,7 +197,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void sendingDownlinkFailsOnMissingClusterId(final TestContext context) {
+    public void sendingDownlinkFailsOnMissingClusterId(final VertxTestContext context) {
         final JsonObject loraGatewayDevice = getValidGatewayDevice();
         LoraUtils.getLoraConfigFromLoraGatewayDevice(loraGatewayDevice)
                 .getJsonObject(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES)
@@ -188,7 +212,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void sendingDownlinkFailsOnMissingCustomerId(final TestContext context) {
+    public void sendingDownlinkFailsOnMissingCustomerId(final VertxTestContext context) {
         final JsonObject loraGatewayDevice = getValidGatewayDevice();
         LoraUtils.getLoraConfigFromLoraGatewayDevice(loraGatewayDevice)
                 .getJsonObject(LoraConstants.FIELD_LORA_VENDOR_PROPERTIES)
@@ -197,8 +221,7 @@ public class KerlinkProviderTest {
         expectValidationFailureForGateway(context, loraGatewayDevice);
     }
 
-    private void expectValidationFailureForGateway(final TestContext context, final JsonObject loraGatewayDevice) {
-        final Async async = context.async();
+    private void expectValidationFailureForGateway(final VertxTestContext context, final JsonObject loraGatewayDevice) {
 
         final CredentialsObject gatewayCredential = getValidGatewayCredential();
 
@@ -206,11 +229,9 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(downlinkResult -> {
-                    context.assertTrue(downlinkResult.failed());
-
-                    async.complete();
-                });
+                .setHandler(context.failing(t -> {
+                    context.completeNow();
+                }));
     }
 
     /**
@@ -219,7 +240,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void tokenIsRenewedAfterTokenExpiry(final TestContext context) {
+    public void tokenIsRenewedAfterTokenExpiry(final VertxTestContext context) {
 
         stubSuccessfulTokenRequest(Instant.now().plusMillis(250));
         stubSuccessfulDownlinkRequest();
@@ -239,8 +260,9 @@ public class KerlinkProviderTest {
                 });
                 return secondResponse.future();
             })
-            .setHandler(context.asyncAssertSuccess(ok -> {
-                context.verify(v -> WireMock.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
+            .setHandler(context.succeeding(ok -> {
+                context.verify(() -> kerlink.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
+                context.completeNow();
             }));
     }
 
@@ -250,7 +272,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void tokenIsReusedFromCacheWhileValid(final TestContext context) {
+    public void tokenIsReusedFromCacheWhileValid(final VertxTestContext context) {
 
         stubSuccessfulTokenRequest();
         stubSuccessfulDownlinkRequest();
@@ -269,8 +291,9 @@ public class KerlinkProviderTest {
                         .setHandler(secondResponse));
                 return secondResponse.future();
             })
-            .setHandler(context.asyncAssertSuccess(ok -> {
-                context.verify(v -> WireMock.verify(1, postRequestedFor(urlEqualTo("/oss/application/login"))));
+            .setHandler(context.succeeding(ok -> {
+                context.verify(() -> kerlink.verify(1, postRequestedFor(urlEqualTo("/oss/application/login"))));
+                context.completeNow();
             }));
     }
 
@@ -280,7 +303,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void tokenIsInvalidatedOnApiUnauthorized(final TestContext context) {
+    public void tokenIsInvalidatedOnApiUnauthorized(final VertxTestContext context) {
 
         stubSuccessfulTokenRequest();
         stubUnauthorizedDownlinkRequest();
@@ -291,14 +314,15 @@ public class KerlinkProviderTest {
         final String targetDeviceId = "myTestDevice";
         final Command command = getValidDownlinkCommand();
 
-        final Async firstResponseFailure = context.async();
+        final Checkpoint firstResponseFailure = context.checkpoint();
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
             .recover(t -> {
-                firstResponseFailure.complete();
+                firstResponseFailure.flag();
                 return provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command);
             })
-            .setHandler(context.asyncAssertFailure(t -> {
-                context.verify(v -> WireMock.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
+            .setHandler(context.failing(t -> {
+                context.verify(() -> kerlink.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
+                context.completeNow();
             }));
     }
 
@@ -308,7 +332,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void failureOnInvalidTokenResponse(final TestContext context) {
+    public void failureOnInvalidTokenResponse(final VertxTestContext context) {
 
         stubInvalidResponseOnTokenRequest();
 
@@ -319,7 +343,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.asyncAssertFailure());
+                .setHandler(context.failing(t -> context.completeNow()));
     }
 
     /**
@@ -328,7 +352,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void failureOnTokenRequest(final TestContext context) {
+    public void failureOnTokenRequest(final VertxTestContext context) {
 
         stubFailureOnTokenRequest();
 
@@ -339,7 +363,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.asyncAssertFailure());
+                .setHandler(context.failing(t -> context.completeNow()));
     }
 
     /**
@@ -348,7 +372,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void failureOnDownlinkRequest(final TestContext context) {
+    public void failureOnDownlinkRequest(final VertxTestContext context) {
 
         stubSuccessfulTokenRequest();
         stubFailureOnDownlinkRequest();
@@ -360,7 +384,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.asyncAssertFailure());
+                .setHandler(context.failing(t -> context.completeNow()));
     }
 
     /**
@@ -369,7 +393,7 @@ public class KerlinkProviderTest {
      * @param context The helper to use for running async tests on vertx.
      */
     @Test
-    public void faultOnDownlinkRequest(final TestContext context) {
+    public void faultOnDownlinkRequest(final VertxTestContext context) {
 
         stubSuccessfulTokenRequest();
         stubConnectionFaultOnDownlinkRequest();
@@ -381,7 +405,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.asyncAssertFailure());
+                .setHandler(context.failing(t -> context.completeNow()));
     }
 
     private CredentialsObject getValidGatewayCredential() {
@@ -404,7 +428,7 @@ public class KerlinkProviderTest {
         final JsonObject loraNetworkServerData = new JsonObject();
         loraNetworkServerData.put("provider", "kerlink");
         loraNetworkServerData.put("auth-id", "lora-secret");
-        loraNetworkServerData.put("url", "http://localhost:" + wireMockRule.port());
+        loraNetworkServerData.put("url", String.format("http://%s:%d", Constants.LOOPBACK_DEVICE_ADDRESS, kerlink.port()));
         loraNetworkServerData.put("vendor-properties", loraVendorProperties);
         loraNetworkServerData.put("lora-port", 23);
 
@@ -442,12 +466,13 @@ public class KerlinkProviderTest {
     }
 
     private void stubSuccessfulTokenRequest(final Instant tokenExpiryTime) {
+
         final JsonObject result = new JsonObject();
         result.put("expiredDate", tokenExpiryTime.toEpochMilli());
         result.put("tokenType", "Bearer");
         result.put("token", "ThisIsAveryLongBearerTokenUsedByKerlink");
 
-        stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
+        kerlink.stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
                 .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
                 .willReturn(aResponse()
                         .withStatus(201)
@@ -456,7 +481,8 @@ public class KerlinkProviderTest {
     }
 
     private void stubFailureOnTokenRequest() {
-        stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
+
+        kerlink.stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
                 .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
                 .willReturn(aResponse()
                         .withStatus(500)
@@ -464,7 +490,8 @@ public class KerlinkProviderTest {
     }
 
     private void stubInvalidResponseOnTokenRequest() {
-        stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
+
+        kerlink.stubFor(post(urlEqualTo(KERLINK_URL_TOKEN))
                 .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
                 .willReturn(aResponse()
                         .withStatus(201)
@@ -473,28 +500,32 @@ public class KerlinkProviderTest {
     }
 
     private void stubSuccessfulDownlinkRequest() {
-        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+
+        kerlink.stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
                 .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
                 .willReturn(aResponse()
                         .withStatus(201)));
     }
 
     private void stubUnauthorizedDownlinkRequest() {
-        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+
+        kerlink.stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
                 .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
                 .willReturn(aResponse()
                         .withStatus(401)));
     }
 
     private void stubFailureOnDownlinkRequest() {
-        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+
+        kerlink.stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
                 .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
                 .willReturn(aResponse()
                         .withStatus(500).withBody("Something went really wrong.")));
     }
 
     private void stubConnectionFaultOnDownlinkRequest() {
-        stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
+
+        kerlink.stubFor(post(urlPathMatching(KERLINK_URL_DOWNLINK))
                 .withHeader("Content-Type", equalTo(KERLINK_APPLICATION_TYPE))
                 .willReturn(aResponse().withFault(Fault.MALFORMED_RESPONSE_CHUNK)));
     }
