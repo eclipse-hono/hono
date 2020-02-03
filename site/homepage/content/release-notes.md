@@ -44,6 +44,14 @@ title = "Release Notes"
   The example deployment now uses the Jaeger Java client in version 0.35.2 and the
   Jaeger 1.16 agent and back end components.
 
+### API Changes
+
+* The already deprecated endpoints with the `control` prefix have been removed. The northbound and southbound
+  Command & Control endpoints can now only be used with the `command` and `command_response` prefixes
+  (or the respective shorthand version). Note that the AMQP Messaging Network still needs to be
+  configured in such a way that protocol adapters can send and receive messages on the `control/*`
+  address pattern. This is now used for internal communication between protocol adapters only.
+
 ## 1.0.3
 
 ### Fixes & Enhancements
