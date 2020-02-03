@@ -233,11 +233,6 @@ The following sections define the topic filters/names to use for subscribing to 
 * `q` instead of `req`
 * `s` instead of `res`
 
-{{% note title="Deprecation" %}}
-Previous versions of Hono required devices to use `control` instead of `command` as the topic prefix.
-The `control` prefix is deprecated. Devices MAY still use it until support for it will be removed in a future Hono version.
-{{% /note %}}
-
 The following variables are used:
 
 * `${command}` : An arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
