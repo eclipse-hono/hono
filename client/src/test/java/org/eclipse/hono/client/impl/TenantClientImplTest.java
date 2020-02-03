@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -274,7 +272,7 @@ public class TenantClientImplTest {
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         final JsonObject payload = MessageHelper.getJsonPayload(sentMessage);
-        assertThat(payload.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN), is("CN=ca,OU=Hono,O=Eclipse"));
+        assertThat(payload.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN)).isEqualTo("CN=ca,OU=Hono,O=Eclipse");
     }
 
     /**
@@ -294,9 +292,9 @@ public class TenantClientImplTest {
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
         assertNull(MessageHelper.getTenantId(sentMessage));
-        assertThat(sentMessage.getMessageId(), is(notNullValue()));
-        assertThat(sentMessage.getSubject(), is(TenantConstants.TenantAction.get.toString()));
-        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID), is("tenant"));
+        assertThat(sentMessage.getMessageId()).isNotNull();
+        assertThat(sentMessage.getSubject()).isEqualTo(TenantConstants.TenantAction.get.toString());
+        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("tenant");
     }
 
     private JsonObject newTenantResult(final String tenantId) {

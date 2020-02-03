@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -223,7 +220,7 @@ public class DeviceConnectionClientImplTest {
         // WHEN getting last known gateway information
         client.getLastKnownGatewayForDevice("deviceId", span.context())
                 .setHandler(ctx.failing(t -> {
-                    assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_BAD_REQUEST));
+                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
@@ -254,7 +251,7 @@ public class DeviceConnectionClientImplTest {
         // WHEN getting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
                 .setHandler(ctx.failing(t -> {
-                    assertThat(((ServiceInvocationException) t).getErrorCode(), is(HttpURLConnection.HTTP_BAD_REQUEST));
+                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
@@ -277,10 +274,10 @@ public class DeviceConnectionClientImplTest {
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
-        assertThat(MessageHelper.getDeviceId(sentMessage), is("deviceId"));
-        assertThat(sentMessage.getMessageId(), is(notNullValue()));
-        assertThat(sentMessage.getSubject(), is(DeviceConnectionConstants.DeviceConnectionAction.GET_LAST_GATEWAY.getSubject()));
-        assertThat(MessageHelper.getJsonPayload(sentMessage), nullValue());
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(sentMessage.getMessageId()).isNotNull();
+        assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.GET_LAST_GATEWAY.getSubject());
+        assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
     }
 
     /**
@@ -297,10 +294,10 @@ public class DeviceConnectionClientImplTest {
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
-        assertThat(MessageHelper.getDeviceId(sentMessage), is("deviceId"));
-        assertThat(sentMessage.getMessageId(), is(notNullValue()));
-        assertThat(sentMessage.getSubject(), is(DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject()));
-        assertThat(MessageHelper.getJsonPayload(sentMessage), nullValue());
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(sentMessage.getMessageId()).isNotNull();
+        assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject());
+        assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
     }
 
     private JsonObject newGetLastGatewayResult(final String gatewayId) {

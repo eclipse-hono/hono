@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
@@ -91,13 +90,13 @@ public class CommandClientImplTest {
         client.sendCommand(DEVICE_ID, "doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
-        assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
+        assertThat(messageCaptor.getValue().getSubject()).isEqualTo("doSomething");
         assertNotNull(messageCaptor.getValue().getMessageId());
-        assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
-        assertThat(messageCaptor.getValue().getReplyTo(),
-                is(String.format("%s/%s/%s", client.getReplyToEndpointName(), Constants.DEFAULT_TENANT, REPLY_ID)));
+        assertThat(messageCaptor.getValue().getContentType()).isEqualTo("text/plain");
+        assertThat(messageCaptor.getValue().getReplyTo()).isEqualTo(
+                String.format("%s/%s/%s", client.getReplyToEndpointName(), Constants.DEFAULT_TENANT, REPLY_ID));
         assertNotNull(messageCaptor.getValue().getApplicationProperties());
-        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey"), is("appValue"));
+        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey")).isEqualTo("appValue");
     }
 
     /**
@@ -119,11 +118,11 @@ public class CommandClientImplTest {
         client.sendOneWayCommand(DEVICE_ID, "doSomething", "text/plain", Buffer.buffer("payload"), applicationProperties);
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
-        assertThat(messageCaptor.getValue().getSubject(), is("doSomething"));
+        assertThat(messageCaptor.getValue().getSubject()).isEqualTo("doSomething");
         assertNotNull(messageCaptor.getValue().getMessageId());
-        assertThat(messageCaptor.getValue().getContentType(), is("text/plain"));
+        assertThat(messageCaptor.getValue().getContentType()).isEqualTo("text/plain");
         assertNull(messageCaptor.getValue().getReplyTo());
         assertNotNull(messageCaptor.getValue().getApplicationProperties());
-        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey"), is("appValue"));
+        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey")).isEqualTo("appValue");
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -156,13 +153,13 @@ public class AbstractRequestResponseClientTest  {
         // THEN the message is sent and the message being sent contains the headers as application properties
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
-        assertThat(messageCaptor.getValue(), is(notNullValue()));
-        assertThat(messageCaptor.getValue().getBody(), is(notNullValue()));
-        assertThat(messageCaptor.getValue().getBody(), instanceOf(Data.class));
+        assertThat(messageCaptor.getValue()).isNotNull();
+        assertThat(messageCaptor.getValue().getBody()).isNotNull();
+        assertThat(messageCaptor.getValue().getBody()).isInstanceOf(Data.class);
         final Buffer body = MessageHelper.getPayload(messageCaptor.getValue());
-        assertThat(body.getBytes(), is(payload.toBuffer().getBytes()));
-        assertThat(messageCaptor.getValue().getApplicationProperties(), is(notNullValue()));
-        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key"), is("test-value"));
+        assertThat(body.getBytes()).isEqualTo(payload.toBuffer().getBytes());
+        assertThat(messageCaptor.getValue().getApplicationProperties()).isNotNull();
+        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("test-key")).isEqualTo("test-value");
         // and a timer has been set to time out the request after 200 ms
         verify(vertx).setTimer(eq(200L), VertxMockSupport.anyHandler());
     }
@@ -478,8 +475,8 @@ public class AbstractRequestResponseClientTest  {
     @Test
     public void testGetCreditsReturnsCreditsOfSenderLink() {
         when(sender.getCredit()).thenReturn(10, 0);
-        assertThat(client.getCredit(), is(10));
-        assertThat(client.getCredit(), is(0));
+        assertThat(client.getCredit()).isEqualTo(10);
+        assertThat(client.getCredit()).isEqualTo(0);
     }
 
     private AbstractRequestResponseClient<SimpleRequestResponseResult> getClient(final String tenant, final ProtonSender sender, final ProtonReceiver receiver) {

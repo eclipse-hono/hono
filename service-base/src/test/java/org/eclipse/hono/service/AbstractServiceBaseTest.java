@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,22 +12,22 @@
  *******************************************************************************/
 package org.eclipse.hono.service;
 
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.net.NetServerOptions;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.util.Arrays;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.net.NetServerOptions;
 
 /**
  * Unit tests for Hono Server Base class.
@@ -105,7 +105,7 @@ public class AbstractServiceBaseTest {
         // THEN the default secure port is selected and no insecure port will be opened
         assertTrue(portConfigurationTracker.succeeded());
         assertTrue(server.isSecurePortEnabled());
-        assertThat(server.getPort(), is(PORT_NR));
+        assertThat(server.getPort()).isEqualTo(PORT_NR);
         assertFalse(server.isInsecurePortEnabled());
     }
 
@@ -129,7 +129,7 @@ public class AbstractServiceBaseTest {
         // THEN the configured port is used and no insecure port will be opened
         assertTrue(portConfigurationTracker.succeeded());
         assertTrue(server.isSecurePortEnabled());
-        assertThat(server.getPort(), is(8989));
+        assertThat(server.getPort()).isEqualTo(8989);
         assertFalse(server.isInsecurePortEnabled());
     }
 
@@ -170,7 +170,7 @@ public class AbstractServiceBaseTest {
         assertTrue(portConfigurationTracker.succeeded());
         assertFalse(server.isSecurePortEnabled());
         assertTrue(server.isInsecurePortEnabled());
-        assertThat(server.getInsecurePort(), is(INSECURE_PORT_NR));
+        assertThat(server.getInsecurePort()).isEqualTo(INSECURE_PORT_NR);
     }
 
     /**
@@ -193,7 +193,7 @@ public class AbstractServiceBaseTest {
         assertTrue(portConfigurationTracker.succeeded());
         assertFalse(server.isSecurePortEnabled());
         assertTrue(server.isInsecurePortEnabled());
-        assertThat(server.getInsecurePort(), is(8888));
+        assertThat(server.getInsecurePort()).isEqualTo(8888);
     }
 
     /**
@@ -216,9 +216,9 @@ public class AbstractServiceBaseTest {
         // THEN the server will bind to both the default insecure and secure ports
         assertTrue(portConfigurationTracker.succeeded());
         assertTrue(server.isSecurePortEnabled());
-        assertThat(server.getPort(), is(PORT_NR));
+        assertThat(server.getPort()).isEqualTo(PORT_NR);
         assertTrue(server.isInsecurePortEnabled());
-        assertThat(server.getInsecurePort(), is(INSECURE_PORT_NR));
+        assertThat(server.getInsecurePort()).isEqualTo(INSECURE_PORT_NR);
     }
 
     /**

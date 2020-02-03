@@ -13,15 +13,9 @@
 
 package org.eclipse.hono.client;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -60,13 +54,13 @@ public class CommandTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getName(), is("doThis"));
-        assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
-        assertThat(cmd.getReplyToEndpoint(), is(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT));
-        assertThat(cmd.getCorrelationId(), is(correlationId));
+        assertThat(cmd.getName()).isEqualTo("doThis");
+        assertThat(cmd.getReplyToId()).isEqualTo(String.format("4711/%s", replyToId));
+        assertThat(cmd.getReplyToEndpoint()).isEqualTo(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT);
+        assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertFalse(cmd.isOneWay());
-        assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
+        assertThat(cmd.getCommandMessage().getReplyTo()).isEqualTo(String.format("%s/%s/%s/%s%s",
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId));
     }
 
     /**
@@ -88,11 +82,11 @@ public class CommandTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getReplyToId(), is(replyToId));
-        assertNotNull(cmd.getCommandMessage());
-        assertNotNull(cmd.getCommandMessage().getReplyTo());
-        assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
+        assertThat(cmd.getReplyToId()).isEqualTo(replyToId);
+        assertThat(cmd.getCommandMessage()).isNotNull();
+        assertThat(cmd.getCommandMessage().getReplyTo()).isNotNull();
+        assertThat(cmd.getCommandMessage().getReplyTo()).isEqualTo(String.format("%s/%s/%s/%s%s",
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId));
     }
 
     /**
@@ -113,11 +107,11 @@ public class CommandTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(true);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getReplyToId(), is(String.format("4711/%s", replyToId)));
-        assertNotNull(cmd.getCommandMessage());
-        assertNotNull(cmd.getCommandMessage().getReplyTo());
-        assertThat(cmd.getCommandMessage().getReplyTo(), is(String.format("%s/%s/%s/%s%s",
-                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId)));
+        assertThat(cmd.getReplyToId()).isEqualTo(String.format("4711/%s", replyToId));
+        assertThat(cmd.getCommandMessage()).isNotNull();
+        assertThat(cmd.getCommandMessage().getReplyTo()).isNotNull();
+        assertThat(cmd.getCommandMessage().getReplyTo()).isEqualTo(String.format("%s/%s/%s/%s%s",
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId));
     }
 
     /**
@@ -134,9 +128,9 @@ public class CommandTest {
         when(message.getCorrelationId()).thenReturn(correlationId);
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getName(), is("doThis"));
-        assertThat(cmd.getCorrelationId(), is(correlationId));
-        assertNull(cmd.getReplyToId());
+        assertThat(cmd.getName()).isEqualTo("doThis");
+        assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(cmd.getReplyToId()).isNull();;
         assertTrue(cmd.isOneWay());
     }
 
@@ -153,9 +147,9 @@ public class CommandTest {
         when(message.getSubject()).thenReturn("doThis");
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getName(), is("doThis"));
-        assertThat(cmd.getCorrelationId(), is(nullValue()));
-        assertNull(cmd.getReplyToId());
+        assertThat(cmd.getName()).isEqualTo("doThis");
+        assertThat(cmd.getCorrelationId()).isNull();
+        assertThat(cmd.getReplyToId()).isNull();
         assertTrue(cmd.isOneWay());
     }
 
@@ -176,7 +170,7 @@ public class CommandTest {
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getCorrelationId(), is(messageId));
+        assertThat(cmd.getCorrelationId()).isEqualTo(messageId);
     }
 
     /**
@@ -200,10 +194,10 @@ public class CommandTest {
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getApplicationProperties(), is(notNullValue()));
-        assertThat(cmd.getApplicationProperties().size(), is(2));
-        assertThat(cmd.getApplicationProperties().get("deviceId"), is("4711"));
-        assertThat(cmd.getApplicationProperties().get("tenantId"), is("DEFAULT_TENANT"));
+        assertThat(cmd.getApplicationProperties()).isNotNull();
+        assertThat(cmd.getApplicationProperties()).hasSize(2);
+        assertThat(cmd.getApplicationProperties().get("deviceId")).isEqualTo("4711");
+        assertThat(cmd.getApplicationProperties().get("tenantId")).isEqualTo("DEFAULT_TENANT");
     }
 
     /**
@@ -223,7 +217,7 @@ public class CommandTest {
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
-        assertThat(cmd.getApplicationProperties(), is(nullValue()));
+        assertThat(cmd.getApplicationProperties()).isNull();
     }
 
     /**
@@ -241,7 +235,7 @@ public class CommandTest {
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToId));
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason(), containsString("correlation-id"));
+        assertThat(command.getInvalidCommandReason()).contains("correlation-id");
     }
 
     /**
@@ -257,7 +251,7 @@ public class CommandTest {
         when(message.getCorrelationId()).thenReturn("the-correlation-id");
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason(), containsString("address"));
+        assertThat(command.getInvalidCommandReason()).contains("address");
     }
 
     /**
@@ -273,7 +267,7 @@ public class CommandTest {
         when(message.getCorrelationId()).thenReturn("the-correlation-id");
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason(), containsString("address"));
+        assertThat(command.getInvalidCommandReason()).contains("address");
     }
 
     /**
@@ -292,7 +286,7 @@ public class CommandTest {
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, "4711", Constants.DEFAULT_TENANT));
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason(), containsString("reply-to"));
+        assertThat(command.getInvalidCommandReason()).contains("reply-to");
     }
 
     /**
@@ -312,7 +306,7 @@ public class CommandTest {
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, replyToId));
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4712");
         assertFalse(command.isValid());
-        assertThat(command.getInvalidCommandReason(), containsString("reply-to"));
+        assertThat(command.getInvalidCommandReason()).contains("reply-to");
     }
 
     /**
@@ -325,10 +319,10 @@ public class CommandTest {
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4712");
         assertFalse(command.isValid());
         // verify the returned validation error contains all missing fields
-        assertThat(command.getInvalidCommandReason(), containsString("address"));
-        assertThat(command.getInvalidCommandReason(), containsString("subject"));
-        assertThat(command.getInvalidCommandReason(), containsString("correlation-id"));
-        assertThat(command.getInvalidCommandReason(), containsString("reply-to"));
+        assertThat(command.getInvalidCommandReason()).contains("address");
+        assertThat(command.getInvalidCommandReason()).contains("subject");
+        assertThat(command.getInvalidCommandReason()).contains("correlation-id");
+        assertThat(command.getInvalidCommandReason()).contains("reply-to");
     }
 
     /**
@@ -338,10 +332,10 @@ public class CommandTest {
     public void testEncodeDecodeReplyToOptions() {
         final boolean replyToContainedDeviceId = false;
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
-        assertThat(Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag), is(replyToContainedDeviceId));
+        assertThat(Command.isReplyToContainedDeviceIdOptionSet(replyToOptionsBitFlag)).isEqualTo(replyToContainedDeviceId);
 
         final boolean replyToContainedDeviceId2 = true;
         final String replyToOptions2 = Command.encodeReplyToOptions(replyToContainedDeviceId2);
-        assertThat(Command.isReplyToContainedDeviceIdOptionSet(replyToOptions2), is(replyToContainedDeviceId2));
+        assertThat(Command.isReplyToContainedDeviceIdOptionSet(replyToOptions2)).isEqualTo(replyToContainedDeviceId2);
     }
 }

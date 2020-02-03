@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.client.impl;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -206,13 +205,13 @@ public class RegistrationClientImplTest {
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
         final Message sentMessage = messageCaptor.getValue();
-        assertThat(MessageHelper.getDeviceId(sentMessage), is("device"));
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("device");
         assertThat(
                 MessageHelper.getApplicationProperty(
                         sentMessage.getApplicationProperties(),
                         MessageHelper.APP_PROPERTY_GATEWAY_ID,
-                        String.class),
-                is("gateway"));
+                        String.class))
+                .isEqualTo("gateway");
     }
 
     private static JsonObject newRegistrationAssertionResult() {
