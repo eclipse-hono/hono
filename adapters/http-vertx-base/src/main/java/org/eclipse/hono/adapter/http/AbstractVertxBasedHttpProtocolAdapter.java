@@ -1297,6 +1297,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 log.trace("delivered command response [command-request-id: {}] to application",
                                         commandRequestId);
                                 currentSpan.log("delivered command response to application");
+                                currentSpan.finish();
                                 metrics.reportCommand(
                                         Direction.RESPONSE,
                                         tenant,
