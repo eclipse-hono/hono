@@ -30,8 +30,12 @@ title = "Release Notes"
   duration limit* for each tenant before accepting any new connection request from the devices. Please 
   refer to the [resource-limits]({{% doclink "/concepts/resource-limits/#connection-duration-limit" %}}) 
   section for more details.
-* Hono supports now setting a time out value when sending a message on the vert.x event bus. This is
-  configured using the property `sendTimeOutInMs` in `org.eclipse.hono.config.ServiceConfigProperties`.
+* Hono's example device registry now supports configuring a time out for processing requests from clients.
+  This is configured using the property `sendTimeOutInMs` in `org.eclipse.hono.config.ServiceConfigProperties`.
+* Hono's Helm chart is now available from the
+  [Eclipse IoT Packages chart repository](https://www.eclipse.org/packages/repository/).
+  All future development of the chart will be done in the IoT Packages project only.
+  The deployment guide has been adapted accordingly.
 
 ### Fixes & Enhancements
 

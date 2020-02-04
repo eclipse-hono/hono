@@ -11,14 +11,14 @@ Eclipse Hono's service components are provided by means of pre-built Docker imag
 [Docker Hub](https://hub.docker.com/u/eclipse/). These container images can be deployed to popular
 container orchestration platforms like Kubernetes and OpenShift.
 
-The release archive contains all files necessary to deploy Hono to a Kubernetes cluster using the
-[Helm package manager](https://helm.sh).
+The [Eclipse IoT Packages](https://www.eclipse.org/packages/) project hosts the
+[Hono Helm chart](https://github.com/eclipse/packages/tree/master/charts/hono)
+which can be used to install the most recent release of Hono to a Kubernetes cluster
+using the [Helm package manager](https://helm.sh).
+Please refer to the [deployment guide]({{% doclink "/deployment/helm-based-deployment/" %}})
+for installation instructions.
 
-* [Eclipse Hono 1.0.3 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.0.3-chart.tar.gz)
-
-Download and extract the archive and follow the [deployment guide]({{% doclink "/deployment/helm-based-deployment/" %}}).
-
-A Java based command line client for consuming telemetry data and events from Hono is available for download as well:
+A Java based command line client for consuming telemetry data and events from Hono is available for download from
 
 * [Eclipse Hono 1.0.3 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.0.3-exec.jar)
 
@@ -34,17 +34,15 @@ Please note that these milestones represent the latest *state of development* wh
 change from one milestone to the other. Milestones are mainly intended for testing purposes and should generally not
 be used in a production environment.
 
-Installation works the same way as for the latest stable release.
+Container images are published to [Docker Hub](https://hub.docker.com/u/eclipse/). The command line
+client is available from Eclipse download servers.
 
-* [Eclipse Hono 1.1.0-M2 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.1.0-M2-chart.tar.gz)
 * [Eclipse Hono 1.1.0-M2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.1.0-M2-exec.jar)
-* [Eclipse Hono 1.1.0-M1 Helm Chart](https://www.eclipse.org/downloads/download.php?file=/hono/eclipse-hono-1.1.0-M1-chart.tar.gz)
 * [Eclipse Hono 1.1.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.1.0-M1-exec.jar)
 
 ## Source Code
 
-The source code can be cloned (using [Git](https://git-scm.com/)) or downloaded from the
-[Eclipse Hono GitHub repository](https://github.com/eclipse/hono).
+The source code can be cloned or downloaded from [Hono's GitHub repository](https://github.com/eclipse/hono).
 The [Building from Source]({{% doclink "/dev-guide/building_hono/" %}}) guide provides instructions on how to build Hono locally.
 
 ## Release Notes
