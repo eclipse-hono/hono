@@ -51,7 +51,7 @@ import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.tenant.Adapter;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
