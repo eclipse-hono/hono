@@ -30,6 +30,8 @@ title = "Release Notes"
   duration limit* for each tenant before accepting any new connection request from the devices. Please 
   refer to the [resource-limits]({{% doclink "/concepts/resource-limits/#connection-duration-limit" %}}) 
   section for more details.
+* Hono supports now setting a time out value when sending a message on the vert.x event bus. This is
+  configured using the property `sendTimeOutInMs` in `org.eclipse.hono.config.ServiceConfigProperties`.
 
 ### Fixes & Enhancements
 

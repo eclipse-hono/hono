@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -248,7 +248,8 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         })
         .compose(authorized -> {
             final Promise<io.vertx.core.eventbus.Message<Object>> reply = Promise.promise();
-            final DeliveryOptions options = createEventBusMessageDeliveryOptions(currentSpan.context());
+            final DeliveryOptions options = createEventBusMessageDeliveryOptions(config.getSendTimeOut(),
+                    currentSpan.context());
             vertx.eventBus().request(
                     getEventBusServiceAddress(),
                     request.result().toJson(),

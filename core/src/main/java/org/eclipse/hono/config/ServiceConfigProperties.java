@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,19 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     public static final int DEFAULT_RECEIVER_LINK_CREDITS = 100;
 
+    /**
+     * The default send timeout value in milliseconds, which is 
+     * to be used when sending a message on the vert.x event bus.
+     */
+    public  static final long DEFAULT_SEND_TIMEOUT_IN_MS = 3000;
+
     private static final int MIN_PAYLOAD_SIZE  = 128; // bytes
+
+    /**
+     * The minimum send timeout value in milliseconds is 500 ms
+     * and any value less than this minimum value is not accepted.
+     */
+    private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
 
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
@@ -35,6 +47,7 @@ public class ServiceConfigProperties extends ServerConfig {
     private int maxPayloadSize = 2048;
     private int receiverLinkCredit = DEFAULT_RECEIVER_LINK_CREDITS;
     private String corsAllowedOrigin = "*";
+    private long sendTimeOutInMs = DEFAULT_SEND_TIMEOUT_IN_MS;
 
     /**
      * Sets the maximum size of a message payload this server accepts from clients.
@@ -204,5 +217,34 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     public final void setCorsAllowedOrigin(final String corsAllowedOrigin) {
         this.corsAllowedOrigin = Objects.requireNonNull(corsAllowedOrigin);
+    }
+
+    /**
+     * Gets the send timeout value in milliseconds, which is to be used when sending a 
+     * message on the vert.x event bus.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_TIMEOUT_IN_MS}.
+     * 
+     * @return The send timeout value in milliseconds.
+     */
+    public final long getSendTimeOut() {
+        return sendTimeOutInMs;
+    }
+
+    /**
+     * Sets the send timeout value in milliseconds, which is to be used when sending a 
+     * message on the vert.x event bus.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_TIMEOUT_IN_MS}.
+     * 
+     * @param sendTimeOutInMs The send timeout value in milliseconds.
+     * @throws IllegalArgumentException if the timeout value is less than {@link #MIN_SEND_TIMEOUT_IN_MS}.
+     */
+    public final void setSendTimeOut(final long sendTimeOutInMs) {
+        if (sendTimeOutInMs < MIN_SEND_TIMEOUT_IN_MS) {
+            throw new IllegalArgumentException(
+                    String.format("send time out value must be >= %sms", MIN_SEND_TIMEOUT_IN_MS));
+        }
+        this.sendTimeOutInMs = sendTimeOutInMs;
     }
 }

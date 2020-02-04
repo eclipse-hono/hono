@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import java.util.function.Function;
 import java.util.function.IntPredicate;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
@@ -52,7 +53,8 @@ import io.vertx.ext.web.handler.CorsHandler;
  *
  * @param <T> The type of configuration properties this endpoint understands.
  */
-public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implements HttpEndpoint {
+public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> extends AbstractEndpoint
+        implements HttpEndpoint {
 
     /**
      * The key that is used to put a valid JSON payload to the RoutingContext.
@@ -309,7 +311,8 @@ public abstract class AbstractHttpEndpoint<T> extends AbstractEndpoint implement
     protected final void sendAction(final RoutingContext ctx, final JsonObject requestMsg,
             final BiConsumer<Integer, EventBusMessage> responseHandler) {
 
-        final DeliveryOptions options = createEventBusMessageDeliveryOptions(TracingHandler.serverSpanContext(ctx));
+        final DeliveryOptions options = createEventBusMessageDeliveryOptions(config.getSendTimeOut(),
+                TracingHandler.serverSpanContext(ctx));
         vertx.eventBus().request(getEventBusAddress(), requestMsg, options, invocation -> {
             if (invocation.failed()) {
                 HttpUtils.serviceUnavailable(ctx, 2);
