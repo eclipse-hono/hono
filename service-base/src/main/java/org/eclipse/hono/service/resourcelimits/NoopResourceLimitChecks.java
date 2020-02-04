@@ -23,18 +23,7 @@ import io.vertx.core.Future;
 public class NoopResourceLimitChecks implements ResourceLimitChecks {
 
     @Override
-    public Future<Boolean> isConnectionLimitReached(final TenantObject tenantObject) {
-        return Future.succeededFuture(Boolean.FALSE);
-    }
-
-    @Override
     public Future<Boolean> isConnectionLimitReached(final TenantObject tenantObject, final SpanContext spanContext) {
-        return Future.succeededFuture(Boolean.FALSE);
-    }
-
-    @Override
-    public Future<Boolean> isMessageLimitReached(final TenantObject tenantObject,
-            final long payloadSize) {
         return Future.succeededFuture(Boolean.FALSE);
     }
 

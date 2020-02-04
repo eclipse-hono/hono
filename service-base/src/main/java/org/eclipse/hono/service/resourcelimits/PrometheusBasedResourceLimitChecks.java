@@ -174,11 +174,6 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     @Override
-    public Future<Boolean> isConnectionLimitReached(final TenantObject tenant) {
-        return isConnectionLimitReached(tenant, null);
-    }
-
-    @Override
     public Future<Boolean> isConnectionLimitReached(final TenantObject tenant, final SpanContext spanContext) {
 
         Objects.requireNonNull(tenant);
@@ -222,11 +217,6 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             span.finish();
             return b;
         });
-    }
-
-    @Override
-    public Future<Boolean> isMessageLimitReached(final TenantObject tenant, final long payloadSize) {
-        return isMessageLimitReached(tenant, payloadSize, null);
     }
 
     /**

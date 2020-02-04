@@ -26,21 +26,6 @@ public interface ResourceLimitChecks {
     /**
      * Checks if the maximum number of connections configured for a tenant
      * have been reached.
-     * 
-     * @param tenantObject The tenant configuration to check the limit against.
-     * @return A future indicating the outcome of the check.
-     *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
-     *         if the check could not be performed.
-     * @throws NullPointerException if the tenant object is null.
-     * @deprecated Use {@link #isConnectionLimitReached(TenantObject, SpanContext)} instead.
-     */
-    @Deprecated
-    Future<Boolean> isConnectionLimitReached(TenantObject tenantObject);
-
-    /**
-     * Checks if the maximum number of connections configured for a tenant
-     * have been reached.
      *
      * @param tenantObject The tenant configuration to check the limit against.
      * @param spanContext The currently active OpenTracing span context that is used to
@@ -53,22 +38,6 @@ public interface ResourceLimitChecks {
      * @throws NullPointerException if the tenant object is null.
      */
     Future<Boolean> isConnectionLimitReached(TenantObject tenantObject, SpanContext spanContext);
-
-    /**
-     * Checks if the maximum limit for the messages configured for a tenant
-     * have been reached.
-     *
-     * @param tenantObject The tenant configuration to check the limit against.
-     * @param payloadSize The message payload size in bytes.
-     * @return A future indicating the outcome of the check.
-     *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
-     *         if the check could not be performed.
-     * @throws NullPointerException if the tenant object is null.
-     * @deprecated Use {@link #isMessageLimitReached(TenantObject, long, SpanContext)} instead.
-     */
-    @Deprecated
-    Future<Boolean> isMessageLimitReached(TenantObject tenantObject, long payloadSize);
 
     /**
      * Checks if the maximum limit for the messages configured for a tenant
