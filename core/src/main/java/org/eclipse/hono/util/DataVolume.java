@@ -34,7 +34,7 @@ public class DataVolume {
     private long maxBytes = TenantConstants.UNLIMITED_BYTES;
 
     @JsonProperty(TenantConstants.FIELD_PERIOD)
-    private DataVolumePeriod period;
+    private ResourceLimitsPeriod period;
 
     /**
      * Gets the point in time on which the data volume limit came into effect.
@@ -91,11 +91,8 @@ public class DataVolume {
      * Gets the period for the data usage calculation.
      *
      * @return The period for the data usage calculation.
-     * @deprecated From Hono 2.0.0, this method will return {@link org.eclipse.hono.util.ResourceLimitsPeriod} 
-     * instead of {@link org.eclipse.hono.util.DataVolumePeriod}.
      */
-    @Deprecated
-    public final DataVolumePeriod getPeriod() {
+    public final ResourceLimitsPeriod getPeriod() {
         return period;
     }
 
@@ -104,11 +101,8 @@ public class DataVolume {
      *
      * @param period The period for the data usage calculation.
      * @return  a reference to this for fluent use.
-     * @deprecated From Hono 2.0.0, this method will take {@link org.eclipse.hono.util.ResourceLimitsPeriod}
-     * as an argument instead of {@link org.eclipse.hono.util.DataVolumePeriod}.
      */
-    @Deprecated
-    public final DataVolume setPeriod(final DataVolumePeriod period) {
+    public final DataVolume setPeriod(final ResourceLimitsPeriod period) {
         this.period = period;
         return this;
     }

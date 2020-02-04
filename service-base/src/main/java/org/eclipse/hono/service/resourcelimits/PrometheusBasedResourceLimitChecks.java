@@ -25,16 +25,13 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import io.opentracing.noop.NoopTracerFactory;
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.DataVolume;
-import org.eclipse.hono.util.DataVolumePeriod;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
 import org.eclipse.hono.util.TenantConstants;
@@ -46,6 +43,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
+import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -410,7 +408,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         final Instant effectiveSince = dataVolumeConfig.getEffectiveSince();
         final PeriodMode periodMode = PeriodMode.from(dataVolumeConfig.getPeriod().getMode());
         final long periodInDays = Optional.ofNullable(dataVolumeConfig.getPeriod())
-                .map(DataVolumePeriod::getNoOfDays)
+                .map(ResourceLimitsPeriod::getNoOfDays)
                 .orElse(0);
 
         log.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}, {}:{}]", tenant.getTenantId(),

@@ -39,7 +39,6 @@ import org.eclipse.hono.cache.ExpiringValueCache;
 import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
-import org.eclipse.hono.util.DataVolumePeriod;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
 import org.eclipse.hono.util.TenantObject;
@@ -185,7 +184,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
                                 .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
-                                .setPeriod(new DataVolumePeriod()
+                                .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
@@ -214,7 +213,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
                                 .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
-                                .setPeriod(new DataVolumePeriod()
+                                .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
@@ -244,7 +243,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
                                 .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
-                                .setPeriod(new DataVolumePeriod()
+                                .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
@@ -379,7 +378,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
                                 .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
-                                .setPeriod(new DataVolumePeriod()
+                                .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
 
@@ -409,7 +408,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                         .setDataVolume(new DataVolume()
                                 .setMaxBytes(100L)
                                 .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
-                                .setPeriod(new DataVolumePeriod()
+                                .setPeriod(new ResourceLimitsPeriod()
                                         .setMode("days")
                                         .setNoOfDays(30))));
 

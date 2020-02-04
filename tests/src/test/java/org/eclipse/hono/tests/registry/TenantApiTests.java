@@ -28,13 +28,13 @@ import java.util.concurrent.TimeUnit;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.TenantClient;
-import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DataVolume;
-import org.eclipse.hono.util.DataVolumePeriod;
 import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.ResourceLimitsPeriod;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
@@ -81,7 +81,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                 .setDataVolume(new DataVolume()
                         .setMaxBytes(2147483648L)
                         .setEffectiveSince(Instant.parse("2019-07-27T14:30:00Z"))
-                        .setPeriod(new DataVolumePeriod()
+                        .setPeriod(new ResourceLimitsPeriod()
                                 .setMode("days")
                                 .setNoOfDays(30)));
 
