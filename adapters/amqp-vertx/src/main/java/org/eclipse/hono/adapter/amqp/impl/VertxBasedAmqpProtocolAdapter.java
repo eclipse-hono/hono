@@ -978,20 +978,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     "empty notifications must not contain payload"));
         }
 
-        return contentTypeCheck.future()
-                .compose(ok -> {
-                    switch (context.getEndpoint()) {
-                    case TELEMETRY:
-                        return doUploadMessage(context, resource, getTelemetrySender(resource.getTenantId()), currentSpan);
-                    case EVENT:
-                        return doUploadMessage(context, resource, getEventSender(resource.getTenantId()), currentSpan);
-                    case COMMAND_RESPONSE:
-                        return doUploadCommandResponseMessage(context, resource, currentSpan);
-                    default:
-                        return Future
-                                .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unknown endpoint"));
-                    }
-                });
+        switch (context.getEndpoint()) {
+        case TELEMETRY:
+            return contentTypeCheck.future()
+                    .compose(ok -> doUploadMessage(context, resource, getTelemetrySender(resource.getTenantId()),
+                            currentSpan));
+        case EVENT:
+            return contentTypeCheck.future()
+                    .compose(ok -> doUploadMessage(context, resource, getEventSender(resource.getTenantId()),
+                            currentSpan));
+        case COMMAND_RESPONSE:
+            return doUploadCommandResponseMessage(context, resource, currentSpan);
+        default:
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "unknown endpoint"));
+        }
     }
 
     private Future<ProtonDelivery> doUploadMessage(
