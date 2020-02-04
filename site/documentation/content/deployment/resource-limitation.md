@@ -75,6 +75,10 @@ The `resources` property defines the overall limit of 256 MB of memory that the 
 
 Hono supports limiting the overall number of simultaneously connected devices per tenant. Please refer to the [connections limit concept]({{< relref "/concepts/resource-limits.md#connections-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/tenant#tenant-information-format" >}}) for configuration details.
 
+## Limiting the Overall Connection Time
+
+Hono supports configuring limits based on the overall amount of time that the devices have already been connected to protocol adapters for a tenant. Please refer to the [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) for more information. Before accepting any connection requests from the devices, the protocol adapters verify that the configured connection duration limit is not exceeded. If the limit has been already reached, then the connection request is rejected. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/tenant#tenant-information-format" >}}) for configuration details.
+ 
 ## Limiting the Data Volume
 
 Hono supports limiting the amount of data that devices of a tenant can publish to Hono during a given time interval. Please refer to the [messages limit concept] ({{< relref "/concepts/resource-limits.md#messages-limit" >}}) for more information. The limit needs to be configured at the tenant level using the *resource-limits* configuration property. Please refer to the [Tenant API]({{< ref "/api/tenant#tenant-information-format" >}}) for configuration details.
