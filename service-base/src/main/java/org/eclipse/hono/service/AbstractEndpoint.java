@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,26 +87,12 @@ public abstract class AbstractEndpoint implements Endpoint {
      * Subclasses should override this method to create required resources
      * during startup.
      * <p>
-     * This default implementation delegates to {@link #doStart(Future)}.
+     * This implementation always completes the start future.
      * 
      * @param startPromise Completes if startup succeeded.
      */
     protected void doStart(final Promise<Void> startPromise) {
-        doStart(startPromise.future());
-    }
-
-    /**
-     * Subclasses should override this method to create required resources
-     * during startup.
-     * <p>
-     * This implementation always completes the start future.
-     * 
-     * @param startFuture Completes if startup succeeded.
-     * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
-     */
-    @Deprecated
-    protected void doStart(final Future<Void> startFuture) {
-        startFuture.complete();
+        startPromise.complete();
     }
 
     @Override
@@ -120,26 +106,12 @@ public abstract class AbstractEndpoint implements Endpoint {
      * Subclasses should override this method to release resources
      * during shutdown.
      * <p>
-     * This default implementation delegates to {@link #doStop(Future)}.
+     * This implementation always completes the stop future.
      * 
      * @param stopPromise Completes if shutdown succeeded.
      */
     protected void doStop(final Promise<Void> stopPromise) {
-        doStop(stopPromise.future());
-    }
-
-    /**
-     * Subclasses should override this method to release resources
-     * during shutdown.
-     * <p>
-     * This implementation always completes the stop future.
-     * 
-     * @param stopFuture Completes if shutdown succeeded.
-     * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
-     */
-    @Deprecated
-    protected void doStop(final Future<Void> stopFuture) {
-        stopFuture.complete();
+        stopPromise.complete();
     }
 
     /**

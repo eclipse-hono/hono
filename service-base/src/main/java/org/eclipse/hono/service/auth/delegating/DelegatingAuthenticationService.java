@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,7 +29,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.dns.DnsClient;
@@ -147,13 +146,10 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     }
 
     @Override
-    protected void doStart(final Future<Void> startFuture) {
-
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(startFuture);
+    protected final void doStart(final Promise<Void> startFuture) {
 
         if (factory == null) {
-            result.fail(new IllegalStateException("no connection factory for Authentication service set"));
+            startFuture.fail(new IllegalStateException("no connection factory for Authentication service set"));
         } else {
             client = new AuthenticationServerClient(vertx, factory);
             if (log.isInfoEnabled()) {
@@ -161,7 +157,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
                         .collect(Collectors.joining(", "));
                 log.info("starting {} with support for SASL mechanisms: {}", toString(), saslMechanisms);
             }
-            result.complete();
+            startFuture.complete();
         }
     }
 

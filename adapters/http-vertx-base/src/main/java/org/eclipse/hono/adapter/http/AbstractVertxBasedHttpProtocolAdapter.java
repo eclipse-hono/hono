@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,10 +48,8 @@ import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.JsonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -1157,11 +1155,18 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     private Future<Boolean> isSupportConcurrentGatewayDeviceCommandRequests(final TenantObject tenantObject) {
-        final Boolean result = Optional.ofNullable(tenantObject.getAdapterConfiguration(getTypeName()))
-                .map(conf -> JsonHelper.getValue(conf, TenantConstants.FIELD_EXT, JsonObject.class, null))
-                .map(extension -> JsonHelper.getValue(extension,
-                        FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS, Boolean.class, false))
+
+        final Boolean result = Optional.ofNullable(tenantObject.getAdapter(getTypeName()))
+                .map(conf -> conf.getExtensions().get(FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS))
+                .map(obj -> {
+                    if (obj instanceof Boolean) {
+                        return (Boolean) obj;
+                    } else {
+                        return Boolean.FALSE;
+                    }
+                })
                 .orElse(false);
+
         return Future.succeededFuture(result);
     }
 

@@ -439,29 +439,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Invoked after the adapter has started up.
      * <p>
-     * This default implementation delegates to {@link #doStart(Future)}.
+     * This default implementation simply completes the promise.
      * <p>
      * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
      *
      * @param startPromise The promise to complete once start up is complete.
      */
     protected void doStart(final Promise<Void> startPromise) {
-        doStart(startPromise.future());
-    }
-
-    /**
-     * Invoked after the adapter has started up.
-     * <p>
-     * This default implementation simply completes the future.
-     * <p>
-     * Subclasses should override this method to perform any work required on start-up of this protocol adapter.
-     *
-     * @param startFuture The future to complete once start up is complete.
-     * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
-     */
-    @Deprecated(forRemoval = true)
-    protected void doStart(final Future<Void> startFuture) {
-        startFuture.complete();
+        startPromise.complete();
     }
 
     @Override
@@ -503,7 +488,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     /**
      * Invoked directly before the adapter is shut down.
      * <p>
-     * This default implementation delegates to {@link #doStop(Future)}.
+     * This default implementation always completes the promise.
      * <p>
      * Subclasses should override this method to perform any work required before shutting down this protocol adapter.
      *
@@ -511,21 +496,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected void doStop(final Promise<Void> stopPromise) {
         // to be overridden by subclasses
-        doStop(stopPromise.future());
-    }
-
-    /**
-     * Invoked directly before the adapter is shut down.
-     * <p>
-     * Subclasses should override this method to perform any work required before shutting down this protocol adapter.
-     *
-     * @param stopFuture The future to complete once all work is done and shut down should commence.
-     * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
-     */
-    @Deprecated(forRemoval = true)
-    protected void doStop(final Future<Void> stopFuture) {
-        // to be overridden by subclasses
-        stopFuture.complete();
+        stopPromise.complete();
     }
 
     /**

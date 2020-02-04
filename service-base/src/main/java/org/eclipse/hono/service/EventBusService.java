@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -98,35 +98,15 @@ public abstract class EventBusService extends AbstractVerticle {
     /**
      * Subclasses should override this method to perform any work required on start-up of this service.
      * <p>
-     * This default implementation delegates to {@link #doStart(Future)}.
-     * </p>
+     * This default implementation always completes the promise.
      * <p>
      * This method is invoked by {@link #start()} as part of the {@code Verticle} deployment process.
-     * </p>
      *
      * @param startPromise promise to complete once start up has succeeded.
      */
     protected void doStart(final Promise<Void> startPromise) {
         // should be overridden by subclasses
-        doStart(startPromise.future());
-    }
-
-    /**
-     * Subclasses should override this method to perform any work required on start-up of this service.
-     * <p>
-     * This default implementation performs nothing except for completing the Future.
-     * </p>
-     * <p>
-     * This method is invoked by {@link #start()} as part of the {@code Verticle} deployment process.
-     * </p>
-     *
-     * @param startFuture future to invoke once start up is complete.
-     * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
-     */
-    @Deprecated
-    protected void doStart(final Future<Void> startFuture) {
-        // should be overridden by subclasses
-        startFuture.complete();
+        startPromise.complete();
     }
 
     /**
@@ -162,35 +142,15 @@ public abstract class EventBusService extends AbstractVerticle {
     /**
      * Subclasses should override this method to perform any work required before shutting down this service.
      * <p>
-     * This default implementation delegates to {@link #doStop(Future)}.
-     * </p>
+     * This default implementation always completes the promise.
      * <p>
      * This method is invoked by {@link #stop()} as part of the Verticle deployment process.
-     * </p>
      *
      * @param stopPromise the future to invoke once shutdown is complete.
      */
     protected void doStop(final Promise<Void> stopPromise) {
         // to be overridden by subclasses
-        doStop(stopPromise.future());
-    }
-
-    /**
-     * Subclasses should override this method to perform any work required before shutting down this service.
-     * <p>
-     * This default implementation performs nothing except for completing the Future.
-     * </p>
-     * <p>
-     * This method is invoked by {@link #stop()} as part of the verticle deployment process.
-     * </p>
-     *
-     * @param stopFuture the future to invoke once shutdown is complete.
-     * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
-     */
-    @Deprecated
-    protected void doStop(final Future<Void> stopFuture) {
-        // to be overridden by subclasses
-        stopFuture.complete();
+        stopPromise.complete();
     }
 
     private void registerConsumer() {

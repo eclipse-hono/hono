@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageConsumer;
@@ -56,28 +55,13 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
      * Subclasses should override this method to create required resources
      * during startup.
      * <p>
-     * This default implementation delegates to {@link #doStart(Future)}.
+     * This default implementation always completes the start promise.
      * 
      * @param startPromise Completes if startup succeeded.
      */
     protected void doStart(final Promise<Void> startPromise) {
         // should be overridden by subclasses
-        doStart(startPromise.future());
-    }
-
-    /**
-     * Subclasses should override this method to create required resources
-     * during startup.
-     * <p>
-     * This implementation always completes the start future.
-     * 
-     * @param startFuture Completes if startup succeeded.
-     * @deprecated Subclasses should override {@link #doStart(Promise)} instead.
-     */
-    @Deprecated
-    protected void doStart(final Future<Void> startFuture) {
-        // should be overridden by subclasses
-        startFuture.complete();
+        startPromise.complete();
     }
 
     @Override
@@ -91,30 +75,13 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
      * Subclasses should override this method to release resources
      * during shutdown.
      * <p>
-     * This default implementation delegates to {@link #doStop(Future)}.
+     * This default implementation always completes the stop future.
      * 
      * @param stopPromise Completes if shutdown succeeded.
      */
     protected void doStop(final Promise<Void> stopPromise) {
-
         // to be overridden by subclasses
-        doStop(stopPromise.future());
-    }
-
-    /**
-     * Subclasses should override this method to release resources
-     * during shutdown.
-     * <p>
-     * This implementation always completes the stop future.
-     * 
-     * @param stopFuture Completes if shutdown succeeded.
-     * @deprecated Subclasses should override {@link #doStop(Promise)} instead.
-     */
-    @Deprecated
-    protected void doStop(final Future<Void> stopFuture) {
-
-        // to be overridden by subclasses
-        stopFuture.complete();
+        stopPromise.complete();
     }
 
     private void processMessage(final Message<JsonObject> message) {

@@ -308,22 +308,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * {@inheritDoc}
-     * 
-     * This method currently delegates to {@link #doStart(Future)}.
      */
     @Override
     protected final void doStart(final Promise<Void> startPromise) {
-        doStart(startPromise.future());
-    }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * @deprecated This method will be removed in a future version of Hono.
-     */
-    @Deprecated(forRemoval = true)
-    @Override
-    public void doStart(final Future<Void> startFuture) {
 
         log.info("limiting size of inbound message payload to {} bytes", getConfig().getMaxPayloadSize());
         if (!getConfig().isAuthenticationRequired()) {
@@ -335,17 +322,17 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         setConnectionLimitManager(connectionLimitManager);
 
         checkPortConfiguration()
-        .compose(ok -> CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer()))
-        .compose(ok -> {
-            if (authHandler == null) {
-                authHandler = createAuthHandler();
-            }
-            if (tenantObjectWithAuthIdProvider == null) {
-                tenantObjectWithAuthIdProvider = createTenantAndAuthIdProvider();
-            }
-            return Future.succeededFuture((Void) null);
-        })
-        .setHandler(startFuture);
+            .compose(ok -> CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer()))
+            .compose(ok -> {
+                if (authHandler == null) {
+                    authHandler = createAuthHandler();
+                }
+                if (tenantObjectWithAuthIdProvider == null) {
+                    tenantObjectWithAuthIdProvider = createTenantAndAuthIdProvider();
+                }
+                return Future.succeededFuture((Void) null);
+            })
+            .setHandler(startPromise);
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -356,22 +343,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * {@inheritDoc}
-     * 
-     * This method currently delegates to {@link #doStop(Future)}.
      */
     @Override
     protected final void doStop(final Promise<Void> stopPromise) {
-        doStop(stopPromise.future());
-    }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * @deprecated This method will be removed in a future version of Hono.
-     */
-    @Deprecated(forRemoval = true)
-    @Override
-    public void doStop(final Future<Void> stopFuture) {
 
         final Promise<Void> serverTracker = Promise.promise();
         if (this.server != null) {
@@ -388,8 +362,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         CompositeFuture.all(serverTracker.future(), insecureServerTracker.future())
-        .map(ok -> (Void) null)
-        .setHandler(stopFuture);
+            .map(ok -> (Void) null)
+            .setHandler(stopPromise);
     }
 
     /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -70,30 +70,15 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
 
     /**
      * {@inheritDoc}
-     * 
-     * This method currently delegates to the deprecated {@link #doStart(Future)}
-     * method. After its removal, this method will be responsible for all initialization
-     * of this service.
      */
     @Override
     protected final void doStart(final Promise<Void> startPromise) {
-        doStart(startPromise.future());
-    }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * @deprecated This method will be removed in Hono 2.0.0.
-     */
-    @Deprecated(forRemoval = true)
-    @Override
-    protected void doStart(final Future<Void> startFuture) {
 
         if (cacheManager == null) {
-            startFuture.fail(new IllegalStateException("cache manager is not set"));
+            startPromise.fail(new IllegalStateException("cache manager is not set"));
         } else {
             connectToGrid();
-            startFuture.complete();
+            startPromise.complete();
         }
     }
 
@@ -134,27 +119,9 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
 
     /**
      * {@inheritDoc}
-     * 
-     * This method currently delegates to the deprecated {@link #doStop(Future)}
-     * method. After its removal, this method will be responsible for cleaning up
-     * during shutdown of this service.
      */
     @Override
     protected final void doStop(final Promise<Void> stopPromise) {
-        doStop(stopPromise.future());
-    }
-
-    /**
-     * {@inheritDoc}
-     * 
-     * @deprecated This method will be removed in Hono 2.0.0.
-     */
-    @Deprecated(forRemoval = true)
-    @Override
-    protected void doStop(final Future<Void> stopFuture) {
-
-        final Promise<Void> result = Promise.promise();
-        result.future().setHandler(stopFuture);
 
         context.executeBlocking(r -> {
             try {
@@ -165,13 +132,13 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
             } catch (final Throwable t) {
                 r.fail(t);
             }
-        }, stopAttempt -> {
+        }, (AsyncResult<Void> stopAttempt) -> {
             if (stopAttempt.succeeded()) {
                 log.info("connection(s) to remote cache stopped successfully");
             } else {
                 log.info("error trying to stop connection(s) to remote cache", stopAttempt.cause());
             }
-            result.complete();
+            stopPromise.complete();
         });
     }
 
