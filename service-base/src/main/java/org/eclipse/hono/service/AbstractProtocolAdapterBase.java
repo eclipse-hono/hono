@@ -532,29 +532,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject, SpanContext)} method
      * to verify if the tenant's overall connection limit across all adapters
      * has been reached and also invokes {@link #checkMessageLimit(TenantObject, long, SpanContext)}
-     * to check if the tenant's message limit has been exceeded.
-     * 
-     * @param tenantConfig The tenant to check the connection limit for.
-     * @return A succeeded future if the connection and message limits have not been reached yet
-     *         or if the limits could not be checked.
-     *         Otherwise the future will be failed with a {@link ClientErrorException}
-     *         containing the 403 Forbidden status code.
-     * @throws NullPointerException if tenant is {@code null}.
-     * @deprecated Use {@link #checkConnectionLimit(TenantObject, SpanContext)} instead.
-     */
-    @Deprecated
-    protected Future<Void> checkConnectionLimit(final TenantObject tenantConfig) {
-        return checkConnectionLimit(tenantConfig, null);
-    }
-
-    /**
-     * Checks if the maximum number of concurrent connections across all protocol
-     * adapters from devices of a particular tenant has been reached.
-     * <p>
-     * This default implementation uses the
-     * {@link ResourceLimitChecks#isConnectionLimitReached(TenantObject, SpanContext)} method
-     * to verify if the tenant's overall connection limit across all adapters
-     * has been reached and also invokes {@link #checkMessageLimit(TenantObject, long, SpanContext)}
      * and  {@link #checkConnectionDurationLimit(TenantObject, SpanContext)} to check 
      * if the tenant's message and connection duration limits have been exceeded or not.
      *
@@ -594,27 +571,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .all(connectionLimitCheckResult, checkConnectionDurationLimit(tenantConfig, spanContext),
                         messageLimitCheckResult)
                 .map(ok -> null);
-    }
-
-    /**
-     * Checks if this adapter may accept another telemetry or event message from a device.
-     * <p>
-     * This default implementation uses the
-     * {@link ResourceLimitChecks#isMessageLimitReached(TenantObject, long, SpanContext)} method
-     * to verify if the tenant's message limit has been reached.
-     *
-     * @param tenantConfig The tenant to check the message limit for.
-     * @param payloadSize  The size of the message payload in bytes.
-     * @return A succeeded future if the message limit has not been reached yet
-     *         or if the limits could not be checked.
-     *         Otherwise the future will be failed with a {@link ClientErrorException}
-     *         containing the 429 Too many requests status code.
-     * @throws NullPointerException if tenant is {@code null}.
-     * @deprecated Use {@link #checkMessageLimit(TenantObject, long, SpanContext)} instead.
-     */
-    @Deprecated
-    protected Future<Void> checkMessageLimit(final TenantObject tenantConfig, final long payloadSize) {
-        return checkMessageLimit(tenantConfig, payloadSize, null);
     }
 
     /**

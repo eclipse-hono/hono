@@ -88,14 +88,13 @@ public class HonoConnectionImplTest {
     /**
      * Sets up fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
         vertx = mock(Vertx.class);
         final Context context = HonoClientUnitTestHelper.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
         // run any timer immediately
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(1);
             handler.handle(null);
             return 0L;
@@ -354,13 +353,12 @@ public class HonoConnectionImplTest {
      *
      * @param ctx The test execution context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testIsConnectedWithTimeoutSucceedsAfterConcurrentReconnectSucceeded(final VertxTestContext ctx) {
 
         final long isConnectedTimeout = 44444L;
         // let the vertx timer for the isConnectedTimeout do nothing
-        when(vertx.setTimer(eq(isConnectedTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        when(vertx.setTimer(eq(isConnectedTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> 0L);
         final AtomicBoolean isConnectedInvocationsDone = new AtomicBoolean(false);
         final AtomicReference<Future<Void>> isConnected1FutureRef = new AtomicReference<>();
         final AtomicReference<Future<Void>> isConnectedTimeoutForcedFutureRef = new AtomicReference<>();
@@ -414,13 +412,12 @@ public class HonoConnectionImplTest {
      *
      * @param ctx The vert.x test client.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testIsConnectedWithTimeoutFailsAfterConcurrentReconnectFailed(final VertxTestContext ctx) {
 
         final long isConnectedTimeout = 44444L;
         // let the vertx timer for the isConnectedTimeout do nothing
-        when(vertx.setTimer(eq(isConnectedTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        when(vertx.setTimer(eq(isConnectedTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> 0L);
         final AtomicBoolean isConnectedInvocationsDone = new AtomicBoolean(false);
         final AtomicReference<Future<Void>> isConnected1FutureRef = new AtomicReference<>();
         final AtomicReference<Future<Void>> isConnected2FutureRef = new AtomicReference<>();
@@ -521,7 +518,6 @@ public class HonoConnectionImplTest {
         testHandlerCallsCloseHook(ctx, (receiver, captor) -> verify(receiver).detachHandler(captor.capture()));
     }
 
-    @SuppressWarnings("unchecked")
     private void testHandlerCallsCloseHook(
             final VertxTestContext ctx,
             final BiConsumer<ProtonReceiver, ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>>> handlerCaptor) {
@@ -535,8 +531,8 @@ public class HonoConnectionImplTest {
         when(receiver.getRemoteSource()).thenReturn(source);
         when(con.createReceiver(anyString())).thenReturn(receiver);
 
-        final Handler<String> remoteCloseHook = mock(Handler.class);
-        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> captor = ArgumentCaptor.forClass(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
+        final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> captor = VertxMockSupport.argumentCaptorHandler();
 
         honoConnection.connect()
             .compose(c -> {
@@ -550,7 +546,7 @@ public class HonoConnectionImplTest {
                         remoteCloseHook);
 
                 // wait for peer's attach frame
-                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+                final ArgumentCaptor<Handler<AsyncResult<ProtonReceiver>>> openHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
                 ctx.verify(() -> verify(receiver).openHandler(openHandlerCaptor.capture()));
                 openHandlerCaptor.getValue().handle(Future.succeededFuture(receiver));
 
@@ -693,7 +689,7 @@ public class HonoConnectionImplTest {
         final long linkEstablishmentTimeout = 444L; // choose a distinct value here
         props.setLinkEstablishmentTimeout(linkEstablishmentTimeout);
         // don't run linkEstablishmentTimeout timer handler
-        when(vertx.setTimer(eq(linkEstablishmentTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        when(vertx.setTimer(eq(linkEstablishmentTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> 0L);
 
         final Source source = mock(Source.class);
         when(source.getAddress()).thenReturn("source/address");
@@ -703,7 +699,7 @@ public class HonoConnectionImplTest {
         when(receiver.getRemoteSource()).thenReturn(source);
         when(con.createReceiver(anyString())).thenReturn(receiver);
 
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         honoConnection.connect()
@@ -761,7 +757,6 @@ public class HonoConnectionImplTest {
                 });
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void testCreateSenderFails(
             final VertxTestContext ctx,
             final Supplier<ErrorCondition> errorSupplier,
@@ -770,8 +765,8 @@ public class HonoConnectionImplTest {
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.getRemoteCondition()).thenReturn(errorSupplier.get());
         when(con.createSender(anyString())).thenReturn(sender);
-        final Handler<String> remoteCloseHook = mock(Handler.class);
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             // do not run timers immediately
             return 0L;
         });
@@ -782,8 +777,8 @@ public class HonoConnectionImplTest {
                 final Future<ProtonSender> s = honoConnection.createSender(
                         "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
                 ctx.verify(() -> {
-                    verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), any(Handler.class));
-                    final ArgumentCaptor<Handler> openHandler = ArgumentCaptor.forClass(Handler.class);
+                    verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), VertxMockSupport.anyHandler());
+                    final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> openHandler = VertxMockSupport.argumentCaptorHandler();
                     verify(sender).openHandler(openHandler.capture());
                     openHandler.getValue().handle(Future.failedFuture(new IllegalStateException()));
                 });
@@ -805,14 +800,13 @@ public class HonoConnectionImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateSenderFailsOnTimeout(final VertxTestContext ctx) {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
         when(con.createSender(anyString())).thenReturn(sender);
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         honoConnection.connect()
@@ -836,12 +830,11 @@ public class HonoConnectionImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateSenderFailsForUnsupportedAnonTerminus(final VertxTestContext ctx) {
 
         when(con.getRemoteOfferedCapabilities()).thenReturn(new Symbol[] {Symbol.valueOf("some-feature")});
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         honoConnection.connect()
@@ -867,14 +860,13 @@ public class HonoConnectionImplTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateSenderFailsIfPeerDoesNotCreateTerminus(final VertxTestContext ctx) {
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.getRemoteTarget()).thenReturn(null);
         when(con.createSender(anyString())).thenReturn(sender);
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         honoConnection.connect()
@@ -883,7 +875,7 @@ public class HonoConnectionImplTest {
                 final Future<ProtonSender> s = c.createSender(
                         TelemetryConstants.TELEMETRY_ENDPOINT, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook);
                 ctx.verify(() -> {
-                    final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> openHandler = ArgumentCaptor.forClass(Handler.class);
+                    final ArgumentCaptor<Handler<AsyncResult<ProtonSender>>> openHandler = VertxMockSupport.argumentCaptorHandler();
                     verify(sender).open();
                     verify(sender).openHandler(openHandler.capture());
                     // and the peer does not allocate a local terminus for the link
@@ -909,7 +901,6 @@ public class HonoConnectionImplTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateSenderThatGetsNoCredits(final VertxTestContext ctx) {
         final ProtonSender sender = mock(ProtonSender.class);
@@ -922,8 +913,8 @@ public class HonoConnectionImplTest {
         // just invoke openHandler with succeeded future
         doAnswer(AdditionalAnswers.answerVoid(
                 (final Handler<AsyncResult<ProtonSender>> handler) -> handler.handle(Future.succeededFuture(sender))))
-                        .when(sender).openHandler(any(Handler.class));
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+                        .when(sender).openHandler(VertxMockSupport.anyHandler());
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         honoConnection.connect()
@@ -944,12 +935,11 @@ public class HonoConnectionImplTest {
      *
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testCreateSenderThatGetsDelayedCredits(final VertxTestContext ctx) {
         // We need to delay timer task. In this case simply forever.
         final long waitOnCreditsTimerId = 23;
-        when(vertx.setTimer(anyLong(), any(Handler.class))).thenAnswer(invocation -> {
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
             // do not call handler any time
             return waitOnCreditsTimerId;
         });
@@ -965,11 +955,11 @@ public class HonoConnectionImplTest {
         // mock handlers
         doAnswer(AdditionalAnswers.answerVoid(
                 (final Handler<AsyncResult<ProtonSender>> handler) -> handler.handle(Future.succeededFuture(sender))))
-                        .when(sender).openHandler(any(Handler.class));
+                        .when(sender).openHandler(VertxMockSupport.anyHandler());
         doAnswer(AdditionalAnswers.answerVoid(
                 (final Handler<ProtonSender> handler) -> handler.handle(sender)))
-                        .when(sender).sendQueueDrainHandler(any(Handler.class));
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+                        .when(sender).sendQueueDrainHandler(VertxMockSupport.anyHandler());
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         honoConnection.connect()
@@ -999,7 +989,7 @@ public class HonoConnectionImplTest {
         final long linkEstablishmentTimeout = 444L; // choose a distinct value here
         props.setLinkEstablishmentTimeout(linkEstablishmentTimeout);
         // don't run linkEstablishmentTimeout timer handler
-        when(vertx.setTimer(eq(linkEstablishmentTimeout), any(Handler.class))).thenAnswer(invocation -> 0L);
+        when(vertx.setTimer(eq(linkEstablishmentTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> 0L);
 
         final ProtonSender sender = mock(ProtonSender.class);
         when(sender.isOpen()).thenReturn(Boolean.TRUE);
@@ -1009,7 +999,7 @@ public class HonoConnectionImplTest {
         when(sender.getRemoteTarget()).thenReturn(target);
         when(sender.getCredit()).thenReturn(0);
         // mock handlers
-        final Handler<String> remoteCloseHook = mock(Handler.class);
+        final Handler<String> remoteCloseHook = VertxMockSupport.mockHandler();
 
         // GIVEN an established connection
         honoConnection.connect()

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -164,44 +164,6 @@ public final class HonoProtonHelper {
         } else {
             return false;
         }
-    }
-
-    /**
-     * Executes some code on a given context.
-     * 
-     * @param <T> The type of the result that the code produces.
-     * @param requiredContext The context to run the code on.
-     * @param codeToRun The code to execute. The code is required to either complete or
-     *                  fail the future that is passed into the handler.
-     * @return The future passed into the handler for executing the code. The future
-     *         thus indicates the outcome of executing the code. The future will be failed
-     *         if the required context is {@code null}.
-     * @deprecated Use {@link #executeOnContext(Context, Handler)} instead.
-     */
-    @Deprecated
-    public static <T> Future<T> executeOrRunOnContext(
-            final Context requiredContext,
-            final Handler<Future<T>> codeToRun) {
-
-        Objects.requireNonNull(codeToRun);
-
-        final Promise<T> result = Promise.promise();
-        if (requiredContext == null) {
-            result.fail(new IllegalStateException("no context to run on"));
-        } else {
-            final Context currentContext = Vertx.currentContext();
-            if (currentContext == requiredContext) {
-                // we are already running on the correct Context,
-                // just execute the code
-                codeToRun.handle(result.future());
-            } else {
-                // we need to run the code on the Context on which
-                // we had originally established the connection,
-                // otherwise vertx-proton will yield undefined results
-                requiredContext.runOnContext(go -> codeToRun.handle(result.future()));
-            }
-        }
-        return result.future();
     }
 
     /**

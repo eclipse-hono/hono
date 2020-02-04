@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -239,22 +239,6 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *         AMQP <em>open</em> frame, {@code false} otherwise.
      */
     boolean supportsCapability(Symbol capability);
-
-    /**
-     * Executes some code on the vert.x Context that has been used to establish the
-     * connection to the peer.
-     * 
-     * @param <T> The type of the result that the code produces.
-     * @param codeToRun The code to execute. The code is required to either complete or
-     *                  fail the future that is passed into the handler.
-     * @return The future passed into the handler for executing the code. The future
-     *         thus indicates the outcome of executing the code. The future will
-     *         be failed with a {@link ServerErrorException} if the <em>context</em>
-     *         property is {@code null}.
-     * @deprecated Use {@link #executeOnContext(Handler)} instead.
-     */
-    @Deprecated
-    <T> Future<T> executeOrRunOnContext(Handler<Future<T>> codeToRun);
 
     /**
      * Executes some code on the vert.x Context that has been used to establish the

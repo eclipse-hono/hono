@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -88,46 +87,6 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
     private final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
     private final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler;
-
-    /**
-     * Creates a new SASL authenticator factory for authentication providers.
-     *
-     * @param tenantClientFactory The factory to use for creating a Tenant service client.
-     * @param config The protocol adapter configuration object.
-     * @param spanFactory The factory to use for creating and starting an OpenTracing span to
-     *                    trace the authentication of the device.
-     * @param adapterConnectionLimit The adapter level connection limit to enforce.
-     * @param tenantConnectionLimit The tenant level connection limit to enforce. The function must return
-     *                              a succeeded future if the connection limit has not been reached yet.
-     * @param usernamePasswordAuthProvider The authentication provider to use for validating device credentials.
-     *                                     The given provider should support validation of credentials with a
-     *                                     username containing the device's tenant ({@code auth-id@TENANT}) if the
-     *                                     protocol adapter configuration's <em>isSingleTenant</em> method returns
-     *                                     {@code false}.
-     * @param clientCertAuthProvider The authentication provider to use for validating client certificates.
-     * @param preAuthenticationHandler An optional handler that will be invoked after the SASL response has been
-     *                                 received and before credentials get verified. May be {@code null}.
-     * @throws NullPointerException if any of the parameters other than the authentication providers are {@code null}.
-     * @deprecated Use {@link #AmqpAdapterSaslAuthenticatorFactory(TenantClientFactory, ProtocolAdapterProperties,
-     *                         Supplier, ConnectionLimitManager, BiFunction, HonoClientBasedAuthProvider,
-     *                         HonoClientBasedAuthProvider, BiFunction)} instead.
-     */
-    @Deprecated
-    public AmqpAdapterSaslAuthenticatorFactory(
-            final TenantClientFactory tenantClientFactory,
-            final ProtocolAdapterProperties config,
-            final Supplier<Span> spanFactory,
-            final ConnectionLimitManager adapterConnectionLimit,
-            final Function<TenantObject, Future<Void>> tenantConnectionLimit,
-            final HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider,
-            final HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider,
-            final BiFunction<SaslResponseContext, Span, Future<Void>> preAuthenticationHandler) {
-
-        this(tenantClientFactory, config, spanFactory, adapterConnectionLimit,
-                (tenantObject, spanContext) -> Objects.requireNonNull(tenantConnectionLimit).apply(tenantObject),
-                usernamePasswordAuthProvider,
-                clientCertAuthProvider, preAuthenticationHandler);
-    }
 
     /**
      * Creates a new SASL authenticator factory for authentication providers.

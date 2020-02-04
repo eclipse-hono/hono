@@ -236,31 +236,6 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     /**
-     * Executes some code on the vert.x Context that has been used to establish the
-     * connection to the peer.
-     *
-     * @param <T> The type of the result that the code produces.
-     * @param codeToRun The code to execute. The code is required to either complete or
-     *                  fail the future that is passed into the handler.
-     * @return The future passed into the handler for executing the code. The future
-     *         thus indicates the outcome of executing the code. The future will
-     *         be failed with a {@link ServerErrorException} if the <em>context</em>
-     *         property is {@code null}.
-     * @deprecated Use {@link #executeOnContext(Handler)} instead.
-     */
-    @Override
-    @Deprecated
-    public final <T> Future<T> executeOrRunOnContext(final Handler<Future<T>> codeToRun) {
-
-        if (context == null) {
-            // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
-        } else {
-            return HonoProtonHelper.executeOrRunOnContext(context, codeToRun);
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override

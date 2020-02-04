@@ -21,7 +21,6 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -162,20 +161,6 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Gets this tenant's trust anchor.
-     * 
-     * @return The first element of this tenant's set of trust anchors or {@code null},
-     *         if no trust anchors have been defined.
-     * @deprecated Use {@link #getTrustAnchors()} instead.
-     */
-    @JsonIgnore
-    @Deprecated
-    public TrustAnchor getTrustAnchor() {
-
-        return getTrustAnchors().stream().findFirst().orElse(null);
-    }
-
-    /**
      * Gets the trust anchors for this tenant.
      * <p>
      * This method tries to create the trust anchors based on the information
@@ -255,7 +240,7 @@ public final class TenantObject extends JsonBackedValueObject {
      *
      * @return The list of configured adapters or {@code null} if not set.
      */
-    @JsonIgnore
+    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
     public List<Adapter> getAdapters() {
         return adapters;
     }
@@ -267,7 +252,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * @return This tenant for command chaining.
      * @throws IllegalArgumentException if more than one of the adapters have the same <em>type</em>.
      */
-    @JsonIgnore
+    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
     public TenantObject setAdapters(final List<Adapter> adapters) {
         this.adapters = validateAdapterTypes(adapters);
         return this;
@@ -306,119 +291,6 @@ public final class TenantObject extends JsonBackedValueObject {
     }
 
     /**
-     * Gets the configuration information for this tenant's
-     * configured adapters.
-     * 
-     * @return An unmodifiable list of configuration properties or
-     *         {@code null} if no specific configuration has been
-     *         set for any protocol adapter.
-     * @deprecated Use {@link #getAdapters()} instead.
-     */
-    @Deprecated
-    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
-    public List<Map<String, Object>> getAdapterConfigurationsAsMaps() {
-        return Optional.ofNullable(adapters)
-                .map(adapters -> adapters.stream()
-                        .map(JsonObject::mapFrom)
-                        .map(JsonObject::getMap)
-                        .collect(Collectors.toList()))
-                .orElse(null);
-    }
-
-    /**
-     * Gets the configuration information for this tenant's
-     * configured adapters.
-     * 
-     * @return The configuration properties for this tenant's
-     *         configured adapters or {@code null} if no specific
-     *         configuration has been set for any protocol adapter.
-     * @deprecated Use {@link #getAdapters()} instead.
-     */
-    @Deprecated
-    @JsonIgnore
-    public JsonArray getAdapterConfigurations() {
-        return Optional.ofNullable(adapters)
-                .map(adapters -> adapters.stream()
-                        .map(JsonObject::mapFrom)
-                        .collect(Collectors.toList()))
-                .map(JsonArray::new)
-                .orElse(null);
-    }
-
-    /**
-     * Gets the configuration properties for a protocol adapter.
-     * 
-     * @param type The adapter's type.
-     * @return The configuration properties or {@code null} if no specific
-     *         properties have been set.
-     * @throws NullPointerException if type is {@code null}.
-     * @deprecated Use {@link #getAdapter(String type)} instead.
-     */
-    @Deprecated
-    public JsonObject getAdapterConfiguration(final String type) {
-
-        Objects.requireNonNull(type);
-
-        return Optional.ofNullable(getAdapter(type))
-                .map(JsonObject::mapFrom)
-                .orElse(null);
-    }
-
-    /**
-     * Sets the configuration information for this tenant's
-     * configured adapters.
-     * 
-     * @param configurations A list of configuration properties, one set of properties
-     *                              for each configured adapter. The list's content will be
-     *                              copied into a new list in order to prevent modification
-     *                              of the list after this method has been invoked.
-     * @return This tenant for command chaining.
-     * @throws IllegalArgumentException if the given configurations does not contain a <em>type</em> or
-     *                                  if more than one of the adapter configurations have the same <em>type</em> or
-     *                                  if error parsing the given configuration.
-     * @deprecated Use {@link #setAdapters(List adapters)} instead.
-     */
-    @Deprecated
-    @JsonProperty(TenantConstants.FIELD_ADAPTERS)
-    public TenantObject setAdapterConfigurations(final List<Map<String, Object>> configurations) {
-        final List<Adapter> adapters = Optional.ofNullable(configurations)
-                .map(ok -> configurations.stream()
-                        .map(JsonObject::mapFrom)
-                        .map(config -> config.mapTo(Adapter.class))
-                        .collect(Collectors.toList()))
-                .orElse(null);
-        setAdapters(adapters);
-        return this;
-    }
-
-    /**
-     * Sets the configuration information for this tenant's
-     * configured adapters.
-     * 
-     * @param configurations The configuration properties for this tenant's
-     *                       configured adapters or {@code null} in order to
-     *                       remove any existing configuration.
-     * @return This tenant for command chaining.
-     * @throws IllegalArgumentException if the given configurations does not contain a <em>type</em> or
-     *                                  if more than one of the adapter configurations have the same <em>type</em> or
-     *                                  if error parsing the given configuration.
-     * @deprecated Use {@link #setAdapters(List adapters)} instead.
-     */
-    @Deprecated
-    @JsonIgnore
-    public TenantObject setAdapterConfigurations(final JsonArray configurations) {
-        final List<Adapter> adapters = Optional.ofNullable(configurations)
-                .map(ok -> configurations.stream()
-                        .filter(obj -> JsonObject.class.isInstance(obj))
-                        .map(JsonObject::mapFrom)
-                        .map(config -> config.mapTo(Adapter.class))
-                        .collect(Collectors.toList()))
-                .orElse(null);
-        setAdapters(adapters);
-        return this;
-    }
-
-    /**
      * Adds an adapter configuration.
      *
      * @param adapter The adapter configuration to add.
@@ -437,26 +309,6 @@ public final class TenantObject extends JsonBackedValueObject {
                     String.format("Already an adapter of the type [%s] exists", adapter.getType()));
         }
         adapters.add(adapter);
-        return this;
-    }
-
-    /**
-     * Adds configuration information for a protocol adapter.
-     * 
-     * @param config The configuration properties to add.
-     * @return This tenant for command chaining.
-     * @throws NullPointerException if the given configuration is {@code null}.
-     * @throws IllegalArgumentException if the given configuration does not contain a <em>type</em> or
-     *                                  if any of the already existing adapters has the same <em>type</em> or
-     *                                  if error parsing the given configuration.
-     * @deprecated Use {@link #addAdapter(Adapter)} instead.
-     */
-    @Deprecated
-    public TenantObject addAdapterConfiguration(final JsonObject config) {
-
-        Objects.requireNonNull(config);
-
-        addAdapter(config.mapTo(Adapter.class));
         return this;
     }
 
@@ -548,23 +400,6 @@ public final class TenantObject extends JsonBackedValueObject {
         final TenantObject result = new TenantObject();
         result.setEnabled(enabled);
         return result;
-    }
-
-    /**
-     * Creates new protocol adapter configuration properties.
-     * 
-     * @param type The adapter type.
-     * @param enabled {@code true} if the adapter should be enabled.
-     * @return The configuration properties.
-     * @deprecated Use {@link Adapter#Adapter(String)} instead.
-     */
-    @Deprecated
-    public static JsonObject newAdapterConfig(final String type, final boolean enabled) {
-
-        Objects.requireNonNull(type);
-        return new JsonObject()
-                .put(TenantConstants.FIELD_ADAPTERS_TYPE, type)
-                .put(TenantConstants.FIELD_ENABLED, enabled);
     }
 
     /**
