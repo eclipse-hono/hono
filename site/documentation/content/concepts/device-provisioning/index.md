@@ -10,7 +10,7 @@ For each device, registration information is stored that defines a device identi
 Each device belongs to exactly one tenant. Each device must have at least one set of credentials that are used to authenticate to Hono.
 
 To get an understanding of what is meant by the terms *tenant*, *device registration* and *credentials*, 
-it is recommended to read the [Device Identity]({{< ref "/concepts/device-identity" >}} page first.
+it is recommended to read the [Device Identity]({{< ref "/concepts/device-identity" >}}) page first.
 
 So in order to use a device with Hono, it has to be provisioned. 
 This means that registration information and at least one credential record must be stored in the device registry.
