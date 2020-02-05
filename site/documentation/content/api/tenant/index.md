@@ -258,18 +258,9 @@ The table below contains the properties which are used to configure a tenant's c
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
 | *effective-since*        | *yes*     | *string*      | `-`           | The point in time at which the current settings became effective, i.e. the start of the first accounting period based on these settings. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).|
 | *max-minutes*            | *no*      | *number*      | `-1`        | The maximum connection duration in minutes allowed for the tenant for each accounting period. MUST be an integer. Minus one indicates that no limit is set. |
-| *period*                 | *no*      | *object*      | `-`          | The mode and length of an accounting period, i.e. the resource usage is calculated based on the defined number of days or on a monthly basis. |
+| *period*                 | *no*      | *object*      | `-`         | The mode and length of an accounting period, i.e. the resource usage is calculated based on the defined number of days or on a monthly basis. For more information, please refer to the [resource limits period]({{< relref "#resource-limits-period-configuration-format" >}}).|
 
 Protocol adapters that maintain *connection state* SHOULD use this information to determine if a connection request from a device should be accepted or not. For more information, please refer to the [connection duration limit concept]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}).
-
-### Resource Limits Period Configuration Format
-
-The table below contains the properties that are used to configure a tenant's resource limits period:
-
-| Name                     | Mandatory | JSON Type     | Default Value | Description |
-| :------------------------| :-------: | :------------ | :------------ | :---------- |
-| *mode*                   | *yes*     | *string*      | `-`           | The mode of the resource usage calculation. The default implementation supports two modes namely `days` and `monthly`. |
-| *no-of-days*             | *no*      | *number*      | `-`           | When the mode is set as `days`, then this value represents the length of an accounting period , i.e. the number of days over which the resource usage is to be limited. MUST be a positive integer.|
 
 ### Data Volume Configuration Format
 
@@ -279,18 +270,18 @@ The table below contains the properties which are used to configure a tenant's d
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
 | *effective-since*        | *yes*     | *string*      | `-`           | The point in time at which the current settings became effective, i.e. the start of the first accounting period based on these settings. The value MUST be an [ISO 8601 compliant *combined date and time representation in extended format*](https://en.wikipedia.org/wiki/ISO_8601#Combined_date_and_time_representations).|
 | *max-bytes*              | *no*      | *number*      | `-1`          | The maximum number of bytes allowed for the tenant for each accounting period. MUST be an integer. A negative value indicates that no limit is set. |
-| *period*                 | *no*      | *object*      | `-`          | The mode and length of an accounting period, i.e. the data usage can limited based on the defined number of days or on a monthly basis. |
+| *period*                 | *no*      | *object*      | `-`           | The mode and length of an accounting period, i.e. the data usage can limited based on the defined number of days or on a monthly basis. For more information, please refer to the [resource limits period]({{< relref "#resource-limits-period-configuration-format" >}}).|
 
 Protocol adapters SHOULD use this information to determine if a message originating from or destined to a device should be accepted for processing.
 
-### Data Volume Period Configuration Format
+### Resource Limits Period Configuration Format
 
-The table below contains the properties which are used to configure a tenant's data volume period:
+The table below contains the properties that are used to configure a tenant's resource limits period:
 
 | Name                     | Mandatory | JSON Type     | Default Value | Description |
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
-| *mode*                   | *yes*     | *string*      | `-`           | The mode of the data usage calculation. The default implementation supports two modes namely `days` and `monthly`.|
-| *no-of-days*             | *no*      | *number*      | `-`           | When the mode is set as `days`, then this value represents the length of an accounting period , i.e. the number of days over which the data usage is to be limited. MUST be a positive integer.|
+| *mode*                   | *yes*     | *string*      | `-`           | The mode of the resource usage calculation. The default implementation supports two modes namely `days` and `monthly`. |
+| *no-of-days*             | *no*      | *number*      | `-`           | When the mode is set as `days`, then this value represents the length of an accounting period , i.e. the number of days over which the resource usage is to be limited. MUST be a positive integer.|
 
 ## Delivery States used by the Tenant API
 

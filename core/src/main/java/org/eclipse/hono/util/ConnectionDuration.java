@@ -33,7 +33,7 @@ public class ConnectionDuration {
     @JsonProperty(TenantConstants.FIELD_MAX_MINUTES)
     private long maxMinutes = TenantConstants.UNLIMITED_MINUTES;
 
-    @JsonProperty(value = TenantConstants.FIELD_PERIOD, required = true)
+    @JsonProperty(value = TenantConstants.FIELD_PERIOD)
     private ResourceLimitsPeriod period;
 
     /**
