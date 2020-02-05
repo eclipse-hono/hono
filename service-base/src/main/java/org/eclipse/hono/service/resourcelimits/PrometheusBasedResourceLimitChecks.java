@@ -247,7 +247,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      * @throws NullPointerException if the tenant object is null.
      * @return A future indicating the outcome of the check.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
      *         if the check could not be performed.
      */
     @Override
