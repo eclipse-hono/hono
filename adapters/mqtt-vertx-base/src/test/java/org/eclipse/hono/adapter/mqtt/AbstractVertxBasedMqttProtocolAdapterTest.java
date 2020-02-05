@@ -39,6 +39,8 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
@@ -677,6 +679,49 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                     adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
                             .setHandler(ctx.completing());
                 });
+    }
+
+    /**
+     * Verifies that the adapter accepts a command response message with an empty body.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadEmptyCommandResponseSucceeds(final VertxTestContext ctx) {
+
+        // GIVEN an adapter with a command response consumer
+        final CommandResponseSender sender = mock(CommandResponseSender.class);
+        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any()))
+                .thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString()))
+                .thenReturn(Future.succeededFuture(sender));
+
+        // WHEN forwarding a command response that has been published
+        final MqttServer server = getMqttServer(false);
+        final AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> adapter = getAdapter(server);
+
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(Boolean.TRUE);
+        final MqttPublishMessage messageFromDevice = mock(MqttPublishMessage.class);
+        when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
+        when(messageFromDevice.messageId()).thenReturn(5555555);
+        when(messageFromDevice.topicName()).thenReturn("command///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
+
+        // ... with an empty payload
+        when(messageFromDevice.payload()).thenReturn(Buffer.buffer());
+        final ResourceIdentifier address = ResourceIdentifier
+                .fromString("command/my-tenant/4712/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
+        adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint), address)
+                .setHandler(ctx.completing());
+
+        // then it is forwarded successfully
+        verify(metrics).reportCommand(
+                eq(MetricsTags.Direction.RESPONSE),
+                eq("my-tenant"),
+                any(TenantObject.class),
+                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                eq(0),
+                any());
     }
 
     private void testUploadQoS1MessageSendsPubAckOnSuccess(
