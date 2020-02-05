@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.tests.coap;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 
 /**
@@ -54,5 +57,13 @@ public class EventCoapIT extends CoapTestBase {
     @Override
     protected Type getMessageType() {
         return Type.CON;
+    }
+
+    @Override
+    protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
+        // assert that events are marked as "durable"
+        ctx.verify(() -> {
+            assertThat(msg.isDurable()).isTrue();
+        });
     }
 }

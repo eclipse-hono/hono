@@ -52,6 +52,8 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     @Override
     protected void assertAdditionalMessageProperties(final VertxTestContext ctx, final Message msg) {
         // assert that events are marked as "durable"
-        ctx.verify(() -> assertThat(msg.isDurable()).isTrue());
+        ctx.verify(() -> {
+            assertThat(msg.isDurable()).isTrue();
+        });
     }
 }

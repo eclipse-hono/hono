@@ -260,7 +260,6 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         connection.compose(ok -> createConsumer(tenantId, msg -> {
             LOGGER.trace("received {}", msg);
             assertMessageProperties(ctx, msg);
-            assertAdditionalMessageProperties(ctx, msg);
             received.countDown();
             lastReceivedTimestamp.set(System.currentTimeMillis());
             if (received.getCount() % 50 == 0) {
@@ -324,7 +323,9 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
+            assertThat(msg.getCreationTime()).isGreaterThan(0);
         });
+        assertAdditionalMessageProperties(ctx, msg);
     }
 
     /**

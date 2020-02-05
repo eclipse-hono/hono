@@ -311,4 +311,30 @@ public class MessageHelperTest {
 
         assertThat(message.getTtl()).isEqualTo(15000L);
     }
+
+    /**
+     * Verifies that the current system time is set on a downstream message
+     * if the message doesn't contain a creation time.
+     */
+    @Test
+    public void testAddPropertiesSetsCreationTime() {
+
+        final Message message = ProtonHelper.message();
+        assertThat(message.getCreationTime()).isEqualTo(0);
+
+        MessageHelper.addProperties(
+                message,
+                ResourceIdentifier.fromString("telemetry/DEFAULT_TENANT/4711"),
+                null,
+                null,
+                null,
+                null,
+                null,
+                "custom-adapter",
+                true,
+                true);
+
+        assertThat(message.getCreationTime()).isGreaterThan(0);
+    }
+
 }

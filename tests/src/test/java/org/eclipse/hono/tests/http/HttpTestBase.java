@@ -1257,6 +1257,7 @@ public abstract class HttpTestBase {
             assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
             assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
+            assertThat(msg.getCreationTime()).isGreaterThan(0);
             assertAdditionalMessageProperties(msg);
         });
     }

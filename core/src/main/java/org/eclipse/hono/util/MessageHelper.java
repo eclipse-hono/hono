@@ -688,9 +688,12 @@ public final class MessageHelper {
     }
 
     /**
-     * Sets the <em>#SYS_PROPERTY_CREATION_TIME</em> of the AMQP 1.0 message to the current timestamp.
+     * Sets the <em>creation-time</em> of an AMQP 1.0 message
+     * to the current point in time.
+     * <p>
+     * This method does nothing if the message already has a creation time (&gt; 0) set.
      *
-     * @param msg the message for that the creation-time property is set.
+     * @param msg The message to set the property on.
      */
     public static void setCreationTime(final Message msg) {
         if (msg.getCreationTime() == 0) {
@@ -920,7 +923,6 @@ public final class MessageHelper {
         Objects.requireNonNull(adapterTypeName);
 
         final Message msg = ProtonHelper.message();
-        msg.setCreationTime(Instant.now().toEpochMilli());
         msg.setContentType(contentType);
         setPayload(msg, contentType, payload);
 
@@ -943,7 +945,8 @@ public final class MessageHelper {
      * The following properties are set:
      * <ul>
      * <li><em>to</em> will be set to the address consisting of the target's endpoint and tenant</li>
-     * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z</li>
+     * <li><em>creation-time</em> will be set to the current number of milliseconds since 1970-01-01T00:00:00Z
+     * if not set already</li>
      * <li>application property <em>device_id</em> will be set to the target's resourceId property</li>
      * <li>application property <em>orig_address</em> will be set to the given publish address</li>
      * <li>application property <em>orig_adapter</em> will be set to the given adapter type name}</li>
@@ -992,6 +995,7 @@ public final class MessageHelper {
      *                          JMS Vendor Properties</a> should be added to the message.
      * @return The message with its properties set.
      * @throws NullPointerException if message or adapterTypeName are {@code null}.
+     * @throws IllegalArgumentException if target is {@code null} and the message does not have an address set.
      */
     public static Message addProperties(
             final Message msg,
@@ -1007,6 +1011,9 @@ public final class MessageHelper {
 
         Objects.requireNonNull(msg);
         Objects.requireNonNull(adapterTypeName);
+        if (target == null && Strings.isNullOrEmpty(msg.getAddress())) {
+            throw new IllegalArgumentException("message must have an address set");
+        }
 
         final ResourceIdentifier ri = Optional.ofNullable(target)
                 .orElseGet(() -> ResourceIdentifier.fromString(msg.getAddress()));

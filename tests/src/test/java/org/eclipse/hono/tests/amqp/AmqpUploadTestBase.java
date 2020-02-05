@@ -66,6 +66,17 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     private ProtonSender sender;
     private MessageConsumer consumer;
 
+    private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
+        ctx.verify(() -> {
+            assertThat(MessageHelper.getDeviceId(msg)).isNotNull();
+            assertThat(MessageHelper.getTenantIdAnnotation(msg)).isNotNull();
+            assertThat(MessageHelper.getDeviceIdAnnotation(msg)).isNotNull();
+            assertThat(MessageHelper.getRegistrationAssertion(msg)).isNull();
+            assertThat(msg.getCreationTime()).isGreaterThan(0);
+        });
+        assertAdditionalMessageProperties(ctx, msg);
+    }
+
     /**
      * Perform additional checks on a received message.
      * <p>
@@ -273,7 +284,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                     log.trace("received message [{}]: {}",
                             msg.getContentType(), payload.toString(StandardCharsets.UTF_8));
                 }
-                assertAdditionalMessageProperties(messageSending, msg);
+                assertMessageProperties(messageSending, msg);
                 callback.handle(null);
             }).map(c -> {
                 consumer = c;
