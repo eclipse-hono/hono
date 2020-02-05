@@ -722,7 +722,6 @@ components:
          additionalProperties: false
          required:
             - effective-since
-            - period
          properties:
             "effective-since":
                type: string

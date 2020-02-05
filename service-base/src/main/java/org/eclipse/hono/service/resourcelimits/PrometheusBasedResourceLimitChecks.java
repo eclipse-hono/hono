@@ -322,7 +322,10 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         final ConnectionDuration connectionDurationConfig = tenant.getResourceLimits().getConnectionDuration();
         final long maxConnectionDurationInMinutes = connectionDurationConfig.getMaxMinutes();
         final Instant effectiveSince = connectionDurationConfig.getEffectiveSince();
-        final PeriodMode periodMode = PeriodMode.from(connectionDurationConfig.getPeriod().getMode());
+        //If the period is not set explicitly, monthly is assumed as the default value
+        final PeriodMode periodMode = Optional.ofNullable(connectionDurationConfig.getPeriod())
+                .map(period -> PeriodMode.from(period.getMode()))
+                .orElse(PeriodMode.MONTHLY);
         final long periodInDays = Optional.ofNullable(connectionDurationConfig.getPeriod())
                 .map(ResourceLimitsPeriod::getNoOfDays)
                 .orElse(0);
@@ -396,7 +399,10 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
         final DataVolume dataVolumeConfig = tenant.getResourceLimits().getDataVolume();
         final long maxBytes = dataVolumeConfig.getMaxBytes();
         final Instant effectiveSince = dataVolumeConfig.getEffectiveSince();
-        final PeriodMode periodMode = PeriodMode.from(dataVolumeConfig.getPeriod().getMode());
+        //If the period is not set explicitly, monthly is assumed as the default value
+        final PeriodMode periodMode = Optional.ofNullable(dataVolumeConfig.getPeriod())
+                .map(period -> PeriodMode.from(period.getMode()))
+                .orElse(PeriodMode.MONTHLY);
         final long periodInDays = Optional.ofNullable(dataVolumeConfig.getPeriod())
                 .map(ResourceLimitsPeriod::getNoOfDays)
                 .orElse(0);
