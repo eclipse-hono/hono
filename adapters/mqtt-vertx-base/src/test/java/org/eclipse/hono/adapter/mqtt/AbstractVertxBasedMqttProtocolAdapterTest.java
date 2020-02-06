@@ -720,17 +720,18 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .fromString("command/my-tenant/4712/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
         adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint), address)
                 .setHandler(ctx.succeeding(result -> {
-                    verify(sender).sendCommandResponse(any(), any());
-                    // then it is forwarded successfully
-                    verify(metrics).reportCommand(
-                            eq(MetricsTags.Direction.RESPONSE),
-                            eq("my-tenant"),
-                            any(TenantObject.class),
-                            eq(MetricsTags.ProcessingOutcome.FORWARDED),
-                            eq(0),
-                            any());
-
-                    ctx.completeNow();
+                    ctx.verify(() -> {
+                        verify(sender).sendCommandResponse(any(), any());
+                        // then it is forwarded successfully
+                        verify(metrics).reportCommand(
+                                eq(MetricsTags.Direction.RESPONSE),
+                                eq("my-tenant"),
+                                any(TenantObject.class),
+                                eq(MetricsTags.ProcessingOutcome.FORWARDED),
+                                eq(0),
+                                any());
+                        ctx.completeNow();
+                    });
                 }));
     }
 
