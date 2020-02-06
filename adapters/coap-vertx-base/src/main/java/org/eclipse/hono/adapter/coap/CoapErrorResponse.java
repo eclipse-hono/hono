@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.coap;
 import java.net.HttpURLConnection;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
+import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.MessageFormatException;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
@@ -91,6 +92,7 @@ public class CoapErrorResponse {
     public static void respond(final CoapExchange exchange, final String message, final ResponseCode code) {
         final Response response = new Response(code);
         response.setPayload(message);
+        response.getOptions().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         exchange.respond(response);
     }
 
