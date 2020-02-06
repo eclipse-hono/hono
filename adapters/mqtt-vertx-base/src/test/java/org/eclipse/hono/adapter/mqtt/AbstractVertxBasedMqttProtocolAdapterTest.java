@@ -708,7 +708,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.topicName()).thenReturn("command///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
 
         // ... with an empty payload
-        when(messageFromDevice.payload()).thenReturn(Buffer.buffer());
+        when(messageFromDevice.payload()).thenReturn(null);
         final ResourceIdentifier address = ResourceIdentifier
                 .fromString("command/my-tenant/4712/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
         adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint), address)

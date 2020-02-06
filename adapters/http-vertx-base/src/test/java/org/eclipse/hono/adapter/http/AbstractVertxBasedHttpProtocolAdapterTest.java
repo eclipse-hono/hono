@@ -544,7 +544,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
 
         // WHEN a device publishes a command response with an empty payload
-        final Buffer payload = Buffer.buffer();
+        final Buffer payload = null;
         final HttpServerResponse response = mock(HttpServerResponse.class);
         final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class), response);
         when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
@@ -563,7 +563,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 eq("tenant"),
                 any(),
                 eq(ProcessingOutcome.FORWARDED),
-                eq(payload.length()),
+                eq(0),
                 any());
     }
 
