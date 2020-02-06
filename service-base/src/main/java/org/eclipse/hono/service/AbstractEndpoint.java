@@ -138,15 +138,14 @@ public abstract class AbstractEndpoint implements Endpoint {
 
     /**
      * Creates {@code DeliveryOptions} that contain the given {@code SpanContext}.
-     * <p>
-     * To be used when sending a message on the vert.x event bus.
-     *  
+     *
+     * @param sendTimeOutInMs The send timeout value in milliseconds.
      * @param spanContext The {@code SpanContext} (may be {@code null}).
      * @return The {@code DeliveryOptions}.
      */
-    protected final DeliveryOptions createEventBusMessageDeliveryOptions(final SpanContext spanContext) {
+    protected final DeliveryOptions createEventBusMessageDeliveryOptions(final long sendTimeOutInMs, final SpanContext spanContext) {
         final DeliveryOptions deliveryOptions = new DeliveryOptions();
-        deliveryOptions.setSendTimeout(3000);
+        deliveryOptions.setSendTimeout(sendTimeOutInMs);
         TracingHelper.injectSpanContext(tracer, spanContext, deliveryOptions);
         return deliveryOptions;
     }
