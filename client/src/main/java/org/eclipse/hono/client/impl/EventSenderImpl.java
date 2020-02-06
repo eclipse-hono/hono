@@ -155,4 +155,10 @@ public final class EventSenderImpl extends AbstractDownstreamSender {
         Tags.SPAN_KIND.set(span, Tags.SPAN_KIND_PRODUCER);
         return span;
     }
+
+    @Override
+    protected void logMessageSendingError(final String format, final Object... arguments) {
+        // log on INFO instead of DEBUG level since events are usually brokered and therefore errors here might indicate issues with the broker
+        log.info(format, arguments);
+    }
 }

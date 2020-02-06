@@ -85,6 +85,8 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
+                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
+                        rawMessage.getMessageId(), getMessageAddress(rawMessage));
                 logError(span, e);
                 span.finish();
                 result.fail(e);
@@ -133,8 +135,8 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after "
                                         + connection.getConfig().getSendMessageTimeout() + "ms");
-                        log.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
-                                messageId, connection.getConfig().getSendMessageTimeout());
+                        logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
+                                messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
                         result.fail(exception);
                     }
                 })
@@ -146,24 +148,26 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
             if (result.future().isComplete()) {
-                log.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+                log.debug("ignoring received delivery update for message [ID: {}, address: {}]: waiting for the update has already timed out",
+                        messageId, getMessageAddress(message));
             } else if (deliveryUpdated.remotelySettled()) {
-                logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
+                logUpdatedDeliveryState(currentSpan, message, deliveryUpdated);
                 result.complete(deliveryUpdated);
             } else {
-                log.debug("peer did not settle message [message ID: {}, remote state: {}], failing delivery",
-                        messageId, remoteState);
+                logMessageSendingError("peer did not settle message [ID: {}, address: {}, remote state: {}], failing delivery",
+                        messageId, getMessageAddress(message), remoteState.getClass().getSimpleName());
                 final ServiceInvocationException e = new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
                         "peer did not settle message, failing delivery");
                 result.fail(e);
             }
         });
-        log.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+        log.trace("sent message [ID: {}, address: {}], remaining credit: {}, queued messages: {}", messageId,
+                getMessageAddress(message), sender.getCredit(), sender.getQueued());
 
         return result.future()
                 .map(delivery -> {
-                    log.trace("message [ID: {}] accepted by peer", messageId);
+                    log.trace("message [ID: {}, address: {}] accepted by peer", messageId, getMessageAddress(message));
                     Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
                     currentSpan.finish();
                     return delivery;
