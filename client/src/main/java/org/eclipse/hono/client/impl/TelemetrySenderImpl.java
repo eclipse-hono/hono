@@ -130,6 +130,8 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
+                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
+                        rawMessage.getMessageId(), getMessageAddress(rawMessage));
                 logError(span, e);
                 span.finish();
                 result.fail(e);
@@ -175,8 +177,8 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
-                        log.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
-                                messageId, config.getSendMessageTimeout());
+                        logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
+                                messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
                         TracingHelper.logError(currentSpan, exception.getMessage());
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
                         currentSpan.finish();
@@ -190,19 +192,21 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
             if (timeoutReached.get()) {
-                log.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+                log.debug("ignoring received delivery update for message [ID: {}, address: {}]: waiting for the update has already timed out",
+                        messageId, getMessageAddress(message));
             } else if (deliveryUpdated.remotelySettled()) {
-                logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
+                logUpdatedDeliveryState(currentSpan, message, deliveryUpdated);
             } else {
-                log.warn("peer did not settle message [message ID: {}, remote state: {}]",
-                        messageId, remoteState);
+                logMessageSendingError("peer did not settle message [ID: {}, address: {}, remote state: {}], failing delivery",
+                        messageId, getMessageAddress(message), remoteState.getClass().getSimpleName());
                 TracingHelper.logError(currentSpan, new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
                         "peer did not settle message, failing delivery"));
             }
             currentSpan.finish();
         });
-        log.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+        log.trace("sent message [ID: {}, address: {}], remaining credit: {}, queued messages: {}", messageId,
+                getMessageAddress(message), sender.getCredit(), sender.getQueued());
 
         return Future.succeededFuture(result);
     }

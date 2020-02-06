@@ -161,6 +161,8 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {
                 final ServiceInvocationException e = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no credit available");
+                logMessageSendingError("error sending message [ID: {}, address: {}], no credit available",
+                        rawMessage.getMessageId(), getMessageAddress(rawMessage));
                 logError(span, e);
                 span.finish();
                 result.fail(e);
@@ -262,8 +264,8 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after " + connection.getConfig().getSendMessageTimeout() + "ms");
-                        log.debug("waiting for delivery update timed out for message [message ID: {}] after {}ms",
-                                messageId, connection.getConfig().getSendMessageTimeout());
+                        logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
+                                messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
                         result.fail(exception);
                     }
                 })
@@ -275,9 +277,10 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
             }
             final DeliveryState remoteState = deliveryUpdated.getRemoteState();
             if (result.future().isComplete()) {
-                log.debug("ignoring received delivery update for message [message ID: {}]: waiting for the update has already timed out", messageId);
+                log.debug("ignoring received delivery update for message [ID: {}, address: {}]: waiting for the update has already timed out",
+                        messageId, getMessageAddress(message));
             } else if (deliveryUpdated.remotelySettled()) {
-                logUpdatedDeliveryState(currentSpan, messageId, deliveryUpdated);
+                logUpdatedDeliveryState(currentSpan, message, deliveryUpdated);
                 if (Accepted.class.isInstance(remoteState)) {
                     result.complete(deliveryUpdated);
                 } else {
@@ -297,19 +300,20 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                     result.fail(e);
                 }
             } else {
-                log.debug("peer did not settle message [message ID: {}, remote state: {}], failing delivery",
-                        messageId, remoteState.getClass().getSimpleName());
+                logMessageSendingError("peer did not settle message [ID: {}, address: {}, remote state: {}], failing delivery",
+                        messageId, getMessageAddress(message), remoteState.getClass().getSimpleName());
                 final ServiceInvocationException e = new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
                         "peer did not settle message, failing delivery");
                 result.fail(e);
             }
         });
-        log.trace("sent message [ID: {}], remaining credit: {}, queued messages: {}", messageId, sender.getCredit(), sender.getQueued());
+        log.trace("sent message [ID: {}, address: {}], remaining credit: {}, queued messages: {}", messageId,
+                getMessageAddress(message), sender.getCredit(), sender.getQueued());
 
         return result.future()
                 .map(delivery -> {
-                    log.trace("message [ID: {}] accepted by peer", messageId);
+                    log.trace("message [ID: {}, address: {}] accepted by peer", messageId, getMessageAddress(message));
                     Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
                     currentSpan.finish();
                     return delivery;
@@ -343,15 +347,17 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      * Also corresponding log output is created.
      *
      * @param currentSpan The current span to log to.
-     * @param messageId The message id.
+     * @param message The message.
      * @param delivery The updated delivery.
-     * @throws NullPointerException if currentSpan or delivery is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected final void logUpdatedDeliveryState(final Span currentSpan, final String messageId, final ProtonDelivery delivery) {
+    protected final void logUpdatedDeliveryState(final Span currentSpan, final Message message, final ProtonDelivery delivery) {
         Objects.requireNonNull(currentSpan);
+        final String messageId = message.getMessageId() != null ? message.getMessageId().toString() : "";
+        final String messageAddress = getMessageAddress(message);
         final DeliveryState remoteState = delivery.getRemoteState();
         if (Accepted.class.isInstance(remoteState)) {
-            log.trace("message [message ID: {}] accepted by peer", messageId);
+            log.trace("message [ID: {}, address: {}] accepted by peer", messageId, messageAddress);
             currentSpan.log("message accepted by peer");
             Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
         } else {
@@ -360,28 +366,55 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
                 final Rejected rejected = (Rejected) delivery.getRemoteState();
                 Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_BAD_REQUEST);
                 if (rejected.getError() == null) {
-                    log.debug("message [message ID: {}] rejected by peer", messageId);
+                    logMessageSendingError("message [ID: {}, address: {}] rejected by peer", messageId, messageAddress);
                     events.put(Fields.MESSAGE, "message rejected by peer");
                 } else {
-                    log.debug("message [message ID: {}] rejected by peer: {}, {}", messageId,
-                            rejected.getError().getCondition(), rejected.getError().getDescription());
+                    logMessageSendingError("message [ID: {}, address: {}] rejected by peer: {}, {}", messageId,
+                            messageAddress, rejected.getError().getCondition(), rejected.getError().getDescription());
                     events.put(Fields.MESSAGE, String.format("message rejected by peer: %s, %s",
                             rejected.getError().getCondition(), rejected.getError().getDescription()));
                 }
             } else if (Released.class.isInstance(remoteState)) {
-                log.debug("message [message ID: {}] not accepted by peer, remote state: {}",
-                        messageId, remoteState.getClass().getSimpleName());
+                logMessageSendingError("message [ID: {}, address: {}] not accepted by peer, remote state: {}",
+                        messageId, messageAddress, remoteState.getClass().getSimpleName());
                 Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
                 events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
             } else if (Modified.class.isInstance(remoteState)) {
                 final Modified modified = (Modified) delivery.getRemoteState();
-                log.debug("message [message ID: {}] not accepted by peer, remote state: {}",
-                        messageId, modified);
+                logMessageSendingError("message [ID: {}, address: {}] not accepted by peer, remote state: {}",
+                        messageId, messageAddress, modified);
                 Tags.HTTP_STATUS.set(currentSpan, modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND
                         : HttpURLConnection.HTTP_UNAVAILABLE);
                 events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
             }
             TracingHelper.logError(currentSpan, events);
         }
+    }
+
+    /**
+     * Gets the address the message is targeted at.
+     * <p>
+     * This is either the message address or the link address of this sender.
+     *
+     * @param message The message.
+     * @return The message or link address.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    protected final String getMessageAddress(final Message message) {
+        Objects.requireNonNull(message);
+        return message.getAddress() != null ? message.getAddress() : targetAddress;
+    }
+
+    /**
+     * Logs an error that occurred when sending a message.
+     * <p>
+     * This method logs on DEBUG level by default. Subclasses may override this
+     * method to use a different log level.
+     *
+     * @param format The log format string.
+     * @param arguments The arguments of the format string.
+     */
+    protected void logMessageSendingError(final String format, final Object... arguments) {
+        log.debug(format, arguments);
     }
 }
