@@ -138,13 +138,6 @@ public final class DeviceManagementHttpEndpoint extends AbstractHttpEndpoint<Ser
         }
 
         final String deviceId = getDeviceIdParam(ctx);
-        if (deviceId != null) {
-            if (!(deviceId instanceof String)) {
-                HttpUtils.badRequest(ctx, String.format("'%s' must be a string",
-                        RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID));
-            }
-        }
-
         final String tenantId = getTenantParam(ctx);
         logger.debug("creating device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId,
                 payload);
