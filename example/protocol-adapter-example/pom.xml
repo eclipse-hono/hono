@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.eclipse.hono.example.protocoladapter</groupId>
+    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>example-protocoladapter</artifactId>
+    <name>protocol adapter example</name>
+    <description>A simple example to ilustrate how a protocol adapter could be implemented using classes from the Hono CLI module</description>
+
+    <properties>
+        <java.version>8</java.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-cli</artifactId>
+            <version>1.1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

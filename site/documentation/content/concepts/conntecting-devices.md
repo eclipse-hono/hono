@@ -36,5 +36,6 @@ A prerequisite for using *protocol gateways* is that devices are registered in H
 and are configured in such a way that the *protocol gateways* can act on their behalf i.e.
 with a device registration "via" property containing the gateway id of the *protocol gateways*.
 
-<!-- Example:  -->
-<!-- LINK TO CODE -->
+### Example Code
+
+To illustrate how a *protocol adapter* could connect a proprietary protocol to the AMQP adapter, a simple example can be found in the [example module](https://github.com/eclipse/hono/tree/master/example/protocol-adapter-example).

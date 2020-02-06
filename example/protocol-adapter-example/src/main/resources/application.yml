@@ -1,0 +1,6 @@
+spring:
+  profiles:
+    active: dev
+
+app:
+  serverPort: 6666
