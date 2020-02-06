@@ -72,11 +72,11 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * <strong>Note:</strong> Instances of {@link ClientConfigProperties} are not thread safe and not immutable.
      * They must therefore not be modified after calling this method.
      *
-     * @param vertx The vert.x instance to use or {@code null}, if a new vert.x instance should be created.
+     * @param vertx The vert.x instance to use.
      * @param clientConfigProperties The client properties to use.
      * @return The newly created connection. Note that the underlying AMQP connection will not be established
      *         until one of its <em>connect</em> methods is invoked.
-     * @throws NullPointerException if properties are {@code null}.
+     * @throws NullPointerException if vertx or clientConfigProperties is {@code null}.
      */
     static HonoConnection newConnection(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         return new HonoConnectionImpl(vertx, clientConfigProperties);
