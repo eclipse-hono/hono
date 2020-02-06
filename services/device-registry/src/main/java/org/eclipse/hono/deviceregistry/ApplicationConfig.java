@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,11 +23,13 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
+import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
-import org.eclipse.hono.service.management.device.AbstractDeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.TenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -140,7 +142,7 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public RegistrationAmqpEndpoint registrationAmqpEndpoint() {
+    public AmqpEndpoint registrationAmqpEndpoint() {
         return new RegistrationAmqpEndpoint(vertx());
     }
 
@@ -151,7 +153,7 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public CredentialsAmqpEndpoint credentialsAmqpEndpoint() {
+    public AmqpEndpoint credentialsAmqpEndpoint() {
         return new CredentialsAmqpEndpoint(vertx());
     }
 
@@ -162,7 +164,7 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public TenantAmqpEndpoint tenantAmqpEndpoint() {
+    public AmqpEndpoint tenantAmqpEndpoint() {
         return new TenantAmqpEndpoint(vertx());
     }
 
@@ -173,7 +175,7 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public DeviceConnectionAmqpEndpoint deviceConnectionAmqpEndpoint() {
+    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
         return new DeviceConnectionAmqpEndpoint(vertx());
     }
 
@@ -198,8 +200,8 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(DeviceManagementService.class)
-    public AbstractDeviceManagementHttpEndpoint registrationHttpEndpoint() {
-        return new AutowiredDeviceManagementHttpEndpoint(vertx());
+    public HttpEndpoint registrationHttpEndpoint() {
+        return new DeviceManagementHttpEndpoint(vertx());
     }
 
     /**
@@ -210,7 +212,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(CredentialsManagementService.class)
-    public CredentialsManagementHttpEndpoint credentialsHttpEndpoint() {
+    public HttpEndpoint credentialsHttpEndpoint() {
         return new CredentialsManagementHttpEndpoint(vertx());
     }
 
@@ -222,7 +224,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @ConditionalOnBean(TenantManagementService.class)
-    public TenantManagementHttpEndpoint tenantHttpEndpoint() {
+    public HttpEndpoint tenantHttpEndpoint() {
         return new TenantManagementHttpEndpoint(vertx());
     }
 

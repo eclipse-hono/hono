@@ -10,25 +10,22 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.service.management.device;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.Vertx;
 
-import org.eclipse.hono.service.management.device.AbstractDeviceManagementHttpEndpoint;
-import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.stereotype.Component;
-
 /**
- * A default http endpoint implementation of the {@link AbstractDeviceManagementHttpEndpoint}.
+ * An {@code HttpEndpoint} for managing device registration information.
  * <p>
- * This wires up the actual service instance with the mapping to the http endopint implementation. It is intended to be used
- * in a Spring Boot environment.
+ * This endpoint implements the <em>devices</em> resources of Hono's
+ * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * It receives HTTP requests representing operation invocations and forwards them to the
+ * configured {@code DeviceManagementService} implementation.
+ * The outcome is then returned to the peer in the HTTP response.
  */
-@Component
-@ConditionalOnBean(DeviceManagementService.class)
 public final class AutowiredDeviceManagementHttpEndpoint extends AbstractDeviceManagementHttpEndpoint {
 
     private DeviceManagementService service;

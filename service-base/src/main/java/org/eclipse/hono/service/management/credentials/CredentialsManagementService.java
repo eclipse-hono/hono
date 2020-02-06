@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,10 +22,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
 /**
- * A service for keeping record of device credentials.
- * This interface presents all the available operations on the API.
- *
- * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>
+ * A service for managing device credentials.
+ * <p>
+ * The methods defined by this interface represent the <em>credentials</em> resources
+ * of Hono's <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  */
 public interface CredentialsManagementService {
 
@@ -49,8 +49,8 @@ public interface CredentialsManagementService {
      *         <li><em>404 Not Found</em> if no credentials of the given type and auth-id exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#update-credentials">
-     *      Credentials API - Update Credentials</a>
+     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/setAllCredentials">
+     *      Device Registry Management API - Update Credentials</a>
      */
     void set(String tenantId, String deviceId, Optional<String> resourceVersion, List<CommonCredential> credentials,
             Span span, Handler<AsyncResult<OperationResult<Void>>> resultHandler);
@@ -71,6 +71,8 @@ public interface CredentialsManagementService {
      *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
      *         </ul>
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/getAllCredentials">
+     *      Device Registry Management API - Get Credentials</a>
      */
     void get(String tenantId, String deviceId, Span span,
             Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler);

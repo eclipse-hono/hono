@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,9 +33,11 @@ import io.vertx.ext.web.RoutingContext;
 /**
  * An {@code HttpEndpoint} for managing device registration information.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device
- * Registration API</a>. It receives HTTP requests representing operation invocations and sends them to an address on
+ * This endpoint implements the <em>devices</em> resources of Hono's
+ * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * It receives HTTP requests representing operation invocations and sends them to an address on
  * the vertx event bus for processing. The outcome is then returned to the peer in the HTTP response.
+ * 
  * @deprecated This class will be removed in future versions. Please use {@link AbstractDeviceManagementHttpEndpoint} based implementation in the future.
  */
 @Deprecated(forRemoval = true)
