@@ -72,7 +72,8 @@ public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandC
                         commandContext.disposition(delegatedMsgDelivery.getRemoteState());
                     } else {
                         // failed to send message
-                        LOG.error("failed to send command message to downstream peer", sendResult.cause());
+                        LOG.error("failed to send command message to downstream peer: {} [tenant: {}, device: {}]",
+                                sendResult.cause().getMessage(), tenantId, deviceId);
                         TracingHelper.logError(commandContext.getCurrentSpan(),
                                 "failed to send command message to downstream peer: " + sendResult.cause());
                         commandContext.release();
@@ -81,7 +82,8 @@ public class DelegateViaDownstreamPeerCommandHandler implements Handler<CommandC
                 });
             } else {
                 // failed to create sender
-                LOG.error("failed to create sender for sending command message to downstream peer", cmdSenderResult.cause());
+                LOG.error("failed to create sender for sending command message to downstream peer: {} [tenant: {}, device: {}]",
+                        cmdSenderResult.cause().getMessage(), tenantId, deviceId);
                 TracingHelper.logError(commandContext.getCurrentSpan(),
                         "failed to create sender for sending command message to downstream peer: " + cmdSenderResult.cause());
                 commandContext.release();
