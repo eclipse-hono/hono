@@ -1078,12 +1078,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
+            final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
             final Future<JsonObject> tokenTracker = getRegistrationAssertion(targetAddress.getTenantId(),
                     targetAddress.getResourceId(), ctx.authenticatedDevice(), currentSpan.context());
             final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
             final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
                                     isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), ctx.message().payload().length(), currentSpan.context()))
+                                    checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
                                     .map(success -> tenantTracker.result());
 
         return CompositeFuture.all(tenantTracker, commandResponseTracker)
@@ -1098,7 +1099,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             targetAddress.getTenantId(),
                             tenantTracker.result(),
                             ProcessingOutcome.FORWARDED,
-                            ctx.message().payload().length(),
+                            payloadSize,
                             ctx.getTimer());
                     // check that the remote MQTT client is still connected before sending PUBACK
                     if (ctx.deviceEndpoint().isConnected() && ctx.message().qosLevel() == MqttQoS.AT_LEAST_ONCE) {
@@ -1115,7 +1116,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             targetAddress.getTenantId(),
                             tenantTracker.result(),
                             ProcessingOutcome.from(t),
-                            ctx.message().payload().length(),
+                            payloadSize,
                             ctx.getTimer());
                     return Future.failedFuture(t);
                 });

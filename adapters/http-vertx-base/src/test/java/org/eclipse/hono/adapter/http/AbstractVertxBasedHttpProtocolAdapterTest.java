@@ -528,6 +528,46 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
+     * Verifies that the adapter accepts a command response message with an empty body.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testUploadEmptyCommandResponseSucceeds() {
+
+        // GIVEN an adapter with a downstream application attached
+        final CommandResponseSender sender = mock(CommandResponseSender.class);
+        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+
+        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString())).thenReturn(Future.succeededFuture(sender));
+
+        final HttpServer server = getHttpServer(false);
+        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
+
+        // WHEN a device publishes a command response with an empty payload
+        final Buffer payload = null;
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        final RoutingContext ctx = newRoutingContext(payload, "application/text", mock(HttpServerRequest.class), response);
+        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return 0;
+        });
+
+        adapter.uploadCommandResponseMessage(ctx, "tenant", "device", CMD_REQ_ID, 200);
+
+        // then it is forwarded successfully
+        verify(response).setStatusCode(202);
+        verify(response).end();
+        verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                any(),
+                eq(ProcessingOutcome.FORWARDED),
+                eq(0),
+                any());
+    }
+
+    /**
      * Verifies that the adapter fails the upload of a command response with a 403
      * if the adapter is disabled for the device's tenant.
      */

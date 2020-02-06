@@ -641,6 +641,51 @@ public class VertxBasedAmqpProtocolAdapterTest {
     }
 
     /**
+     * Verify that the AMQP adapter forwards command responses that do not contain a payload downstream.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUploadCommandResponseWithoutPayloadSucceeds(final VertxTestContext ctx) {
+
+        // GIVEN an AMQP adapter
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any()))
+                .thenReturn(Future.succeededFuture(delivery));
+        // which is enabled for the test tenant
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
+
+        // WHEN an unauthenticated device publishes a command response
+        final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
+                Command.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
+
+        final Map<String, Object> propertyMap = new HashMap<>();
+        propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
+        final ApplicationProperties props = new ApplicationProperties(propertyMap);
+        final Message message = getFakeMessage(replyToAddress, null);
+        when(message.getCorrelationId()).thenReturn("correlation-id");
+        when(message.getApplicationProperties()).thenReturn(props);
+
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).setHandler(ctx.succeeding(ok -> {
+            ctx.verify(() -> {
+                // THEN the adapter forwards the command response message downstream
+                verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+                // and reports the forwarded message
+                verify(metrics).reportCommand(
+                        eq(Direction.RESPONSE),
+                        eq(TEST_TENANT_ID),
+                        eq(tenantObject),
+                        eq(ProcessingOutcome.FORWARDED),
+                        eq(0),
+                        any());
+            });
+            ctx.completeNow();
+        }));
+    }
+
+    /**
      * Verifies that the adapter signals successful forwarding of a one-way command
      * back to the sender of the command.
      */
@@ -1050,13 +1095,17 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     private Message getFakeMessage(final String to, final Buffer payload, final String subject) {
 
-        final Data data = new Data(new Binary(payload.getBytes()));
         final Message message = mock(Message.class);
         when(message.getMessageId()).thenReturn("the-message-id");
         when(message.getSubject()).thenReturn(subject);
-        when(message.getContentType()).thenReturn("text/plain");
-        when(message.getBody()).thenReturn(data);
         when(message.getAddress()).thenReturn(to);
+
+        if (payload != null) {
+            final Data data = new Data(new Binary(payload.getBytes()));
+            when(message.getContentType()).thenReturn("text/plain");
+            when(message.getBody()).thenReturn(data);
+        }
+
         return message;
     }
 

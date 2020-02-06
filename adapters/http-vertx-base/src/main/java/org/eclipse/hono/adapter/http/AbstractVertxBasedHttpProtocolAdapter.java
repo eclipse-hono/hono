@@ -1283,6 +1283,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         String.format("command-request-id [%s] or status code [%s] is missing/invalid",
                                 commandRequestId, responseStatus)));
 
+        final int payloadSize = Optional.ofNullable(payload).map(Buffer::length).orElse(0);
         CompositeFuture.all(tenantTracker, commandResponseTracker)
                 .compose(commandResponse -> {
                     final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
@@ -1292,7 +1293,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             currentSpan.context());
                     final Future<Void> tenantValidationTracker = CompositeFuture
                             .all(isAdapterEnabled(tenantTracker.result()),
-                                    checkMessageLimit(tenantTracker.result(), payload.length(), currentSpan.context()))
+                                    checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
                             .map(ok -> null);
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)
@@ -1308,7 +1309,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                         tenant,
                                         tenantTracker.result(),
                                         ProcessingOutcome.FORWARDED,
-                                        payload.length(),
+                                        payloadSize,
                                         getMicrometerSample(ctx));
                                 ctx.response().setStatusCode(HttpURLConnection.HTTP_ACCEPTED);
                                 ctx.response().end();
