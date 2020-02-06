@@ -248,7 +248,7 @@ echo
 echo Deploying CoAP adapter ...
 docker secret create -l project=$NS coap-adapter.credentials $SCRIPTPATH/coap-adapter.credentials
 docker secret create -l project=$NS hono-adapter-coap-vertx-config.yml $SCRIPTPATH/hono-adapter-coap-vertx-config.yml
-docker service create $CREATE_OPTIONS --name ${hono.adapter-coap.service} -p 5683:5683 -p 5684:5684 \
+docker service create $CREATE_OPTIONS --name ${hono.adapter-coap.service} -p 5683:5683/udp -p 5684:5684/udp \
   --secret hono.eclipse.org-key.pem \
   --secret hono.eclipse.org-cert.pem \
   --secret coap-adapter.credentials \
