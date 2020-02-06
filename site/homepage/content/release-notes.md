@@ -57,6 +57,7 @@ title = "Release Notes"
   (or the respective shorthand version). Note that the AMQP Messaging Network still needs to be
   configured in such a way that protocol adapters can send and receive messages on the `control/*`
   address pattern. This is now used for internal communication between protocol adapters only.
+* The `create` method in `org.eclipse.hono.client.HonoConnection` now requires its Vertx parameter to be not null.
 
 ## 1.0.3
 

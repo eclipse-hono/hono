@@ -124,9 +124,9 @@ public class HonoConnectionImpl implements HonoConnection {
      * This constructor creates a connection factory using
      * {@link ConnectionFactory#newConnectionFactory(Vertx, ClientConfigProperties)}.
      *
-     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @param vertx The Vert.x instance to execute the client on.
      * @param clientConfigProperties The configuration properties to use.
-     * @throws NullPointerException if clientConfigProperties is {@code null}
+     * @throws NullPointerException if vertx or clientConfigProperties is {@code null}.
      */
     public HonoConnectionImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
         this(vertx, null, clientConfigProperties);
@@ -138,22 +138,19 @@ public class HonoConnectionImpl implements HonoConnection {
      * <em>NB</em> Make sure to always use the same set of configuration properties for both the connection factory as
      * well as the Hono client in order to prevent unexpected behavior.
      *
-     * @param vertx The Vert.x instance to execute the client on, if {@code null} a new Vert.x instance is used.
+     * @param vertx The Vert.x instance to execute the client on.
      * @param connectionFactory The factory to use for creating an AMQP connection to the Hono server.
      * @param clientConfigProperties The configuration properties to use.
-     * @throws NullPointerException if clientConfigProperties is {@code null}
+     * @throws NullPointerException if vertx or clientConfigProperties is {@code null}.
      */
     public HonoConnectionImpl(final Vertx vertx, final ConnectionFactory connectionFactory,
             final ClientConfigProperties clientConfigProperties) {
 
+        Objects.requireNonNull(vertx);
         Objects.requireNonNull(clientConfigProperties);
 
-        if (vertx != null) {
-            this.vertx = vertx;
-        } else {
-            this.vertx = Vertx.vertx();
-        }
-        deferredConnectionCheckHandler = new DeferredConnectionCheckHandler(vertx);
+        this.vertx = vertx;
+        this.deferredConnectionCheckHandler = new DeferredConnectionCheckHandler(vertx);
         if (connectionFactory != null) {
             this.connectionFactory = connectionFactory;
         } else {
