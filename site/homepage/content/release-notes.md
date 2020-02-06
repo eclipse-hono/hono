@@ -53,6 +53,9 @@ title = "Release Notes"
   Hono components had not been recognized during start up of the components.
   In particular, the names for configuring the connection to the Device Connection service
   and for configuring a heath check server have been fixed.
+* The AMQP adapter now correctly accepts command response messages from devices that do not
+  contain any payload. Such responses are useful to only convey a status code in reply to
+  a command.
 
 ### API Changes
 
