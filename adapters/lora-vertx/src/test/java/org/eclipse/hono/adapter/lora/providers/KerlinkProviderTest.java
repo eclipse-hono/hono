@@ -450,7 +450,7 @@ public class KerlinkProviderTest {
                 CommandConstants.COMMAND_ENDPOINT, "bumlux", "bumlux"));
         message.setSubject("subject");
         message.setCorrelationId("correlation_id");
-        message.setReplyTo(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT + "/bumlux");
+        message.setReplyTo(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT + "/bumlux/replyId");
 
         final JsonObject payload = new JsonObject();
         payload.put(LoraConstants.FIELD_LORA_DOWNLINK_PAYLOAD, "bumlux".getBytes(Charsets.UTF_8));
