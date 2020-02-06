@@ -921,21 +921,28 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final void shutdown() {
+        // we don't want to block any event loop thread (even if it's different from the one of the 'context' variable)
+        // therefore the latch used for blocking is not used in that case
+        final CountDownLatch latch = Context.isOnEventLoopThread() ? null : new CountDownLatch(1);
 
-        final CountDownLatch latch = new CountDownLatch(1);
         shutdown(done -> {
-            if (done.succeeded()) {
+            if (!done.succeeded()) {
+                log.warn("could not close connection to server", done.cause());
+            }
+            if (latch != null) {
                 latch.countDown();
-            } else {
-                log.error("could not close connection to server", done.cause());
             }
         });
-        try {
-            if (!latch.await(5, TimeUnit.SECONDS)) {
-                log.error("shutdown of client timed out after 5 seconds");
+        if (latch != null) {
+            try {
+                // use a timeout slightly higher than the one used in closeConnection()
+                final int timeout = getCloseConnectionTimeout() + 20;
+                if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
+                    log.warn("shutdown of client timed out after {}ms", timeout);
+                }
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-        } catch (final InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
     }
 
@@ -958,22 +965,31 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     @Override
     public final void disconnect() {
-        final CountDownLatch countDown = new CountDownLatch(1);
+        // we don't want to block any event loop thread (even if it's different from the one of the 'context' variable)
+        // therefore the latch used for blocking is not used in that case
+        final CountDownLatch latch = Context.isOnEventLoopThread() ? null : new CountDownLatch(1);
+
         disconnect(disconnectResult -> {
             if (disconnectResult.succeeded()) {
                 log.info("successfully disconnected from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
-                countDown.countDown();
             } else {
-                log.error("could not disconnect from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                log.warn("could not disconnect from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+            }
+            if (latch != null) {
+                latch.countDown();
             }
         });
-        try {
-            if (!countDown.await(5, TimeUnit.SECONDS)) {
-                log.error("Disconnecting from the server [{}:{}] timed out after 5 seconds",
-                        connectionFactory.getHost(), connectionFactory.getPort());
+        if (latch != null) {
+            try {
+                // use a timeout slightly higher than the one used in closeConnection()
+                final int timeout = getCloseConnectionTimeout() + 20;
+                if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
+                    log.warn("Disconnecting from the server [{}:{}] timed out after {}ms",
+                            connectionFactory.getHost(), connectionFactory.getPort(), timeout);
+                }
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
-        } catch (final InterruptedException e) {
-            Thread.currentThread().interrupt();
         }
     }
 
@@ -1034,8 +1050,9 @@ public class HonoConnectionImpl implements HonoConnection {
                         clearState();
                         r.complete();
                     };
-                    final long timerId = vertx.setTimer(clientConfigProperties.getConnectTimeout(), tid -> {
-                        log.info("did not receive remote peer's close frame after {}ms", clientConfigProperties.getConnectTimeout());
+                    final int timeout = getCloseConnectionTimeout();
+                    final long timerId = vertx.setTimer(timeout, tid -> {
+                        log.info("did not receive remote peer's close frame after {}ms", timeout);
                         closeHandler.handle(Future.succeededFuture());
                     });
                     connectionToClose.closeHandler(remoteClose -> {
@@ -1053,6 +1070,13 @@ public class HonoConnectionImpl implements HonoConnection {
                 handler.handle(Future.succeededFuture());
             }
         }
+    }
+
+    private int getCloseConnectionTimeout() {
+        final int connectTimeoutToUse = clientConfigProperties.getConnectTimeout() > 0
+                ? clientConfigProperties.getConnectTimeout()
+                : ClientConfigProperties.DEFAULT_CONNECT_TIMEOUT;
+        return connectTimeoutToUse / 2;
     }
 
     /**
