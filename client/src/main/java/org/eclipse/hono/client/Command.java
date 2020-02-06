@@ -140,7 +140,7 @@ public final class Command {
                     validationErrorJoiner.add("reply-to not targeted at tenant " + tenantId + ": " + message.getReplyTo());
                 } else {
                     originalReplyToId = replyTo.getPathWithoutBase();
-                    if (originalReplyToId == null) {
+                    if (originalReplyToId.isEmpty()) {
                         validationErrorJoiner.add("reply-to part after tenant not set: " + message.getReplyTo());
                     } else {
                         message.setReplyTo(
@@ -148,7 +148,7 @@ public final class Command {
                                         getDeviceFacingReplyToId(originalReplyToId, deviceId)));
                     }
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (final IllegalArgumentException e) {
                 // reply-to could not be parsed
                 validationErrorJoiner.add("reply-to cannot be parsed: " + message.getReplyTo());
             }
@@ -411,7 +411,7 @@ public final class Command {
      * @param correlationId The identifier to use for correlating the response with the request.
      * @param replyToId An arbitrary identifier to encode into the request ID.
      * @param deviceId The target of the command.
-     * @return The request identifier or {@code null} if any the correlationId or the deviceId is {@code null}.
+     * @return The request identifier or {@code null} if correlationId or deviceId is {@code null}.
      */
     public static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
 
@@ -419,14 +419,13 @@ public final class Command {
             return null;
         }
 
-        final String correlationIdOrEmpty = Optional.ofNullable(correlationId).orElse("");
         String replyToIdWithoutDeviceOrEmpty = Optional.ofNullable(replyToId).orElse("");
         final boolean replyToContainedDeviceId = replyToIdWithoutDeviceOrEmpty.startsWith(deviceId + "/");
         if (replyToContainedDeviceId) {
             replyToIdWithoutDeviceOrEmpty = replyToIdWithoutDeviceOrEmpty.substring(deviceId.length() + 1);
         }
         return String.format("%s%02x%s%s", encodeReplyToOptions(replyToContainedDeviceId),
-                correlationIdOrEmpty.length(), correlationIdOrEmpty, replyToIdWithoutDeviceOrEmpty);
+                correlationId.length(), correlationId, replyToIdWithoutDeviceOrEmpty);
     }
 
     /**

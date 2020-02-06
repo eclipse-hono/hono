@@ -304,7 +304,7 @@ public class CommandResponseTest {
     }
 
     /**
-     * Verifies that the device-id is not part of the reply-to-id.
+     * Verifies that the device-id is not part of the CommandResponse replyToId.
      */
     @Test
     public void testForNoDeviceIdInReplyToId() {
@@ -312,12 +312,29 @@ public class CommandResponseTest {
         final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
         final Message message = ProtonHelper.message();
         message.setAddress(ResourceIdentifier
-                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%srid-1", DEVICE_ID, replyToOptionsBitFlag)).toString());
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%s%s", DEVICE_ID, replyToOptionsBitFlag, "rid-1")).toString());
         message.setCorrelationId(CORRELATION_ID);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         final CommandResponse response = CommandResponse.from(message);
         assertThat(response).isNotNull();
         assertThat(response.getReplyToId()).isEqualTo("rid-1");
+    }
+
+    /**
+     * Verifies that creating a response fails for a message with an invalid address, having an empty id
+     * after the replyToOptions bit.
+     */
+    @Test
+    public void testFromMessageFailsForInvalidAddressWithEmptyReplyId() {
+        final boolean replyToContainedDeviceId = false;
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
+        final Message message = ProtonHelper.message();
+        message.setAddress(ResourceIdentifier
+                .from(getCommandResponseEndpoint(), TENANT_ID, String.format("%s/%s%s", DEVICE_ID, replyToOptionsBitFlag, "")).toString());
+        message.setCorrelationId(CORRELATION_ID);
+        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        final CommandResponse response = CommandResponse.from(message);
+        assertThat(response).isNull();
     }
 
     /**

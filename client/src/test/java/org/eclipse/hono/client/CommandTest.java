@@ -272,10 +272,10 @@ public class CommandTest {
 
     /**
      * Verifies that a command cannot be created from a message that contains
-     * a malformed reply-to address.
+     * a reply-to address with the wrong tenant.
      */
     @Test
-    public void testFromMessageFailsForMalformedReplyToAddress() {
+    public void testFromMessageFailsForReplyToWithWrongTenant() {
         final String correlationId = "the-correlation-id";
         final Message message = mock(Message.class);
         when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
@@ -283,7 +283,7 @@ public class CommandTest {
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
         when(message.getReplyTo()).thenReturn(String.format("%s/%s/%s",
-                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, "4711", Constants.DEFAULT_TENANT));
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, "wrong_tenant", "4711"));
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertFalse(command.isValid());
         assertThat(command.getInvalidCommandReason()).contains("reply-to");
@@ -291,11 +291,10 @@ public class CommandTest {
 
     /**
      * Verifies that a command cannot be created from a message that contains
-     * a reply-to address that does not match the target device.
+     * a reply-to address without a reply id.
      */
     @Test
-    public void testFromMessageFailsForNonMatchingReplyToAddress() {
-        final String replyToId = "the-reply-to-id";
+    public void testFromMessageFailsForReplyToWithoutReplyId() {
         final String correlationId = "the-correlation-id";
         final Message message = mock(Message.class);
         when(message.getAddress()).thenReturn(String.format("%s/%s/%s",
@@ -303,7 +302,7 @@ public class CommandTest {
         when(message.getSubject()).thenReturn("doThis");
         when(message.getCorrelationId()).thenReturn(correlationId);
         when(message.getReplyTo()).thenReturn(String.format("%s/%s",
-                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, replyToId));
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT));
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4712");
         assertFalse(command.isValid());
         assertThat(command.getInvalidCommandReason()).contains("reply-to");
