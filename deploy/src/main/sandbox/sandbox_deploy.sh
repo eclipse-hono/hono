@@ -1,6 +1,6 @@
 #!/bin/sh
 #*******************************************************************************
-# Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -19,8 +19,7 @@
 
 # Absolute path this script is in
 SCRIPTPATH="$(cd "$(dirname "$0")" && pwd -P)"
-CONFIG=$SCRIPTPATH/../config
-CERTS=$CONFIG/hono-demo-certs-jar
+CERTS=$SCRIPTPATH/hono-demo-certs-jar
 NS=hono
 CREATE_OPTIONS="-l project=$NS --network $NS --detach=false --log-driver json-file --log-opt max-size=1m --log-opt max-file=3"
 HONO_VERSION="${project.version}"
@@ -79,25 +78,26 @@ echo ... done
 
 echo
 echo Deploying Artemis broker ...
-docker secret create -l $NS artemis-broker.xml $SCRIPTPATH/artemis/artemis-broker.xml
-docker secret create -l $NS artemis-bootstrap.xml $SCRIPTPATH/artemis/artemis-bootstrap.xml
+docker secret create -l $NS broker.xml $SCRIPTPATH/artemis/broker.xml
 docker secret create -l $NS artemis-users.properties $SCRIPTPATH/artemis/artemis-users.properties
 docker secret create -l $NS artemis-roles.properties $SCRIPTPATH/artemis/artemis-roles.properties
 docker secret create -l $NS login.config $SCRIPTPATH/artemis/login.config
 docker secret create -l $NS logging.properties $SCRIPTPATH/artemis/logging.properties
-docker secret create -l $NS artemis.profile $SCRIPTPATH/artemis/artemis.profile
+docker secret create -l $NS artemisKeyStore.p12 $CERTS/artemisKeyStore.p12
 docker service create $CREATE_OPTIONS --name ${hono.artemis.service} \
-  --env ARTEMIS_CONFIGURATION=/run/secrets \
-  --secret artemis-broker.xml \
-  --secret artemis-bootstrap.xml \
-  --secret artemis-users.properties \
-  --secret artemis-roles.properties \
-  --secret login.config \
-  --secret logging.properties \
-  --secret artemis.profile \
+  --secret source=broker.xml,target=/opt/apache-artemis/conf/broker.xml \
+  --secret source=artemis-users.properties,target=/opt/apache-artemis/conf/artemis-users.properties \
+  --secret source=artemis-roles.properties,target=/opt/apache-artemis/conf/artemis-roles.properties \
+  --secret source=login.config,target=/opt/apache-artemis/conf/login.config \
+  --secret source=logging.properties,target=/opt/apache-artemis/conf/logging.properties \
+  --secret artemisKeyStore.p12 \
   --limit-memory 512m \
-  --entrypoint "/opt/artemis/bin/artemis run xml:/run/secrets/artemis-bootstrap.xml" \
-  ${artemis.image.name}
+  --env AMQ_NAME=custom \
+  --env HOME=/var/run/artemis/ \
+  --env JAVA_INITIAL_MEM_RATIO=30 \
+  --env JAVA_MAX_MEM_RATIO=70 \
+  --env HOME=/var/run/artemis/ \
+  ${artemis.image.name} /opt/apache-artemis/bin/launch.sh start
 echo ... done
 
 echo
@@ -175,7 +175,7 @@ echo ... done
 
 echo
 echo Deploying HTTP adapter ...
-docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/../deploy/http-adapter.credentials
+docker secret create -l project=$NS http-adapter.credentials $SCRIPTPATH/http-adapter.credentials
 docker secret create -l project=$NS hono-adapter-http-vertx-config.yml $SCRIPTPATH/hono-adapter-http-vertx-config.yml
 docker service create $CREATE_OPTIONS --name ${hono.adapter-http.service} -p 8080:8080 -p 8443:8443 \
   --secret hono.eclipse.org-key.pem \
@@ -193,7 +193,7 @@ echo ... done
 
 echo
 echo Deploying MQTT adapter ...
-docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/../deploy/mqtt-adapter.credentials
+docker secret create -l project=$NS mqtt-adapter.credentials $SCRIPTPATH/mqtt-adapter.credentials
 docker secret create -l project=$NS hono-adapter-mqtt-vertx-config.yml $SCRIPTPATH/hono-adapter-mqtt-vertx-config.yml
 docker service create $CREATE_OPTIONS --name ${hono.adapter-mqtt.service} -p 1883:1883 -p 8883:8883 \
   --secret hono.eclipse.org-key.pem \
@@ -211,7 +211,7 @@ echo ... done
 
 echo
 echo Deploying AMQP adapter ...
-docker secret create -l project=$NS amqp-adapter.credentials $SCRIPTPATH/../deploy/amqp-adapter.credentials
+docker secret create -l project=$NS amqp-adapter.credentials $SCRIPTPATH/amqp-adapter.credentials
 docker secret create -l project=$NS hono-adapter-amqp-vertx-config.yml $SCRIPTPATH/hono-adapter-amqp-vertx-config.yml
 docker service create $CREATE_OPTIONS --name ${hono.adapter-amqp.service} -p 5672:5672 -p 5671:5671 \
   --secret hono.eclipse.org-key.pem \
@@ -228,7 +228,7 @@ echo ... done
 
 echo
 echo Deploying Kura adapter ...
-docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/../deploy/kura-adapter.credentials
+docker secret create -l project=$NS kura-adapter.credentials $SCRIPTPATH/kura-adapter.credentials
 docker secret create -l project=$NS hono-adapter-kura-config.yml $SCRIPTPATH/hono-adapter-kura-config.yml
 docker service create $CREATE_OPTIONS --name ${hono.adapter-kura.service} -p 1884:1883 -p 8884:8883 \
   --secret hono.eclipse.org-key.pem \
@@ -242,6 +242,24 @@ docker service create $CREATE_OPTIONS --name ${hono.adapter-kura.service} -p 188
   --env LOGGING_CONFIG=classpath:logback-spring.xml \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
   ${docker.image.org-name}/hono-adapter-kura:$HONO_VERSION
+echo ... done
+
+echo
+echo Deploying CoAP adapter ...
+docker secret create -l project=$NS coap-adapter.credentials $SCRIPTPATH/coap-adapter.credentials
+docker secret create -l project=$NS hono-adapter-coap-vertx-config.yml $SCRIPTPATH/hono-adapter-coap-vertx-config.yml
+docker service create $CREATE_OPTIONS --name ${hono.adapter-coap.service} -p 5683:5683 -p 5684:5684 \
+  --secret hono.eclipse.org-key.pem \
+  --secret hono.eclipse.org-cert.pem \
+  --secret coap-adapter.credentials \
+  --secret hono-adapter-coap-vertx-config.yml \
+  --limit-memory 384m \
+  --env _JAVA_OPTIONS="${default-java-options}" \
+  --env SPRING_CONFIG_LOCATION=file:///run/secrets/hono-adapter-coap-vertx-config.yml \
+  --env SPRING_PROFILES_ACTIVE=prod \
+  --env LOGGING_CONFIG=classpath:logback-spring.xml \
+  --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
+  ${docker.image.org-name}/hono-adapter-coap-vertx:$HONO_VERSION
 echo ... done
 
 echo

@@ -21,6 +21,11 @@ echo UNDEPLOYING ECLIPSE HONO SANDBOX FROM DOCKER SWARM
 docker service rm hono-nginx
 docker config rm site.conf
 
+docker service rm ${hono.adapter-coap.service}
+docker secret rm \
+  coap-adapter.credentials \
+  hono-adapter-coap-vertx-config.yml
+
 docker service rm ${hono.adapter-kura.service}
 docker secret rm \
   kura-adapter.credentials \
@@ -64,13 +69,12 @@ docker secret rm qdrouterd.json
 
 docker service rm ${hono.artemis.service}
 docker secret rm \
-  artemis-broker.xml \
-  artemis-bootstrap.xml \
+  broker.xml \
   artemis-users.properties \
   artemis-roles.properties \
   login.config \
   logging.properties \
-  artemis.profile
+  artemisKeyStore.p12
 
 docker service rm grafana
 docker config rm \

@@ -23,6 +23,7 @@ hono:
     port: 5671
     trustStorePath: /run/secrets/trusted-certs.pem
     name: 'Hono Device Registry'
+    supportedSaslMechanisms: "PLAIN"
     validation:
       certPath: /run/secrets/auth-server-cert.pem
   registry:

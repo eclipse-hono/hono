@@ -77,8 +77,7 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <!-- Execution and configuration for copying certificates from related module to "target/classes" folder
-              so that we can include them in the image. -->
+            <!-- Execution and configuration for copying demo certificates to sandbox -->
             <id>copy_demo_certs</id>
             <phase>generate-resources</phase>
             <goals>
@@ -88,7 +87,7 @@
               <includeArtifactIds>
                 hono-demo-certs
               </includeArtifactIds>
-              <outputDirectory>${project.build.directory}/config</outputDirectory>
+              <outputDirectory>${project.build.directory}/sandbox</outputDirectory>
               <includes>
                 *.pem,
                 *.jks,
@@ -127,8 +126,8 @@
                 </resource>
               </resources>
               <filters>
-                <filter>${project.build.directory}/config/hono-demo-certs-jar/trust-anchor.properties</filter>
-                <filter>${project.build.directory}/config/hono-demo-certs-jar/device-certs.properties</filter>
+                <filter>${project.build.directory}/sandbox/hono-demo-certs-jar/trust-anchor.properties</filter>
+                <filter>${project.build.directory}/sandbox/hono-demo-certs-jar/device-certs.properties</filter>
               </filters>
             </configuration>
           </execution>
@@ -143,11 +142,6 @@
               <resources>
                 <resource>
                   <directory>${project.basedir}/src/main/sandbox</directory>
-                  <filtering>true</filtering>
-                </resource>
-                <resource>
-                  <directory>${project.basedir}/src/main/config/grafana</directory>
-                  <targetPath>grafana</targetPath>
                   <filtering>true</filtering>
                 </resource>
               </resources>

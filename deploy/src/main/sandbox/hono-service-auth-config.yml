@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,3 +26,8 @@ hono:
       trustStorePath: /run/secrets/trusted-certs.pem
     svc:
       permissionsPath: file:///run/secrets/sandbox-permissions.json
+      supportedSaslMechanisms: "PLAIN"
+      signing:
+        # tokenExpiration contains the number of seconds after which tokens issued
+        # by the Auth server will expire.
+        tokenExpiration: 3600
