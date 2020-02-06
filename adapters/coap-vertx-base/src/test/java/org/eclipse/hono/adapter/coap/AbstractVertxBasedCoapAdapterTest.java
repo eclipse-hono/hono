@@ -56,6 +56,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.TenantObject;
@@ -346,6 +347,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                 eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
+                eq(TtdStatus.NONE),
                 any());        
     }
 
@@ -376,7 +378,11 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // until the event has been accepted
         outcome.complete(mock(ProtonDelivery.class));
-        verify(coapExchange).respond(ResponseCode.CHANGED);
+
+        final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
+        verify(coapExchange).respond(captor.capture());
+        assertThat(captor.getValue().getCode()).isEqualTo(ResponseCode.CHANGED);
+
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.EVENT),
                 eq("tenant"),
@@ -384,6 +390,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
+                eq(TtdStatus.NONE),
                 any());
     }
 
@@ -421,6 +428,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
+                eq(TtdStatus.NONE),
                 any());        
     }
 
@@ -451,7 +459,11 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // until the telemetry message has been accepted
         outcome.complete(mock(ProtonDelivery.class));
-        verify(coapExchange).respond(ResponseCode.CHANGED);
+
+        final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
+        verify(coapExchange).respond(captor.capture());
+        assertThat(captor.getValue().getCode()).isEqualTo(ResponseCode.CHANGED);
+
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
@@ -459,6 +471,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
+                eq(TtdStatus.NONE),
                 any());
     }
 
@@ -489,7 +502,11 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // until the telemetry message has been accepted
         outcome.complete(mock(ProtonDelivery.class));
-        verify(coapExchange).respond(ResponseCode.CHANGED);
+
+        final ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
+        verify(coapExchange).respond(captor.capture());
+        assertThat(captor.getValue().getCode()).isEqualTo(ResponseCode.CHANGED);
+
         verify(metrics).reportTelemetry(
                 eq(MetricsTags.EndpointType.TELEMETRY),
                 eq("tenant"),
@@ -497,6 +514,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 eq(MetricsTags.ProcessingOutcome.FORWARDED),
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
+                eq(TtdStatus.NONE),
                 any());        
     }
 
@@ -536,6 +554,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                 eq(MetricsTags.QoS.AT_MOST_ONCE),
                 eq(payload.length()),
+                eq(TtdStatus.NONE),
                 any());
     }
 
@@ -575,6 +594,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 eq(MetricsTags.ProcessingOutcome.UNPROCESSABLE),
                 eq(MetricsTags.QoS.AT_LEAST_ONCE),
                 eq(payload.length()),
+                eq(TtdStatus.NONE),
                 any());        
     }
 

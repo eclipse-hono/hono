@@ -11,25 +11,30 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.adapter.coap;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
+import org.eclipse.californium.core.coap.MediaTypeRegistry;
+import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 
 import io.micrometer.core.instrument.Timer.Sample;
-
+import io.vertx.core.buffer.Buffer;
 
 /**
- * A dictionary of relevant information required during the
- * processing of a CoAP request message published by a device.
+ * A dictionary of relevant information required during the processing of a CoAP request message published by a device.
  *
  */
 public final class CoapContext extends MapBasedExecutionContext {
 
+    private static final String PARAM_EMPTY_CONTENT = "empty";
     private final CoapExchange exchange;
     private Sample timer;
 
@@ -53,8 +58,7 @@ public final class CoapContext extends MapBasedExecutionContext {
      * Creates a new context for a CoAP request.
      * 
      * @param request The CoAP exchange representing the request.
-     * @param timer The object to use for measuring the time it takes to
-     *              process the request.
+     * @param timer The object to use for measuring the time it takes to process the request.
      * @return The context.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
@@ -77,8 +81,37 @@ public final class CoapContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Gets the object used for measuring the time it takes to
-     * process this request.
+     * Get payload of request.
+     * 
+     * @return payload of request
+     */
+    public Buffer getPayload() {
+        final byte[] payload = exchange.getRequestPayload();
+        if (payload == null || payload.length == 0) {
+            return Buffer.buffer();
+        } else {
+            return Buffer.buffer(payload);
+        }
+    }
+
+    /**
+     * Get content type.
+     * 
+     * If {@link #isEmptyNotification()}, return {@link EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION}. Otherwise map
+     * the CoAP content type into the textual form.
+     * 
+     * @return content type of request.
+     */
+    public String getContentType() {
+        if (isEmptyNotification()) {
+            return EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
+        } else {
+            return MediaTypeRegistry.toString(exchange.getRequestOptions().getContentFormat());
+        }
+    }
+
+    /**
+     * Gets the object used for measuring the time it takes to process this request.
      * 
      * @return The timer or {@code null} if not set.
      */
@@ -87,11 +120,102 @@ public final class CoapContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Sends a response to the device.
+     * Get CoAP query parameter.
+     * 
+     * @param name parameter name
+     * @return value of query parameter, or {@code null}, if not provided in request,
+     */
+    public String getQueryParameter(final String name) {
+        return exchange.getQueryParameter(name);
+    }
+
+    /**
+     * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} query parameter of the
+     * CoAP request.
+     *
+     * @return The time till disconnect or {@code null} if
+     *         <ul>
+     *         <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT}
+     *         query parameter.</li>
+     *         <li>the contained value cannot be parsed as an Integer</li>
+     *         </ul>
+     */
+    public Integer getTimeUntilDisconnect() {
+        return getIntegerQueryParameter(Constants.HEADER_TIME_TILL_DISCONNECT);
+    }
+
+    /**
+     * Get command request id of response for command.
+     * 
+     * @return command request id.
+     */
+    public String getCommandRequestId() {
+        final List<String> pathList = exchange.getRequestOptions().getUriPath();
+        if (pathList.size() == 2 || pathList.size() == 4) {
+            return pathList.get(pathList.size() - 1);
+        }
+        return null;
+    }
+
+    /**
+     * Get command response status of response for command.
+     * 
+     * @return status, or {@code null}, if not available.
+     */
+    public Integer getCommandResponseStatus() {
+        return getIntegerQueryParameter(Constants.HEADER_COMMAND_RESPONSE_STATUS);
+    }
+
+    /**
+     * Check, if request represents a empty notification, just to check, if commands are available.
+     * 
+     * @return {@code true}, if request is a empty notification, {@code false}, otherwise.
+     */
+    public boolean isEmptyNotification() {
+        return exchange.getQueryParameter(PARAM_EMPTY_CONTENT) != null;
+    }
+
+    /**
+     * Sends a response with the response code to the device.
      * 
      * @param responseCode The code to set in the response.
      */
     public void respondWithCode(final ResponseCode responseCode) {
-        exchange.respond(responseCode);
+        respond(new Response(responseCode));
     }
+
+    /**
+     * Sends a response to the device.
+     * 
+     * @param response The response to sent.
+     */
+    public void respond(final Response response) {
+        exchange.respond(response);
+    }
+
+    /**
+     * Gets the integer value of the provided query parameter.
+     *
+     * @param parameterName name of the query parameter
+     * @return integer value or {@code null} if
+     *         <ul>
+     *         <li>the request doesn't contain the provided query parameter.</li>
+     *         <li>the contained value cannot be parsed as an Integer</li>
+     *         </ul>
+     */
+    private Integer getIntegerQueryParameter(final String parameterName) {
+
+        try {
+            final Optional<String> value = Optional
+                    .ofNullable(exchange.getQueryParameter(parameterName));
+
+            if (value.isPresent()) {
+                return Integer.parseInt(value.get());
+            }
+        } catch (final NumberFormatException e) {
+        }
+
+        return null;
+    }
+
 }
