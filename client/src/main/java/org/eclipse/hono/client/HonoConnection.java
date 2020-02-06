@@ -186,7 +186,9 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * permission information from an authorization service. If after connecting to the server the permissions
      * from the service have changed, then it will be necessary to drop the connection and connect back to the server
      * to retrieve the updated permissions.
-     *
+     * <p>
+     * If not called from a Vert.x event loop thread, this method waits for at most half of the configured
+     * connect timeout for the connection to be closed properly.
      */
     @Override
     void disconnect();
@@ -194,7 +196,10 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
     /**
      * Closes this client's connection to the Hono server.
      * <p>
-     * This method waits for at most 5 seconds for the connection to be closed properly. Any subsequent attempts to
+     * If not called from a Vert.x event loop thread, this method waits for at most half of the configured
+     * connect timeout for the connection to be closed properly.
+     * <p>
+     * Any senders or consumers opened by this client will be implicitly closed as well. Any subsequent attempts to
      * connect this client again will fail.
      */
     void shutdown();
