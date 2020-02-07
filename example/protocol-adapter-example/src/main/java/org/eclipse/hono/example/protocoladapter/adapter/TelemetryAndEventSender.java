@@ -11,22 +11,22 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Adapter for telemetry or event messages using methods and properties from {@link AmqpCliClient} to simplify handling
- * 
+ * <p>
  * based loosely on {@link org.eclipse.hono.cli.adapter.TelemetryAndEventCli}
- * 
+ *
  * @see org.eclipse.hono.cli.adapter.TelemetryAndEventCli
  */
 @Component
 public class TelemetryAndEventSender extends AmqpCliClient {
-    
+
     /**
      * Sends message to Hono AMQP adapter
-     * 
+     *
      * @param messagePayload message payload
      * @param messageAddress "telemetry" ("t") or "event" ("e")
      * @param messageTracker message delivery Future
      */
-    public void sendMessage(final String messagePayload, final String messageAddress, final CompletableFuture<ProtonDelivery> messageTracker) throws IllegalArgumentException{
+    public void sendMessage(final String messagePayload, final String messageAddress, final CompletableFuture<ProtonDelivery> messageTracker) throws IllegalArgumentException {
         String messageAddressChecked;
         switch (messageAddress.toLowerCase()) {
             case "telemetry":
@@ -63,10 +63,10 @@ public class TelemetryAndEventSender extends AmqpCliClient {
     }
 
     /**
-     *  Sets AMQP client connection properties
-     * 
-     * @param host AMQP Hono adapter IP address
-     * @param port AMQP Hono adapter port
+     * Sets AMQP client connection properties
+     *
+     * @param host     AMQP Hono adapter IP address
+     * @param port     AMQP Hono adapter port
      * @param username username consists of DEVICE_ID@TENANT_ID
      * @param password device credentials
      */

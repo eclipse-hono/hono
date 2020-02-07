@@ -17,9 +17,9 @@ import java.net.HttpURLConnection;
 
 /**
  * Command and receiver listener using methods and properties from {@link AmqpCliClient} to simplify handling
- * 
+ * <p>
  * based loosely on {@link org.eclipse.hono.cli.adapter.CommandAndControlClient}
- * 
+ *
  * @see org.eclipse.hono.cli.adapter.CommandAndControlClient
  */
 @Component
@@ -31,7 +31,6 @@ public class CommandAndControlReceiver extends AmqpCliClient {
 
     /**
      * Listen for incoming commands
-     * 
      */
     public void listenCommands() {
         final ProtonMessageHandler messageHandler = (d, m) -> {
@@ -83,12 +82,12 @@ public class CommandAndControlReceiver extends AmqpCliClient {
     }
 
     /**
-     *  Sets AMQP client connection properties and command handler {@link ICommandHandler}
-     * 
-     * @param host AMQP Hono adapter IP address
-     * @param port AMQP Hono adapter port
-     * @param username username consists of DEVICE_ID@TENANT_ID
-     * @param password device credentials
+     * Sets AMQP client connection properties and command handler {@link ICommandHandler}
+     *
+     * @param host           AMQP Hono adapter IP address
+     * @param port           AMQP Hono adapter port
+     * @param username       username consists of DEVICE_ID@TENANT_ID
+     * @param password       device credentials
      * @param commandHandler handler for incoming commands
      */
     public void setAMQPClientProps(final String host, final int port, final String username, final String password, final ICommandHandler commandHandler) {

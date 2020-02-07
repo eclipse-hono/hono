@@ -34,24 +34,23 @@ public class ProtocolAdapterExample {
         this.commandAndControlReceiver = commandAndControlReceiver;
     }
 
-     /**
-      * Sets AMQP client properties and command handler {@link ICommandHandler}
-      *
-      * @param host AMQP Hono adapter IP address
-      * @param port AMQP Hono adapter port
-      * @param username username consists of DEVICE_ID@TENANT_ID
-      * @param password device credentials
-      * @param commandHandler function to process incoming commands
-      */
+    /**
+     * Sets AMQP client properties and command handler {@link ICommandHandler}
+     *
+     * @param host           AMQP Hono adapter IP address
+     * @param port           AMQP Hono adapter port
+     * @param username       username consists of DEVICE_ID@TENANT_ID
+     * @param password       device credentials
+     * @param commandHandler function to process incoming commands
+     */
     public void setAMQPClientProps(final String host, final int port, final String username, final String password, final ICommandHandler commandHandler) {
         telemetryAndEventSender.setAMQPClientProps(host, port, username, password);
         commandAndControlReceiver.setAMQPClientProps(host, port, username, password, commandHandler);
     }
 
     /**
-     * 
-     * Sends AMQP message to Hono AMQP adapter 
-     * 
+     * Sends AMQP message to Hono AMQP adapter
+     * <p>
      * Connection properties have to be set with {@link #setAMQPClientProps(String, int, String, String, ICommandHandler) } beforehand
      *
      * @param messagePayload Message payload
@@ -68,7 +67,7 @@ public class ProtocolAdapterExample {
             messageResponse.fail(e.getCause());
             log.error(String.format("Sending message failed [reason: %s] %n", e.getMessage()));
             return messageResponse.future();
-        } 
+        }
 
         try {
             final ProtonDelivery delivery = messageSent.join();
@@ -87,9 +86,8 @@ public class ProtocolAdapterExample {
     }
 
     /**
-     * 
      * Start listening for commands
-     * 
+     * <p>
      * Connection properties have to be set with {@link #setAMQPClientProps(String, int, String, String, ICommandHandler) } beforehand
      */
     public void listenCommands() {

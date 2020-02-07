@@ -48,7 +48,6 @@ public class DemoTCPApplication {
         this.serverPort = serverPort;
     }
 
-
     /**
      * Starts example tcp server listening to command to be relayed to the AMQP adapter
      */
@@ -69,47 +68,47 @@ public class DemoTCPApplication {
                     break;
                 }
 
-            switch (greeting) {
-                case "initConnection":
-                    log.info("Command: initConnection");
-                    out.println("host:");
-                    String host = in.readLine();
-                    out.println("port:");
-                    int port = Integer.parseInt(in.readLine());
-                    out.println("username (DEVICE_ID@TENANT_ID):");
-                    String username = in.readLine();
-                    out.println("password:");
-                    String password = in.readLine();
-                    initConnection(host, port, username, password);
-                    out.println("OK");
-                    break;
-                case "listenCommands":
-                    log.info("Command: listenCommands");
-                    listenCommands();
-                    out.println("OK");
-                    break;
-                case "sendAMQPMessage":
-                    log.info("Command: sendAMQPMessage");
-                    out.println("message address (\"telemetry\"/\"event\"):");
-                    String messageAddress = in.readLine();
-                    out.println("payload:");
-                    String payload = in.readLine();
-                    Future<String> amqpResponse = sendAMQPMessage(payload, messageAddress);
-                    amqpResponse.setHandler(response -> {
-                        if (response.succeeded()) {
-                            out.println("OK");
-                            log.info(String.format("sendAMQPMessage result: \"%s\"", response.result()));
-                            out.println("response: " + response.result());
-                        } else {
-                            out.println("FAIL");
-                        }
-                    });
-                    break;
-                default:
-                    out.println("Unrecognized Command.\nCommands:\n - \"initConnection\"\n - \"listenCommands\"\n - \"sendAMQPMessage\"");
-                    break;
+                switch (greeting) {
+                    case "initConnection":
+                        log.info("Command: initConnection");
+                        out.println("host:");
+                        String host = in.readLine();
+                        out.println("port:");
+                        int port = Integer.parseInt(in.readLine());
+                        out.println("username (DEVICE_ID@TENANT_ID):");
+                        String username = in.readLine();
+                        out.println("password:");
+                        String password = in.readLine();
+                        initConnection(host, port, username, password);
+                        out.println("OK");
+                        break;
+                    case "listenCommands":
+                        log.info("Command: listenCommands");
+                        listenCommands();
+                        out.println("OK");
+                        break;
+                    case "sendAMQPMessage":
+                        log.info("Command: sendAMQPMessage");
+                        out.println("message address (\"telemetry\"/\"event\"):");
+                        String messageAddress = in.readLine();
+                        out.println("payload:");
+                        String payload = in.readLine();
+                        Future<String> amqpResponse = sendAMQPMessage(payload, messageAddress);
+                        amqpResponse.setHandler(response -> {
+                            if (response.succeeded()) {
+                                out.println("OK");
+                                log.info(String.format("sendAMQPMessage result: \"%s\"", response.result()));
+                                out.println("response: " + response.result());
+                            } else {
+                                out.println("FAIL");
+                            }
+                        });
+                        break;
+                    default:
+                        out.println("Unrecognized Command.\nCommands:\n - \"initConnection\"\n - \"listenCommands\"\n - \"sendAMQPMessage\"");
+                        break;
+                }
             }
-        }
         }
     }
 
@@ -128,9 +127,9 @@ public class DemoTCPApplication {
 
     /**
      * Sets connection properties, sets a commandHandler for incoming commands
-     * 
-     * @param host AMQP Hono adapter IP address
-     * @param port AMQP Hono adapter port
+     *
+     * @param host     AMQP Hono adapter IP address
+     * @param port     AMQP Hono adapter port
      * @param username username consists of DEVICE_ID@TENANT_ID
      * @param password device credentials
      */
@@ -140,9 +139,9 @@ public class DemoTCPApplication {
         ICommandHandler commandHandler = (commandPayload, subject, contentType, isOneWay) -> {
             log.info(String.format("Got now command: \"%s\" for subject \"%s\"", commandPayload, subject));
             if (!isOneWay && subject.contains("tellTime")) {
-                return String.format("myCurrentTime: %s", 
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now())
-                    );
+                return String.format("myCurrentTime: %s",
+                        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now())
+                );
             }
             return "{}";
         };
@@ -151,7 +150,7 @@ public class DemoTCPApplication {
 
     /**
      * Starts listening to commands
-     * 
+     * <p>
      * Connection properties have to be set with {@link #initConnection(String, int, String, String) } beforehand
      */
     public void listenCommands() {
@@ -160,10 +159,10 @@ public class DemoTCPApplication {
 
     /**
      * Sends telemtry or event message to Hono AMQP adapter
-     * 
+     * <p>
      * Connection properties have to be set with {@link #initConnection(String, int, String, String) } beforehand
-     * 
-     * @param payload message payload
+     *
+     * @param payload        message payload
      * @param messageAddress address can be either "telemetry" or "event"
      * @return
      */
