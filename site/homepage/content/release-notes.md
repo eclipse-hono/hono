@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 1.2.0 (Not Released yet)
+
+### API Changes
+
+ * The device registry credentials endpoint will no longer handout sensitive details for hashed-password secrets.
+   `pwd-hash`, `salt` and `hash-function` are stored by the device registry but not returned to the user.
+   Each secret is given an ID which is now returned, along with the other metadata (time validity and optional fields).
+
 ## 1.1.0
 
 ### New Features

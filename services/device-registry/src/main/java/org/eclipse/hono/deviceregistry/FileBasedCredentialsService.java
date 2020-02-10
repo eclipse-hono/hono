@@ -43,6 +43,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -479,16 +480,18 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         final var newVersion = UUID.randomUUID().toString();
         setResourceVersion(tenantId, deviceId, newVersion);
 
-        // clean out all existing credentials for this device
-        try {
-            removeAllForDevice(tenantId, deviceId, span);
-        } catch (final ClientErrorException e) {
-            TracingHelper.logError(span, e);
-            return OperationResult.empty(e.getErrorCode());
-        }
 
         // authId->credentials[]
         final Map<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
+
+        if (!credentialsForTenant.isEmpty()) {
+            try {
+                verifyOverwriteEnabled(span);
+            } catch (ClientErrorException e) {
+                TracingHelper.logError(span, e);
+                return OperationResult.empty(e.getErrorCode());
+            }
+        }
 
         // now add the new ones
         for (final CommonCredential credential : credentials) {
@@ -504,10 +507,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             final String authId = credential.getAuthId();
             final JsonObject credentialObject = JsonObject.mapFrom(credential);
             final String type = credentialObject.getString(CredentialsConstants.FIELD_TYPE);
-            final var json = createOrGetAuthIdCredentials(authId, credentialsForTenant);
+            final JsonArray json = createOrGetAuthIdCredentials(authId, credentialsForTenant);
 
             // find credentials - matching by type
-            var credentialsJson = json.stream()
+            JsonObject credentialsJson = json.stream()
                     .filter(JsonObject.class::isInstance).map(JsonObject.class::cast)
                     .filter(j -> type.equals(j.getString(CredentialsConstants.FIELD_TYPE)))
                     .findAny().orElse(null);
@@ -529,16 +532,68 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                 return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
             }
 
-            // start updating
-            dirty = true;
-
-            var secretsJson = credentialsJson.getJsonArray(CredentialsConstants.FIELD_SECRETS);
+            JsonArray secretsJson = credentialsJson.getJsonArray(CredentialsConstants.FIELD_SECRETS);
             if (secretsJson == null) {
                 // secrets field was missing, assign
                 secretsJson = new JsonArray();
-                credentialsJson.put(CredentialsConstants.FIELD_SECRETS, secretsJson);
             }
-            secretsJson.addAll(credentialObject.getJsonArray(CredentialsConstants.FIELD_SECRETS));
+
+            final JsonArray inputSecrets = credentialObject.getJsonArray(CredentialsConstants.FIELD_SECRETS);
+            final JsonArray definitiveInputSecret = new JsonArray();
+            for (Object inputSecret : inputSecrets) {
+                final JsonObject secret = (JsonObject) inputSecret;
+                final String secretId = secret.getString(RegistryManagementConstants.FIELD_ID);
+
+                // No secret ID specified : create a new secret
+                if (Strings.isNullOrEmpty(secretId)) {
+                    secret.put(RegistryManagementConstants.FIELD_ID, UUID.randomUUID().toString());
+                    definitiveInputSecret.add(secret);
+                // secret ID specified
+                } else {
+                    // Find the corresponding secret with the given ID.
+                    boolean found = false;
+                    for (Object st : secretsJson) {
+                        final JsonObject existingSecret = (JsonObject) st;
+                        if (secretId.equals(existingSecret.getString(RegistryManagementConstants.FIELD_ID))) {
+                            found = true;
+                            final JsonObject newSecret = new JsonObject();
+                            copySecretFields(secret, newSecret);
+
+                            // update the secret : remove the old values.
+                            if (secret.containsKey(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN)
+                                    || secret.containsKey(CredentialsConstants.FIELD_SECRETS_KEY)
+                                    || secret.containsKey(CredentialsConstants.FIELD_SECRETS_PWD_HASH)
+                                    || secret.containsKey(CredentialsConstants.FIELD_SECRETS_SALT)) {
+
+                                removePasswordDetailsFromSecret(newSecret);
+                            }
+                            // then copy the new details.
+                            for (String field : secret.fieldNames()) {
+                                newSecret.put(field, secret.getValue(field));
+                            }
+                            definitiveInputSecret.add(newSecret);
+                        }
+                    }
+
+                    // check if the secretID given was found
+                    if (!found) {
+                        TracingHelper.logError(span, "secret ID given does not exist for this auth-id and type.");
+                        return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+                    }
+                }
+            }
+
+            dirty = true;
+
+            // Now we can remove all the secrets
+            secretsJson.clear();
+
+            // Write the new secrets
+            secretsJson.addAll(definitiveInputSecret);
+
+            // Commit the update
+            credentialsJson.put(CredentialsConstants.FIELD_SECRETS, secretsJson);
+
             credentialsForTenant.put(authId, json);
         }
 
@@ -557,13 +612,16 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
                 passwordSecret.encode(passwordEncoder);
                 passwordSecret.checkValidity();
-                switch (passwordSecret.getHashFunction()) {
+                if (!passwordSecret.containsOnlySecretId()) {
+                    switch (passwordSecret.getHashFunction()) {
                     case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
                         final String pwdHash = passwordSecret.getPasswordHash();
                         verifyBcryptPasswordHash(pwdHash);
                         break;
                     default:
                         // pass
+                    }
+                    // pass
                 }
                 // pass
             }
@@ -589,13 +647,11 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
     /**
      * Remove all credentials that point to a device.
-     * 
+     *
      * @param tenantId The tenant to process.
      * @param deviceId The device id to look for.
      */
     private void removeAllForDevice(final String tenantId, final String deviceId, final Span span) {
-
-        final boolean canModify = getConfig().isModificationEnabled();
 
         final Map<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
 
@@ -615,12 +671,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                     continue;
                 }
 
-                // check if we may overwrite
-
-                if (!canModify) {
-                    TracingHelper.logError(span, "Modification is disabled for the Credentials service.");
-                    throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN);
-                }
+                verifyOverwriteEnabled(span);
 
                 // remove device from credentials set
                 i.remove();
@@ -663,6 +714,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         for (final Object credential : matchingCredentials) {
             final JsonObject credentialsObject = (JsonObject) credential;
             credentialsObject.remove(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+            removePasswordDetailsFromCredential(credentialsObject);
             final CommonCredential cred = credentialsObject.mapTo(CommonCredential.class);
             credentials.add(cred);
         }
@@ -760,7 +812,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
     /**
      * Create or get credentials map for a single tenant.
-     * 
+     *
      * @param tenantId The tenant to get
      * @return The map, never returns {@code null}.
      */
@@ -803,5 +855,42 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
     protected int getMaxBcryptIterations() {
         return getConfig().getMaxBcryptIterations();
+    }
+
+    /**
+     * Strips the hashed-password details from the jsonObject if needed.
+     */
+    private static void removePasswordDetailsFromCredential(final JsonObject credential) {
+        if (credential.getString(CredentialsConstants.FIELD_TYPE).equals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) {
+
+            credential.getJsonArray(CredentialsConstants.FIELD_SECRETS).forEach(secret ->
+                    removePasswordDetailsFromSecret((JsonObject) secret));
+        }
+    }
+
+    private static void removePasswordDetailsFromSecret(final JsonObject secret) {
+
+        secret.remove(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+        secret.remove(CredentialsConstants.FIELD_SECRETS_SALT);
+        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
+        secret.remove(CredentialsConstants.FIELD_SECRETS_KEY);
+    }
+
+    private static void copySecretFields(final JsonObject in, final JsonObject out) {
+
+        out.put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, in.getString(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION));
+        out.put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, in.getString(CredentialsConstants.FIELD_SECRETS_PWD_HASH));
+        out.put(CredentialsConstants.FIELD_SECRETS_SALT, in.getString(CredentialsConstants.FIELD_SECRETS_SALT));
+        out.put(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, in.getString(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN));
+    }
+
+    private void verifyOverwriteEnabled(final Span span) {
+
+        // check if we may overwrite
+        if (!config.isModificationEnabled()) {
+            TracingHelper.logError(span, "Modification is disabled for the Credentials service.");
+            throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN);
+        }
     }
 }
