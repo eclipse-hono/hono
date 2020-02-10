@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.example.protocoladapter.adapter;
+package org.eclipse.hono.example.protocolgateway.adapter;
 
 import io.vertx.core.Promise;
 import io.vertx.proton.*;
@@ -19,7 +19,7 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cli.adapter.AmqpCliClient;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.example.protocoladapter.interfaces.CommandHandler;
+import org.eclipse.hono.example.protocolgateway.interfaces.CommandHandler;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;

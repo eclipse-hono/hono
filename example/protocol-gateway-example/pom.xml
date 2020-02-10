@@ -22,17 +22,17 @@
         <relativePath>..</relativePath>
     </parent>
 
-    <artifactId>example-protocoladapter</artifactId>
+    <artifactId>protocol-gateway</artifactId>
 
-    <name>protocol adapter example</name>
-    <description>A simple example to illustrate how a protocol adapter could be implemented using classes from the Hono CLI module</description>
+    <name>protocol gateway</name>
+    <description>A simple example to illustrate how a protocol gateway could be implemented using classes from the Hono CLI module</description>
     <url>https://www.eclipse.org/hono</url>
 
     <dependencies>
         <dependency>
             <groupId>org.eclipse.hono</groupId>
             <artifactId>hono-cli</artifactId>
-            <version>1.2.0-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

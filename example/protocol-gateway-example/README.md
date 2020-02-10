@@ -1,4 +1,4 @@
-# Example *Protocol adapter* to connect to the AMQP adapter
+# Example *Protocol gateway* to connect to the AMQP adapter
 
 > Disclaimer: This example is considered a POC and not intended to be run in a productive environment.
 

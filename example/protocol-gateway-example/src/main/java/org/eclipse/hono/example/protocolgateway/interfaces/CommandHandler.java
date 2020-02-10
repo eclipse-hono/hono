@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.example.protocoladapter.interfaces;
+package org.eclipse.hono.example.protocolgateway.interfaces;
 
 public interface CommandHandler {
     /**

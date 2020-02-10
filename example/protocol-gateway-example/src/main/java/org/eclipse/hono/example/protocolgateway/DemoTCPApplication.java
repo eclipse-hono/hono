@@ -11,11 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.example.protocoladapter;
+package org.eclipse.hono.example.protocolgateway;
 
 import io.vertx.core.Future;
-import org.eclipse.hono.example.protocoladapter.controller.ProtocolAdapterExample;
-import org.eclipse.hono.example.protocoladapter.interfaces.CommandHandler;
+import org.eclipse.hono.example.protocolgateway.controller.ProtocolGatewayExample;
+import org.eclipse.hono.example.protocolgateway.interfaces.CommandHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -40,7 +40,7 @@ import java.time.format.DateTimeFormatter;
 public class DemoTCPApplication {
 
     private static final Logger log = LoggerFactory.getLogger(DemoTCPApplication.class);
-    private final ProtocolAdapterExample protocolAdapterExample;
+    private final ProtocolGatewayExample protocolGatewayExample;
     // TCP server properties
     private int serverPort;
     private ServerSocket serverSocket;
@@ -48,8 +48,8 @@ public class DemoTCPApplication {
     private PrintWriter out;
     private BufferedReader in;
 
-    public DemoTCPApplication(ProtocolAdapterExample protocolAdapterExample) throws IOException {
-        this.protocolAdapterExample = protocolAdapterExample;
+    public DemoTCPApplication(ProtocolGatewayExample protocolGatewayExample) throws IOException {
+        this.protocolGatewayExample = protocolGatewayExample;
     }
 
     public static void main(String[] args) throws IOException {
@@ -158,7 +158,7 @@ public class DemoTCPApplication {
             }
             return "{}";
         };
-        this.protocolAdapterExample.setAMQPClientProps(host, port, username, password, commandHandler);
+        this.protocolGatewayExample.setAMQPClientProps(host, port, username, password, commandHandler);
     }
 
     /**
@@ -167,7 +167,7 @@ public class DemoTCPApplication {
      * Connection properties have to be set with {@link #initConnection(String, int, String, String) } beforehand
      */
     public void listenCommands() {
-        this.protocolAdapterExample.listenCommands();
+        this.protocolGatewayExample.listenCommands();
     }
 
     /**
@@ -180,6 +180,6 @@ public class DemoTCPApplication {
      * @return
      */
     public Future<String> sendAMQPMessage(String payload, String messageAddress) {
-        return protocolAdapterExample.sendAMQPMessage(payload, messageAddress);
+        return protocolGatewayExample.sendAMQPMessage(payload, messageAddress);
     }
 }

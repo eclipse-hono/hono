@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
- package org.eclipse.hono.example.protocoladapter.adapter;
+ package org.eclipse.hono.example.protocolgateway.adapter;
 
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;

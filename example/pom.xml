@@ -29,7 +29,7 @@
 
   <modules>
     <module>hono-client-examples</module>
-    <module>protocol-adapter-example</module>
+    <module>protocol-gateway-example</module>
   </modules>
 
   <packaging>pom</packaging>

@@ -11,15 +11,15 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.example.protocoladapter.controller;
+package org.eclipse.hono.example.protocolgateway.controller;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.proton.ProtonDelivery;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
-import org.eclipse.hono.example.protocoladapter.adapter.CommandAndControlReceiver;
-import org.eclipse.hono.example.protocoladapter.adapter.TelemetryAndEventSender;
-import org.eclipse.hono.example.protocoladapter.interfaces.CommandHandler;
+import org.eclipse.hono.example.protocolgateway.adapter.CommandAndControlReceiver;
+import org.eclipse.hono.example.protocolgateway.adapter.TelemetryAndEventSender;
+import org.eclipse.hono.example.protocolgateway.interfaces.CommandHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,18 +30,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 /**
- * Example protocol adapter service to send AMQP messages to Hono amqp adapter using Hono cli module classes
+ * Example protocol gateway service to send AMQP messages to Hono amqp adapter using Hono cli module classes
  */
 @Service
-public class ProtocolAdapterExample {
+public class ProtocolGatewayExample {
 
-    private static final Logger log = LoggerFactory.getLogger(ProtocolAdapterExample.class);
+    private static final Logger log = LoggerFactory.getLogger(ProtocolGatewayExample.class);
 
     private final TelemetryAndEventSender telemetryAndEventSender;
     private final CommandAndControlReceiver commandAndControlReceiver;
 
     @Autowired
-    public ProtocolAdapterExample(final TelemetryAndEventSender telemetryAndEventSender,
+    public ProtocolGatewayExample(final TelemetryAndEventSender telemetryAndEventSender,
                                   final CommandAndControlReceiver commandAndControlReceiver) {
         this.telemetryAndEventSender = telemetryAndEventSender;
         this.commandAndControlReceiver = commandAndControlReceiver;
