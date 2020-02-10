@@ -1,8 +1,21 @@
+/*******************************************************************************
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+
 package org.eclipse.hono.example.protocoladapter;
 
 import io.vertx.core.Future;
 import org.eclipse.hono.example.protocoladapter.controller.ProtocolAdapterExample;
-import org.eclipse.hono.example.protocoladapter.interfaces.ICommandHandler;
+import org.eclipse.hono.example.protocoladapter.interfaces.CommandHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -136,7 +149,7 @@ public class DemoTCPApplication {
     public void initConnection(String host, int port, String username, String password) {
 
         // Example command handler responds with time if incoming subject is "tellTime"
-        ICommandHandler commandHandler = (commandPayload, subject, contentType, isOneWay) -> {
+        CommandHandler commandHandler = (commandPayload, subject, contentType, isOneWay) -> {
             log.info(String.format("Got now command: \"%s\" for subject \"%s\"", commandPayload, subject));
             if (!isOneWay && subject.contains("tellTime")) {
                 return String.format("myCurrentTime: %s",

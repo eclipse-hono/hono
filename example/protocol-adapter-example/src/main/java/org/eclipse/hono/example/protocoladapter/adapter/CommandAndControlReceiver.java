@@ -1,3 +1,16 @@
+/*******************************************************************************
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+
 package org.eclipse.hono.example.protocoladapter.adapter;
 
 import io.vertx.core.Promise;
@@ -6,7 +19,7 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cli.adapter.AmqpCliClient;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.example.protocoladapter.interfaces.ICommandHandler;
+import org.eclipse.hono.example.protocoladapter.interfaces.CommandHandler;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
@@ -27,7 +40,7 @@ public class CommandAndControlReceiver extends AmqpCliClient {
 
     private static final Logger log = LoggerFactory.getLogger(CommandAndControlReceiver.class);
     private ProtonSender sender;
-    private ICommandHandler commandHandler;
+    private CommandHandler commandHandler;
 
     /**
      * Listen for incoming commands
@@ -82,7 +95,7 @@ public class CommandAndControlReceiver extends AmqpCliClient {
     }
 
     /**
-     * Sets AMQP client connection properties and command handler {@link ICommandHandler}
+     * Sets AMQP client connection properties and command handler {@link CommandHandler}
      *
      * @param host           AMQP Hono adapter IP address
      * @param port           AMQP Hono adapter port
@@ -90,7 +103,7 @@ public class CommandAndControlReceiver extends AmqpCliClient {
      * @param password       device credentials
      * @param commandHandler handler for incoming commands
      */
-    public void setAMQPClientProps(final String host, final int port, final String username, final String password, final ICommandHandler commandHandler) {
+    public void setAMQPClientProps(final String host, final int port, final String username, final String password, final CommandHandler commandHandler) {
         final ClientConfigProperties props = new ClientConfigProperties();
         props.setHost(host);
         props.setPort(port);

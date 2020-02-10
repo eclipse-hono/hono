@@ -17,38 +17,7 @@ From your Hono instance get:
 
 How to get these values, can be found in [Getting started guide](https://www.eclipse.org/hono/getting-started/).
 
-Alternatively, these values can be fetched and created using the following script:
-
-```bash
-# prior: setup hono in kubernetes namespace "hono"
-export REGISTRY_IP=$(kubectl -n hono get service  hono-service-device-registry-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
-echo "REGISTRY_IP=${REGISTRY_IP}"
-export AMQP_NETWORK_IP=$(kubectl -n hono get service hono-dispatch-router-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
-echo "AMQP_NETWORK_IP=${AMQP_NETWORK_IP}"
-export AMQP_ADAPTER_PORT=$(kubectl -n hono get service hono-adapter-amqp-vertx --output='jsonpath={.status.loadBalancer.ingress[0].port}')
-echo "AMQP_ADAPTER_IP=${AMQP_ADAPTER_IP}"
-
-# Get example tenant or
-export MY_TENANT="DEFAULT_TENANT"
-# register new tenant
-# export MY_TENANT=$(curl -X POST http://$REGISTRY_IP:28080/v1/tenants 2>/dev/null | jq -r .id)
-
-echo "MY_TENANT=\"${MY_TENANT}\""
-
-# register new device
-export MY_DEVICE=$(curl -X POST http://$REGISTRY_IP:28080/v1/devices/$MY_TENANT 2>/dev/null | jq -r .id)
-echo "MY_DEVICE=\"${MY_DEVICE}\""
-
-# set credential secret for device
-export MY_PWD="dummyDevicePassword"
-echo "MY_PWD=\"${MY_PWD}\""
-curl -i -X PUT -H "content-type: application/json" --data-binary '[{
-  "type": "hashed-password",
-  "auth-id": "'$MY_DEVICE'",
-  "secrets": [{ "pwd-plain": "'$MY_PWD'" }]
-}]' http://$REGISTRY_IP:28080/v1/credentials/$MY_TENANT/$MY_DEVICE
-
-```
+Alternatively, these values can be fetched and created using the script `scripts/create_hono_device.sh`.
 
 ## Application properties
 

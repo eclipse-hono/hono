@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -17,9 +17,9 @@
 
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-bom</artifactId>
+    <artifactId>hono-example</artifactId>
     <version>1.1.0-SNAPSHOT</version>
-    <relativePath>../../bom</relativePath>
+    <relativePath>..</relativePath>
   </parent>
 
   <artifactId>hono-example-client</artifactId>
