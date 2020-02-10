@@ -31,6 +31,9 @@ public abstract class CommonSecret {
     @JsonProperty
     private Boolean enabled;
 
+    @JsonProperty
+    private String id;
+
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE)
     @HonoTimestamp
     private Instant notBefore;
@@ -52,6 +55,22 @@ public abstract class CommonSecret {
      */
     public CommonSecret setEnabled(final Boolean enabled) {
         this.enabled = enabled;
+        return this;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    /**
+     * Sets the ID of the secret. This id may be assigned by the device registry.
+     * The id must be unique within the credentials set containing it.
+     *
+     * @param id The string to set as the id.
+     * @return   a reference to this for fluent use.
+     */
+    public CommonSecret setId(final String id) {
+        this.id = id;
         return this;
     }
 

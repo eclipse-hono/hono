@@ -18,9 +18,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -42,6 +44,7 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.ThrowingConsumer;
 
@@ -71,7 +74,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Gets credentials service being tested.
-     * 
+     *
      * @return The credentials service
      */
     public abstract CredentialsManagementService getCredentialsManagementService();
@@ -102,7 +105,7 @@ public abstract class AbstractCredentialsServiceTest {
      * Gets the information of this device registry implementation supports resource versions.
      * <p>
      * The default implementation of this method returns {@code true}. Other implementations may override this.
-     * 
+     *
      * @return {@code true} if the implementation supports resource versions, {@code false} otherwise.
      */
     protected boolean supportsResourceVersion() {
@@ -182,7 +185,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Creates a password type based credential containing a hashed password secret.
-     * 
+     *
      * @param authId The authentication to use.
      * @param password The password to use.
      * @param maxBcryptIterations max bcrypt iterations to use.
@@ -223,7 +226,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Create a new password secret.
-     * 
+     *
      * @param password The password to use.
      * @param maxBcryptIterations max bcrypt iterations to use.
      * @return The password secret instance.
@@ -243,22 +246,18 @@ public abstract class AbstractCredentialsServiceTest {
     }
 
     /**
-     * Verify that provided secret contains valid password.
+     * Verify that provided secret does contains any of the hash, the salt, or the hash function.
      * @param secret Secret to check.
-     * @param password Expected password.
-     * @param maxBcryptIterations Optional number of iteration to use for bcrypt.
-     * @return true only if provided password matches the secret.
      */
-    public static boolean verifyPasswordSecret(final PasswordSecret secret, final String password, final OptionalInt maxBcryptIterations) {
-        final SpringBasedHonoPasswordEncoder encoder = new SpringBasedHonoPasswordEncoder(
-                maxBcryptIterations.orElse(SpringBasedHonoPasswordEncoder.DEFAULT_BCRYPT_STRENGTH));
-
-        return encoder.matches(password, JsonObject.mapFrom(secret));
+    public void assertPasswordSecretDoesNotContainPasswordDetails(final PasswordSecret secret) {
+        assertNull(secret.getPasswordHash());
+        assertNull(secret.getHashFunction());
+        assertNull(secret.getSalt());
     }
 
     /**
      * Assert credentials, expect them to be missing.
-     * 
+     *
      * @param ctx The test context to report to.
      * @param tenantId The tenant to check for.
      * @param deviceId The device to check for.
@@ -282,7 +281,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Assert credentials, expect them to be present, but empty.
-     * 
+     *
      * @param ctx The test context to report to.
      * @param tenantId The tenant to check for.
      * @param deviceId The device to check for.
@@ -307,7 +306,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Assert credentials.
-     * 
+     *
      * @param ctx The test context to report to.
      * @param tenantId The tenant to check for.
      * @param deviceId The device to check for.
@@ -353,7 +352,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Test creating a new secret.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -419,7 +418,8 @@ public abstract class AbstractCredentialsServiceTest {
                                     assertEquals(1, credentials.size());
                                     final List<PasswordSecret> secrets = ((PasswordCredential) credentials.get(0)).getSecrets();
                                     assertEquals(1, secrets.size());
-                                    assertEquals(true, verifyPasswordSecret(secrets.get(0), password, OptionalInt.empty()));
+                                    assertNotNull(JsonObject.mapFrom(secrets.get(0)).getString(RegistryManagementConstants.FIELD_ID));
+                                    assertPasswordSecretDoesNotContainPasswordDetails(secrets.get(0));
                                     assertNull(secrets.get(0).getPasswordPlain());
                                     assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                                 },
@@ -455,7 +455,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Test updating a new secret.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -677,7 +677,7 @@ public abstract class AbstractCredentialsServiceTest {
 
     /**
      * Test fetching disabled credentials for the protocol adapter.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -747,6 +747,638 @@ public abstract class AbstractCredentialsServiceTest {
         // finally complete
 
         phase4.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+    }
+
+    /**
+     * Verify that created secrets contains an ID.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testReturnedSecretContainAnId(final VertxTestContext ctx) {
+
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String authId = UUID.randomUUID().toString();
+
+        final CommonCredential credential = createPasswordCredential(authId, "bar");
+
+        final List<CommonCredential> credentials = Arrays.asList(credential);
+
+        // create device
+
+        final Promise<?> phase1 = Promise.promise();
+        getDeviceManagementService().createDevice(
+                tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE,
+                ctx.succeeding(s -> phase1.complete()));
+
+        // set credentials
+
+        final Promise<?> phase2 = Promise.promise();
+
+        phase1.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                            ctx.succeeding(s -> phase2.complete()));
+        }));
+
+        // validate credentials - contains an ID.
+
+        final Promise<?> phase3 = Promise.promise();
+
+        phase2.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+                        assertNotNull(creds.getSecrets().getJsonObject(0).getString(RegistryManagementConstants.FIELD_ID));
+
+                        phase3.complete();
+                    })));
+        }));
+
+        // finally complete
+
+        phase3.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+    }
+
+    /**
+     * Verify that updating a secret using a wrong secret ID fails with a `400 Bad Request`.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUpdateSecretFailsWithWrongSecretId(final VertxTestContext ctx) {
+
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String authId = UUID.randomUUID().toString();
+
+        final CommonCredential credential = createPasswordCredential(authId, "bar");
+
+        final List<CommonCredential> credentials = Arrays.asList(credential);
+
+        // create device
+
+        final Promise<?> phase1 = Promise.promise();
+        getDeviceManagementService().createDevice(
+                tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE,
+                ctx.succeeding(s -> phase1.complete()));
+
+        // set credentials
+
+        final Promise<?> phase2 = Promise.promise();
+
+        phase1.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                            ctx.succeeding(s -> phase2.complete()));
+        }));
+
+        // re-set credentials with wrong ID
+        final Promise<?> phase3 = Promise.promise();
+
+        // Change the password
+        final CommonCredential newCredential = createPasswordCredential(authId, "foo");
+        ((PasswordCredential) newCredential).getSecrets().get(0).setId("randomId");
+
+
+        phase2.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(newCredential),
+                            NoopSpan.INSTANCE,
+                            ctx.succeeding( s -> ctx.verify(() -> {
+
+                                assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, s.getStatus());
+                                phase3.complete();
+                            })));
+        }));
+
+        // finally complete
+
+        phase3.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+    }
+
+    /**
+     * Verify that secrets returned by the management methods do not
+     * contains secrets details for hashed passwords.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testHashedPasswordsDetailsAreRemoved(final VertxTestContext ctx) {
+
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String authId = UUID.randomUUID().toString();
+
+        final CommonCredential credential = createPasswordCredential(authId, "bar");
+
+        final List<CommonCredential> credentials = Arrays.asList(credential);
+
+        // create device
+
+        final Promise<?> phase1 = Promise.promise();
+        getDeviceManagementService().createDevice(
+                tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE,
+                ctx.succeeding(s -> phase1.complete()));
+
+        // set credentials
+
+        final Promise<?> phase2 = Promise.promise();
+
+        phase1.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                            ctx.succeeding(s -> phase2.complete()));
+        }));
+
+        // validate credentials - do not contain the secret details.
+
+        final Promise<?> phase3 = Promise.promise();
+
+        phase2.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService().get(tenantId, deviceId,
+                    NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final List<CommonCredential> creds = s.getPayload();
+                        assertEquals(1, creds.size());
+
+                        final CommonCredential cred = creds.get(0);
+                        assertEquals(authId, cred.getAuthId());
+                        assertTrue(cred instanceof PasswordCredential);
+                        assertEquals(1, ((PasswordCredential) cred).getSecrets().size());
+                        final PasswordSecret secret = ((PasswordCredential) cred).getSecrets().get(0);
+                        assertNull(secret.getPasswordHash());
+                        assertNull(secret.getSalt());
+                        assertNull(secret.getHashFunction());
+
+                        phase3.complete();
+                    })));
+        }));
+
+        // finally complete
+
+        phase3.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+    }
+
+    /**
+     * Verify that an existing secret is deleted when it's ID is removed
+     * from the SET payload.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSecretsWithMissingIDsAreRemoved(final VertxTestContext ctx) {
+
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String authId = UUID.randomUUID().toString();
+
+        final PasswordCredential credential = new PasswordCredential();
+        credential.setAuthId(authId);
+        final PasswordSecret sec1 = new PasswordSecret().setPasswordPlain("bar");
+        final PasswordSecret sec2 = new PasswordSecret().setPasswordPlain("foo");
+
+        credential.setSecrets(Arrays.asList(sec1, sec2));
+
+        // create device
+
+        final Promise<?> phase1 = Promise.promise();
+        getDeviceManagementService().createDevice(
+                tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE,
+                ctx.succeeding(s -> phase1.complete()));
+
+        // set credentials
+
+        final Promise<?> phase2 = Promise.promise();
+
+        phase1.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credential), NoopSpan.INSTANCE,
+                            ctx.succeeding(s -> phase2.complete()));
+        }));
+
+        // Retrieve credentials IDs
+
+        final Promise<?> phase3 = Promise.promise();
+        final List<String> secretIDs = new ArrayList<>();
+
+        phase2.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(2, creds.getSecrets().size());
+
+                        for (Object secret : creds.getSecrets()){
+                            final String id = ((JsonObject) secret).getString(RegistryManagementConstants.FIELD_ID);
+                            assertNotNull(id);
+                            secretIDs.add(id);
+                        }
+
+                        phase3.complete();
+                    })));
+        }));
+
+        // re-set credentials
+        final Promise<?> phase4 = Promise.promise();
+
+        // create a credential object with only one of the ID.
+        final PasswordCredential credentialWithOnlyId = new PasswordCredential();
+        credentialWithOnlyId.setAuthId(authId);
+
+        final PasswordSecret secretWithOnlyId = new PasswordSecret();
+        secretWithOnlyId.setId(secretIDs.get(0));
+
+        credentialWithOnlyId.setSecrets(Collections.singletonList(secretWithOnlyId));
+
+
+        phase3.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credentialWithOnlyId),
+                            NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
+        }));
+
+
+        // Retrieve credentials again, one should be deleted.
+
+        final Promise<?> phase5 = Promise.promise();
+
+        phase4.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+
+                        final String id = creds.getSecrets().getJsonObject(0)
+                                .getString(RegistryManagementConstants.FIELD_ID);
+                        assertEquals(id, secretIDs.get(0));
+
+                        phase5.complete();
+                    })));
+        }));
+
+        // finally complete
+
+        phase5.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+    }
+
+    /**
+     * Verify that the ID of a secret is still the same when the secret is updated.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSecretsIDisNotChangedWhenSecretIsUpdated(final VertxTestContext ctx) {
+
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String authId = UUID.randomUUID().toString();
+
+        final CommonCredential credential = createPasswordCredential(authId, "bar");
+
+        final List<CommonCredential> credentials = Collections.singletonList(credential);
+
+        // create device
+
+        final Promise<?> phase1 = Promise.promise();
+        getDeviceManagementService().createDevice(
+                tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE,
+                ctx.succeeding(s -> phase1.complete()));
+
+        // set credentials
+
+        final Promise<?> phase2 = Promise.promise();
+
+        phase1.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                            ctx.succeeding(s -> phase2.complete()));
+        }));
+
+        // Retrieve credentials IDs
+
+        final Promise<?> phase3 = Promise.promise();
+        final List<String> secretIDs = new ArrayList<>();
+
+        phase2.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+
+                        final String id = (creds.getSecrets().getJsonObject(0))
+                                .getString(RegistryManagementConstants.FIELD_ID);
+                        assertNotNull(id);
+                        secretIDs.add(id);
+
+                        phase3.complete();
+                    })));
+        }));
+
+        // re-set credentials
+        final Promise<?> phase4 = Promise.promise();
+
+        // Change the password
+        final CommonCredential newCredential = createPasswordCredential(authId, "foo");
+        ((PasswordCredential) newCredential).getSecrets().get(0).setId(secretIDs.get(0));
+
+        phase3.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(newCredential),
+                            NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
+        }));
+
+
+        // Retrieve credentials again, the ID should have changed.
+
+        final Promise<?> phase5 = Promise.promise();
+
+        phase4.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+
+                        final String id = creds.getSecrets().getJsonObject(0)
+                                .getString(RegistryManagementConstants.FIELD_ID);
+                        assertEquals(id, secretIDs.get(0));
+
+                        phase5.complete();
+                    })));
+        }));
+
+        // finally complete
+
+        phase5.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+    }
+
+    /**
+     * Verify that the metadata of a secret can be updated without changing the secret id.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSecretMetadataUpdateDoesntChangeSecretID(final VertxTestContext ctx) {
+
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String authId = UUID.randomUUID().toString();
+
+        final CommonCredential credential = createPasswordCredential(authId, "bar");
+
+        final List<CommonCredential> credentials = Collections.singletonList(credential);
+
+        // create device
+
+        final Promise<?> phase1 = Promise.promise();
+        getDeviceManagementService().createDevice(
+                tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE,
+                ctx.succeeding(s -> phase1.complete()));
+
+        // set credentials
+
+        final Promise<?> phase2 = Promise.promise();
+
+        phase1.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                            ctx.succeeding(s -> phase2.complete()));
+        }));
+
+        // Retrieve credential ID
+
+        final Promise<?> phase3 = Promise.promise();
+        final List<String> secretIDs = new ArrayList<>();
+
+        phase2.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+
+                        final String id = (creds.getSecrets().getJsonObject(0))
+                                .getString(RegistryManagementConstants.FIELD_ID);
+                        assertNotNull(id);
+                        secretIDs.add(id);
+
+                        phase3.complete();
+                    })));
+        }));
+
+        // re-set credentials
+        final Promise<?> phase4 = Promise.promise();
+
+        // Add some metadata to the secret
+        final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential();
+        credentialWithMetadataUpdate.setAuthId(authId);
+
+        final PasswordSecret secretWithOnlyIdAndMetadata = new PasswordSecret();
+        secretWithOnlyIdAndMetadata.setId(secretIDs.get(0));
+        secretWithOnlyIdAndMetadata.setComment("secret comment");
+
+
+        credentialWithMetadataUpdate.setSecrets(Collections.singletonList(secretWithOnlyIdAndMetadata));
+
+
+        phase3.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credentialWithMetadataUpdate),
+                            NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
+        }));
+
+
+        // Retrieve credentials again, the ID should not have changed.
+
+        final Promise<?> phase5 = Promise.promise();
+
+        phase4.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+
+                        final String id = creds.getSecrets().getJsonObject(0)
+                                .getString(RegistryManagementConstants.FIELD_ID);
+                        assertEquals(id, secretIDs.get(0));
+
+                        final String comment = creds.getSecrets().getJsonObject(0)
+                                .getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT);
+                        assertEquals("secret comment", comment);
+
+                        phase5.complete();
+                    })));
+        }));
+
+        // finally complete
+
+        phase5.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+    }
+
+
+    /**
+     * Verify deleting some metadata to a secret.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSecretMetadataDeletion(final VertxTestContext ctx) {
+
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String authId = UUID.randomUUID().toString();
+
+        final CommonCredential credential = createPasswordCredential(authId, "bar");
+        ((PasswordCredential) credential).getSecrets().get(0).setNotBefore(new Date().toInstant());
+
+        final List<CommonCredential> credentials = Collections.singletonList(credential);
+
+        // create device
+
+        final Promise<?> phase1 = Promise.promise();
+        getDeviceManagementService().createDevice(
+                tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE,
+                ctx.succeeding(s -> phase1.complete()));
+
+        // set credentials
+
+        final Promise<?> phase2 = Promise.promise();
+
+        phase1.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                            ctx.succeeding(s -> phase2.complete()));
+        }));
+
+        // Retrieve credential ID
+
+        final Promise<?> phase3 = Promise.promise();
+        final List<String> secretIDs = new ArrayList<>();
+
+        phase2.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+
+                        final String id = (creds.getSecrets().getJsonObject(0))
+                                .getString(RegistryManagementConstants.FIELD_ID);
+                        assertNotNull(id);
+                        secretIDs.add(id);
+                        final String notBefore = (creds.getSecrets().getJsonObject(0))
+                                .getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+                        assertNotNull(notBefore);
+
+                        phase3.complete();
+                    })));
+        }));
+
+        // re-set credentials
+        final Promise<?> phase4 = Promise.promise();
+
+        // Add some other metadata to the secret
+        final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential();
+        credentialWithMetadataUpdate.setAuthId(authId);
+
+        final PasswordSecret secretWithOnlyIdAndMetadata = new PasswordSecret();
+        secretWithOnlyIdAndMetadata.setId(secretIDs.get(0));
+        secretWithOnlyIdAndMetadata.setComment("secret comment");
+
+        credentialWithMetadataUpdate.setSecrets(Collections.singletonList(secretWithOnlyIdAndMetadata));
+
+
+        phase3.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsManagementService()
+                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credentialWithMetadataUpdate),
+                            NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
+        }));
+
+
+        // Retrieve credentials again, both metadata should be there
+
+        final Promise<?> phase5 = Promise.promise();
+
+        phase4.future().setHandler(ctx.succeeding(n -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+
+                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+
+                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+
+                        assertEquals(authId, creds.getAuthId());
+                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                        assertEquals(1, creds.getSecrets().size());
+
+                        final String id = creds.getSecrets().getJsonObject(0)
+                                .getString(RegistryManagementConstants.FIELD_ID);
+                        assertEquals(id, secretIDs.get(0));
+
+                        final String comment = creds.getSecrets().getJsonObject(0)
+                                .getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT);
+                        assertEquals("secret comment", comment);
+
+                        final String notBefore = (creds.getSecrets().getJsonObject(0))
+                                .getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+                        assertNull(notBefore);
+
+                        phase5.complete();
+                    })));
+        }));
+
+        // finally complete
+
+        phase5.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**

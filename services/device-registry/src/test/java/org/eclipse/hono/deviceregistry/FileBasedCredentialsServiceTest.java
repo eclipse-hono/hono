@@ -391,7 +391,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         hashedPassword.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);
         passwordCredential.setSecrets(Collections.singletonList(hashedPassword));
 
-        // 4711
+        // 4711RegistryManagementConstants.FIELD_ID
         final PskCredential pskCredential = new PskCredential();
         pskCredential.setAuthId("sensor1");
 

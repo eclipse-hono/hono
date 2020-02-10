@@ -385,8 +385,6 @@ paths:
                      schema:
                         $ref: '#/components/schemas/CredentialsSet'
                      examples:
-                        Full Credentials:
-                           $ref: '#/components/examples/HashedPasswordExample'
                         Credentials Metadata:
                            $ref: '#/components/examples/MetaPasswordExample'
                headers:
@@ -911,8 +909,8 @@ components:
                     format: byte
                     description: The clear text value of the password to be hashed by the device registry.
                                  If this property is specified, the device registry will ignore user-provided hash properties (`hash-function`, `pwd-hash` and `salt`).
-                                 This property should never be stored by the device registry.
-                                 This property should be empty when returning passwords from the device registry.
+                                 This property must never be stored by the device registry.
+                                 This property must be empty when returning passwords from the device registry.
 
       PSKSecret:
          additionalProperties: false
@@ -1098,15 +1096,9 @@ components:
             }]
       MetaPasswordExample:
          value:
-           [{
-               auth-id: sensor1,
-               type: hashed-password,
-               secrets: [{
-                  "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
-                  "not-after": "2027-12-24T19:00:00Z",
-                  "pwd-plain": "",
-                  "pwd-hash": "",
-                  "salt": "",
-                  "hash-function": ""
-               }]
+            auth-id: sensor1
+            type: hashed-password
+            secrets: [{
+               "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
+               "not-after": "2027-12-24T19:00:00Z",
             }]

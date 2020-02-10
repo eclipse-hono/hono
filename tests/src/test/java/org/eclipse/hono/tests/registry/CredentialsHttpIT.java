@@ -403,9 +403,11 @@ public class CredentialsHttpIT {
                 HttpURLConnection.HTTP_NO_CONTENT)
                 .compose(ar -> registry.getCredentials(TENANT, deviceId))
                 .setHandler(context.succeeding(b -> {
-                    context.verify(() -> assertThat(b.toJsonArray())
-                            .isEqualTo(new JsonArray().add(JsonObject.mapFrom(hashedPasswordCredential))));
-                    context.completeNow();
+                    final PasswordCredential cred = b.toJsonArray().getJsonObject(0).mapTo(PasswordCredential.class);
+                    cred.getSecrets().forEach(secret -> {
+                        context.verify(() -> assertThat(secret.getId()).isNotNull());
+                    });
+                    context.completeNow();;
                 }));
 
     }
@@ -541,8 +543,33 @@ public class CredentialsHttpIT {
     private static void assertResponseBodyContainsAllCredentials(final VertxTestContext context, final JsonArray responseBody,
             final List<CommonCredential> expected) {
 
+        assertThat(expected.size()).isEqualTo(responseBody.size());
+
+        responseBody.forEach(credential -> {
+            JsonObject.mapFrom(credential).getJsonArray(CredentialsConstants.FIELD_SECRETS)
+                    .forEach(secret -> {
+                        // each secret should contain an ID.
+                        assertThat(JsonObject.mapFrom(secret)
+                                .getString(RegistryManagementConstants.FIELD_ID)).isNotNull();
+                    });
+        });
+
+        // secrets id were added by registry, strip it so we can compare other fields.
+        responseBody.forEach(credential -> {
+            ((JsonObject) credential).getJsonArray(CredentialsConstants.FIELD_SECRETS)
+                    .forEach(secret -> {
+                        ((JsonObject) secret).remove(RegistryManagementConstants.FIELD_ID);
+                    });
+        });
+
+        // The returned secrets won't contains the hashed password details fields, strip them from the expected values.
         final JsonArray expectedArray = new JsonArray();
-        expected.stream().forEach(credential -> expectedArray.add(JsonObject.mapFrom(credential)));
+        expected.stream().forEach(credential -> {
+            final JsonObject jsonCredential = JsonObject.mapFrom(credential);
+            expectedArray.add(stripHashAndSaltFromPasswordSecret(jsonCredential));
+        });
+
+        // now compare
         context.verify(() -> assertThat(responseBody).isEqualTo(expectedArray));
     }
 
@@ -565,5 +592,21 @@ public class CredentialsHttpIT {
 
     private JsonObject extractFirstCredential(final JsonObject json) {
         return json.getJsonArray(CredentialsConstants.CREDENTIALS_ENDPOINT).getJsonObject(0);
+    }
+
+    private static JsonObject stripHashAndSaltFromPasswordSecret(final JsonObject credential) {
+        if (credential.getString(CredentialsConstants.FIELD_TYPE).equals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) {
+
+            credential.getJsonArray(CredentialsConstants.FIELD_SECRETS)
+                    .forEach(secret -> {
+                        // password details should not be expected from the registry as well
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_SALT);
+                        ((JsonObject) secret).remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
+                    });
+        }
+
+        return credential;
     }
 }

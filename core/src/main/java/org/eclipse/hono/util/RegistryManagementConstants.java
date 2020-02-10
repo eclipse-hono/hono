@@ -105,6 +105,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the field that contains the number of credentials contained in a message.
      */
     public static final String FIELD_CREDENTIALS_TOTAL           = "total";
+    /**
+     * The name of the field that contains the id of the entity (e.g. secret id).
+     */
+    public static final String FIELD_ID = "id";
 
     /* secrets fields */
     /**

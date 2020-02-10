@@ -112,6 +112,9 @@ public class PasswordSecret extends CommonSecret {
     @Override
     public void checkValidity() {
         super.checkValidity();
+        if (containsOnlySecretId()) {
+            return;
+        }
         if (!Strings.isNullOrEmpty(passwordPlain)) {
             throw new IllegalStateException(String.format("'%s' must be empty", RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN));
         }
@@ -121,6 +124,18 @@ public class PasswordSecret extends CommonSecret {
         if (Strings.isNullOrEmpty(passwordHash)) {
             throw new IllegalStateException(String.format("'%s' must not be empty", RegistryManagementConstants.FIELD_SECRETS_PWD_HASH));
         }
+    }
+
+    /**
+     * Asserts if the secret do not contain secret details and only an id.
+     *
+     * @return        true if an ID is present and no new secret detail is set.
+     */
+    public boolean containsOnlySecretId() {
+        return (!Strings.isNullOrEmpty(getId())
+                && Strings.isNullOrEmpty(passwordPlain)
+                && Strings.isNullOrEmpty(hashFunction)
+                && Strings.isNullOrEmpty(passwordHash));
     }
 
     /**
