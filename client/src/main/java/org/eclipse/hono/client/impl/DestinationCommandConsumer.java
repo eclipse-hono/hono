@@ -159,22 +159,32 @@ public final class DestinationCommandConsumer extends CommandConsumer {
             delivery.disposition(rejected, true);
             return;
         }
+        final Command command = Command.from(msg, tenantId, gatewayOrDeviceId);
+        // command.isValid() check not done here - it is to be done in the command handler
+        final Tracer tracer = connection.getTracer();
+        // try to extract Span context from incoming message
+        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
+        final String gatewayId = gatewayOrDeviceId.equals(originalDeviceId) ? null : gatewayOrDeviceId;
+        final Span currentSpan = createSpan("send command", tenantId, originalDeviceId,
+                gatewayId, tracer, spanContext);
+        logReceivedCommandToSpan(command, currentSpan);
+
         // look for a handler with the original device id first
         final CommandHandlerWrapper commandHandler = getCommandHandlerOrDefault(originalDeviceId);
         if (commandHandler != null) {
-            final Command command = Command.from(msg, tenantId, gatewayOrDeviceId);
-            // command.isValid() check not done here - it is to be done in the command handler
-            final Tracer tracer = connection.getTracer();
-            // try to extract Span context from incoming message
-            final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
-            final String gatewayId = gatewayOrDeviceId.equals(originalDeviceId) ? null : gatewayOrDeviceId;
-            final Span currentSpan = createSpan("send command", tenantId, originalDeviceId,
-                    gatewayId, tracer, spanContext);
-            logReceivedCommandToSpan(command, currentSpan);
             commandHandler.handleCommand(CommandContext.from(command, delivery, this.receiver, currentSpan));
         } else {
-            LOG.error("no command handler found for command with device id {}, message address device id {} [tenant-id: {}]",
-                    gatewayOrDeviceId, originalDeviceId, tenantId);
+            // no command handler found
+            if (gatewayId != null && !containsCommandHandler(gatewayOrDeviceId) && !commandHandlers.isEmpty()) {
+                LOG.debug("no command handler found; target gateway {} is only subscribed for commands to other specific devices, not for device {} [tenant-id: {}]",
+                        gatewayId, originalDeviceId, tenantId);
+                TracingHelper.logError(currentSpan, "no command handler found; target gateway is only subscribed for commands to other specific devices");
+            } else {
+                LOG.error("no command handler found for command targeted at device {}, gateway {} [tenant-id: {}]",
+                        originalDeviceId, gatewayId, tenantId);
+                TracingHelper.logError(currentSpan, "no command handler found for command");
+            }
+            currentSpan.finish();
             ProtonHelper.released(delivery, true);
         }
     }
