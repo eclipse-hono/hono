@@ -45,7 +45,8 @@ import java.util.Optional;
 /**
  * An {@code HttpEndpoint} for managing tenant information.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a>.
+ * This endpoint implements the <em>tenant</em> resources of Hono's
+ * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  * It receives HTTP requests representing operation invocations and executes the matching service implementation methods.
  * The outcome is then returned to the peer in the HTTP response.
  */

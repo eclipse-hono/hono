@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -39,13 +38,15 @@ import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Util;
 
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * An {@code HttpEndpoint} for managing device credentials.
  * <p>
- * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials//">Credentials API</a>.
+ * This endpoint implements the <em>credentials</em> resources of Hono's
+ * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  * It receives HTTP requests representing operation invocations and forward them to the
  * Credential Management Service Implementation for processing.
  * The outcome is then returned to the client in the HTTP response.
@@ -129,9 +130,13 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
         try {
             decodeCredentials(credentials);
         } catch (final IllegalArgumentException | IllegalStateException e) {
-            logger.debug("Error parsing credentials");
-            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e));
+            final String msg = "Error parsing credentials";
+            logger.debug(msg);
+            TracingHelper.logError(span, msg);
+            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
+            HttpUtils.badRequest(ctx, msg);
             span.finish();
+            return;
         }
 
         logger.debug("updating credentials [tenant: {}, device-id: {}] - {}", tenantId, deviceId, credentials);
