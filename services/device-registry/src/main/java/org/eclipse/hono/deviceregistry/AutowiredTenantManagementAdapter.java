@@ -25,9 +25,13 @@ import org.springframework.stereotype.Component;
  * <p>
  * This wires up the actual service instance with the mapping to the event bus implementation. It is intended to be used
  * in a Spring Boot environment.
+ *
+ * @deprecated This class will be removed in future versions as HTTP endpoint does not use event bus anymore.
+ *             Please use {@link org.eclipse.hono.service.management.tenant.AbstractTenantManagementHttpEndpoint} based implementation in the future. *
  */
 @Component
 @ConditionalOnBean(TenantManagementService.class)
+@Deprecated(forRemoval = true)
 public final class AutowiredTenantManagementAdapter extends EventBusTenantManagementAdapter {
 
     private TenantManagementService service;

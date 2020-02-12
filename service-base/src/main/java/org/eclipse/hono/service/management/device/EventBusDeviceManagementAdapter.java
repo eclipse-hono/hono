@@ -39,7 +39,10 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * In particular, this base class provides support for receiving service invocation request messages via vert.x' event
  * bus and route them to specific methods corresponding to the operation indicated in the message.
+ *
+ * @deprecated This class will be removed in future versions. Please use {@link AbstractDeviceManagementHttpEndpoint} based implementation in the future.
  */
+@Deprecated(forRemoval = true)
 public abstract class EventBusDeviceManagementAdapter extends EventBusService
         implements Verticle {
 

@@ -10,10 +10,14 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.management.device;
+package org.eclipse.hono.deviceregistry;
 
+import org.eclipse.hono.service.management.device.AbstractDeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.stereotype.Component;
 
 import io.vertx.core.Vertx;
 
@@ -26,6 +30,8 @@ import io.vertx.core.Vertx;
  * configured {@code DeviceManagementService} implementation.
  * The outcome is then returned to the peer in the HTTP response.
  */
+@Component
+@ConditionalOnBean(DeviceManagementService.class)
 public final class AutowiredDeviceManagementHttpEndpoint extends AbstractDeviceManagementHttpEndpoint {
 
     private DeviceManagementService service;
