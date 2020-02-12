@@ -1,0 +1,99 @@
+/*******************************************************************************
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+
+package org.eclipse.hono.client.device.amqp;
+
+import java.util.Map;
+
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
+
+import io.opentracing.SpanContext;
+import io.vertx.core.Future;
+import io.vertx.proton.ProtonDelivery;
+
+/**
+ * A client for sending telemetry messages to Hono's AMQP adapter.
+ */
+public interface TraceableTelemetrySender extends TelemetrySender {
+
+    /**
+     * Sends a telemetry message for a given device.
+     *
+     * @param deviceId The id of the device.
+     * @param payload The data to send.
+     *            <p>
+     *            The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *            <p>
+     *            This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param properties Optional application properties (may be {@code null}).
+     *            <p>
+     *            AMQP application properties that can be used for carrying data in the message other than the payload.
+     * @param context The context to create the span in. If {@code null}, then the span is created without a parent.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been sent to the peer. The delivery contained in the future
+     *         will represent the delivery state at the time the future has been succeeded, i.e. it will be locally
+     *         <em>unsettled</em> without any outcome yet.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message could not be sent due to a
+     *         lack of credit. If an event is sent which cannot be processed by the peer the future will be failed with
+     *         either a {@code ServerErrorException} or a {@link ClientErrorException} depending on the reason for the
+     *         failure to process the message.
+     * @throws NullPointerException if any of device-id, payload or content-type is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set or if the properties
+     *             contain a value of type list, map or array.
+     */
+    Future<ProtonDelivery> send(
+            String deviceId,
+            byte[] payload,
+            String contentType,
+            Map<String, ?> properties,
+            SpanContext context);
+
+    /**
+     * Sends a telemetry message for a given device and waits for the disposition indicating the outcome of the
+     * transfer.
+     *
+     * @param deviceId The id of the device.
+     * @param payload The data to send.
+     *            <p>
+     *            The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
+     * @param contentType The content type of the payload.
+     *            <p>
+     *            This parameter will be used as the value for the message's <em>content-type</em> property.
+     * @param properties Optional application properties (may be {@code null}).
+     *            <p>
+     *            AMQP application properties that can be used for carrying data in the message other than the payload.
+     * @param context The context to create the span in. If {@code null}, then the span is created without a parent.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed if the message has been accepted (and settled) by the peer.
+     *         <p>
+     *         The future will be failed with a {@link ServerErrorException} if the message could not be sent due to a
+     *         lack of credit. If an event is sent which cannot be processed by the peer the future will be failed with
+     *         either a {@code ServerErrorException} or a {@link ClientErrorException} depending on the reason for the
+     *         failure to process the message.
+     * @throws NullPointerException if any of device-id, payload or content-type is {@code null}.
+     * @throws IllegalArgumentException if the content type specifies an unsupported character set or if the properties
+     *             contain a value of type list, map or array.
+     */
+    Future<ProtonDelivery> sendAndWaitForOutcome(
+            String deviceId,
+            byte[] payload,
+            String contentType,
+            Map<String, ?> properties,
+            SpanContext context);
+
+}
