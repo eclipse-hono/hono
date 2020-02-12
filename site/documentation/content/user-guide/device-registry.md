@@ -28,7 +28,7 @@ Please refer to the [Device Registry HTTP API]({{< relref "/api/management" >}})
 * Request Headers:
   * (required) `Content-Type`: `application/json` (no other type supported)
 * Request Body:
-  * (required) A JSON object as specified by [Tenant schema]({{< relref "/api/management" >}}) of the HTTP API specification.
+  * (Optional) A JSON object as specified by [Tenant schema]({{< relref "/api/management" >}}) of the HTTP API specification.
 * Status Codes:
   * 201 (Created): Tenant has been added successfully under the resource indicated by `Location` header.
   * 400 (Bad Request): The tenant has not been created because the request was malformed, e .g. because the payload was malformed. The response body may contain hints regarding the cause of the problem.
@@ -44,7 +44,7 @@ The following commands add some tenants with different adapter configurations:
 Add a tenant that has all adapters set to enabled:
 
 ~~~sh
-curl -i -X POST -H 'Content-Type: application/json' http://localhost:28080/v1/tenants/tenantAllAdapters
+curl -i -X POST http://localhost:28080/v1/tenants/tenantAllAdapters
 
 HTTP/1.1 201 Created
 ETag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
@@ -98,6 +98,19 @@ Content-Type: application/json; charset=utf-8
          "enabled": true
      } ]
 }
+~~~
+
+**NB** A tenant can be created without specifying a tenant identifier. The device registry will generate a tenant ID: 
+~~~sh
+curl -i  -X POST http://localhost:28080/v1/tenants/
+
+HTTP/1.1 201 Created
+Etag: edc93899-7838-4dd1-93c8-839748c2fa42
+location: /v1/tenants/0b2df55f-1a02-43f7-a1c0-f3dbd25041e0
+content-type: application/json; charset=utf-8
+content-length: 45
+
+{"id":"0b2df55f-1a02-43f7-a1c0-f3dbd25041e0"}
 ~~~
 
 ### Update Tenant
@@ -161,7 +174,7 @@ Please refer to the [Device Registry HTTP API]({{< relref "/api/management" >}})
 * Headers:
   * (required) `Content-Type`: `application/json`
 * Request Body:
-  * (required) A JSON object as specified by [Device schema]({{< relref "/api/management" >}}) of the HTTP API specification.
+  * (Optional) A JSON object as specified by [Device schema]({{< relref "/api/management" >}}) of the HTTP API specification.
 * Status Codes:
   * 201 (Created): Device has been registered successfully under resource indicated by `Location` header.
   * 400 (Bad Request): Device has not been registered because the request was malformed, e .g. a required header is missing (the body may contain hints regarding the problem).
@@ -191,6 +204,18 @@ Content-Type: application/json; charset=utf-8
 {"id": "4711"}
 ~~~
 
+**NB** A device can be created without specifying a device identifier. The device registry will generate a device identifier: 
+~~~sh
+curl -i -X POST http://localhost:28080/v1/devices/DEFAULT_TENANT
+
+HTTP/1.1 201 Created
+Etag: 0d615bcd-0825-44d9-9ef5-54a7b12165d8
+location: /v1/devices/DEFAULT_TENANT/98d25103-d49d-44b0-bdd0-0de84743c522
+content-type: application/json; charset=utf-8
+content-length: 45
+
+{"id":"98d25103-d49d-44b0-bdd0-0de84743c522"}
+~~~
 
 ### Read Device
 

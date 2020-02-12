@@ -167,7 +167,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
         final JsonObject payload = Util.getRequestPayload(ctx.get(KEY_REQUEST_BODY));
 
         if (isValidRequestPayload(payload)) {
-            logger.debug("creating tenant [{}]", Optional.of(tenantId).orElse("<auto>"));
+            logger.debug("creating tenant [{}]", Optional.ofNullable(tenantId).orElse("<auto>"));
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
 
@@ -310,11 +310,6 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
      *       or the JsonArray contains elements that are not of type {@link JsonObject}.
      */
     protected final void addNotPresentFieldsWithDefaultValuesForTenant(final JsonObject checkedPayload) {
-        if (!checkedPayload.containsKey(RegistryManagementConstants.FIELD_ENABLED)) {
-            logger.trace("adding 'enabled' key to payload");
-            checkedPayload.put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
-        }
-
         final JsonArray adapters = checkedPayload.getJsonArray(RegistryManagementConstants.FIELD_ADAPTERS);
         if (adapters != null) {
             adapters.forEach(elem -> addNotPresentFieldsWithDefaultValuesForAdapter((JsonObject) elem));

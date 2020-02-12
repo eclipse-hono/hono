@@ -14,6 +14,7 @@
 package org.eclipse.hono.tests.registry;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
@@ -162,6 +163,38 @@ public class TenantHttpIT {
 
         registry.addTenant(tenantId, null, HttpURLConnection.HTTP_CREATED)
         .setHandler(context.completing());
+    }
+
+    /**
+     * Verifies that the service successfully create a tenant from a request without a body.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddTenantSucceedsWithNoRequestBody(final VertxTestContext context) {
+
+        registry.addTenant(tenantId)
+                .setHandler(context.completing());
+    }
+
+    /**
+     * Verifies that the service successfully create a tenant with a generated tenant ID.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddTenantSucceedsWithAGeneratedId(final VertxTestContext context) {
+
+        registry.addTenant("")
+                .compose(res -> {
+                    // compare the changed field only
+                    context.verify(() -> {
+                        assertNotNull(res.get("location"));
+                        // update the global tenantId value for cleanup
+                        tenantId = res.get("location");
+                    });
+                    return Future.succeededFuture();
+                }).setHandler(context.completing());
     }
 
     /**
