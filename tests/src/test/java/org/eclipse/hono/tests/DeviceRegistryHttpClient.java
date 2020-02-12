@@ -122,6 +122,20 @@ public final class DeviceRegistryHttpClient {
     }
 
     /**
+     * Adds configuration information for a tenant without a payload.
+     * <p>
+     * This method simply invokes {@link #addTenant(String, Tenant, String, int)} with
+     * {@link HttpURLConnection#HTTP_CREATED} as the expected status code.
+     *
+     * @param tenantId The id of the tenant to add.
+     * @return A future indicating the outcome of the operation. The future will succeed if the tenant has been created
+     *         successfully. Otherwise the future will fail with a {@link ServiceInvocationException}.
+     */
+    public Future<MultiMap> addTenant(final String tenantId) {
+        return addTenant(tenantId, null, null, HttpURLConnection.HTTP_CREATED);
+    }
+
+    /**
      * Adds configuration information for a tenant.
      * <p>
      * This method simply invokes {@link #addTenant(String, Tenant, String, int)} with <em>application/json</em> as

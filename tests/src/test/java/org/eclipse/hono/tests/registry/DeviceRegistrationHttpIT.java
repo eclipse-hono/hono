@@ -110,6 +110,18 @@ public class DeviceRegistrationHttpIT {
     }
 
     /**
+     * Verifies that a device can be properly registered without providing a payload.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testAddDeviceWithoutPayloadSucceeds(final VertxTestContext ctx) {
+
+        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED)
+                .setHandler(ctx.completing());
+    }
+
+    /**
      * Verifies that a device can be registered if the request body does not contain a device identifier.
      * 
      * @param ctx The vert.x test context

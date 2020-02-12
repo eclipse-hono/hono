@@ -9,6 +9,8 @@ title = "Release Notes"
  * The device registry credentials endpoint will no longer handout sensitive details for hashed-password secrets.
    `pwd-hash`, `salt` and `hash-function` are stored by the device registry but not returned to the user.
    Each secret is given an ID which is now returned, along with the other metadata (time validity and optional fields).
+* The `tenant` and `devices` endpoints of the management HTTP API now accept creation requests without a body.
+    As there is no mandatory field, having a mandatory body was confusing. 
 
 ## 1.1.0
 
