@@ -12,23 +12,22 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry;
 
-import io.vertx.core.Vertx;
-
 import org.eclipse.hono.service.management.tenant.AbstractTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.stereotype.Component;
+
+import io.vertx.core.Vertx;
 
 /**
- * A default http endpoint implementation of the {@link AbstractTenantManagementHttpEndpoint}.
+ * An {@code HttpEndpoint} for managing tenant information.
  * <p>
- * This wires up the actual service instance with the mapping to the http endopint implementation. It is intended to be used
- * in a Spring Boot environment.
+ * This endpoint implements the <em>tenants</em> resources of Hono's
+ * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
+ * It receives HTTP requests representing operation invocations and forwards them to the
+ * configured {@code TenantManagementService} implementation.
+ * The outcome is then returned to the peer in the HTTP response.
  */
-@Component
-@ConditionalOnBean(TenantManagementService.class)
 public class AutowiredTenantManagementHttpEndpoint extends AbstractTenantManagementHttpEndpoint {
 
     private TenantManagementService service;

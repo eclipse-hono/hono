@@ -27,16 +27,12 @@ import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpoint;
-import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
-import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -127,7 +123,7 @@ public class ApplicationConfig {
     @Qualifier(Constants.QUALIFIER_AMQP)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.amqp")
-    public ServiceConfigProperties amqpProperties() {
+    public ServiceConfigProperties amqpServerProperties() {
         final ServiceConfigProperties props = new ServiceConfigProperties();
         return props;
     }
@@ -177,50 +173,50 @@ public class ApplicationConfig {
     }
 
     /**
-     * Gets properties for configuring the Device Registry's REST endpoint.
+     * Gets properties for configuring the HTTP based Device Registry Management endpoint.
      * 
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_REST)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.rest")
-    public ServiceConfigProperties restProperties() {
+    public ServiceConfigProperties httpServerProperties() {
         final ServiceConfigProperties props = new ServiceConfigProperties();
         return props;
     }
 
     /**
-     * Creates a new instance of an HTTP protocol handler for Hono's <em>Device Registration</em> API.
+     * Creates a new instance of an HTTP protocol handler for the <em>devices</em> resources
+     * of Hono's Device Registry Management API's.
      * 
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    @ConditionalOnBean(DeviceManagementService.class)
     public HttpEndpoint deviceHttpEndpoint() {
         return new AutowiredDeviceManagementHttpEndpoint(vertx());
     }
 
     /**
-     * Creates a new instance of an HTTP protocol handler for Hono's <em>Credentials</em> API.
+     * Creates a new instance of an HTTP protocol handler for the <em>credentials</em> resources
+     * of Hono's Device Registry Management API's.
      *
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    @ConditionalOnBean(CredentialsManagementService.class)
     public HttpEndpoint credentialsHttpEndpoint() {
         return new AutowiredCredentialsManagementHttpEndpoint(vertx());
     }
 
     /**
-     * Creates a new instance of an HTTP protocol handler for Hono's <em>Tenant</em> API.
+     * Creates a new instance of an HTTP protocol handler for the <em>tenants</em> resources
+     * of Hono's Device Registry Management API's.
      *
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    @ConditionalOnBean(TenantManagementService.class)
     public HttpEndpoint tenantHttpEndpoint() {
         return new AutowiredTenantManagementHttpEndpoint(vertx());
     }

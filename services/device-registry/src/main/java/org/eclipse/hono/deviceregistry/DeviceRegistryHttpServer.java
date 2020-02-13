@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,6 @@ import org.springframework.stereotype.Component;
  * Default REST server for Hono's example device registry.
  */
 @Component
-public class DeviceRegistryRestServer extends HttpServiceBase<ServiceConfigProperties> {
+public class DeviceRegistryHttpServer extends HttpServiceBase<ServiceConfigProperties> {
 
 }
