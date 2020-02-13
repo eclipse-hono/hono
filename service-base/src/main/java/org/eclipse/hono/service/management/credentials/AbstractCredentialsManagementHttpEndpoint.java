@@ -32,7 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.AbstractManagementHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.OperationResult;
@@ -51,7 +51,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * Credential Management Service Implementation for processing.
  * The outcome is then returned to the client in the HTTP response.
  */
-public abstract class AbstractCredentialsManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public abstract class AbstractCredentialsManagementHttpEndpoint extends AbstractManagementHttpEndpoint<ServiceConfigProperties> {
 
 
     private static final String SPAN_NAME_GET_CREDENTIALS = "get Credentials from management API";
@@ -70,14 +70,6 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
     @Autowired
     public AbstractCredentialsManagementHttpEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
-    }
-
-    /**
-     * Returns an empty String as this implementation does not use event bus.
-     */
-    @Override
-    protected String getEventBusAddress() {
-        return "";
     }
 
     @Override

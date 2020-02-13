@@ -28,6 +28,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.AbstractManagementHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.Id;
@@ -50,7 +51,8 @@ import java.util.Optional;
  * It receives HTTP requests representing operation invocations and executes the matching service implementation methods.
  * The outcome is then returned to the peer in the HTTP response.
  */
-public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public abstract class AbstractTenantManagementHttpEndpoint extends
+        AbstractManagementHttpEndpoint<ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";
@@ -72,13 +74,6 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
         super(Objects.requireNonNull(vertx));
     }
 
-    /**
-     * Returns an empty String as this implementation does not use event bus.
-     */
-    @Override
-    protected String getEventBusAddress() {
-        return "";
-    }
 
     @Override
     public String getName() {
