@@ -29,6 +29,7 @@ import org.eclipse.hono.adapter.coap.ExtendedDevice;
 import org.eclipse.hono.adapter.coap.TracingSupportingHonoResource;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -148,6 +149,32 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 final CoapContext ctx = newContext(exchange);
                 ctx.setTracingContext(currentSpan.context());
                 return uploadEventMessage(
+                        ctx,
+                        device.authenticatedDevice,
+                        device.originDevice);
+            }
+        });
+        result.add(new TracingSupportingHonoResource(tracer, CommandConstants.COMMAND_RESPONSE_ENDPOINT, getTypeName()) {
+
+            @Override
+            public Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
+
+                return getAuthenticatedExtendedDevice(null, exchange)
+                .compose(device -> upload(exchange, device, currentSpan));
+            }
+
+            @Override
+            public Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
+
+                return getExtendedDevice(exchange)
+                .compose(device -> upload(exchange, device, currentSpan));
+            }
+
+            private Future<ResponseCode> upload(final CoapExchange exchange, final ExtendedDevice device, final Span currentSpan) {
+
+                final CoapContext ctx = newContext(exchange);
+                ctx.setTracingContext(currentSpan.context());
+                return uploadCommandResponseMessage(
                         ctx,
                         device.authenticatedDevice,
                         device.originDevice);
