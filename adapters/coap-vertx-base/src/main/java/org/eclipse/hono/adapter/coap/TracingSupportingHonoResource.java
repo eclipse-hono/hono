@@ -22,6 +22,8 @@ import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -36,6 +38,7 @@ import io.vertx.core.Future;
  */
 public abstract class TracingSupportingHonoResource extends CoapResource {
 
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     final Tracer tracer;
     final String adapterName;
 
@@ -94,9 +97,11 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
                 break;
         }
         responseCode.otherwise(t -> {
+            log.debug("failed:", t);
             return CoapErrorResponse.respond(coapExchange, t);
         })
         .setHandler(r -> {
+            log.debug("response: {}", r.result());
             currentSpan.setTag("coap.response_code", r.result().toString());
             currentSpan.finish();
         });

@@ -49,6 +49,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
+import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ResourceConflictException;
@@ -1115,4 +1116,94 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         return Future.succeededFuture(result);
     }
+
+    /**
+     * Uploads a command response message to Hono.
+     *
+     * @param context The context representing the request to be processed.
+     * @param authenticatedDevice authenticated device
+     * @param device message's origin device
+     * @return A succeeded future containing the CoAP status code that has been returned to the device.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public final Future<ResponseCode> uploadCommandResponseMessage(final CoapContext context, final Device authenticatedDevice,
+                final Device device) {
+
+        Objects.requireNonNull(context);
+        Objects.requireNonNull(authenticatedDevice);
+        Objects.requireNonNull(device);
+
+        final Buffer payload = context.getPayload();
+        final String contentType = MediaTypeRegistry.toString(context.getExchange().getRequestOptions().getContentFormat());
+        final String commandRequestId = context.getCommandRequestId();
+        final Integer responseStatus = context.getCommandResponseStatus();
+        log.debug("processing response to command [tenantId: {}, deviceId: {}, cmd-req-id: {}, status code: {}]",
+                device.getTenantId(), device.getDeviceId(), commandRequestId, responseStatus);
+
+        final Span currentSpan = TracingHelper
+                .buildChildSpan(tracer, context.getTracingContext(), "upload Command response")
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, device.getTenantId())
+                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId())
+                .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, responseStatus)
+                .withTag(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId)
+                .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
+                .start();
+
+        final CommandResponse cmdResponseOrNull = CommandResponse.from(commandRequestId, device.getTenantId(), device.getDeviceId(), payload,
+                contentType, responseStatus);
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(device.getTenantId(), currentSpan.context());
+        final Future<CommandResponse> commandResponseTracker = cmdResponseOrNull != null
+                ? Future.succeededFuture(cmdResponseOrNull)
+                : Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                        String.format("command-request-id [%s] or status code [%s] is missing/invalid",
+                                commandRequestId, responseStatus)));
+
+        return CompositeFuture.all(tenantTracker, commandResponseTracker)
+                .compose(commandResponse -> {
+                    final Future<JsonObject> deviceRegistrationTracker = getRegistrationAssertion(
+                            device.getTenantId(),
+                            device.getDeviceId(),
+                            authenticatedDevice,
+                            currentSpan.context());
+                    final Future<Void> tenantValidationTracker = CompositeFuture
+                            .all(isAdapterEnabled(tenantTracker.result()),
+                                    checkMessageLimit(tenantTracker.result(), payload.length(), currentSpan.context()))
+                            .map(ok -> null);
+
+                    return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)
+                            .compose(ok -> sendCommandResponse(device.getTenantId(), commandResponseTracker.result(), currentSpan.context()))
+                            .map(delivery -> {
+                                log.trace("delivered command response [command-request-id: {}] to application",
+                                        commandRequestId);
+                                currentSpan.log("delivered command response to application");
+                                currentSpan.finish();
+                                metrics.reportCommand(
+                                        Direction.RESPONSE,
+                                        device.getTenantId(),
+                                        tenantTracker.result(),
+                                        ProcessingOutcome.FORWARDED,
+                                        payload.length(),
+                                        context.getTimer());
+                                context.respondWithCode(ResponseCode.CHANGED);
+                                return ResponseCode.CHANGED;
+                            });
+                }).otherwise(t -> {
+                    log.debug("could not send command response [command-request-id: {}] to application",
+                            commandRequestId, t);
+                    TracingHelper.logError(currentSpan, t);
+                    currentSpan.finish();
+                    metrics.reportCommand(
+                            Direction.RESPONSE,
+                            device.getTenantId(),
+                            tenantTracker.result(),
+                            ProcessingOutcome.from(t),
+                            payload.length(),
+                            context.getTimer());
+                    return CoapErrorResponse.respond(context.getExchange(), t);
+                });
+    }
+
 }
