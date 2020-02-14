@@ -33,7 +33,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Example Tcp server to send event and telemetry messages to Hono AMQP adapter and receives commands
+ * Example TCP server to send event and telemetry messages to Hono AMQP adapter and receive commands.
  */
 @SpringBootApplication
 @ConfigurationProperties("app")
@@ -48,21 +48,28 @@ public class DemoTCPApplication {
     private PrintWriter out;
     private BufferedReader in;
 
-    public DemoTCPApplication(ProtocolGatewayExample protocolGatewayExample) throws IOException {
+    /**
+     * Creates a new application.
+     * 
+     * @param protocolGatewayExample The example.
+     */
+    public DemoTCPApplication(final ProtocolGatewayExample protocolGatewayExample) {
         this.protocolGatewayExample = protocolGatewayExample;
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(final String[] args) {
         SpringApplication.run(DemoTCPApplication.class, args);
         log.info("Start DemoTCPApplication");
     }
 
-    public void setServerPort(int serverPort) {
+    public void setServerPort(final int serverPort) {
         this.serverPort = serverPort;
     }
 
     /**
-     * Starts example tcp server listening to command to be relayed to the AMQP adapter
+     * Starts example tcp server listening to command to be relayed to the AMQP adapter.
+     * 
+     * @throws IOException if the server socket cannot be created.
      */
     @PostConstruct
     public void startTcpServer() throws IOException {
@@ -85,13 +92,13 @@ public class DemoTCPApplication {
                     case "initConnection":
                         log.info("Command: initConnection");
                         out.println("host:");
-                        String host = in.readLine();
+                        final String host = in.readLine();
                         out.println("port:");
-                        int port = Integer.parseInt(in.readLine());
+                        final int port = Integer.parseInt(in.readLine());
                         out.println("username (DEVICE_ID@TENANT_ID):");
-                        String username = in.readLine();
+                        final String username = in.readLine();
                         out.println("password:");
-                        String password = in.readLine();
+                        final String password = in.readLine();
                         initConnection(host, port, username, password);
                         out.println("OK");
                         break;
@@ -103,10 +110,10 @@ public class DemoTCPApplication {
                     case "sendAMQPMessage":
                         log.info("Command: sendAMQPMessage");
                         out.println("message address (\"telemetry\"/\"event\"):");
-                        String messageAddress = in.readLine();
+                        final String messageAddress = in.readLine();
                         out.println("payload:");
-                        String payload = in.readLine();
-                        Future<String> amqpResponse = sendAMQPMessage(payload, messageAddress);
+                        final String payload = in.readLine();
+                        final Future<String> amqpResponse = sendAMQPMessage(payload, messageAddress);
                         amqpResponse.setHandler(response -> {
                             if (response.succeeded()) {
                                 out.println("OK");
@@ -126,7 +133,7 @@ public class DemoTCPApplication {
     }
 
     /**
-     * Closes sockets and streams if client is disconnected
+     * Closes sockets and streams if client is disconnected.
      */
     private void close() {
         try {
@@ -139,17 +146,17 @@ public class DemoTCPApplication {
     }
 
     /**
-     * Sets connection properties, sets a commandHandler for incoming commands
+     * Sets connection properties, sets a commandHandler for incoming commands.
      *
      * @param host     AMQP Hono adapter IP address
      * @param port     AMQP Hono adapter port
      * @param username username consists of DEVICE_ID@TENANT_ID
      * @param password device credentials
      */
-    public void initConnection(String host, int port, String username, String password) {
+    public void initConnection(final String host, final int port, final String username, final String password) {
 
         // Example command handler responds with time if incoming subject is "tellTime"
-        CommandHandler commandHandler = (commandPayload, subject, contentType, isOneWay) -> {
+        final CommandHandler commandHandler = (commandPayload, subject, contentType, isOneWay) -> {
             log.info(String.format("Got now command: \"%s\" for subject \"%s\"", commandPayload, subject));
             if (!isOneWay && subject.contains("tellTime")) {
                 return String.format("myCurrentTime: %s",
@@ -162,7 +169,7 @@ public class DemoTCPApplication {
     }
 
     /**
-     * Starts listening to commands
+     * Starts listening to commands.
      * <p>
      * Connection properties have to be set with {@link #initConnection(String, int, String, String) } beforehand
      */
@@ -171,15 +178,15 @@ public class DemoTCPApplication {
     }
 
     /**
-     * Sends telemtry or event message to Hono AMQP adapter
+     * Sends telemetry or event message to Hono AMQP adapter.
      * <p>
      * Connection properties have to be set with {@link #initConnection(String, int, String, String) } beforehand
      *
      * @param payload        message payload
      * @param messageAddress address can be either "telemetry" or "event"
-     * @return
+     * @return The response from the AMQP adapter.
      */
-    public Future<String> sendAMQPMessage(String payload, String messageAddress) {
+    public Future<String> sendAMQPMessage(final String payload, final String messageAddress) {
         return protocolGatewayExample.sendAMQPMessage(payload, messageAddress);
     }
 }

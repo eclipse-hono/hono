@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.example.protocolgateway.adapter;
 
-import io.vertx.core.Promise;
-import io.vertx.proton.*;
+import java.net.HttpURLConnection;
+
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cli.adapter.AmqpCliClient;
@@ -26,10 +26,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.net.HttpURLConnection;
+import io.vertx.core.Promise;
+import io.vertx.proton.ProtonHelper;
+import io.vertx.proton.ProtonMessageHandler;
+import io.vertx.proton.ProtonQoS;
+import io.vertx.proton.ProtonReceiver;
+import io.vertx.proton.ProtonSender;
 
 /**
- * Command and receiver listener using methods and properties from {@link AmqpCliClient} to simplify handling
+ * Command and receiver listener using methods and properties from {@link AmqpCliClient} to simplify handling.
  * <p>
  * based loosely on {@link org.eclipse.hono.cli.adapter.CommandAndControlClient}
  *
@@ -43,7 +48,7 @@ public class CommandAndControlReceiver extends AmqpCliClient {
     private CommandHandler commandHandler;
 
     /**
-     * Listen for incoming commands
+     * Listen for incoming commands.
      */
     public void listenCommands() {
         final ProtonMessageHandler messageHandler = (d, m) -> {
@@ -95,7 +100,7 @@ public class CommandAndControlReceiver extends AmqpCliClient {
     }
 
     /**
-     * Sets AMQP client connection properties and command handler {@link CommandHandler}
+     * Sets AMQP client connection properties and command handler {@link CommandHandler}.
      *
      * @param host           AMQP Hono adapter IP address
      * @param port           AMQP Hono adapter port

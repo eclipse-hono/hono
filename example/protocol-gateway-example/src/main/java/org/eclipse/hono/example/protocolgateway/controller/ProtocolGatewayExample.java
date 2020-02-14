@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 /**
- * Example protocol gateway service to send AMQP messages to Hono amqp adapter using Hono cli module classes
+ * Example protocol gateway service to send AMQP messages to Hono amqp adapter using Hono cli module classes.
  */
 @Service
 public class ProtocolGatewayExample {
@@ -40,6 +40,12 @@ public class ProtocolGatewayExample {
     private final TelemetryAndEventSender telemetryAndEventSender;
     private final CommandAndControlReceiver commandAndControlReceiver;
 
+    /**
+     * Creates a new service for a sender and receiver.
+     * 
+     * @param telemetryAndEventSender The object to use for sending telemetry.
+     * @param commandAndControlReceiver The object for receiving commands.
+     */
     @Autowired
     public ProtocolGatewayExample(final TelemetryAndEventSender telemetryAndEventSender,
                                   final CommandAndControlReceiver commandAndControlReceiver) {
@@ -48,7 +54,7 @@ public class ProtocolGatewayExample {
     }
 
     /**
-     * Sets AMQP client properties and command handler {@link CommandHandler}
+     * Sets AMQP client properties and command handler {@link CommandHandler}.
      *
      * @param host           AMQP Hono adapter IP address
      * @param port           AMQP Hono adapter port
@@ -62,7 +68,7 @@ public class ProtocolGatewayExample {
     }
 
     /**
-     * Sends AMQP message to Hono AMQP adapter
+     * Sends AMQP message to Hono AMQP adapter.
      * <p>
      * Connection properties have to be set with {@link #setAMQPClientProps(String, int, String, String, CommandHandler) } beforehand
      *
@@ -99,7 +105,7 @@ public class ProtocolGatewayExample {
     }
 
     /**
-     * Start listening for commands
+     * Start listening for commands.
      * <p>
      * Connection properties have to be set with {@link #setAMQPClientProps(String, int, String, String, CommandHandler) } beforehand
      */

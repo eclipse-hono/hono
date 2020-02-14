@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Adapter for telemetry or event messages using methods and properties from {@link AmqpCliClient} to simplify handling
+ * Adapter for telemetry or event messages using methods and properties from {@link AmqpCliClient} to simplify handling.
  * <p>
  * based loosely on {@link org.eclipse.hono.cli.adapter.TelemetryAndEventCli}
  *
@@ -33,14 +33,15 @@ import java.util.concurrent.CompletableFuture;
 public class TelemetryAndEventSender extends AmqpCliClient {
 
     /**
-     * Sends message to Hono AMQP adapter
+     * Sends message to Hono AMQP adapter.
      *
      * @param messagePayload message payload
      * @param messageAddress "telemetry" ("t") or "event" ("e")
      * @param messageTracker message delivery Future
+     * @throws IllegalArgumentException if the message address is not supported.
      */
-    public void sendMessage(final String messagePayload, final String messageAddress, final CompletableFuture<ProtonDelivery> messageTracker) throws IllegalArgumentException {
-        String messageAddressChecked;
+    public void sendMessage(final String messagePayload, final String messageAddress, final CompletableFuture<ProtonDelivery> messageTracker) {
+        final String messageAddressChecked;
         switch (messageAddress.toLowerCase()) {
             case "telemetry":
             case "t":
@@ -76,7 +77,7 @@ public class TelemetryAndEventSender extends AmqpCliClient {
     }
 
     /**
-     * Sets AMQP client connection properties
+     * Sets AMQP client connection properties.
      *
      * @param host     AMQP Hono adapter IP address
      * @param port     AMQP Hono adapter port
@@ -84,7 +85,7 @@ public class TelemetryAndEventSender extends AmqpCliClient {
      * @param password device credentials
      */
     public void setAMQPClientProps(final String host, final int port, final String username, final String password) {
-        ClientConfigProperties props = new ClientConfigProperties();
+        final ClientConfigProperties props = new ClientConfigProperties();
         props.setHost(host);
         props.setPort(port);
         props.setUsername(username);

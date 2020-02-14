@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configure vertx, which is used in {@link org.eclipse.hono.cli.adapter.AmqpCliClient}
+ * Configure vertx, which is used in {@link org.eclipse.hono.cli.adapter.AmqpCliClient}.
  */
 @Configuration
 public class ServiceProperties {
