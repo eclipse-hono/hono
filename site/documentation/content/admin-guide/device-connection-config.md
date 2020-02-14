@@ -24,18 +24,18 @@ The following table provides an overview of the configuration variables and corr
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
 | `HONO_APP_MAX_INSTANCES`<br>`--hono.app.maxInstances` | no | *#CPU cores* | The number of Verticle instances to deploy. If not set, one Verticle per processor core is deployed. |
-| `HONO_DEVICE_CONNECTION_AMQP_BIND_ADDRESS`<br>`--hono.registry.amqp.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure AMQP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_DEVICE_CONNECTION_AMQP_CERT_PATH`<br>`--hono.deviceConnection.amqp.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_DEVICE_CONNECTION_AMQP_KEY_PATH`.<br>Alternatively, the `HONO_DEVICE_CONNECTION_AMQP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT`<br>`--hono.deviceConnection.amqp.insecurePort` | no | - | The insecure port the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.deviceConnection.amqp.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure AMQP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT_ENABLED`<br>`--hono.deviceConnection.amqp.insecurePortEnabled` | no | `false` | If set to `true` the server will open an insecure port (not secured by TLS) using either the port number set via `HONO_REGISTRY_AMQP_INSECURE_PORT` or the default AMQP port number (`5672`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_DEVICE_CONNECTION_AMQP_KEY_PATH`<br>`--hono.deviceConnection.amqp.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_DEVICE_CONNECTION_AMQP_CERT_PATH`. Alternatively, the `HONO_DEVICE_CONNECTION_AMQP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_DEVICE_CONNECTION_AMQP_KEY_STORE_PASSWORD`<br>`--hono.deviceConnection.amqp.keyStorePassword` | no | - | The password required to read the contents of the key store. |
-| `HONO_DEVICE_CONNECTION_AMQP_KEY_STORE_PATH`<br>`--hono.deviceConnection.amqp.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_DEVICE_CONNECTION_AMQP_KEY_PATH` and `HONO_DEVICE_CONNECTION_AMQP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
-| `HONO_DEVICE_CONNECTION_AMQP_NATIVE_TLS_REQUIRED`<br>`--hono.deviceConnection.amqp.nativeTlsRequired` | no | `false` | The server will probe for OpenSLL on startup if a secure port is configured. By default, the server will fall back to the JVM's default SSL engine if not available. However, if set to `true`, the server will fail to start at all in this case. |
-| `HONO_DEVICE_CONNECTION_AMQP_PORT`<br>`--hono.deviceConnection.amqp.port` | no | `5671` | The secure port that the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
-| `HONO_DEVICE_CONNECTION_AMQP_RECEIVER_LINK_CREDIT`<br>`--hono.deviceConnection.amqp.receiverLinkCredit` | no | `100` | The number of credits to flow to a client connecting to the service's AMQP endpoint. |
-| `HONO_DEVICE_CONNECTION_AMQP_SECURE_PROTOCOLS`<br>`--hono.deviceConnection.amqp.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
+| `HONO_DEVICECONNECTION_AMQP_BIND_ADDRESS`<br>`--hono.registry.amqp.bindAddress` | no | `127.0.0.1` | The IP address of the network interface that the secure AMQP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_DEVICECONNECTION_AMQP_CERT_PATH`<br>`--hono.deviceConnection.amqp.certPath` | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_DEVICECONNECTION_AMQP_KEY_PATH`.<br>Alternatively, the `HONO_DEVICECONNECTION_AMQP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT`<br>`--hono.deviceConnection.amqp.insecurePort` | no | - | The insecure port the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT_BIND_ADDRESS`<br>`--hono.deviceConnection.amqp.insecurePortBindAddress` | no | `127.0.0.1` | The IP address of the network interface that the insecure AMQP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT_ENABLED`<br>`--hono.deviceConnection.amqp.insecurePortEnabled` | no | `false` | If set to `true` the server will open an insecure port (not secured by TLS) using either the port number set via `HONO_REGISTRY_AMQP_INSECURE_PORT` or the default AMQP port number (`5672`) if not set explicitly.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_DEVICECONNECTION_AMQP_KEY_PATH`<br>`--hono.deviceConnection.amqp.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_DEVICECONNECTION_AMQP_CERT_PATH`. Alternatively, the `HONO_DEVICECONNECTION_AMQP_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
+| `HONO_DEVICECONNECTION_AMQP_KEY_STORE_PASSWORD`<br>`--hono.deviceConnection.amqp.keyStorePassword` | no | - | The password required to read the contents of the key store. |
+| `HONO_DEVICECONNECTION_AMQP_KEY_STORE_PATH`<br>`--hono.deviceConnection.amqp.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the server should use for authenticating to clients. Either this option or the `HONO_DEVICECONNECTION_AMQP_KEY_PATH` and `HONO_DEVICECONNECTION_AMQP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
+| `HONO_DEVICECONNECTION_AMQP_NATIVE_TLS_REQUIRED`<br>`--hono.deviceConnection.amqp.nativeTlsRequired` | no | `false` | The server will probe for OpenSLL on startup if a secure port is configured. By default, the server will fall back to the JVM's default SSL engine if not available. However, if set to `true`, the server will fail to start at all in this case. |
+| `HONO_DEVICECONNECTION_AMQP_PORT`<br>`--hono.deviceConnection.amqp.port` | no | `5671` | The secure port that the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
+| `HONO_DEVICECONNECTION_AMQP_RECEIVER_LINK_CREDIT`<br>`--hono.deviceConnection.amqp.receiverLinkCredit` | no | `100` | The number of credits to flow to a client connecting to the service's AMQP endpoint. |
+| `HONO_DEVICECONNECTION_AMQP_SECURE_PROTOCOLS`<br>`--hono.deviceConnection.amqp.secureProtocols` | no | `TLSv1.2` | A (comma separated) list of secure protocols that are supported when negotiating TLS sessions. Please refer to the [vert.x documentation](https://vertx.io/docs/vertx-core/java/#ssl) for a list of supported protocol names. |
 
 The variables only need to be set if the default value does not match your environment.
 
@@ -55,23 +55,23 @@ The server needs to be configured with a private key and certificate in order to
 
 There are two alternative ways for doing so:
 
-1. Setting the `HONO_DEVICE_CONNECTION_AMQP_KEY_STORE_PATH` and the `HONO_DEVICE_CONNECTION_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
-1. setting the `HONO_DEVICE_CONNECTION_AMQP_KEY_PATH` and `HONO_DEVICE_CONNECTION_AMQP_CERT_PATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
+1. Setting the `HONO_DEVICECONNECTION_AMQP_KEY_STORE_PATH` and the `HONO_DEVICECONNECTION_AMQP_KEY_STORE_PASSWORD` variables in order to load the key & certificate from a password protected key store, or
+1. setting the `HONO_DEVICECONNECTION_AMQP_KEY_PATH` and `HONO_DEVICECONNECTION_AMQP_CERT_PATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
 
-When starting up, the server will bind a TLS secured socket to the default secure AMQP port 5671. The port number can also be set explicitly using the `HONO_DEVICE_CONNECTION_AMQP_PORT` variable.
+When starting up, the server will bind a TLS secured socket to the default secure AMQP port 5671. The port number can also be set explicitly using the `HONO_DEVICECONNECTION_AMQP_PORT` variable.
 
-The `HONO_DEVICE_CONNECTION_AMQP_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
+The `HONO_DEVICECONNECTION_AMQP_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
 
 ### Insecure Port Only
 
 The secure port will mostly be required for production scenarios. However, it might be desirable to expose a non-TLS secured port instead, e.g. for testing purposes. In any case, the non-secure port needs to be explicitly enabled either by
 
-- explicitly setting `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT` to a valid port number, or by
-- implicitly configuring the default AMQP port (5672) by simply setting `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT_ENABLED` to `true`.
+- explicitly setting `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT` to a valid port number, or by
+- implicitly configuring the default AMQP port (5672) by simply setting `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT_ENABLED` to `true`.
 
-The server issues a warning on the console if `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT` is set to the default secure AMQP port (5671).
+The server issues a warning on the console if `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT` is set to the default secure AMQP port (5671).
 
-The `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used to e.g. expose the non-TLS secured port on a local interface only, thus providing easy access from within the local network, while still requiring encrypted communication when accessed from the outside over public network infrastructure.
+The `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT_BIND_ADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used to e.g. expose the non-TLS secured port on a local interface only, thus providing easy access from within the local network, while still requiring encrypted communication when accessed from the outside over public network infrastructure.
 
 Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
 
@@ -81,7 +81,7 @@ In test setups and some production scenarios Hono server may be configured to op
  
 This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has it's own binding address `HONO_DEVICE_CONNECTION_AMQP_INSECURE_PORT_BIND_ADDRESS`. 
+Since the secure port may need different visibility in the network setup compared to the secure port, it has it's own binding address `HONO_DEVICECONNECTION_AMQP_INSECURE_PORT_BIND_ADDRESS`. 
 This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
 
 ### Ephemeral Ports
@@ -96,10 +96,10 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_DEVICE_CONNECTION_REMOTE_SERVER_LIST`<br>`--hono.deviceConnection.remote.serverList` | yes | - | A list of remote servers in the form: `host1[:port][;host2[:port]]....`. |
-| `HONO_DEVICE_CONNECTION_REMOTE_AUTH_SERVER_NAME`<br>`--hono.deviceConnection.remote.authServerName` | yes | - | The server name to indicate in the SASL handshake when authenticating to the server. |
-| `HONO_DEVICE_CONNECTION_REMOTE_AUTH_USERNAME`<br>`--hono.deviceConnection.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
-| `HONO_DEVICE_CONNECTION_REMOTE_AUTH_PASSWORD`<br>`--hono.deviceConnection.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
+| `HONO_DEVICECONNECTION_REMOTE_SERVER_LIST`<br>`--hono.deviceConnection.remote.serverList` | yes | - | A list of remote servers in the form: `host1[:port][;host2[:port]]....`. |
+| `HONO_DEVICECONNECTION_REMOTE_AUTH_SERVER_NAME`<br>`--hono.deviceConnection.remote.authServerName` | yes | - | The server name to indicate in the SASL handshake when authenticating to the server. |
+| `HONO_DEVICECONNECTION_REMOTE_AUTH_USERNAME`<br>`--hono.deviceConnection.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
+| `HONO_DEVICECONNECTION_REMOTE_AUTH_PASSWORD`<br>`--hono.deviceConnection.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
 
 In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/9.4/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.deviceConnection.remote` instead of the `infinispan.client.hotrod` prefix.
 
