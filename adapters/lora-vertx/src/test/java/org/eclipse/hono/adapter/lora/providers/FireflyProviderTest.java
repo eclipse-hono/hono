@@ -14,10 +14,14 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.core.json.JsonObject;
+import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 /**
  * Verifies behavior of {@link FireflyProvider}.
@@ -56,6 +60,17 @@ public class FireflyProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("firefly.uplink");
         final LoraMessageType type = provider.extractMessageType(loraMessage);
         assertEquals(LoraMessageType.UPLINK, type);
+    }
+
+    /**
+     * Verifies that the extracted mic is true.
+     */
+    @Test
+    public void extractMicFromLoraMessage() {
+        final JsonObject loraMessage = LoraTestUtil.loadTestFile("firefly.uplink");
+        final Map<String, Object> map = provider.extractNormalizedData(loraMessage);
+        assertTrue(map.containsKey(LoraConstants.APP_PROPERTY_MIC));
+        assertTrue((boolean) map.getOrDefault(LoraConstants.APP_PROPERTY_MIC, null));
     }
 
     /**
