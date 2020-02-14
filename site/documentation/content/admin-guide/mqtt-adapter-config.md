@@ -8,9 +8,14 @@ The MQTT protocol adapter exposes an MQTT topic hierarchy for publishing message
 
 The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-mqtt-vertx/) created from it.
 
-## Service Configuration
+The adapter supports the following standard configuration options:
 
-In addition to the following options, this component supports the options described in [Common Configuration]({{< relref "common-config.md" >}}).
+* [Common Java VM Options]({{< relref "common-config.md/#java-vm-options" >}})
+* [Common vert.x Options]({{< relref "common-config.md/#vert-x-options" >}})
+* [Common Protocol Adapter Options]({{< relref "common-config.md/#protocol-adapter-options" >}})
+* [Monitoring Options]({{< relref "monitoring-tracing-config.md" >}})
+
+## Service Configuration
 
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the MQTT adapter.
 
@@ -82,79 +87,3 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 ### Ephemeral Ports
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
-
-## AMQP 1.0 Messaging Network Connection Configuration
-
-The adapter requires a connection to the *AMQP 1.0 Messaging Network* in order to forward telemetry data and events received from devices to downstream consumers.
-
-The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
-
-## Command & Control Connection Configuration
-
-The adapter requires an additional connection to the *AMQP 1.0 Messaging Network* in order to receive
-commands from downstream applications and send responses to commands back to applications.
-
-The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-with `HONO_COMMAND` being used as `${PREFIX}`. The properties for configuring response caching can be ignored.
-
-## Tenant Service Connection Configuration
-
-The adapter requires a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}}) in order to retrieve information for a tenant.
-
-The connection to the Tenant Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.
-
-The adapter caches the responses from the service according to the *cache directive* included in the response.
-If the response doesn't contain a *cache directive* no data will be cached.
-
-## Device Registration Service Connection Configuration
-
-The adapter requires a connection to an implementation of Hono's [Device Registration API]({{< relref "/api/device-registration" >}}) in order to retrieve registration status assertions for connected devices.
-
-The connection to the Device Registration Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_REGISTRATION`.
-
-The adapter caches the responses from the service according to the *cache directive* included in the response.
-If the response doesn't contain a *cache directive* no data will be cached.
-
-
-## Credentials Service Connection Configuration
-
-The adapter requires a connection to an implementation of Hono's [Credentials API]({{< relref "/api/credentials" >}}) in order to retrieve credentials stored for devices that needs to be authenticated. During connection establishment, the adapter uses the Credentials API to retrieve the credentials on record for the device and matches that with the credentials provided by a device.
-
-The connection to the Credentials Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_CREDENTIALS`.
-
-The adapter caches the responses from the service according to the *cache directive* included in the response.
-If the response doesn't contain a *cache directive* no data will be cached.
-
-
-## Device Connection Service Connection Configuration
-
-The adapter requires a connection to an implementation of Hono's [Device Connection API]({{< relref "/api/device-connection" >}}) in order to determine the gateway that a device is connected via to a protocol adapter. This information is required in order to forward commands issued by applications to the protocol adapter instance that the gateway is connected to.
-
-The connection to the Device Connection service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_DEVICECONNECTION`.
-
-Responses from the Device Connection service are never cached, so the properties for configuring the cache are ignored.
-
-
-## Resource Limits Checker Configuration
-
-The adapter can use metrics collected by a Prometheus server to enforce certain limits set at the tenant level like the overall number of connected devices allowed per tenant.
-
-The following table provides an overview of the configuration variables and corresponding command line options for configuring the checker.
-
-| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
-| :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_RESOURCE_LIMITS_PROMETHEUS_BASED_HOST`<br>`--hono.resourceLimits.prometheusBased.host` | no | none | The host name or IP address of the Prometheus server to retrieve the metrics data from. This property needs to be set in order to enable the Prometheus based checks. |
-| `HONO_RESOURCE_LIMITS_PROMETHEUS_BASED_PORT`<br>`--hono.resourceLimits.prometheusBased.port` | no | `9090` | The port of the Prometheus server to retrieve metrics data from. |
-| `HONO_RESOURCE_LIMITS_PROMETHEUS_BASED_CACHE_MIN_SIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMinSize` | no | `20` | The minimum size of the cache to store the metrics data retrieved from the Prometheus server. The cache is used for storing the current amount of data exchanged with devices of tenants. |
-| `HONO_RESOURCE_LIMITS_PROMETHEUS_BASED_CACHE_MAX_SIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMaxSize` | no | `1000` | The maximum size of the cache to store the metrics data retrieved from the Prometheus server. |
-| `HONO_RESOURCE_LIMITS_PROMETHEUS_BASED_CACHE_TIMEOUT`<br>`--hono.resourceLimits.prometheusBased.cacheTimeout` | no | `600` | The number of seconds after which the cached metrics data should be considered invalid. |
-
-
-## Metrics Configuration
-
-See [Monitoring & Tracing Admin Guide]({{< relref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
