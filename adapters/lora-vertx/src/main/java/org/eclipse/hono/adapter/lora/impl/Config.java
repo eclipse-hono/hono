@@ -15,9 +15,7 @@ package org.eclipse.hono.adapter.lora.impl;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -149,16 +147,6 @@ public class Config extends AbstractAdapterConfig {
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(
                 MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_LORA));
-    }
-
-    /**
-     * Provides the adapter metrics instance to use.
-     * @param registry The meter registry to use.
-     * @return A new adapter metrics instance.
-     */
-    @Bean
-    public HttpAdapterMetrics adapterMetrics(final MeterRegistry registry) {
-        return new MicrometerBasedHttpAdapterMetrics(registry, vertx());
     }
 
 }

@@ -15,8 +15,6 @@ package org.eclipse.hono.adapter.sigfox.impl;
 
 import javax.annotation.PostConstruct;
 
-import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
-import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
@@ -144,13 +142,4 @@ public class Config extends AbstractAdapterConfig {
                 MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_SIGFOX));
     }
 
-    /**
-     * Provides the adapter metrics instance to use.
-     * @param registry The meter registry to use.
-     * @return A new adapter metrics instance.
-     */
-    @Bean
-    public HttpAdapterMetrics adapterMetrics(final MeterRegistry registry) {
-        return new MicrometerBasedHttpAdapterMetrics(registry, vertx());
-    }
 }
