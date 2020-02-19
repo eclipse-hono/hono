@@ -54,7 +54,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <coap.java.options></coap.java.options>
     <http.java.options></http.java.options>
     <mqtt.java.options></mqtt.java.options>
-    <deviceregistry.image>hono-service-device-registry</deviceregistry.image>
+    <deviceregistry.image>hono-service-device-registry-file</deviceregistry.image>
     <!-- logging profile: either prod, dev or trace -->
     <logging.profile>prod</logging.profile>
     <trace.frames>0</trace.frames>
