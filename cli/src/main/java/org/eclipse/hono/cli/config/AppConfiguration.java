@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.config;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;

@@ -10,6 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+
 package org.eclipse.hono.cli.app;
 
 import io.vertx.core.*;
@@ -20,6 +21,8 @@ import org.eclipse.hono.cli.ClientConfig;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.util.MessageHelper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +59,6 @@ public class Receiver extends AbstractCliClient{
     }
 
     private CompositeFuture createConsumer(final HonoConnection connection) {
-
         final Handler<Void> closeHandler = closeHook -> {
             log.info("close handler of consumer is called");
             vertx.setTimer(clientConfig.connectionRetryInterval, reconnect -> {

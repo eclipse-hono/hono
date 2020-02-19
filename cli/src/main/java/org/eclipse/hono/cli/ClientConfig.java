@@ -1,13 +1,24 @@
+/*******************************************************************************
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
+
 package org.eclipse.hono.cli;
 
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.MethodParameter;
 import org.springframework.shell.CompletionContext;
 import org.springframework.shell.CompletionProposal;
 import org.springframework.shell.standard.ValueProviderSupport;
 import org.springframework.stereotype.Component;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,16 +28,21 @@ public class ClientConfig implements  Cloneable{
     public static final String TYPE_EVENT = "event";
     public static final String TYPE_ALL = "all";
 
-    @Value(value = "${tenant.id}")
     public String tenantId;
-    @Value(value = "${device.id}")
     public String deviceId;
-    @Value(value = "${message.type}")
     public String messageType;
-    @Value(value = "${connection.retryInterval}")
     public int connectionRetryInterval;
-    @Value(value = "${command.timeoutInSeconds}")
     public int requestTimeoutInSecs;
+
+    public ClientConfig(String tenantId, String deviceId, String messageType, int connectionRetryInterval, int requestTimeoutInSecs) {
+        this.tenantId = tenantId;
+        this.deviceId = deviceId;
+        this.messageType = messageType;
+        this.connectionRetryInterval = connectionRetryInterval;
+        this.requestTimeoutInSecs = requestTimeoutInSecs;
+    }
+
+
 
     @Component
     public static class MessageTypeProvider extends ValueProviderSupport {
@@ -47,9 +63,9 @@ public class ClientConfig implements  Cloneable{
 
     @Override
     public Object clone() throws CloneNotSupportedException {
-        return super.clone();
+        ClientConfigProperties cfp = new ClientConfigProperties(this.honoClientConfig);
+        ClientConfig clone = new ClientConfig(this.tenantId, this.deviceId, this.messageType, this.connectionRetryInterval, this.requestTimeoutInSecs);
+        clone.honoClientConfig = cfp;
+        return clone;
     }
-    //TODO solve and test clone
-    //start hono.eclipseprojects.io 15672 consumer@HONO verysecret
-    //TODO check that the annotation value be got by the variables
 }
