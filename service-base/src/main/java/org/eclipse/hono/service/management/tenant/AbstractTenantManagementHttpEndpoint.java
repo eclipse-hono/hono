@@ -185,7 +185,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
                         span);
             });
 
-            getService().add(Optional.ofNullable(tenantId), payload, span, result);
+            getService().createTenant(Optional.ofNullable(tenantId), payload.mapTo(Tenant.class), span, result);
         } else {
             final String msg = "request contains malformed payload";
             logger.debug(msg);
@@ -220,7 +220,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
                     response.end();
             }
         });
-        getService().read(tenantId, span, result);
+        getService().readTenant(tenantId, span, result);
     }
 
     private void updateTenant(final RoutingContext ctx) {
@@ -246,7 +246,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
                 Util.writeOperationResponse(ctx, handler.result(), null, span);
             });
 
-            getService().update(tenantId, payload, resourceVersion, span, result);
+            getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span, result);
         } else {
             final String msg = "request contains malformed payload";
             logger.debug(msg);
@@ -273,7 +273,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
                     Util.writeResponse(ctx, handler.result(), null, span);
                 });
 
-        getService().remove(tenantId, resourceVersion, span, result);
+        getService().deleteTenant(tenantId, resourceVersion, span, result);
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {

@@ -152,7 +152,8 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
                         span);
         });
 
-        getService().set(tenantId, deviceId, resourceVersion, commonCredentials, span, result);
+        getService().updateCredentials(tenantId, deviceId, commonCredentials, resourceVersion, span, result);
+
     }
 
     private void getCredentialsForDevice(final RoutingContext ctx) {
@@ -190,7 +191,7 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
             }
         });
 
-        getService().get(tenantId, deviceId, span, result);
+        getService().readCredentials(tenantId, deviceId, span, result);
     }
 
     /**

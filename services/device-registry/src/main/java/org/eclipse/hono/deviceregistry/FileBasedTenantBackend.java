@@ -65,26 +65,26 @@ public final class FileBasedTenantBackend extends AbstractVerticle implements Te
     // Tenant management API
 
     @Override
-    public void add(final Optional<String> tenantId, final JsonObject tenantObj,
+    public void createTenant(final Optional<String> tenantId, final Tenant tenantObj,
             final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
-        tenantService.add(tenantId, tenantObj, span, resultHandler);
+        tenantService.createTenant(tenantId, tenantObj, span, resultHandler);
     }
 
     @Override
-    public void read(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
-        tenantService.read(tenantId, span, resultHandler);
+    public void readTenant(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
+        tenantService.readTenant(tenantId, span, resultHandler);
     }
 
     @Override
-    public void update(final String tenantId, final JsonObject tenantObj, final Optional<String> resourceVersion,
+    public void updateTenant(final String tenantId, final Tenant tenantObj, final Optional<String> resourceVersion,
             final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
-        tenantService.update(tenantId, tenantObj, resourceVersion, span, resultHandler);
+        tenantService.updateTenant(tenantId, tenantObj, resourceVersion, span, resultHandler);
     }
 
     @Override
-    public void remove(final String tenantId, final Optional<String> resourceVersion, final Span span,
+    public void deleteTenant(final String tenantId, final Optional<String> resourceVersion, final Span span,
             final Handler<AsyncResult<Result<Void>>> resultHandler) {
-        tenantService.remove(tenantId, resourceVersion, span, resultHandler);
+        tenantService.deleteTenant(tenantId, resourceVersion, span, resultHandler);
     }
 
     // Tenant AMQP API

@@ -148,11 +148,11 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
 
                     // now create the empty credentials set
                     final Promise<OperationResult<Void>> f = Promise.promise();
-                    credentialsService.set(
+                    credentialsService.updateCredentials(
                             tenantId,
                             r.getPayload().getId(),
-                            Optional.empty(),
                             Collections.emptyList(),
+                            Optional.empty(),
                             span,
                             f);
 
@@ -258,18 +258,20 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
     }
 
     @Override
-    public void set(final String tenantId, final String deviceId, final Optional<String> resourceVersion,
-            final List<CommonCredential> credentials, final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
+    public void updateCredentials(final String tenantId, final String deviceId,
+            final List<CommonCredential> credentials, final Optional<String> resourceVersion,
+            final Span span,
+            final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
         //TODO check if device exists
-        credentialsService.set(tenantId, deviceId, resourceVersion, credentials, span, resultHandler);
+        credentialsService.updateCredentials(tenantId, deviceId, credentials, resourceVersion, span, resultHandler);
     }
 
     @Override
-    public void get(final String tenantId, final String deviceId, final Span span,
+    public void readCredentials(final String tenantId, final String deviceId, final Span span,
             final Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler) {
 
         final Promise<OperationResult<List<CommonCredential>>> f = Promise.promise();
-        credentialsService.get(tenantId, deviceId, span, f);
+        credentialsService.readCredentials(tenantId, deviceId, span, f);
         f.future()
         .compose(r -> {
             if (r.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
