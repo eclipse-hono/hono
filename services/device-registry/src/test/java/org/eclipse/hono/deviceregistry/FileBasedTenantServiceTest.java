@@ -330,10 +330,10 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         // that has been configured to not allow modification of entries
         props.setModificationEnabled(false);
 
-        // WHEN trying to add a new tenant
-        svc.add(
+        // WHEN trying to create a new tenant
+        svc.createTenant(
                 Optional.of("fancy-new-tenant"),
-                new JsonObject(),
+                new Tenant(),
                 NoopSpan.INSTANCE,
                 ctx.succeeding(s -> {
                     ctx.verify(() -> {
@@ -357,7 +357,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.remove(
+        svc.deleteTenant(
                 "tenant",
                 Optional.empty(),
                 NoopSpan.INSTANCE,
@@ -383,9 +383,9 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         props.setModificationEnabled(false);
 
         // WHEN trying to update the tenant
-        svc.update(
+        svc.updateTenant(
                 "tenant",
-                new JsonObject(),
+                new Tenant(),
                 null,
                 NoopSpan.INSTANCE,
                 ctx.succeeding(s -> {

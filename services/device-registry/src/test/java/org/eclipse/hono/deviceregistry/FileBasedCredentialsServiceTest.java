@@ -324,7 +324,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
                 .compose(s -> {
                     final Promise<OperationResult<List<CommonCredential>>> result = Promise.promise();
-                    getCredentialsManagementService().get(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE, result);
+                    getCredentialsManagementService().readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE, result);
                     return result.future().map(r -> {
                         if (r.getStatus() == HttpURLConnection.HTTP_OK) {
                             return null;
@@ -491,9 +491,9 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                     final Promise<OperationResult<Void>> result = Promise.promise();
                     // WHEN trying to update the credentials
                     final PasswordCredential newSecret = createPasswordCredential("myId", "baz", OptionalInt.empty());
-                    svc.set("tenant", "device",
-                            Optional.empty(),
+                    svc.updateCredentials("tenant", "device",
                             Collections.singletonList(newSecret),
+                            Optional.empty(),
                             NoopSpan.INSTANCE,
                             result);
                     return result.future();

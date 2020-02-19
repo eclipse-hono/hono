@@ -461,8 +461,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void set(final String tenantId, final String deviceId, final Optional<String> resourceVersion,
-                    final List<CommonCredential> secrets, final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
+    public void updateCredentials(final String tenantId, final String deviceId, final List<CommonCredential> secrets,
+            final Optional<String> resourceVersion,
+            final Span span,
+            final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
 
         resultHandler.handle(Future.succeededFuture(set(tenantId, deviceId, resourceVersion, span, secrets)));
 
@@ -681,7 +683,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void get(final String tenantId, final String deviceId, final Span span,
+    public void readCredentials(final String tenantId, final String deviceId, final Span span,
             final Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);

@@ -322,7 +322,7 @@ public abstract class AbstractCredentialsServiceTest {
             final ThrowingConsumer<CredentialsResult<JsonObject>> adapterValidation,
             final ExecutionBlock whenComplete) {
 
-        getCredentialsManagementService().get(tenantId, deviceId, NoopSpan.INSTANCE, ctx.succeeding(s3 -> {
+        getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE, ctx.succeeding(s3 -> {
 
             ctx.verify(() -> {
 
@@ -365,8 +365,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, () -> {
 
-            getCredentialsManagementService().set(tenantId, deviceId, Optional.empty(),
-                    Collections.singletonList(secret), NoopSpan.INSTANCE,
+            getCredentialsManagementService().updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE,
                     ctx.succeeding(s2 -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
@@ -404,8 +405,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.FIELD_SECRETS_PWD_PLAIN, () -> {
 
-            getCredentialsManagementService().set(tenantId, deviceId, Optional.empty(),
-                    Collections.singletonList(secret), NoopSpan.INSTANCE,
+            getCredentialsManagementService().updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE,
                     ctx.succeeding(s2 -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
@@ -472,8 +474,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, () -> {
 
-            getCredentialsManagementService().set(tenantId, deviceId, Optional.empty(),
-                    Collections.singletonList(secret), NoopSpan.INSTANCE,
+            getCredentialsManagementService().updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE,
                     ctx.succeeding(s2 -> ctx.verify(() -> {
 
                         assertResourceVersion(s2);
@@ -499,8 +502,9 @@ public abstract class AbstractCredentialsServiceTest {
 
             final var newSecret = createPasswordCredential(authId, "baz");
 
-            getCredentialsManagementService().set(tenantId, deviceId, Optional.empty(),
-                    Collections.singletonList(newSecret), NoopSpan.INSTANCE,
+            getCredentialsManagementService().updateCredentials(tenantId, deviceId,
+                    Collections.singletonList(newSecret), Optional.empty(),
+                    NoopSpan.INSTANCE,
                     ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
@@ -549,8 +553,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(s1 -> {
 
-                getCredentialsManagementService().set(tenantId, deviceId, Optional.empty(),
-                        Collections.singletonList(secret), NoopSpan.INSTANCE,
+                getCredentialsManagementService().updateCredentials(tenantId, deviceId,
+                        Collections.singletonList(secret), Optional.empty(),
+                        NoopSpan.INSTANCE,
                         ctx.succeeding(s2 -> {
 
                             checkpoint.flag();
@@ -568,8 +573,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().setHandler(ctx.succeeding(v -> {
 
-            getCredentialsManagementService().set(tenantId, deviceId, Optional.of(UUID.randomUUID().toString()),
-                    Collections.singletonList(secret), NoopSpan.INSTANCE,
+            getCredentialsManagementService().updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
+                    Optional.of(UUID.randomUUID().toString()),
+                    NoopSpan.INSTANCE,
                     ctx.succeeding( s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus());
@@ -624,8 +630,9 @@ public abstract class AbstractCredentialsServiceTest {
 
             assertGetEmpty(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, () -> {
 
-                getCredentialsManagementService().set(tenantId, deviceId, Optional.empty(),
-                        Collections.singletonList(secret), NoopSpan.INSTANCE,
+                getCredentialsManagementService().updateCredentials(tenantId, deviceId,
+                        Collections.singletonList(secret), Optional.empty(),
+                        NoopSpan.INSTANCE,
                         ctx.succeeding(s2 -> {
 
                             checkpoint.flag();
@@ -706,7 +713,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -778,7 +785,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -837,7 +844,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -851,7 +858,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(newCredential),
+                    .updateCredentials(tenantId, deviceId, Collections.singletonList(newCredential), Optional.empty(),
                             NoopSpan.INSTANCE,
                             ctx.succeeding( s -> ctx.verify(() -> {
 
@@ -895,7 +902,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -904,7 +911,7 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase3 = Promise.promise();
 
         phase2.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsManagementService().get(tenantId, deviceId,
+            getCredentialsManagementService().readCredentials(tenantId, deviceId,
                     NoopSpan.INSTANCE, ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
@@ -963,7 +970,8 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credential), NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, Collections.singletonList(credential), Optional.empty(),
+                            NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -1009,7 +1017,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase3.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credentialWithOnlyId),
+                    .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithOnlyId), Optional.empty(),
                             NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
         }));
 
@@ -1072,7 +1080,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -1111,7 +1119,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase3.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(newCredential),
+                    .updateCredentials(tenantId, deviceId, Collections.singletonList(newCredential), Optional.empty(),
                             NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
         }));
 
@@ -1174,7 +1182,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -1221,7 +1229,8 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase3.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credentialWithMetadataUpdate),
+                    .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithMetadataUpdate),
+                            Optional.empty(),
                             NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
         }));
 
@@ -1290,7 +1299,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase1.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), credentials, NoopSpan.INSTANCE,
+                    .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                             ctx.succeeding(s -> phase2.complete()));
         }));
 
@@ -1339,7 +1348,8 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase3.future().setHandler(ctx.succeeding(n -> {
             getCredentialsManagementService()
-                    .set(tenantId, deviceId, Optional.empty(), Collections.singletonList(credentialWithMetadataUpdate),
+                    .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithMetadataUpdate),
+                            Optional.empty(),
                             NoopSpan.INSTANCE, ctx.succeeding(s -> phase4.complete()));
         }));
 
@@ -1397,7 +1407,7 @@ public abstract class AbstractCredentialsServiceTest {
             final List<CommonCredential> secrets) {
 
         final Promise<OperationResult<Void>> result = Promise.promise();
-        svc.set(tenantId, deviceId, Optional.empty(), secrets, NoopSpan.INSTANCE, result);
+        svc.updateCredentials(tenantId, deviceId, secrets, Optional.empty(), NoopSpan.INSTANCE, result);
         return result.future().map(r -> {
             if (HttpURLConnection.HTTP_NO_CONTENT == r.getStatus()) {
                 return r;

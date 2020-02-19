@@ -52,7 +52,7 @@ public interface CredentialsManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/setAllCredentials">
      *      Device Registry Management API - Update Credentials</a>
      */
-    void set(String tenantId, String deviceId, Optional<String> resourceVersion, List<CommonCredential> credentials,
+    void updateCredentials(String tenantId, String deviceId, List<CommonCredential> credentials, Optional<String> resourceVersion,
             Span span, Handler<AsyncResult<OperationResult<Void>>> resultHandler);
 
     /**
@@ -74,6 +74,6 @@ public interface CredentialsManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/getAllCredentials">
      *      Device Registry Management API - Get Credentials</a>
      */
-    void get(String tenantId, String deviceId, Span span,
+    void readCredentials(String tenantId, String deviceId, Span span,
             Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler);
 }

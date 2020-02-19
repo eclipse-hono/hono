@@ -16,7 +16,6 @@ package org.eclipse.hono.service.management.tenant;
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import java.util.Optional;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -33,7 +32,7 @@ public interface TenantManagementService {
     /**
      * Creates a new Tenant.
      *
-     * @param tenantId The identifier of the tenant to add.
+     * @param tenantId The identifier of the tenant to create.
      * @param tenantObj The configuration information to add for the tenant (may be {@code null}).
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *              An implementation should log (error) events on this span and it may set tags and use this span as the
@@ -48,7 +47,7 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/createTenant">
      *      Device Registry Management API - Create Tenant</a>
      */
-    void add(Optional<String> tenantId, JsonObject tenantObj, Span span, Handler<AsyncResult<OperationResult<Id>>> resultHandler);
+    void createTenant(Optional<String> tenantId, Tenant tenantObj, Span span, Handler<AsyncResult<OperationResult<Id>>> resultHandler);
 
     /**
      * Reads tenant configuration information for a tenant identifier.
@@ -67,7 +66,7 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/getTenant">
      *      Device Registry Management API - Get Tenant</a>
      */
-    void read(String tenantId, Span span, Handler<AsyncResult<OperationResult<Tenant>>> resultHandler);
+    void readTenant(String tenantId, Span span, Handler<AsyncResult<OperationResult<Tenant>>> resultHandler);
 
     /**
      * Updates configuration information of a tenant.
@@ -88,7 +87,7 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/updateTenant">
      *      Device Registry Management API - Update Tenant</a>
      */
-    void update(String tenantId, JsonObject tenantObj, Optional<String> resourceVersion,
+    void updateTenant(String tenantId, Tenant tenantObj, Optional<String> resourceVersion,
             Span span, Handler<AsyncResult<OperationResult<Void>>> resultHandler);
 
     /**
@@ -109,5 +108,5 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/deleteTenant">
      *      Device Registry Management API - Delete Tenant</a>
      */
-    void remove(String tenantId, Optional<String> resourceVersion, Span span, Handler<AsyncResult<Result<Void>>> resultHandler);
+    void deleteTenant(String tenantId, Optional<String> resourceVersion, Span span, Handler<AsyncResult<Result<Void>>> resultHandler);
 }

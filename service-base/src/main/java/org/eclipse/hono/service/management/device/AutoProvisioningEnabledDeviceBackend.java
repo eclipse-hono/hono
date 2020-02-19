@@ -90,7 +90,7 @@ public interface AutoProvisioningEnabledDeviceBackend extends DeviceBackend {
                     final String deviceId = r.getPayload().getId();
 
                     final Promise<OperationResult<Void>> credPromise = Promise.promise();
-                    set(tenantId, deviceId, Optional.empty(), List.of(certCredential), span, credPromise);
+                    updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span, credPromise);
                     return credPromise.future()
                             .compose(v -> {
                                 if (v.isError()) {

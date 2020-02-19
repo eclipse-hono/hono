@@ -19,6 +19,7 @@ import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,8 +32,10 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -78,7 +81,7 @@ public abstract class AbstractTenantServiceTest {
         addTenant("tenant")
         .compose(ok -> {
                     final Promise<OperationResult<Id>> result = Promise.promise();
-                    getTenantManagementService().add(
+                    getTenantManagementService().createTenant(
                     Optional.of("tenant"),
                     buildTenantPayload(), NoopSpan.INSTANCE,
                             result);
@@ -99,7 +102,7 @@ public abstract class AbstractTenantServiceTest {
     @Test
     public void testAddTenantSucceedsWithGeneratedTenantId(final VertxTestContext ctx) {
 
-        getTenantManagementService().add(
+        getTenantManagementService().createTenant(
                 Optional.empty(),
                 buildTenantPayload(),
                 NoopSpan.INSTANCE,
@@ -120,7 +123,7 @@ public abstract class AbstractTenantServiceTest {
     @Test
     public void testAddTenantSucceedsAndContainResourceVersion(final VertxTestContext ctx) {
 
-        getTenantManagementService().add(
+        getTenantManagementService().createTenant(
                 Optional.of("tenant"),
                 buildTenantPayload(),
                 NoopSpan.INSTANCE,
@@ -146,7 +149,7 @@ public abstract class AbstractTenantServiceTest {
 
         addTenant("tenant")
         .map(ok -> {
-            getTenantManagementService().remove(
+            getTenantManagementService().deleteTenant(
                     "tenant",
                     Optional.empty(),
                     NoopSpan.INSTANCE,
@@ -172,7 +175,7 @@ public abstract class AbstractTenantServiceTest {
         .map(cr -> {
             final String version = cr.getResourceVersion().orElse(null);
             ctx.verify(() -> assertNotNull(version));
-            getTenantManagementService().remove(
+            getTenantManagementService().deleteTenant(
                     "tenant",
                     Optional.of(version),
                     NoopSpan.INSTANCE,
@@ -196,7 +199,7 @@ public abstract class AbstractTenantServiceTest {
         .map(cr -> {
             final String version = cr.getResourceVersion().orElse(null);
             ctx.verify(() -> assertNotNull(version));
-            getTenantManagementService().remove(
+            getTenantManagementService().deleteTenant(
                     "tenant",
                     Optional.of(version + "abc"),
                     NoopSpan.INSTANCE,
@@ -220,9 +223,9 @@ public abstract class AbstractTenantServiceTest {
         .map(cr -> {
             final String version = cr.getResourceVersion().orElse(null);
             ctx.verify(() -> assertNotNull(version));
-            getTenantManagementService().update(
+            getTenantManagementService().updateTenant(
                     "tenant",
-                    buildTenantPayload().put(RegistryManagementConstants.FIELD_EXT, new JsonObject()),
+                    buildTenantPayload(),
                     Optional.of(version + "abc"),
                     NoopSpan.INSTANCE,
                     ctx.succeeding(s -> {
@@ -246,9 +249,9 @@ public abstract class AbstractTenantServiceTest {
         .map(cr -> {
             final String version = cr.getResourceVersion().orElse(null);
             ctx.verify(() -> assertNotNull(version));
-            getTenantManagementService().update(
+            getTenantManagementService().updateTenant(
                     "tenant",
-                    buildTenantPayload().put(RegistryManagementConstants.FIELD_EXT, new JsonObject()),
+                    buildTenantPayload(),
                     Optional.of(version),
                     NoopSpan.INSTANCE,
                     ctx.succeeding(s -> {
@@ -269,9 +272,9 @@ public abstract class AbstractTenantServiceTest {
 
         addTenant("tenant")
         .map(cr -> {
-            getTenantManagementService().update(
+            getTenantManagementService().updateTenant(
                     "tenant",
-                    buildTenantPayload().put(RegistryManagementConstants.FIELD_EXT, new JsonObject()),
+                    buildTenantPayload(),
                     Optional.empty(),
                     NoopSpan.INSTANCE,
                     ctx.succeeding(s -> {
@@ -291,17 +294,17 @@ public abstract class AbstractTenantServiceTest {
     @Test
     public void testAddTenantFailsForDuplicateCa(final VertxTestContext ctx) {
 
-        final JsonArray trustedCa = new JsonArray().add(new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=taken")
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAKEY".getBytes(StandardCharsets.UTF_8)));
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=taken")
+                .setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
 
-        final JsonObject tenant = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ENABLED, true)
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+        final Tenant tenant = new Tenant()
+                .setEnabled(true)
+                .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
 
         addTenant("tenant", tenant)
         .map(ok -> {
-            getTenantManagementService().add(
+            getTenantManagementService().createTenant(
                     Optional.of("newTenant"),
                     tenant,
                     NoopSpan.INSTANCE,
@@ -340,11 +343,11 @@ public abstract class AbstractTenantServiceTest {
     @Test
     public void testGetTenantSucceedsForExistingTenant(final VertxTestContext ctx) {
 
-        final JsonObject tenantSpec = buildTenantPayload()
-                .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("plan", "unlimited"))
-                .put(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE, 2048)
-                .put(TenantConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                        .put(TenantConstants.FIELD_MAX_CONNECTIONS, 1000));
+        final Tenant tenantSpec = buildTenantPayload()
+                .setExtensions(new JsonObject().put("plan", "unlimited").getMap())
+                .setMinimumMessageSize(2048)
+                .setResourceLimits(new ResourceLimits()
+                        .setMaxConnections(1000));
 
         // GIVEN a tenant that has been added via the Management API
         addTenant("tenant", tenantSpec)
@@ -363,20 +366,22 @@ public abstract class AbstractTenantServiceTest {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_OK, response.getStatus());
                 assertEquals("tenant", response.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
+
+                final JsonObject jsonTenantSpec = JsonObject.mapFrom(tenantSpec);
                 assertEquals(
-                        tenantSpec.getValue(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE),
+                        jsonTenantSpec.getValue(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE),
                         response.getPayload().getValue(TenantConstants.FIELD_MINIMUM_MESSAGE_SIZE));
                 assertEquals(
-                        tenantSpec.getValue(RegistryManagementConstants.FIELD_ENABLED),
+                        jsonTenantSpec.getValue(TenantConstants.FIELD_ENABLED),
                         response.getPayload().getValue(TenantConstants.FIELD_ENABLED));
                 assertEquals(
-                        tenantSpec.getValue(RegistryManagementConstants.FIELD_EXT),
+                        jsonTenantSpec.getValue(RegistryManagementConstants.FIELD_EXT),
                         response.getPayload().getValue(RegistryManagementConstants.FIELD_EXT));
                 assertEquals(
-                        tenantSpec.getValue(RegistryManagementConstants.FIELD_RESOURCE_LIMITS),
+                        jsonTenantSpec.getValue(TenantConstants.FIELD_RESOURCE_LIMITS),
                         response.getPayload().getValue(TenantConstants.FIELD_RESOURCE_LIMITS));
                 assertEquals(
-                        tenantSpec.getValue(RegistryManagementConstants.FIELD_ADAPTERS),
+                        jsonTenantSpec.getValue(TenantConstants.FIELD_ADAPTERS),
                         response.getPayload().getValue(TenantConstants.FIELD_ADAPTERS));
             });
             ctx.completeNow();
@@ -459,11 +464,11 @@ public abstract class AbstractTenantServiceTest {
 
         final X500Principal unknownSubjectDn = new X500Principal("O=Eclipse, OU=NotHono, CN=ca");
         final X500Principal subjectDn = new X500Principal("O=Eclipse, OU=Hono, CN=ca");
-        final JsonArray trustedCa = new JsonArray().add(new JsonObject()
-                .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253))
-                .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8)));
-        final JsonObject tenant = buildTenantPayload()
-                .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, trustedCa);
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn(subjectDn.getName(X500Principal.RFC2253))
+                .setPublicKey("NOTAPUBLICKEY".getBytes(StandardCharsets.UTF_8));
+        final Tenant tenant = buildTenantPayload()
+                .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
 
         addTenant("tenant", tenant)
         .map(ok -> {
@@ -487,7 +492,7 @@ public abstract class AbstractTenantServiceTest {
         .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
         .compose(ok -> {
             final Promise<Result<Void>> result = Promise.promise();
-            getTenantManagementService().remove("tenant", Optional.empty(), NoopSpan.INSTANCE, result);
+            getTenantManagementService().deleteTenant("tenant", Optional.empty(), NoopSpan.INSTANCE, result);
             return result.future();
         })
         .compose(s -> {
@@ -508,17 +513,17 @@ public abstract class AbstractTenantServiceTest {
     @Test
     public void testUpdateTenantSucceeds(final VertxTestContext ctx) {
 
-        final JsonObject origPayload = buildTenantPayload();
+        final Tenant origPayload = buildTenantPayload();
         final JsonObject extensions = new JsonObject().put("custom-prop", "something");
 
         addTenant("tenant", origPayload)
         .compose(ok -> {
             final Promise<OperationResult<Void>> updateResult = Promise.promise();
-            final JsonObject updatedPayload = origPayload.copy();
+            final JsonObject updatedPayload = JsonObject.mapFrom(origPayload).copy();
             updatedPayload.put(RegistryManagementConstants.FIELD_EXT, extensions);
-            getTenantManagementService().update(
+            getTenantManagementService().updateTenant(
                     "tenant",
-                    updatedPayload,
+                    updatedPayload.mapTo(Tenant.class),
                     Optional.empty(),
                     NoopSpan.INSTANCE,
                     updateResult);
@@ -565,12 +570,12 @@ public abstract class AbstractTenantServiceTest {
             // WHEN updating the second tenant to use the same CA as the first tenant
             tenantTwo.setTrustedCertificateAuthorities(List.of(trustedCa));
             final Promise<OperationResult<Void>> result = Promise.promise();
-            getTenantManagementService().update(
+            getTenantManagementService().updateTenant(
                     "tenantTwo",
-                    JsonObject.mapFrom(tenantTwo),
-                            null,
-                            NoopSpan.INSTANCE,
-                            result);
+                    tenantTwo,
+                    null,
+                    NoopSpan.INSTANCE,
+                    result);
             return result.future();
         })
         .setHandler(ctx.succeeding(s -> {
@@ -616,7 +621,7 @@ public abstract class AbstractTenantServiceTest {
             final int expectedStatusCode) {
 
         final Promise<OperationResult<Tenant>> result = Promise.promise();
-        svc.read(tenantId, NoopSpan.INSTANCE, result);
+        svc.readTenant(tenantId, NoopSpan.INSTANCE, result);
         return result.future().map(r -> {
             if (r.getStatus() == expectedStatusCode) {
                 return r;
@@ -645,20 +650,9 @@ public abstract class AbstractTenantServiceTest {
      * @return A succeeded future if the tenant has been created.
      */
     protected Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenant) {
-        return addTenant(tenantId, JsonObject.mapFrom(tenant));
-    }
-
-    /**
-     * Adds a tenant.
-     *
-     * @param tenantId The identifier of the tenant.
-     * @param payload The properties to register for the tenant.
-     * @return A succeeded future if the tenant has been created.
-     */
-    protected Future<OperationResult<Id>> addTenant(final String tenantId, final JsonObject payload) {
 
         final Promise<OperationResult<Id>> result = Promise.promise();
-        getTenantManagementService().add(Optional.ofNullable(tenantId), payload, NoopSpan.INSTANCE, result);
+        getTenantManagementService().createTenant(Optional.ofNullable(tenantId), tenant, NoopSpan.INSTANCE, result);
         return result.future().map(response -> {
             if (response.getStatus() == HttpURLConnection.HTTP_CREATED) {
                 return response;
@@ -669,25 +663,34 @@ public abstract class AbstractTenantServiceTest {
     }
 
     /**
+     * Adds a tenant.
+     *
+     * @param tenantId The identifier of the tenant.
+     * @param payload The properties to register for the tenant.
+     * @return A succeeded future if the tenant has been created.
+     */
+    protected Future<OperationResult<Id>> addTenant(final String tenantId, final JsonObject payload) {
+        return addTenant(tenantId, payload.mapTo(Tenant.class));
+    }
+
+    /**
      * Creates a tenant management object for a tenantId.
      * <p>
      * The tenant object created contains configurations for the http and the mqtt adapter.
      *
      * @return The tenant object.
      */
-    private static JsonObject buildTenantPayload() {
+    private static Tenant buildTenantPayload() {
 
-        final JsonObject adapterDetailsHttp = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject adapterDetailsMqtt = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE)
-                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
-        final JsonObject tenantPayload = new JsonObject()
-                .put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE)
-                .put(RegistryManagementConstants.FIELD_ADAPTERS, new JsonArray().add(adapterDetailsHttp).add(adapterDetailsMqtt));
+        final Adapter adapterDetailsHttp = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
+                .setDeviceAuthenticationRequired(true)
+                .setEnabled(true);
+        final Adapter adapterDetailsMqtt = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                .setDeviceAuthenticationRequired(true)
+                .setEnabled(true);
+        final Tenant tenantPayload = new Tenant()
+                .setEnabled(true)
+                .setAdapters(List.of(adapterDetailsHttp, adapterDetailsMqtt));
         return tenantPayload;
     }
 }

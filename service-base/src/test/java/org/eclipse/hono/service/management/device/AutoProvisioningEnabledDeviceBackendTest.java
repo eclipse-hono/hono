@@ -90,7 +90,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
             final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
             promise.complete(OperationResult.empty(204));
             return null;
-        }).when(underTest).set(any(), any(), any(), any(), any(), any(Handler.class));
+        }).when(underTest).updateCredentials(any(), any(), any(), any(), any(), any(Handler.class));
 
         // WHEN provisioning a device from a certificate
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);
@@ -99,7 +99,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         result.setHandler(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 verify(underTest).createDevice(eq(TENANT_ID), any(), any(), any(), any());
-                verify(underTest).set(eq(TENANT_ID), eq(DEVICE_ID), any(), any(), any(), any());
+                verify(underTest).updateCredentials(eq(TENANT_ID), eq(DEVICE_ID), any(), any(), any(), any());
             });
             ctx.completeNow();
         }));
@@ -135,7 +135,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
             final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
             promise.complete(OperationResult.empty(403)); // creation of credentials fails
             return null;
-        }).when(underTest).set(any(), any(), any(), any(), any(), any(Handler.class));
+        }).when(underTest).updateCredentials(any(), any(), any(), any(), any(), any(Handler.class));
 
         // WHEN provisioning a device from a certificate
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);

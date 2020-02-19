@@ -109,7 +109,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
 
             final Promise<OperationResult<Id>> addResult = Promise.promise();
-            getService().add(tenantId, payload, span, addResult);
+            getService().createTenant(tenantId, payload.mapTo(Tenant.class), span, addResult);
             resultFuture = addResult.future().map(res -> {
                 final String createdTenantId = Optional.ofNullable(res.getPayload()).map(Id::getId).orElse(null);
                 return res.createResponse(request, JsonObject::mapFrom).setTenant(createdTenantId);
@@ -142,7 +142,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
 
             final Promise<OperationResult<Void>> updateResult = Promise.promise();
-            getService().update(tenantId, payload, resourceVersion, span, updateResult);
+            getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span, updateResult);
             resultFuture = updateResult.future()
                     .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         } else {
@@ -170,7 +170,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             log.debug("deleting tenant [{}]", tenantId);
 
             final Promise<Result<Void>> removeResult = Promise.promise();
-            getService().remove(tenantId, resourceVersion, span, removeResult);
+            getService().deleteTenant(tenantId, resourceVersion, span, removeResult);
             resultFuture = removeResult.future()
                     .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         }
@@ -192,7 +192,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         } else {
             log.debug("retrieving tenant [id: {}]", tenantId);
             final Promise<OperationResult<Tenant>> readResult = Promise.promise();
-            getService().read(tenantId, span, readResult);
+            getService().readTenant(tenantId, span, readResult);
             resultFuture = readResult.future()
                     .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         }

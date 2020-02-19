@@ -112,7 +112,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
             resultFuture = credentialsFromPayload(request)
                     .compose(secrets -> {
                         final Promise<OperationResult<Void>> result = Promise.promise();
-                        getService().set(tenantId, deviceId, resourceVersion, secrets, span, result);
+                        getService().updateCredentials(tenantId, deviceId, secrets, resourceVersion, span, result);
                         return result.future()
                                 .map(res -> res.createResponse(request, id -> null).setDeviceId(deviceId));
                     });
@@ -210,7 +210,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final Span span = Util.newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         final Promise<OperationResult<List<CommonCredential>>> getResult = Promise.promise();
-        getService().get(tenantId, deviceId, span, getResult);
+        getService().readCredentials(tenantId, deviceId, span, getResult);
 
         final Future<EventBusMessage> resultFuture = getResult.future()
                 .map(res -> {

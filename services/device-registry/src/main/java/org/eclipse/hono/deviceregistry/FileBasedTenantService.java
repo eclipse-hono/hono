@@ -273,7 +273,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void read(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
+    public void readTenant(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resultHandler);
@@ -343,7 +343,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void remove(final String tenantId, final Optional<String> resourceVersion, final Span span,
+    public void deleteTenant(final String tenantId, final Optional<String> resourceVersion, final Span span,
             final Handler<AsyncResult<Result<Void>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
@@ -379,7 +379,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void add(final Optional<String> tenantId, final JsonObject tenantSpec,
+    public void createTenant(final Optional<String> tenantId, final Tenant tenantSpec,
             final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
 
         Objects.requireNonNull(tenantId);
@@ -398,7 +398,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
      * @return The outcome of the operation indicating success or failure.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    private OperationResult<Id> add(final String tenantId, final JsonObject tenantSpec, final Span span) {
+    private OperationResult<Id> add(final String tenantId, final Tenant tenantSpec, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
@@ -409,10 +409,9 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         }
         try {
             if (log.isTraceEnabled()) {
-                log.trace("adding tenant [id: {}]: {}", tenantId, tenantSpec.encodePrettily());
+                log.trace("adding tenant [id: {}]: {}", tenantId, JsonObject.mapFrom(tenantSpec).encodePrettily());
             }
-            final Tenant tenantToAdd = tenantSpec.mapTo(Tenant.class);
-            final boolean existsConflictingTenant = tenantToAdd.getTrustedCertificateAuthoritySubjectDNs()
+            final boolean existsConflictingTenant = tenantSpec.getTrustedCertificateAuthoritySubjectDNs()
             .stream().anyMatch(subjectDn -> getByCa(subjectDn) != null);
 
             if (existsConflictingTenant) {
@@ -420,7 +419,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
                 return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
             } else {
-                final Versioned<Tenant> tenant = new Versioned<>(tenantToAdd);
+                final Versioned<Tenant> tenant = new Versioned<>(tenantSpec);
                 tenants.put(tenantId, tenant);
                 dirty = true;
                 return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
@@ -444,7 +443,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
      * @throws NullPointerException if either of the input parameters is {@code null}.
      */
     @Override
-    public void update(final String tenantId, final JsonObject tenantSpec, final Optional<String> expectedResourceVersion,
+    public void updateTenant(final String tenantId, final Tenant tenantSpec, final Optional<String> expectedResourceVersion,
             final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
@@ -465,7 +464,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
      */
     public OperationResult<Void> update(
             final String tenantId,
-            final JsonObject tenantSpec,
+            final Tenant tenantSpec,
             final Optional<String> expectedResourceVersion,
             final Span span) {
 
@@ -475,8 +474,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         if (getConfig().isModificationEnabled()) {
             if (tenants.containsKey(tenantId)) {
                 try {
-                    final Tenant newTenantData = tenantSpec.mapTo(Tenant.class);
-                    final Entry<String, Versioned<Tenant>> conflictingTenant = newTenantData
+                    final Entry<String, Versioned<Tenant>> conflictingTenant = tenantSpec
                             .getTrustedCertificateAuthoritySubjectDNs()
                             .stream()
                             .map(subjectDn -> getByCa(subjectDn))
@@ -489,7 +487,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                         TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
                         return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
                     } else {
-                        final Versioned<Tenant> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> newTenantData);
+                        final Versioned<Tenant> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> tenantSpec);
                         if ( updatedTenant != null ) {
 
                             tenants.put(tenantId, updatedTenant);
