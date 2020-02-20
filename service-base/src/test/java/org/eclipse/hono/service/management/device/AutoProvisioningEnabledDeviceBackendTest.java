@@ -37,6 +37,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.VertxExtension;
@@ -71,6 +72,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testProvisionDeviceSucceeds(final VertxTestContext ctx) {
 
@@ -82,13 +84,13 @@ public class AutoProvisioningEnabledDeviceBackendTest {
             final Promise<OperationResult<Id>> promise = invocation.getArgument(4);
             promise.complete(OperationResult.ok(201, Id.of(DEVICE_ID), Optional.empty(), Optional.empty()));
             return null;
-        }).when(underTest).createDevice(any(), any(), any(), any(), any(Promise.class));
+        }).when(underTest).createDevice(any(), any(), any(), any(), any(Handler.class));
 
         doAnswer(invocation -> {
             final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
             promise.complete(OperationResult.empty(204));
             return null;
-        }).when(underTest).set(any(), any(), any(), any(), any(), any(Promise.class));
+        }).when(underTest).set(any(), any(), any(), any(), any(), any(Handler.class));
 
         // WHEN provisioning a device from a certificate
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);
@@ -109,6 +111,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testProvisionDeviceRemovesDeviceIfCredentialsCreationFails(final VertxTestContext ctx) {
 
@@ -120,19 +123,19 @@ public class AutoProvisioningEnabledDeviceBackendTest {
             final Promise<OperationResult<Id>> promise = invocation.getArgument(4);
             promise.complete(OperationResult.ok(201, Id.of(DEVICE_ID), Optional.empty(), Optional.empty()));
             return null;
-        }).when(underTest).createDevice(any(), any(), any(), any(), any(Promise.class));
+        }).when(underTest).createDevice(any(), any(), any(), any(), any(Handler.class));
 
         doAnswer(invocation -> {
             final Promise<Result<Void>> promise = invocation.getArgument(4);
             promise.complete(Result.from(204));
             return null;
-        }).when(underTest).deleteDevice(any(), any(), any(), any(), any(Promise.class));
+        }).when(underTest).deleteDevice(any(), any(), any(), any(), any(Handler.class));
 
         doAnswer(invocation -> {
             final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
             promise.complete(OperationResult.empty(403)); // creation of credentials fails
             return null;
-        }).when(underTest).set(any(), any(), any(), any(), any(), any(Promise.class));
+        }).when(underTest).set(any(), any(), any(), any(), any(), any(Handler.class));
 
         // WHEN provisioning a device from a certificate
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);
