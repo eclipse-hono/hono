@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfoCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionResult;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
@@ -56,7 +56,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
     private RemoteCacheBasedDeviceConnectionService svc;
     private Span span;
-    private DeviceConnectionInfoCache cache;
+    private DeviceConnectionInfo cache;
 
     /**
      * Sets up fixture.
@@ -66,7 +66,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
         final SpanContext spanContext = mock(SpanContext.class);
         span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
-        cache = mock(DeviceConnectionInfoCache.class);
+        cache = mock(DeviceConnectionInfo.class);
         svc = new RemoteCacheBasedDeviceConnectionService(cache);
     }
 

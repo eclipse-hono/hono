@@ -37,18 +37,18 @@ import io.vertx.ext.healthchecks.Status;
  * Hotrod protocol.
  *
  */
-public final class HotrodBasedDeviceConnectionInfoCache implements DeviceConnectionInfoCache, HealthCheckProvider {
+public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionInfo, HealthCheckProvider {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HotrodBasedDeviceConnectionInfoCache.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HotrodBasedDeviceConnectionInfo.class);
 
-    final HotrodCache<String, String> cache;
+    final RemoteCache<String, String> cache;
 
     /**
      * Creates a client for accessing device connection information.
      * 
      * @param cache The remote cache that contains the data.
      */
-    public HotrodBasedDeviceConnectionInfoCache(final HotrodCache<String, String> cache) {
+    public HotrodBasedDeviceConnectionInfo(final RemoteCache<String, String> cache) {
         this.cache = Objects.requireNonNull(cache);
     }
 

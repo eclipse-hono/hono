@@ -21,7 +21,7 @@ import io.vertx.core.json.JsonObject;
  * A repository for keeping connection information about devices.
  *
  */
-public interface DeviceConnectionInfoCache {
+public interface DeviceConnectionInfo {
 
     /**
      * Sets the gateway that last acted on behalf of a device.

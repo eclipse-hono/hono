@@ -24,8 +24,7 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
-import org.infinispan.client.hotrod.RemoteCache;
-import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.commons.api.BasicCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,23 +37,23 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A HotrodCache.
+ * A remote cache that connects to a data grid using the Hotrod protocol.
  *
  * @param <K> The type of keys used by the cache.
  * @param <V> The type of values stored in the cache.
  */
-public final class HotrodCache<K, V> implements ConnectionLifecycle<HotrodCache<K, V>> {
+public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLifecycle<HotrodCache<K, V>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(HotrodCache.class);
 
     private final AtomicBoolean connecting = new AtomicBoolean(false);
     private final Vertx vertx;
-    private final RemoteCacheManager cacheManager;
+    private final RemoteCacheContainer cacheManager;
     private final String cacheName;
     private final K connectionCheckKey;
     private final V connectionCheckValue;
 
-    private RemoteCache<K, V> cache;
+    private BasicCache<K, V> cache;
 
     /**
      * @param vertx The vert.x instance to run on.
@@ -67,7 +66,7 @@ public final class HotrodCache<K, V> implements ConnectionLifecycle<HotrodCache<
      */
     public HotrodCache(
             final Vertx vertx,
-            final RemoteCacheManager cacheManager,
+            final RemoteCacheContainer cacheManager,
             final String name,
             final K connectionCheckKey,
             final V connectionCheckValue) {
@@ -157,6 +156,7 @@ public final class HotrodCache<K, V> implements ConnectionLifecycle<HotrodCache<
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be stored in the cache.
      */
+    @Override
     public Future<V> put(final K key, final V value) {
 
         final Promise<V> result = Promise.promise();
@@ -185,6 +185,7 @@ public final class HotrodCache<K, V> implements ConnectionLifecycle<HotrodCache<
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be read from the cache.
      */
+    @Override
     public Future<V> get(final K key) {
 
         final Promise<V> result = Promise.promise();
@@ -253,6 +254,7 @@ public final class HotrodCache<K, V> implements ConnectionLifecycle<HotrodCache<
      * @return A future that is completed with information about a successful check's result.
      *         Otherwise, the future will be failed with a {@link ServerErrorException}.
      */
+    @Override
     public Future<JsonObject> checkForCacheAvailability() {
 
         final Promise<JsonObject> result = Promise.promise();

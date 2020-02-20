@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 
 /**
- * A InfinispanRemoteConfigurationPropertiesTest.
+ * Tests verifying behavior of {@link InfinispanRemoteConfigurationProperties}.
  *
  */
 class InfinispanRemoteConfigurationPropertiesTest {

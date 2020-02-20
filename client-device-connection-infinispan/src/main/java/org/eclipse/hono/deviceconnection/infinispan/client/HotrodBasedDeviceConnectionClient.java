@@ -33,7 +33,7 @@ import io.vertx.core.json.JsonObject;
 public final class HotrodBasedDeviceConnectionClient implements DeviceConnectionClient {
 
     final String tenantId;
-    final DeviceConnectionInfoCache cache;
+    final DeviceConnectionInfo cache;
 
     /**
      * Creates a client for accessing device connection information.
@@ -41,7 +41,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
      * @param tenantId The tenant that this client is scoped to.
      * @param cache The remote cache that contains the data.
      */
-    public HotrodBasedDeviceConnectionClient(final String tenantId, final DeviceConnectionInfoCache cache) {
+    public HotrodBasedDeviceConnectionClient(final String tenantId, final DeviceConnectionInfo cache) {
         this.tenantId = Objects.requireNonNull(tenantId);
         this.cache = Objects.requireNonNull(cache);
     }

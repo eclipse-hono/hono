@@ -1,0 +1,55 @@
+/**
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+
+package org.eclipse.hono.deviceconnection.infinispan.client;
+
+import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+
+/**
+ * A simple {@code Map} like interface to a remote data grid.
+ *
+ * @param <K> The type of keys used for looking up data.
+ * @param <V> The type of values stored in grid.
+ */
+public interface RemoteCache<K, V> {
+
+    /**
+     * Checks if the cache is connected to the data grid.
+     * 
+     * @return A future that is completed with information about a successful check's result.
+     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServerErrorException}.
+     */
+    Future<JsonObject> checkForCacheAvailability();
+
+    /**
+     * Puts a value to the cache.
+     * 
+     * @param key The key.
+     * @param value The value.
+     * @return A succeeded future containing the previous value or {@code null} if the
+     *         cache didn't contain the key yet.
+     *         A failed future if the value could not be stored in the cache.
+     */
+    Future<V> put(K key, V value);
+
+    /**
+     * Gets a value from the cache.
+     * 
+     * @param key The key.
+     * @return A succeeded future containing the value or {@code null} if the
+     *         cache didn't contain the key yet.
+     *         A failed future if the value could not be read from the cache.
+     */
+    Future<V> get(K key);
+}

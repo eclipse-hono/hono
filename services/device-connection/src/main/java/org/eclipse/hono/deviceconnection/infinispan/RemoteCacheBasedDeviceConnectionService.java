@@ -18,7 +18,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfoCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.deviceconnection.EventBusDeviceConnectionAdapter;
@@ -37,7 +37,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  */
 public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConnectionAdapter implements DeviceConnectionService, HealthCheckProvider {
 
-    private final DeviceConnectionInfoCache cache;
+    private final DeviceConnectionInfo cache;
 
     /**
      * Creates a new service instance for a remote cache.
@@ -45,7 +45,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
      * @param cache The remote cache.
      * @throws NullPointerException if the cache is {@code null}.
      */
-    public RemoteCacheBasedDeviceConnectionService(@Autowired final DeviceConnectionInfoCache cache) {
+    public RemoteCacheBasedDeviceConnectionService(@Autowired final DeviceConnectionInfo cache) {
         this.cache = Objects.requireNonNull(cache);
     }
 

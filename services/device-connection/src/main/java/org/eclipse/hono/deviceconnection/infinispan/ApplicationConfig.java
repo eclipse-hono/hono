@@ -19,7 +19,7 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
-import org.eclipse.hono.deviceconnection.infinispan.client.HotrodBasedDeviceConnectionInfoCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -198,7 +198,7 @@ public class ApplicationConfig {
      */
     @Bean
     public RemoteCacheBasedDeviceConnectionService deviceConnectionService(final HotrodCache<String, String> cache) {
-        return new RemoteCacheBasedDeviceConnectionService(new HotrodBasedDeviceConnectionInfoCache(cache));
+        return new RemoteCacheBasedDeviceConnectionService(new HotrodBasedDeviceConnectionInfo(cache));
     }
 
     /**
