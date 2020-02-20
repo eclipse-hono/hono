@@ -62,7 +62,7 @@
     <spring-boot.version>2.2.4.RELEASE</spring-boot.version>
     <spring-security-crypto.version>5.2.2.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
-    <vertx.version>3.8.4</vertx.version>
+    <vertx.version>3.8.5</vertx.version>
     <wiremock.version>2.24.1</wiremock.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
