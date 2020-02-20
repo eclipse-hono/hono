@@ -39,9 +39,14 @@ import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -59,6 +64,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * The vert.x context to run interactions with Hono services on.
      */
     private final Context context;
+    private final Tracer tracer;
+    private final String adapterName;
     private final CoapAdapterProperties config;
     private final CredentialsClientFactory credentialsClientFactory;
 
@@ -66,16 +73,22 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * Creates a new resolver.
      * 
      * @param vertxContext The vert.x context to run on.
+     * @param tracer The OpenTracing tracer.
+     * @param adapterName The name of the protocol adapter.
      * @param config The configuration properties.
      * @param credentialsClientFactory The factory to use for creating clients to the Credentials service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public DefaultDeviceResolver(
             final Context vertxContext,
+            final Tracer tracer,
+            final String adapterName,
             final CoapAdapterProperties config,
             final CredentialsClientFactory credentialsClientFactory) {
 
         this.context = Objects.requireNonNull(vertxContext);
+        this.tracer = Objects.requireNonNull(tracer);
+        this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
     }
@@ -103,6 +116,13 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
         }
     }
 
+    private Span newSpan(final String operation) {
+        return tracer.buildSpan(operation)
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.COMPONENT.getKey(), adapterName)
+                .start();
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -111,12 +131,15 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
         final Map<String, Object> result = new HashMap<>();
 
         if (clientIdentity instanceof PreSharedKeyIdentity) {
+            final Span span = newSpan("PSK-getDeviceIdentityInfo");
             final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(clientIdentity.getName());
+            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceIdentity.getTenantId())
+                .setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdentity.getAuthId());
             final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
             context.runOnContext(go -> {
                 credentialsClientFactory
                 .getOrCreateCredentialsClient(deviceIdentity.getTenantId())
-                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, deviceIdentity.getAuthId()))
+                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, deviceIdentity.getAuthId(), new JsonObject(), span.context()))
                 .setHandler(attempt -> {
                     if (attempt.succeeded()) {
                         credentialsResult.complete(attempt.result());
@@ -130,10 +153,12 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
                 // so no need to use get(Long, TimeUnit) here
                 final CredentialsObject credentials = credentialsResult.join();
                 result.put("hono-device", new Device(deviceIdentity.getTenantId(), credentials.getDeviceId()));
+                span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, credentials.getDeviceId());
             } catch (final CompletionException e) {
                 LOG.debug("could not resolve authenticated principal [type: {}, tenant-id: {}, auth-id: {}]",
                         clientIdentity.getClass(), deviceIdentity.getTenantId(), deviceIdentity.getAuthId(), e);
             }
+            span.finish();
         } else {
             LOG.info("unsupported Principal type: {}", clientIdentity.getClass());
         }
@@ -142,16 +167,20 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
 
     @Override
     public SecretKey getKey(final PskPublicInformation identity) {
+        final Span span = newSpan("PSK-getSecretKey");
 
         final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(identity.getPublicInfoAsString());
         if (handshakeIdentity == null) {
+            span.finish();
             return null;
         }
+        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, handshakeIdentity.getTenantId())
+            .setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, handshakeIdentity.getAuthId());
 
         final CompletableFuture<SecretKey> secret = new CompletableFuture<>();
         context.runOnContext((v) -> {
             LOG.debug("getting PSK secret for identity [{}]", handshakeIdentity.getAuthId());
-            getSharedKeyForDevice(handshakeIdentity)
+            getSharedKeyForDevice(handshakeIdentity, span.context())
             .setHandler((getAttempt) -> {
                 if (getAttempt.succeeded()) {
                     secret.complete(getAttempt.result());
@@ -160,13 +189,18 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
                 }
             });
         });
+        SecretKey key;
         try {
             // credentials client will wait limited time only
-            return secret.join();
+            key = secret.join();
+            span.log("secret key available.");
         } catch (final CompletionException e) {
             LOG.debug("error retrieving credentials for PSK identity [{}]", handshakeIdentity.getAuthId());
-            return null;
+            key = null;
+            span.log("no secret key available!");
         }
+        span.finish();
+        return key;
     }
 
     /**
@@ -178,11 +212,11 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * @param handshakeIdentity The identity used by the device.
      * @return A future completed with the key or failed with a {@link ServiceInvocationException}.
      */
-    private Future<SecretKey> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity) {
+    private Future<SecretKey> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity, final SpanContext context) {
 
         return credentialsClientFactory
                 .getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
-                .compose(client -> client.get(handshakeIdentity.getType(), handshakeIdentity.getAuthId()))
+                .compose(client -> client.get(handshakeIdentity.getType(), handshakeIdentity.getAuthId(), new JsonObject(), context))
                 .compose((credentials) -> Optional.ofNullable(getCandidateKey(credentials))
                         .map(secret -> Future.succeededFuture(secret))
                         .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
