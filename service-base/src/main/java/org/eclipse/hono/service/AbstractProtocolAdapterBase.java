@@ -744,9 +744,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         connection cannot be established.
      * @throws NullPointerException if serviceName is {@code null}.
      * @throws IllegalArgumentException if factory is {@code null}.
-     * @param <T> The type of connection that the factory uses.
+     * @param <C> The type of connection that the factory uses.
      */
-    protected final <T> Future<T> connectToService(final ConnectionLifecycle<T> factory, final String serviceName) {
+    protected final <C> Future<C> connectToService(final ConnectionLifecycle<C> factory, final String serviceName) {
         return connectToService(factory, serviceName, null, null);
     }
 
@@ -764,13 +764,13 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         connection cannot be established.
      * @throws NullPointerException if serviceName is {@code null}.
      * @throws IllegalArgumentException if factory is {@code null}.
-     * @param <T> The type of connection that the factory uses.
+     * @param <C> The type of connection that the factory uses.
      */
-    protected final <T> Future<T> connectToService(
-            final ConnectionLifecycle<T> factory,
+    protected final <C> Future<C> connectToService(
+            final ConnectionLifecycle<C> factory,
             final String serviceName,
-            final DisconnectListener<T> disconnectListener,
-            final ReconnectListener<T> reconnectListener) {
+            final DisconnectListener<C> disconnectListener,
+            final ReconnectListener<C> reconnectListener) {
 
         Objects.requireNonNull(factory);
         factory.addDisconnectListener(c -> {

@@ -32,6 +32,7 @@
     <logger name="org.eclipse.hono.adapter" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
   </springProfile>
 
@@ -40,6 +41,7 @@
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.client.impl.AbstractRequestResponseClient" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
   </springProfile>
 

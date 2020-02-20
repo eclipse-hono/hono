@@ -37,7 +37,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  */
 public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConnectionAdapter implements DeviceConnectionService, HealthCheckProvider {
 
-    private DeviceConnectionInfoCache cache;
+    private final DeviceConnectionInfoCache cache;
 
     /**
      * Creates a new service instance for a remote cache.
