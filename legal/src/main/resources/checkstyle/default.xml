@@ -69,13 +69,10 @@
                org.hamcrest.CoreMatchers.*,
                org.hamcrest.Matchers.*,
                org.hamcrest.MatcherAssert.*,
-               org.hamcrest.collection.IsCollectionWithSize.hasSize,
-               org.junit.Assert.*,
                org.junit.jupiter.api.Assertions.*,
                org.junit.jupiter.api.Assumptions.*,
                org.mockito.Mockito.*,
-               org.mockito.ArgumentMatchers.*,
-               org.mockito.hamcrest.MockitoHamcrest.booleanThat"/>
+               org.mockito.ArgumentMatchers.*"/>
     </module>
     <!-- style -->
 

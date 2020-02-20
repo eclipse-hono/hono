@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,9 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -219,11 +217,10 @@ public class CredentialsTest {
 
         final PasswordCredential decodeCredential = (PasswordCredential) decode[0];
 
-        assertThat(decodeCredential, instanceOf(PasswordCredential.class));
+        assertThat(decodeCredential).isInstanceOf(PasswordCredential.class);
         assertEquals(authId, decodeCredential.getAuthId());
-        assertThat(decodeCredential.getSecrets(), hasSize(1));
+        assertThat(decodeCredential.getSecrets()).hasSize(1);
         final PasswordSecret decodeSecret = decodeCredential.getSecrets().get(0);
         assertEquals(decodeSecret.getNotAfter(), Instant.parse("1992-09-11T11:38:00Z"));
-
     }
 }
