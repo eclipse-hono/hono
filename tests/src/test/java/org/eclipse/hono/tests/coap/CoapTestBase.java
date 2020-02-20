@@ -37,6 +37,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapClient;
 import org.eclipse.californium.core.CoapHandler;
 import org.eclipse.californium.core.CoapResponse;
+import org.eclipse.californium.core.Utils;
 import org.eclipse.californium.core.coap.CoAP.Code;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
@@ -56,6 +57,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -70,6 +72,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
 
@@ -97,6 +100,9 @@ public abstract class CoapTestBase {
     private static final Vertx VERTX = Vertx.vertx();
 
     private static final int MESSAGES_TO_SEND = 60;
+
+    private static final String COMMAND_TO_SEND = "setDarkness";
+    private static final String COMMAND_JSON_KEY = "darkness";
 
     /**
      * A logger to be shared with subclasses.
@@ -675,6 +681,57 @@ public abstract class CoapTestBase {
         }));
     }
 
+    /**
+     * Verifies that the CoAP adapter handles hono-ttd.
+     *
+     * @param ctx The test context
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+        .setHandler(setup.completing());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
+
+        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+        final AtomicInteger counter = new AtomicInteger();
+
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                msg -> {
+                    final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
+                    logger.info("north-bound-cmd received {}, ttd: {}", msg, ttd);
+                    final Optional<TimeUntilDisconnectNotification> notification = TimeUntilDisconnectNotification.fromMessage(msg);
+                    if (notification.isPresent()) {
+                        logger.info("send one-way-command!");
+                        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                        helper.sendOneWayCommand(
+                                tenantId,
+                                deviceId,
+                                COMMAND_TO_SEND,
+                                "application/json",
+                                inputData.toBuffer(),
+                                // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
+                                IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
+                                notification.get().getMillisecondsUntilExpiry()/2);
+                    }
+                },
+                count -> {
+                    logger.info("south-bound send");
+                    final Promise<OptionSet> result = Promise.promise();
+                    final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
+                    request.getOptions().setUriQuery("hono-ttd=4");
+                    logger.info("south-bound send {}", request);
+                    client.advanced(getHandler(result, ResponseCode.CONTENT), request);
+                    return result.future();
+                });
+    }
+
     private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
 
         ctx.verify(() -> {
@@ -740,8 +797,10 @@ public abstract class CoapTestBase {
             @Override
             public void onLoad(final CoapResponse response) {
                 if (response.getCode() == expectedStatusCode) {
+                    logger.info("=> received {}", Utils.prettyPrint(response));
                     responseHandler.handle(Future.succeededFuture(response.getOptions()));
                 } else {
+                    logger.warn("expected {} => received {}", expectedStatusCode, Utils.prettyPrint(response));
                     responseHandler.handle(Future.failedFuture(
                             new CoapResultException(toHttpStatusCode(response.getCode()), response.getResponseText())));
                 }
