@@ -34,8 +34,11 @@ public interface GatewayMapper extends ConnectionLifecycle<HonoConnection> {
      * @return The GatewayMapper instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    static GatewayMapper create(final RegistrationClientFactory registrationClientFactory,
-            final DeviceConnectionClientFactory deviceConnectionClientFactory, final Tracer tracer) {
+    static GatewayMapper create(
+            final RegistrationClientFactory registrationClientFactory,
+            final BasicDeviceConnectionClientFactory deviceConnectionClientFactory,
+            final Tracer tracer) {
+
         return new GatewayMapperImpl(registrationClientFactory, deviceConnectionClientFactory, tracer);
     }
 

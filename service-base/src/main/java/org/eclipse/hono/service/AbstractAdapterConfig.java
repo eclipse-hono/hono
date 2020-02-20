@@ -16,6 +16,7 @@ package org.eclipse.hono.service;
 import java.util.Optional;
 
 import org.eclipse.hono.cache.CacheProvider;
+import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
@@ -341,15 +342,18 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating clients for the <em>Device Connection</em> API as a Spring bean.
+     * Exposes configuration properties for accessing the device connection service as a Spring bean.
      *
-     * @return The factory.
+     * @return The properties.
      */
     @Bean
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @Scope("prototype")
-    public DeviceConnectionClientFactory deviceConnectionClientFactory() {
-        return DeviceConnectionClientFactory.create(deviceConnectionServiceConnection());
+    @ConfigurationProperties(prefix = "hono.device-connection")
+    @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
+    public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
+        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        customizeDeviceConnectionClientFactoryConfig(config);
+        return config;
     }
 
     /**
@@ -360,22 +364,22 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
     @Scope("prototype")
+    @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
     public HonoConnection deviceConnectionServiceConnection() {
         return HonoConnection.newConnection(vertx(), deviceConnectionServiceClientConfig());
     }
 
     /**
-     * Exposes configuration properties for accessing the device connection service as a Spring bean.
+     * Exposes a factory for creating clients for the <em>Device Connection</em> API as a Spring bean.
      *
-     * @return The properties.
+     * @return The factory.
      */
-    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @ConfigurationProperties(prefix = "hono.device-connection")
     @Bean
-    public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
-        final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        customizeDeviceConnectionClientFactoryConfig(config);
-        return config;
+    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
+    @Scope("prototype")
+    @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
+    public BasicDeviceConnectionClientFactory deviceConnectionClientFactory() {
+        return DeviceConnectionClientFactory.create(deviceConnectionServiceConnection());
     }
 
     /**
@@ -404,18 +408,6 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes a factory for creating clients for receiving upstream commands
-     * via the AMQP Messaging Network.
-     *
-     * @return The factory.
-     */
-    @Bean
-    @Scope("prototype")
-    public CommandConsumerFactory commandConsumerFactory() {
-        return CommandConsumerFactory.create(commandConsumerConnection(), gatewayMapper());
-    }
-
-    /**
      * Exposes the connection used for receiving upstream commands as a Spring bean.
      *
      * @return The connection.
@@ -427,14 +419,34 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Exposes the component for mapping a device id to a corresponding gateway id.
+     * Exposes a factory for creating clients for receiving upstream commands
+     * via the AMQP Messaging Network.
      *
-     * @return New GatewayMapper instance.
+     * @param gatewayMapper The component to use for mapping device IDs to gateway IDs.
+     * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public GatewayMapper gatewayMapper() {
-        return GatewayMapper.create(registrationClientFactory(), deviceConnectionClientFactory(), getTracer());
+    public CommandConsumerFactory commandConsumerFactory(final GatewayMapper gatewayMapper) {
+        return CommandConsumerFactory.create(commandConsumerConnection(), gatewayMapper);
+    }
+
+    /**
+     * Exposes the component for mapping a device id to a corresponding gateway id.
+     *
+     * @param registrationClientFactory The factory to use for creating clients for the Device Registration service.
+     * @param deviceConnectionClientFactory The factory to use for creating clients for accessing device connection information.
+     * @param tracer The Open Tracing tracer to use for tracking the processing of requests.
+     * @return The newly created mapper instance.
+     */
+    @Bean
+    @Scope("prototype")
+    public GatewayMapper gatewayMapper(
+            final RegistrationClientFactory registrationClientFactory,
+            final BasicDeviceConnectionClientFactory deviceConnectionClientFactory,
+            final Tracer tracer) {
+
+        return GatewayMapper.create(registrationClientFactory, deviceConnectionClientFactory, tracer);
     }
 
     /**

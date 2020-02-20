@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import org.springframework.context.annotation.ComponentScan;
 @ComponentScan("org.eclipse.hono.adapter.sigfox")
 @ComponentScan("org.eclipse.hono.adapter.http")
 @ComponentScan("org.eclipse.hono.service.metric")
+@ComponentScan("org.eclipse.hono.deviceconnection.infinispan.client")
 @SpringBootApplication
 public class Application extends AbstractApplication {
 

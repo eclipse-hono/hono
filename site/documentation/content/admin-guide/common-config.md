@@ -103,6 +103,26 @@ where the `${PREFIX}` is set to `HONO_DEVICECONNECTION`.
 
 Responses from the Device Connection service are never cached, so the properties for configuring the cache are ignored.
 
+#### Direct Connection to Data Grid
+
+Protocol adapters can alternatively be configured to directly access an data grid for storing and retrieving
+device connection information using [Infinispan](https://infinispan.org)'s Hotrod protocol.
+This has the advantage of saving the network hop to the Device Connection service. However,
+this is only beneficial if the Device Connection service implementation itself uses a remote service (like a data grid) for
+storing the data.
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring
+the connection to the data grid:
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_DEVICECONNECTION_SERVER_LIST`<br>`--hono.deviceConnection.serverList` | yes | - | A list of remote servers in the form: `host1[:port][;host2[:port]]....`. |
+| `HONO_DEVICECONNECTION_AUTH_SERVER_NAME`<br>`--hono.deviceConnection.authServerName` | yes | - | The server name to indicate in the SASL handshake when authenticating to the server. |
+| `HONO_DEVICECONNECTION_AUTH_USERNAME`<br>`--hono.deviceConnection.authUsername` | yes | - | The username to use for authenticating to the server. |
+| `HONO_DEVICECONNECTION_AUTH_PASSWORD`<br>`--hono.deviceConnection.authPassword` | yes | - | The password to use for authenticating to the server. |
+
+In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/9.4/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.deviceConnection` instead of the `infinispan.client.hotrod` prefix.
+
 ### Resource Limits Checker Configuration
 
 The adapter can use metrics collected by a Prometheus server to enforce certain limits set at the tenant level like the overall number of connected devices allowed per tenant.

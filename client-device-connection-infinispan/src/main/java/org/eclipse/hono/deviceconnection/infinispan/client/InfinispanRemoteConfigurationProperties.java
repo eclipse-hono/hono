@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,12 +12,14 @@
  */
 
 
-package org.eclipse.hono.deviceconnection.infinispan;
+package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Map;
 
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.client.hotrod.impl.ConfigurationProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -26,6 +28,8 @@ import org.infinispan.client.hotrod.impl.ConfigurationProperties;
  */
 public class InfinispanRemoteConfigurationProperties extends ConfigurationProperties {
 
+    private static final Logger LOG = LoggerFactory.getLogger(InfinispanRemoteConfigurationProperties.class);
+
     /**
      * Gets a builder for this configuration.
      * 
@@ -33,6 +37,19 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
      */
     public final ConfigurationBuilder getConfigurationBuilder() {
        return new ConfigurationBuilder().withProperties(getProperties());
+    }
+
+    /**
+     * Sets the properties related to the connection pool.
+     * 
+     * @param poolProperties The properties.
+     */
+    public final void setConnectionPool(final Map<String, String> poolProperties) {
+       poolProperties.forEach((k, v) -> {
+           final String key = String.format("%s.%s", "infinispan.client.hotrod.connection_pool", k);
+           LOG.debug("setting configuration property [{}: {}]", key, v);
+           getProperties().setProperty(key, v);
+       });
     }
 
     /**

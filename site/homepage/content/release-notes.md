@@ -4,6 +4,13 @@ title = "Release Notes"
 
 ## 1.2.0 (Not Released yet)
 
+### New Features
+
+* The protocol adapters can now be configured with a direct connection to a data grid
+  for storing device connection information.
+  This has the advantage of saving the network hop to the Device Connection service.
+  Refer to the protocol adapter Admin Guides for details.
+
 ### API Changes
 
  * The device registry credentials endpoint will no longer handout sensitive details for hashed-password secrets.

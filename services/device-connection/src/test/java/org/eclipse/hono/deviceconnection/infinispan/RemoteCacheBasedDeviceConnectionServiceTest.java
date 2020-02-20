@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,17 +23,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
-import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionResult;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
-import org.infinispan.commons.api.BasicCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -55,28 +56,24 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
     private RemoteCacheBasedDeviceConnectionService svc;
     private Span span;
-    private BasicCache<Object, Object> cache;
-    private RemoteCacheContainer cacheManager;
+    private DeviceConnectionInfo cache;
 
     /**
      * Sets up fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
+        final SpanContext spanContext = mock(SpanContext.class);
         span = mock(Span.class);
-        cache = mock(BasicCache.class);
-        cacheManager = mock(RemoteCacheContainer.class);
-        when(cacheManager.getCache("device-connection")).thenReturn(cache);
-
-        svc = new RemoteCacheBasedDeviceConnectionService();
-        svc.setCacheManager(cacheManager);
+        when(span.context()).thenReturn(spanContext);
+        cache = mock(DeviceConnectionInfo.class);
+        svc = new RemoteCacheBasedDeviceConnectionService(cache);
     }
 
     @SuppressWarnings("unchecked")
     private Future<Void> givenAStartedService() {
 
-        final Context ctx = mock(Context.class);
+        final Vertx vertx = mock(Vertx.class);
         doAnswer(invocation -> {
             final Promise<RemoteCacheContainer> result = Promise.promise();
             final Handler<Future<RemoteCacheContainer>> blockingCode = invocation.getArgument(0);
@@ -84,11 +81,11 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
             blockingCode.handle(result.future());
             resultHandler.handle(result.future());
             return null;
-        }).when(ctx).executeBlocking(any(Handler.class), any(Handler.class));
+        }).when(vertx).executeBlocking(any(Handler.class), any(Handler.class));
         final EventBus eventBus = mock(EventBus.class);
         when(eventBus.consumer(anyString())).thenReturn(mock(MessageConsumer.class));
-        final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
+        final Context ctx = mock(Context.class);
 
         final Promise<Void> startPromise = Promise.promise();
         svc.init(vertx, ctx);
@@ -106,7 +103,8 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
         final String deviceId = "testDevice";
         final String gatewayId = "testGateway";
-        when(cache.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(null));
+        when(cache.setLastKnownGatewayForDevice(anyString(), anyString(), anyString(), any(SpanContext.class)))
+            .thenReturn(Future.succeededFuture());
 
         givenAStartedService()
         .compose(ok -> {
@@ -117,7 +115,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
         .setHandler(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
-                verify(cache).putAsync(anyString(), eq(gatewayId));
+                verify(cache).setLastKnownGatewayForDevice(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(gatewayId), any(SpanContext.class));
             });
             ctx.completeNow();
         }));
@@ -133,8 +131,8 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
     public void testGetLastKnownGatewayForDeviceNotFound(final VertxTestContext ctx) {
 
         final String deviceId = "testDevice";
-        final CompletableFuture<Object> result = CompletableFuture.completedFuture(null);
-        when(cache.getAsync(anyString())).thenReturn(result);
+        when(cache.getLastKnownGatewayForDevice(anyString(), anyString(), any(SpanContext.class)))
+            .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         givenAStartedService()
         .compose(ok -> {

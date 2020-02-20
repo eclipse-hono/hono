@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,12 @@ package org.eclipse.hono.util;
  */
 
 public final class DeviceConnectionConstants extends RequestResponseApiConstants {
+
+    /**
+     * The name of the (remote) cache in the data grid that is use for
+     * storing device connection information.
+     */
+    public static final String CACHE_NAME = "device-connection";
 
     /**
      * The name of the field that contains the identifier of a gateway.

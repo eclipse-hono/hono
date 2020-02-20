@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,11 +19,15 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodBasedDeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
@@ -170,13 +174,31 @@ public class ApplicationConfig {
     }
 
     /**
+     * Exposes a remote cache for accessing the Infinispan data grid that contains device
+     * connection information.
+     *
+     * @param vertx The vert.x instance to run on.
+     * @return The cache.
+     */
+    @Bean
+    public HotrodCache<String, String> remoteCache(final Vertx vertx) {
+        return new HotrodCache<String, String>(
+                vertx,
+                remoteCacheManager(),
+                DeviceConnectionConstants.CACHE_NAME,
+                "KEY_CONNECTION_CHECK",
+                "VALUE_CONNECTION_CHECK");
+    }
+
+    /**
      * Exposes a Device Connection service as a Spring bean.
      * 
+     * @param cache The remote cache.
      * @return The service implementation.
      */
     @Bean
-    public RemoteCacheBasedDeviceConnectionService deviceConnectionService() {
-        return new RemoteCacheBasedDeviceConnectionService();
+    public RemoteCacheBasedDeviceConnectionService deviceConnectionService(final HotrodCache<String, String> cache) {
+        return new RemoteCacheBasedDeviceConnectionService(new HotrodBasedDeviceConnectionInfo(cache));
     }
 
     /**
