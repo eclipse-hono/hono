@@ -307,13 +307,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private Future<CoapServer> bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
 
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
-                .orElse(new DefaultDeviceResolver(context, getConfig(), getCredentialsClientFactory()));
+                .orElse(new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(), getCredentialsClientFactory()));
         final PskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
                     if (deviceResolver instanceof PskStore) {
                         return (PskStore) deviceResolver;
                     } else {
-                        return new DefaultDeviceResolver(context, getConfig(), getCredentialsClientFactory());
+                        return new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(), getCredentialsClientFactory());
                     }
                 });
 
