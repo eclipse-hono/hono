@@ -34,7 +34,7 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
  * Abstract base CLI connection for interacting with Hono's AMQP adapter.
  */
 public abstract class AmqpCliClient extends AbstractCliClient {
-
+    //TODO set parameters
     /**
      * A writer to stdout.
      */

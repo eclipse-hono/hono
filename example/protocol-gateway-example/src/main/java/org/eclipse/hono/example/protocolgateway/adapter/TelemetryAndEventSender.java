@@ -25,9 +25,9 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Adapter for telemetry or event messages using methods and properties from {@link AmqpCliClient} to simplify handling.
  * <p>
- * based loosely on {@link org.eclipse.hono.cli.adapter.TelemetryAndEventCli}
+ * based loosely on {@link org.eclipse.hono.cli.adapter.TelemetryAndEvent}
  *
- * @see org.eclipse.hono.cli.adapter.TelemetryAndEventCli
+ * @see org.eclipse.hono.cli.adapter.TelemetryAndEvent
  */
 @Component
 public class TelemetryAndEventSender extends AmqpCliClient {

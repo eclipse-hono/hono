@@ -21,6 +21,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
+import static org.eclipse.hono.cli.ClientConfig.*;
+
 /**
  * Abstract base class for the Hono CLI module.
  */
@@ -38,13 +40,10 @@ public abstract class AbstractCliClient{
      * The vert.x context to run on.
      */
     protected Context ctx;
-    /**
-     * The Spring Boot profiles that are active.
-     */
-    protected List<String> activeProfiles;
-
 
     protected ApplicationClientFactory clientFactory;
+
+//    protected AmqpAdapterClientFactory adapterFactory;
 
 }
 

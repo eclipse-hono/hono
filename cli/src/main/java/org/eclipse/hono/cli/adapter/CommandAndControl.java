@@ -14,11 +14,14 @@
 package org.eclipse.hono.cli.adapter;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.CountDownLatch;
 
 import javax.annotation.PostConstruct;
 
+import io.vertx.core.Vertx;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.cli.ClientConfig;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.springframework.context.annotation.Profile;
@@ -36,14 +39,26 @@ import io.vertx.proton.ProtonSender;
  * A connection for accessing Hono's Command and Control APIs to
  * receive commands and sends command response messages via the AMQP org.eclipse.hono.cli.app.adapter.
  */
-@Component
-@Profile("amqp-command")
-public class CommandAndControlClient extends AmqpCliClient {
+public class CommandAndControl extends AmqpCliClient {
 
     private ProtonSender sender;
+    private final ClientConfig clientConfig;
+    CountDownLatch latch;
 
-    @PostConstruct
-    void start() {
+    public CommandAndControl(Vertx vertx, ClientConfig clientConfig) {
+        this.vertx = vertx;
+        this.clientConfig = clientConfig;
+    }
+
+//   public CommandAndControl(AmqpAdapterClientFactory adapterFactory, Vertx vertx, ClientConfig clientConfig) {
+//        this.adapterFactory = adapterFactory;
+//        this.vertx = vertx;
+//        this.clientConfig = clientConfig;
+//    }
+
+
+    public void start(CountDownLatch latch){
+        this.latch = latch;
         startCommandReceiver((d, m) -> {
 
             String commandPayload = null;
@@ -75,7 +90,7 @@ public class CommandAndControlClient extends AmqpCliClient {
         })
         .otherwise(t -> {
             writer.printf("failed to create command receiver link: %s%n", t.getMessage()).flush();
-            System.exit(1);
+            latch.countDown();
             return null;
         });
     }

@@ -36,9 +36,9 @@ import io.vertx.proton.ProtonSender;
 /**
  * Command and receiver listener using methods and properties from {@link AmqpCliClient} to simplify handling.
  * <p>
- * based loosely on {@link org.eclipse.hono.cli.adapter.CommandAndControlClient}
+ * based loosely on {@link org.eclipse.hono.cli.adapter.CommandAndControl}
  *
- * @see org.eclipse.hono.cli.adapter.CommandAndControlClient
+ * @see org.eclipse.hono.cli.adapter.CommandAndControl
  */
 @Component
 public class CommandAndControlReceiver extends AmqpCliClient {

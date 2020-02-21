@@ -16,59 +16,57 @@ package org.eclipse.hono.cli.adapter;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 
 import javax.annotation.PostConstruct;
 
+import io.vertx.core.Vertx;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
-
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
+import org.eclipse.hono.cli.ClientConfig;
 
 /**
  * A Client for accessing Hono's Telemetry and Event APIs to send
  * telemetry data respectively events via the AMQP org.eclipse.hono.cli.app.adapter.
  */
-@Component
-@Profile("amqp-send")
-public class TelemetryAndEventCli extends AmqpCliClient {
+public class TelemetryAndEvent extends AmqpCliClient {
 
-    /**
-     * The address to set on the message being sent.
-     */
-    @Value(value = "${message.address}")
-    private String messageAddress;
+    private final ClientConfig clientConfig;
+    CountDownLatch latch;
 
-    /**
-     * The payload to send.
-     */
-    @Value(value = "${message.payload}")
-    private String payload;
+    public TelemetryAndEvent(Vertx vertx, ClientConfig clientConfig) {
+        this.vertx = vertx;
+        this.clientConfig = clientConfig;
+    }
 
-    @PostConstruct
-    void start() {
+//   public TelemetryAndEvent(AmqpAdapterClientFactory adapterFactory, Vertx vertx, ClientConfig clientConfig) {
+//        this.adapterFactory = adapterFactory;
+//        this.vertx = vertx;
+//        this.clientConfig = clientConfig;
+//    }
+
+    public void start(CountDownLatch latch){
+        this.latch = latch;
 
         final CompletableFuture<ProtonDelivery> messageSent = new CompletableFuture<>();
 
         sendMessage(messageSent);
 
         try {
-
             final ProtonDelivery delivery = messageSent.join();
             // Logs the delivery state to the console
             printDelivery(delivery);
-            System.exit(0);
+            latch.countDown();
         } catch (CompletionException e) {
             writer.printf("Sending message failed [reason: %s] %n", e.getCause());
             writer.flush();
         } catch (CancellationException e) {
             // do-nothing
         }
-        System.exit(1);
+        latch.countDown();
     }
 
     /**
@@ -86,7 +84,7 @@ public class TelemetryAndEventCli extends AmqpCliClient {
                 return createSender();
             })
             .map(sender -> {
-                final Message message = ProtonHelper.message(messageAddress, payload);
+                final Message message = ProtonHelper.message(clientConfig.messageAddress, clientConfig.payload);
                 sender.send(message, delivery -> {
                     adapterConnection.close();
                     messageTracker.complete(delivery);

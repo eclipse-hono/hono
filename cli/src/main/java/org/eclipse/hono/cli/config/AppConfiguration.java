@@ -75,4 +75,9 @@ public class AppConfiguration {
     public ApplicationClientFactory clientFactory() {
         return ApplicationClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()));
     }
+
+//    @Bean
+//    public AmqpAdapterClientFactory AdapterFactory() {
+//        return AmqpAdapterClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()), ...);
+//    }
 }

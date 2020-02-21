@@ -33,13 +33,17 @@ public class ClientConfig implements  Cloneable{
     public String messageType;
     public int connectionRetryInterval;
     public int requestTimeoutInSecs;
+    public String messageAddress;
+    public String payload;
 
-    public ClientConfig(String tenantId, String deviceId, String messageType, int connectionRetryInterval, int requestTimeoutInSecs) {
+    public ClientConfig(String tenantId, String deviceId, String messageType, int connectionRetryInterval, int requestTimeoutInSecs, String messageAddress, String payload) {
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.messageType = messageType;
         this.connectionRetryInterval = connectionRetryInterval;
         this.requestTimeoutInSecs = requestTimeoutInSecs;
+        this.payload = payload;
+        this.messageAddress = messageAddress;
     }
 
 
@@ -64,7 +68,7 @@ public class ClientConfig implements  Cloneable{
     @Override
     public Object clone() throws CloneNotSupportedException {
         ClientConfigProperties cfp = new ClientConfigProperties(this.honoClientConfig);
-        ClientConfig clone = new ClientConfig(this.tenantId, this.deviceId, this.messageType, this.connectionRetryInterval, this.requestTimeoutInSecs);
+        ClientConfig clone = new ClientConfig(this.tenantId, this.deviceId, this.messageType, this.connectionRetryInterval, this.requestTimeoutInSecs, this.messageAddress, this.payload);
         clone.honoClientConfig = cfp;
         return clone;
     }
