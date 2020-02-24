@@ -54,7 +54,8 @@ public final class Command {
             final String tenantId,
             final String deviceId,
             final String correlationId,
-            final String replyToId) {
+            final String replyToId,
+            final String requestId) {
 
         this.validationError = validationError;
         this.message = message;
@@ -62,7 +63,7 @@ public final class Command {
         this.deviceId = deviceId;
         this.correlationId = correlationId;
         this.replyToId = replyToId;
-        this.requestId = getRequestId(correlationId, replyToId, deviceId);
+        this.requestId = requestId;
     }
 
     /**
@@ -70,6 +71,7 @@ public final class Command {
      * <p>
      * The message is expected to contain
      * <ul>
+     * <li>a non-null <em>address</em>, containing a matching tenant part and a non-empty device-id part</li>
      * <li>a non-null <em>subject</em></li>
      * <li>either a null <em>reply-to</em> address (for a one-way command)
      * or a non-null <em>reply-to</em> address that matches the tenant and device IDs and consists
@@ -85,7 +87,9 @@ public final class Command {
      *
      * @param message The message containing the command.
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
+     * @param deviceId The identifier of the device that the command will be sent to. If the command has been mapped
+     *                 to a gateway, this id is the gateway id and the original command target device is given in
+     *                 the message address.
      * @return The command.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -99,6 +103,7 @@ public final class Command {
         Objects.requireNonNull(deviceId);
 
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
+        String originalDeviceId = deviceId;
         if (message.getAddress() == null) {
             validationErrorJoiner.add("address is not set");
         } else {
@@ -109,6 +114,7 @@ public final class Command {
             if (addressIdentifier.getResourceId() == null) {
                 validationErrorJoiner.add("address is missing device-id part");
             }
+            originalDeviceId = addressIdentifier.getResourceId();
         }
 
         if (message.getSubject() == null) {
@@ -145,7 +151,7 @@ public final class Command {
                     } else {
                         message.setReplyTo(
                                 String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId,
-                                        getDeviceFacingReplyToId(originalReplyToId, deviceId)));
+                                        getDeviceFacingReplyToId(originalReplyToId, originalDeviceId)));
                     }
                 }
             } catch (final IllegalArgumentException e) {
@@ -160,7 +166,8 @@ public final class Command {
                 tenantId,
                 deviceId,
                 correlationId,
-                originalReplyToId);
+                originalReplyToId,
+                getRequestId(correlationId, originalReplyToId, originalDeviceId));
 
         return result;
     }
