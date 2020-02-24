@@ -127,9 +127,10 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
+        final List<CommonCredential> commonCredentials;
         try {
-            decodeCredentials(credentials);
-        } catch (final IllegalArgumentException | IllegalStateException e) {
+            commonCredentials = decodeCredentials(credentials);
+        } catch (final IllegalArgumentException e) {
             final String msg = "Error parsing credentials";
             logger.debug(msg);
             TracingHelper.logError(span, msg);
@@ -151,8 +152,7 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
                         span);
         });
 
-        getService().set(tenantId, deviceId, resourceVersion, decodeCredentials(credentials), span, result);
-
+        getService().set(tenantId, deviceId, resourceVersion, commonCredentials, span, result);
     }
 
     private void getCredentialsForDevice(final RoutingContext ctx) {
@@ -201,7 +201,6 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
      * @param objects The JSON array.
      * @return The list of decoded secrets.
      * @throws NullPointerException in the case the {@code objects} parameter is {@code null}.
-     * @throws IllegalStateException if the {@code type} field was not set in a credentials object.
      * @throws IllegalArgumentException If a credentials object is invalid.
      */
     protected List<CommonCredential> decodeCredentials(final JsonArray objects) {
@@ -219,7 +218,6 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
      *
      * @param object The object to device from.
      * @return The decoded secret. Or {@code null} if the provided JSON object was {@code null}.
-     * @throws IllegalStateException if the {@code type} field was not set.
      * @throws IllegalArgumentException If the credential object is invalid.
      */
     protected CommonCredential decodeCredential(final JsonObject object) {
@@ -230,8 +228,7 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
 
         final String type = object.getString("type");
         if (type == null || type.isEmpty()) {
-            // TODO this should rather be an IllegalArgumentException
-            throw new IllegalStateException("'type' field must be set");
+            throw new IllegalArgumentException("'type' field must be set");
         }
 
         return decodeCredential(type, object);
