@@ -70,14 +70,6 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
         super(vertx);
     }
 
-    /**
-     * Returns an empty String as this implementation does not use event bus.
-     */
-    @Override
-    protected String getEventBusAddress() {
-        return "";
-    }
-
     @Override
     public String getName() {
         return DEVICE_MANAGEMENT_ENDPOINT_NAME;
@@ -249,5 +241,4 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
                 .map(json -> json.mapTo(Device.class))
                 .orElseGet(Device::new);
     }
-
 }

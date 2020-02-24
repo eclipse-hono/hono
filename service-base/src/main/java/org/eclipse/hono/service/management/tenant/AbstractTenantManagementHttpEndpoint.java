@@ -72,14 +72,6 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
         super(Objects.requireNonNull(vertx));
     }
 
-    /**
-     * Returns an empty String as this implementation does not use event bus.
-     */
-    @Override
-    protected String getEventBusAddress() {
-        return "";
-    }
-
     @Override
     public String getName() {
         return TENANT_MANAGEMENT_ENDPOINT_NAME;
@@ -327,7 +319,4 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
             adapter.put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE);
         }
     }
-
-
-
 }

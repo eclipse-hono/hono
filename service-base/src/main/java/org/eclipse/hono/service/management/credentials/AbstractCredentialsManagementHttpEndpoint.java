@@ -72,14 +72,6 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
         super(Objects.requireNonNull(vertx));
     }
 
-    /**
-     * Returns an empty String as this implementation does not use event bus.
-     */
-    @Override
-    protected String getEventBusAddress() {
-        return "";
-    }
-
     @Override
     public String getName() {
         return CREDENTIALS_MANAGEMENT_ENDPOINT_NAME;
@@ -255,5 +247,4 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
                 return object.mapTo(GenericCredential.class);
         }
     }
-
 }

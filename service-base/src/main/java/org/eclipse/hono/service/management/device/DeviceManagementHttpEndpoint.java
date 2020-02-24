@@ -15,11 +15,12 @@ package org.eclipse.hono.service.management.device;
 
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
+
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.AbstractEventBusHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
@@ -41,7 +42,7 @@ import io.vertx.ext.web.RoutingContext;
  * @deprecated This class will be removed in future versions. Please use {@link AbstractDeviceManagementHttpEndpoint} based implementation in the future.
  */
 @Deprecated(forRemoval = true)
-public final class DeviceManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public final class DeviceManagementHttpEndpoint extends AbstractEventBusHttpEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates an endpoint for a Vertx instance.

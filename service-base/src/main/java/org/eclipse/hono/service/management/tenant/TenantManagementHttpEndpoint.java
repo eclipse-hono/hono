@@ -13,6 +13,20 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.net.HttpURLConnection;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.IntPredicate;
+
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.http.AbstractEventBusHttpEndpoint;
+import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RegistryManagementConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -21,19 +35,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-
-import java.net.HttpURLConnection;
-import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.IntPredicate;
-import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.util.EventBusMessage;
-import org.eclipse.hono.util.RegistryManagementConstants;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * An {@code HttpEndpoint} for managing tenant information.
@@ -44,7 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @deprecated This class will be removed in future versions. Please use {@link AbstractTenantManagementHttpEndpoint} based implementation in the future.
  */
 @Deprecated(forRemoval = true)
-public final class TenantManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public final class TenantManagementHttpEndpoint extends AbstractEventBusHttpEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates an endpoint for a Vertx instance.

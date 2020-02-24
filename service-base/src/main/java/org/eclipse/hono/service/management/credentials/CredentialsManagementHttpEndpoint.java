@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.management.credentials;
 
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerResponse;
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
 import java.util.Objects;
@@ -22,13 +20,15 @@ import java.util.function.BiConsumer;
 import java.util.function.IntPredicate;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.AbstractEventBusHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -45,7 +45,7 @@ import io.vertx.ext.web.handler.BodyHandler;
  * @deprecated This class will be removed in future versions. Please use {@link org.eclipse.hono.service.management.credentials.AbstractCredentialsManagementHttpEndpoint} based implementation in the future.
  */
 @Deprecated(forRemoval = true)
-public final class CredentialsManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public final class CredentialsManagementHttpEndpoint extends AbstractEventBusHttpEndpoint<ServiceConfigProperties> {
 
     /**
      * Creates an endpoint for a Vertx instance.
