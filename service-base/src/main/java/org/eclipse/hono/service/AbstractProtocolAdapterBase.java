@@ -678,6 +678,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 final ResourceIdentifier resource = ResourceIdentifier.from(address,
                         authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
                 result.complete(resource);
+            } else if (Strings.isNullOrEmpty(address.getTenantId())) {
+                // use authenticated device's tenant ID
+                final ResourceIdentifier resource = ResourceIdentifier.from(address,
+                        authenticatedDevice.getTenantId(), address.getResourceId());
+                result.complete(resource);
             } else {
                 result.complete(address);
             }

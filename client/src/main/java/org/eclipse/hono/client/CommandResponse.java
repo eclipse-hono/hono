@@ -68,6 +68,7 @@ public final class CommandResponse {
      * @param status The HTTP status code indicating the outcome of the command.
      * @return The response or {@code null} if the request ID could not be parsed, the status is {@code null} or if the
      *         status code is &lt; 200 or &gt;= 600.
+     * @throws NullPointerException if tenantId or deviceId is {@code null}.
      */
     public static CommandResponse from(
             final String requestId,
@@ -76,6 +77,9 @@ public final class CommandResponse {
             final Buffer payload,
             final String contentType,
             final Integer status) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
 
         if (requestId == null) {
             LOG.debug("cannot create CommandResponse: request id is null");

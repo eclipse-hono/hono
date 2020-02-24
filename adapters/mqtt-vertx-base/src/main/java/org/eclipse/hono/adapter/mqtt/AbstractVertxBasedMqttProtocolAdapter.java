@@ -836,8 +836,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         } else {
                             onMessageUndeliverable(context);
                         }
+                        TracingHelper.logError(span, processing.cause());
                         if (context.deviceEndpoint().isConnected()) {
-                            TracingHelper.logError(span, processing.cause());
                             span.log("closing connection to device");
                             context.deviceEndpoint().close();
                         }
