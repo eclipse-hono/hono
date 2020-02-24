@@ -237,7 +237,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     200)
                     .map(response -> {
                         ctx.verify(() -> {
-                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(deviceId);
+                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
                             assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
                         });
                         return response;

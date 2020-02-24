@@ -494,6 +494,26 @@ public class AbstractProtocolAdapterBaseTest {
 
     /**
      * Verifies that the adapter uses an authenticated device's identity when validating an
+     * address without a tenant ID and device ID.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testValidateAddressUsesDeviceIdentityForAddressWithoutTenantAndDevice(final VertxTestContext ctx) {
+
+        // WHEN an authenticated device publishes a message to an address that does not contain a tenant ID
+        final Device authenticatedDevice = new Device("my-tenant", "4711");
+        final ResourceIdentifier address = ResourceIdentifier.fromString(TelemetryConstants.TELEMETRY_ENDPOINT);
+        adapter.validateAddress(address, authenticatedDevice).setHandler(ctx.succeeding(r -> ctx.verify(() -> {
+            // THEN the validated address contains the authenticated device's tenant and device ID
+            assertEquals("my-tenant", r.getTenantId());
+            assertEquals("4711", r.getResourceId());
+            ctx.completeNow();
+        })));
+    }
+
+    /**
+     * Verifies that the adapter uses an authenticated device's identity when validating an
      * address without a tenant ID.
      *
      * @param ctx The vert.x test context.
@@ -503,11 +523,11 @@ public class AbstractProtocolAdapterBaseTest {
 
         // WHEN an authenticated device publishes a message to an address that does not contain a tenant ID
         final Device authenticatedDevice = new Device("my-tenant", "4711");
-        final ResourceIdentifier address = ResourceIdentifier.fromString(TelemetryConstants.TELEMETRY_ENDPOINT);
+        final ResourceIdentifier address = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "", "4712");
         adapter.validateAddress(address, authenticatedDevice).setHandler(ctx.succeeding(r -> ctx.verify(() -> {
             // THEN the validated address contains the authenticated device's tenant and device ID
             assertEquals("my-tenant", r.getTenantId());
-            assertEquals("4711", r.getResourceId());
+            assertEquals("4712", r.getResourceId());
             ctx.completeNow();
         })));
     }

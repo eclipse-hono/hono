@@ -84,9 +84,10 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
      * @return The topic name.
      */
     public final String getResponseTopic(final String deviceId, final String requestId, final int status) {
-        return String.format(
-                "%s///res/%s/%d",
-                getSouthboundEndpoint(), requestId, status);
+        if (isSubscribeAsGateway()) {
+            return String.format("%s//%s/res/%s/%d", getSouthboundEndpoint(), deviceId, requestId, status);
+        }
+        return String.format("%s///res/%s/%d", getSouthboundEndpoint(), requestId, status);
     }
 
     void assertCommandPublishTopicStructure(
