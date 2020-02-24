@@ -19,10 +19,10 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -129,7 +129,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final Optional<String> deviceId = Optional.ofNullable(request.getDeviceId());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_CREATE_DEVICE, spanContext, tracer, tenantId, deviceId.orElse("unspecified"), getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_CREATE_DEVICE, spanContext, tracer, tenantId, deviceId.orElse("unspecified"), getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture = deviceFromPayload(request)
                 .compose(device -> {
@@ -151,7 +151,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final String deviceId = request.getDeviceId();
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_GET_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_GET_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {
@@ -176,7 +176,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_UPDATE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {
@@ -203,7 +203,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_REMOVE_DEVICE, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {

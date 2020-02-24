@@ -36,7 +36,6 @@ import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Util;
 
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -110,10 +109,10 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
 
     private void updateCredentials(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_CREDENTIALS, TracingHandler.serverSpanContext(ctx), tracer,
+        final Span span = newChildSpan(SPAN_NAME_UPDATE_CREDENTIALS, TracingHandler.serverSpanContext(ctx), tracer,
                 getClass().getSimpleName());
 
-        final JsonArray credentials = getMandatoryRequestBody(ctx, span);
+        final JsonArray credentials = ctx.get(KEY_REQUEST_BODY);
 
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
@@ -137,7 +136,7 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
         final Promise<OperationResult<Void>> result = Promise.promise();
         result.future().setHandler(handler -> {
                 final OperationResult<Void> operationResult = handler.result();
-                Util.writeOperationResponse(
+                writeOperationResponse(
                         ctx,
                         operationResult,
                         null,
@@ -150,7 +149,7 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
 
     private void getCredentialsForDevice(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_GET_CREDENTIALS, TracingHandler.serverSpanContext(ctx), tracer,
+        final Span span = newChildSpan(SPAN_NAME_GET_CREDENTIALS, TracingHandler.serverSpanContext(ctx), tracer,
                 getClass().getSimpleName());
 
         // mandatory params
