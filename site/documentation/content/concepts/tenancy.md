@@ -1,6 +1,6 @@
 +++
 title = "Multi-Tenancy"
-weight = 188
+weight = 185
 +++
 
 Hono is designed to structure the set of all internally managed data and data streams into strictly isolated subsets. 

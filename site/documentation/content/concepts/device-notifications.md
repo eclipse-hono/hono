@@ -1,6 +1,6 @@
 +++
 title = "Device Notifications"
-weight = 190
+weight = 192
 +++
 
 *Business Applications* need to know when an attempt to send a command to device is feasible, e.g. because the device is then known to be connected to a protocol adapter. *Devices* and *Protocol Adapters* can indicate to *Business Applications* a device's intent to e.g. receive commands using specific *notifications*.

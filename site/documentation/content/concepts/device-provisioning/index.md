@@ -1,6 +1,6 @@
 ---
 title: "Device Provisioning"
-weight: 250
+weight: 188
 resources:
   - src: auto-provisioning.svg
 ---
