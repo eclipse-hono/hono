@@ -55,7 +55,42 @@ public class CommandTest {
         final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertTrue(cmd.isValid());
         assertThat(cmd.getName()).isEqualTo("doThis");
+        assertThat(cmd.getDeviceId()).isEqualTo("4711");
+        assertThat(cmd.getOriginalDeviceId()).isEqualTo("4711");
         assertThat(cmd.getReplyToId()).isEqualTo(String.format("4711/%s", replyToId));
+        assertThat(cmd.getReplyToEndpoint()).isEqualTo(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT);
+        assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
+        assertFalse(cmd.isOneWay());
+        assertThat(cmd.getCommandMessage().getReplyTo()).isEqualTo(String.format("%s/%s/%s/%s%s",
+                CommandConstants.COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, "4711", replyToOptionsBitFlag, replyToId));
+    }
+
+    /**
+     * Verifies that a command can be created from a valid message, containing a message address with device id
+     * differing from the one given in the command constructor.
+     * Verifies that the replyToId are build up of all segments behind the tenant.
+     */
+    @Test
+    public void testFromMessageSucceedsWithDifferingDeviceId() {
+        final String gatewayId = "gw-1";
+        final String targetDeviceId = "4711";
+        final String replyToId = "the-reply-to-id";
+        final String correlationId = "the-correlation-id";
+        final Message message = ProtonHelper.message("input data");
+        message.setAddress(String.format("%s/%s/%s",
+                CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT, targetDeviceId));
+        message.setSubject("doThis");
+        message.setCorrelationId(correlationId);
+        message.setReplyTo(String.format("%s/%s/%s/%s",
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, Constants.DEFAULT_TENANT, targetDeviceId, replyToId));
+        final boolean replyToContainedDeviceId = true;
+        final String replyToOptionsBitFlag = Command.encodeReplyToOptions(replyToContainedDeviceId);
+        final Command cmd = Command.from(message, Constants.DEFAULT_TENANT, gatewayId);
+        assertTrue(cmd.isValid());
+        assertThat(cmd.getName()).isEqualTo("doThis");
+        assertThat(cmd.getDeviceId()).isEqualTo(gatewayId);
+        assertThat(cmd.getOriginalDeviceId()).isEqualTo(targetDeviceId);
+        assertThat(cmd.getReplyToId()).isEqualTo(String.format("%s/%s", targetDeviceId, replyToId));
         assertThat(cmd.getReplyToEndpoint()).isEqualTo(CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT);
         assertThat(cmd.getCorrelationId()).isEqualTo(correlationId);
         assertFalse(cmd.isOneWay());
