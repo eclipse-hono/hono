@@ -375,8 +375,8 @@ public abstract class AbstractTenantServiceTest {
                         jsonTenantSpec.getValue(TenantConstants.FIELD_ENABLED),
                         response.getPayload().getValue(TenantConstants.FIELD_ENABLED));
                 assertEquals(
-                        jsonTenantSpec.getValue(RegistryManagementConstants.FIELD_EXT),
-                        response.getPayload().getValue(RegistryManagementConstants.FIELD_EXT));
+                        jsonTenantSpec.getValue(TenantConstants.FIELD_EXT),
+                        response.getPayload().getValue(TenantConstants.FIELD_EXT));
                 assertEquals(
                         jsonTenantSpec.getValue(TenantConstants.FIELD_RESOURCE_LIMITS),
                         response.getPayload().getValue(TenantConstants.FIELD_RESOURCE_LIMITS));
@@ -538,7 +538,7 @@ public abstract class AbstractTenantServiceTest {
         }).setHandler(ctx.succeeding(getResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_OK, getResult.getStatus());
-                assertEquals(extensions, getResult.getPayload().getJsonObject(RegistryManagementConstants.FIELD_EXT));
+                assertEquals(extensions, getResult.getPayload().getJsonObject(TenantConstants.FIELD_EXT));
             });
             ctx.completeNow();
         }));
