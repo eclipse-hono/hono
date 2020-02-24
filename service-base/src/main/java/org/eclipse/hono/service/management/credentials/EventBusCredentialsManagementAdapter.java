@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -97,7 +97,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final JsonObject payload = request.getJsonPayload();
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_UPDATE_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
@@ -207,7 +207,7 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final String deviceId = request.getDeviceId();
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
 
         final Promise<OperationResult<List<CommonCredential>>> getResult = Promise.promise();
         getService().readCredentials(tenantId, deviceId, span, getResult);

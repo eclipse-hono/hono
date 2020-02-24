@@ -24,7 +24,6 @@ import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -122,7 +121,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doGetDevice(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_GET_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_GET_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
 
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
@@ -152,7 +151,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doCreateDevice(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_CREATE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_CREATE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
 
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
         final String deviceId = getRequestParam(PARAM_DEVICE_ID, ctx, span, true);
@@ -177,7 +176,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
             final OperationResult<Id> operationResult = handler.result();
 
             final String createdDeviceId = Optional.ofNullable(operationResult.getPayload()).map(Id::getId).orElse(null);
-            Util.writeOperationResponse(
+            writeOperationResponse(
                     ctx,
                     operationResult,
                     (response) -> response.putHeader(
@@ -192,7 +191,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doUpdateDevice(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_UPDATE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
 
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
@@ -210,7 +209,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
         final Promise<OperationResult<Id>> result = Promise.promise();
 
         result.future().setHandler(handler -> {
-                    Util.writeOperationResponse(ctx, handler.result(), null, span);
+                    writeOperationResponse(ctx, handler.result(), null, span);
                 });
 
         getService().updateDevice(tenantId, deviceId, device, resourceVersion, span, result);
@@ -218,7 +217,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doDeleteDevice(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_REMOVE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
 
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
@@ -230,7 +229,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
         final Promise<Result<Void>> result = Promise.promise();
 
         result.future().setHandler(handler -> {
-                    Util.writeResponse(ctx, handler.result(), null, span);
+                    writeResponse(ctx, handler.result(), null, span);
                 });
 
         getService().deleteDevice(tenantId, deviceId, resourceVersion, span, result);

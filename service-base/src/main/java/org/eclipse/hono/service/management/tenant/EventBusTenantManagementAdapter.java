@@ -13,16 +13,17 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -100,7 +101,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final JsonObject payload = getRequestPayload(request.getJsonPayload());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (isValidRequestPayload(payload)) {
@@ -129,7 +130,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
@@ -159,7 +160,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
@@ -182,7 +183,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final String tenantId = request.getTenant();
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = Util.newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null ) {

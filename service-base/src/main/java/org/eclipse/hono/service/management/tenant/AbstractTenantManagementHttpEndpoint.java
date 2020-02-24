@@ -33,7 +33,6 @@ import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.service.management.Util;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -152,11 +151,11 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void createTenant(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_CREATE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_CREATE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
 
         final String tenantId = getRequestParam(PARAM_TENANT_ID, ctx, span, true);
 
-        final JsonObject payload = Util.getRequestPayload(ctx.get(KEY_REQUEST_BODY));
+        final JsonObject payload = getRequestPayload(ctx.get(KEY_REQUEST_BODY));
 
         if (isValidRequestPayload(payload)) {
             logger.debug("creating tenant [{}]", Optional.ofNullable(tenantId).orElse("<auto>"));
@@ -168,7 +167,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
                 final OperationResult<Id> operationResult = handler.result();
 
                 final String createdTenantId = Optional.ofNullable(operationResult.getPayload()).map(Id::getId).orElse(null);
-                Util.writeOperationResponse(
+                writeOperationResponse(
                         ctx,
                         operationResult,
                         (response) -> response.putHeader(
@@ -190,7 +189,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void getTenant(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_GET_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_GET_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
 
         final HttpServerResponse response = ctx.response();
@@ -217,10 +216,10 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void updateTenant(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_UPDATE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_UPDATE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
 
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
-        final JsonObject payload = Util.getRequestPayload(ctx.get(KEY_REQUEST_BODY));
+        final JsonObject payload = getRequestPayload(ctx.get(KEY_REQUEST_BODY));
         if (payload != null) {
             payload.remove(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID);
         }
@@ -235,7 +234,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
             final Promise<OperationResult<Void>> result = Promise.promise();
 
             result.future().setHandler(handler -> {
-                Util.writeOperationResponse(ctx, handler.result(), null, span);
+                writeOperationResponse(ctx, handler.result(), null, span);
             });
 
             getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span, result);
@@ -251,7 +250,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void deleteTenant(final RoutingContext ctx) {
 
-        final Span span = Util.newChildSpan(SPAN_NAME_REMOVE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = newChildSpan(SPAN_NAME_REMOVE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
 
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
 
@@ -262,7 +261,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
         final Promise<Result<Void>> result = Promise.promise();
 
         result.future().setHandler(handler -> {
-                    Util.writeResponse(ctx, handler.result(), null, span);
+                    writeResponse(ctx, handler.result(), null, span);
                 });
 
         getService().deleteTenant(tenantId, resourceVersion, span, result);
