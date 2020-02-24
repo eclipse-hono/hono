@@ -32,7 +32,10 @@ public final class HttpCommandEndpointConfiguration extends CommandEndpointConfi
         super(subscriberRole);
     }
 
-    String getCommandResponseUri(final String reqId) {
+    String getCommandResponseUri(final String tenantId, final String deviceId, final String reqId) {
+        if (isSubscribeAsGateway()) {
+            return String.format("/%s/res/%s/%s/%s", getSouthboundEndpoint(), tenantId, deviceId, reqId);
+        }
         return String.format("/%s/res/%s", getSouthboundEndpoint(), reqId);
     }
 }
