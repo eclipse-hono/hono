@@ -1085,7 +1085,7 @@ public abstract class HttpTestBase {
                                         .map(response -> {
                                             ctx.verify(() -> {
                                                 assertThat(response.getContentType()).isEqualTo("text/plain");
-                                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(deviceId);
+                                                assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
                                                 assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
                                             });
                                             return response;
@@ -1114,15 +1114,25 @@ public abstract class HttpTestBase {
                             }).compose(receivedCommandRequestId -> {
 
                                 // send a response to the command now
-                                final String responseUri = endpointConfig.getCommandResponseUri(receivedCommandRequestId);
+                                final String responseUri = endpointConfig.getCommandResponseUri(tenantId, commandTargetDeviceId, receivedCommandRequestId);
+                                logger.debug("sending response to command [uri: {}]", responseUri);
 
-                                logger.debug("posting response to command [uri: {}]", responseUri);
-
-                                return httpClient.create(
-                                        responseUri,
-                                        Buffer.buffer("ok"),
-                                        cmdResponseRequestHeaders,
-                                        response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                                final Buffer body = Buffer.buffer("ok");
+                                final Future<MultiMap> result;
+                                if (endpointConfig.isSubscribeAsGateway()) {
+                                    // GW uses PUT when acting on behalf of a device
+                                    result = httpClient.update(responseUri, body, cmdResponseRequestHeaders,
+                                            status -> status == HttpURLConnection.HTTP_ACCEPTED);
+                                } else {
+                                    result = httpClient.create(responseUri, body, cmdResponseRequestHeaders,
+                                            response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
+                                }
+                                return result.recover(thr -> { // wrap exception, making clear it occurred when sending the command response, not the preceding telemetry/event message
+                                    final String msg = "Error sending command response: " + thr.getMessage();
+                                    return Future.failedFuture(thr instanceof ServiceInvocationException
+                                            ? new ServiceInvocationException(((ServiceInvocationException) thr).getErrorCode(), msg, thr)
+                                            : new RuntimeException(msg, thr));
+                                });
                             });
                 });
     }
