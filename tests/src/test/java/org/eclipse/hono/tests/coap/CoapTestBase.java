@@ -561,14 +561,10 @@ public abstract class CoapTestBase {
             // WHEN a device that belongs to the tenant uploads a message
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
             final Promise<OptionSet> result = Promise.promise();
-            client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
+            client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
-        .setHandler(ctx.failing(t -> {
-            // THEN the request fails with a 403
-            assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
-            ctx.completeNow();
-        }));
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -591,18 +587,10 @@ public abstract class CoapTestBase {
             // WHEN the device tries to upload a message
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
             final Promise<OptionSet> result = Promise.promise();
-            client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
+            client.advanced(getHandler(result, ResponseCode.NOT_FOUND), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
-        .setHandler(ctx.failing(t -> {
-
-            // THEN the request fails because the DTLS handshake cannot be completed
-            logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]",
-                    tenantId, deviceId);
-            ctx.verify(() -> assertThat(((CoapResultException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
-            assertStatus(ctx, HttpURLConnection.HTTP_NOT_FOUND, t);
-            ctx.completeNow();
-        }));
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -630,18 +618,10 @@ public abstract class CoapTestBase {
             // WHEN the gateway tries to upload a message for the device
             final Promise<OptionSet> result = Promise.promise();
             final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
-            client.advanced(getHandler(result), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
+            client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
-
         })
-        .setHandler(ctx.failing(t -> {
-
-            // THEN the message gets rejected by the CoAP adapter with a 403
-            logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]",
-                    tenantId, gatewayId);
-            assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
-            ctx.completeNow();
-        }));
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -667,18 +647,11 @@ public abstract class CoapTestBase {
             // WHEN another gateway tries to upload a message for the device
             final Promise<OptionSet> result = Promise.promise();
             final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
-            client.advanced(getHandler(result),
+            client.advanced(getHandler(result, ResponseCode.FORBIDDEN),
                     createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
         })
-        .setHandler(ctx.failing(t -> {
-
-            // THEN the message gets rejected by the HTTP adapter with a 403
-            logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]",
-                    tenantId, gatewayId);
-            assertStatus(ctx, HttpURLConnection.HTTP_FORBIDDEN, t);
-            ctx.completeNow();
-        }));
+        .setHandler(ctx.completing());
     }
 
     /**
@@ -797,7 +770,7 @@ public abstract class CoapTestBase {
             @Override
             public void onLoad(final CoapResponse response) {
                 if (response.getCode() == expectedStatusCode) {
-                    logger.info("=> received {}", Utils.prettyPrint(response));
+                    logger.debug("=> received {}", Utils.prettyPrint(response));
                     responseHandler.handle(Future.succeededFuture(response.getOptions()));
                 } else {
                     logger.warn("expected {} => received {}", expectedStatusCode, Utils.prettyPrint(response));
