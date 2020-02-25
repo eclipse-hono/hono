@@ -28,6 +28,7 @@
   <modules>
     <module>auth</module>
     <module>device-connection</module>
+    <module>device-registry-base</module>
     <module>device-registry</module>
   </modules>
 
