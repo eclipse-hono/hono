@@ -42,7 +42,7 @@ import io.vertx.junit5.VertxTestContext;
 abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
     private static final String NON_EXISTING_DEVICE_ID = "non-existing-device";
-    private static final String NON_EXISTING_GATWAY_ID = "non-existing-gateway";
+    private static final String NON_EXISTING_GATEWAY_ID = "non-existing-gateway";
 
     /**
      * Gets a client for interacting with the Device Registration service.
@@ -120,7 +120,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that the registry succeeds a request to assert the registration status of a device that connects via an
+     * Verifies that the registry succeeds a request to assert the registration status of a device that connects via a
      * gateway that is authorized through its group membership.
      *
      * @param ctx The vert.x test context.
@@ -189,7 +189,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         getHelper().registry
         .registerDevice(Constants.DEFAULT_TENANT, deviceId)
         .compose(r -> getClient(Constants.DEFAULT_TENANT))
-        .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATWAY_ID))
+        .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATEWAY_ID))
         .setHandler(ctx.failing(t -> {
             ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN));
             ctx.completeNow();

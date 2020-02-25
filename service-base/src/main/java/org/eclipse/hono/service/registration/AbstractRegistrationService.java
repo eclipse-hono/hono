@@ -77,7 +77,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
 
     /**
-     * Takes the 'viaGroups' list of a device and resolve all group ids with the ids of the devices that are
+     * Takes the 'viaGroups' list of a device and resolves all group ids with the ids of the devices that are
      * a member of those groups.
      *
      * @param tenantId The tenant the device belongs to.
@@ -87,7 +87,6 @@ public abstract class AbstractRegistrationService implements RegistrationService
      *            parent for any spans created in this method.
      * @param resultHandler The handler to invoke with the result of the operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     *
      */
     protected abstract void resolveGroupMembers(
             String tenantId,
@@ -218,6 +217,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * This default implementation checks if the gateway's identifier matches the value of the
      * {@link RegistrationConstants#FIELD_VIA} property in the device's registration information. The property may
      * either contain a single String value or a JSON array of Strings.
+     * Alternatively, the {@link RegistrationConstants#FIELD_VIA_GROUPS} property value in the device's registration
+     * information is checked against the group membership defined in the gateway's registration information.
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated check.
      *
@@ -296,19 +297,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      */
     protected final Future<JsonObject> getAssertionPayload(final String tenantId, final String deviceId,
             final JsonObject registrationInfo) {
-        return getSupportedGatewaysForDevice(tenantId, deviceId, registrationInfo, NoopSpan.INSTANCE)
-                .compose(via -> {
-            final JsonObject result = new JsonObject()
-                    .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
-            if (!via.isEmpty()) {
-                result.put(RegistrationConstants.FIELD_VIA, via);
-            }
-            final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
-            if (defaults != null) {
-                result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
-            }
-            return Future.succeededFuture(result);
-        });
+        return getAssertionPayload(tenantId, deviceId, registrationInfo, NoopSpan.INSTANCE);
     }
 
     /**
@@ -327,7 +316,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @return A Future to the payload.
      */
     protected final Future<JsonObject> getAssertionPayload(final String tenantId, final String deviceId,
-                                                           final JsonObject registrationInfo, final Span span) {
+            final JsonObject registrationInfo, final Span span) {
         return getSupportedGatewaysForDevice(tenantId, deviceId, registrationInfo, span)
                 .compose(via -> {
                     final JsonObject result = new JsonObject()
@@ -399,7 +388,6 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * <p>
      * Subclasses may override this method to provide a different means to determine the supported gateways.
      *
-     *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param registrationInfo The device's registration information.
@@ -413,15 +401,21 @@ public abstract class AbstractRegistrationService implements RegistrationService
         final JsonArray via = convertObjectToJsonArray(registrationInfo.getValue(RegistrationConstants.FIELD_VIA));
         final JsonArray viaGroups = convertObjectToJsonArray(registrationInfo.getValue(RegistrationConstants.FIELD_VIA_GROUPS));
 
-        final Promise<JsonArray> resolveGroupMembersTracker = Promise.promise();
-        resolveGroupMembers(tenantId, viaGroups, span, resolveGroupMembersTracker);
-        return resolveGroupMembersTracker.future().compose(groupMembers -> {
-            for (Object gateway : groupMembers) {
-                if (!via.contains(gateway)) {
-                    via.add(gateway);
+        final Future<JsonArray> resultFuture;
+        if (viaGroups.isEmpty()) {
+            resultFuture = Future.succeededFuture(via);
+        } else {
+            final Promise<JsonArray> resolveGroupMembersTracker = Promise.promise();
+            resolveGroupMembers(tenantId, viaGroups, span, resolveGroupMembersTracker);
+            resultFuture = resolveGroupMembersTracker.future().compose(groupMembers -> {
+                for (final Object gateway : groupMembers) {
+                    if (!via.contains(gateway)) {
+                        via.add(gateway);
+                    }
                 }
-            }
-            return Future.succeededFuture(via);
-        });
+                return Future.succeededFuture(via);
+            });
+        }
+        return resultFuture;
     }
 }

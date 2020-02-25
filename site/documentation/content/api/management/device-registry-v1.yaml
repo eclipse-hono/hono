@@ -775,7 +775,7 @@ components:
                type: array
                items:
                   type: string
-               description: The IDs of the gateway groups in which this device is a member. Note that "via" and "memberOf" must not be set at the same time. The same applies for "viaGroups" and "memberOf" which must not be set at the same time too. The reason is that Eclipse Hono does not support groups of gateway groups.
+               description: The IDs of the gateway groups that this device is a member of. Note that "via" and "memberOf" must not be set at the same time. The same applies for "viaGroups" and "memberOf" which must be set at the same time too. The reason is that Eclipse Hono does not support groups of gateway groups.
             "ext":
                $ref: '#/components/schemas/Extensions'
 

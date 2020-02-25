@@ -100,7 +100,8 @@ public class FileBasedRegistrationService extends AbstractVerticle
         }
 
         @Override
-        public void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span, final Handler<AsyncResult<JsonArray>> resultHandler) {
+        public void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span,
+                final Handler<AsyncResult<JsonArray>> resultHandler) {
             FileBasedRegistrationService.this.resolveGroupMembers(tenantId, viaGroups, resultHandler);
         }
     };
@@ -340,7 +341,8 @@ public class FileBasedRegistrationService extends AbstractVerticle
         resultHandler.handle(Future.succeededFuture(convertResult(deviceId, readDevice(tenantId, deviceId, NoopSpan.INSTANCE))));
     }
 
-    private void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Handler<AsyncResult<JsonArray>> resultHandler) {
+    private void resolveGroupMembers(final String tenantId, final JsonArray viaGroups,
+            final Handler<AsyncResult<JsonArray>> resultHandler) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(viaGroups);
         Objects.requireNonNull(resultHandler);

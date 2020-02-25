@@ -80,7 +80,6 @@ public class Device {
         if (other.viaGroups != null) {
             this.viaGroups = new ArrayList<>(other.viaGroups);
         }
-
         if (other.memberOf != null) {
             this.memberOf = new ArrayList<>(other.memberOf);
         }
@@ -178,7 +177,7 @@ public class Device {
      * @throws IllegalArgumentException if trying to set the 'via' property while the 'memberOf' property is already set.
      */
     public Device setVia(final List<String> via) {
-        if (memberOf != null && memberOf.size() > 0) {
+        if (memberOf != null && !memberOf.isEmpty()) {
             throw new IllegalArgumentException("Trying to set the 'via' property while the 'memberOf' property is already set though both properties must not be set at the same time.");
         }
         this.via = via;
@@ -202,7 +201,7 @@ public class Device {
      * @throws IllegalArgumentException if trying to set the 'viaGroups' property while the 'memberOf' property is already set.
      */
     public Device setViaGroups(final List<String> viaGroups) {
-        if (memberOf != null && memberOf.size() > 0) {
+        if (memberOf != null && !memberOf.isEmpty()) {
             throw new IllegalArgumentException("Trying to set the 'viaGroups' property while the 'memberOf' property is already set though both properties must not be set at the same time.");
         }
         this.viaGroups = viaGroups;
@@ -223,13 +222,13 @@ public class Device {
      *
      * @param memberOf The memberOf property to set.
      * @return    a reference to this for fluent use.
-     * @throws IllegalArgumentException if trying to set the 'memberOf' property while the 'via' or 'viaGroups' Fproperty is already set.
+     * @throws IllegalArgumentException if trying to set the 'memberOf' property while the 'via' or 'viaGroups' property is already set.
      */
     public Device setMemberOf(final List<String> memberOf) {
-        if (via != null && via.size() > 0) {
+        if (via != null && !via.isEmpty()) {
             throw new IllegalArgumentException("Trying to set the 'memberOf' property while the 'via' property is already set though both properties must not be set at the same time.");
         }
-        if (viaGroups != null && viaGroups.size() > 0) {
+        if (viaGroups != null && !viaGroups.isEmpty()) {
             throw new IllegalArgumentException("Trying to set the 'memberOf' property while the 'viaGroups' property is already set though both properties must not be set at the same time.");
         }
         this.memberOf = memberOf;
