@@ -16,13 +16,13 @@ package org.eclipse.hono.tests.coap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.californium.core.CoapClient;
 import org.eclipse.californium.core.coap.CoAP.Code;
+import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
@@ -121,12 +121,9 @@ public class TelemetryCoapIT extends CoapTestBase {
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
             final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), IntegrationTestSupport.getPayload(4096));
             final Promise<OptionSet> result = Promise.promise();
-            client.advanced(getHandler(result), request);
+            client.advanced(getHandler(result, ResponseCode.REQUEST_ENTITY_TOO_LARGE), request);
             return result.future();
         })
-        .setHandler(ctx.failing(t -> {
-            assertStatus(ctx, HttpURLConnection.HTTP_ENTITY_TOO_LARGE, t);
-            ctx.completeNow();
-        }));
+        .setHandler(ctx.completing());
     }
 }
