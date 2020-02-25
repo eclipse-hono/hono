@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
 
-import io.vertx.core.json.JsonArray;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -26,6 +26,7 @@ import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -48,6 +49,7 @@ public class DummyRegistrationService extends AbstractRegistrationService {
         final JsonObject deviceData = new JsonObject();
         getAssertionPayload(tenantId, deviceId, deviceData)
                 .compose(payload -> Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, payload)))
+                .recover(thr -> Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(thr))))
                 .setHandler(resultHandler);
     }
 
