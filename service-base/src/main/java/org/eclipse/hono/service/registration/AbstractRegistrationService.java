@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.service.registration;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -85,7 +86,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @param resultHandler The handler to invoke with the result of the operation. The handler is failed with
+     *                      a {@link ServiceInvocationException} if there was an error resolving the groups.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected abstract void resolveGroupMembers(
@@ -277,9 +279,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
             final Span span) {
         return getAssertionPayload(tenantId, deviceId, deviceData, span)
                 .compose(payload -> Future.succeededFuture(RegistrationResult.from(
-                HttpURLConnection.HTTP_OK,
-                payload,
-                getRegistrationAssertionCacheDirective(deviceId, tenantId))));
+                        HttpURLConnection.HTTP_OK,
+                        payload,
+                        getRegistrationAssertionCacheDirective(deviceId, tenantId))))
+                .recover(thr -> Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(thr))));
     }
 
 
@@ -293,7 +296,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to create the assertion token for.
      * @param registrationInfo The device registration information.
-     * @return A Future to the payload.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed with the payload
+     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
     protected final Future<JsonObject> getAssertionPayload(final String tenantId, final String deviceId,
             final JsonObject registrationInfo) {
@@ -313,7 +319,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @return A Future to the payload.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed with the payload
+     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
     protected final Future<JsonObject> getAssertionPayload(final String tenantId, final String deviceId,
             final JsonObject registrationInfo, final Span span) {
@@ -394,7 +403,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @return A Future to the list of gateways as a JSON array of Strings (never {@code null}). Depending on the implementation this may fail.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will succeed with the list of gateways as a JSON array of Strings (never {@code null})
+     *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
     protected Future<JsonArray> getSupportedGatewaysForDevice(final String tenantId, final String deviceId,
             final JsonObject registrationInfo, final Span span) {
@@ -414,6 +426,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
                     }
                 }
                 return Future.succeededFuture(via);
+            }).recover(thr -> {
+                log.debug("failed to resolve group members", thr);
+                TracingHelper.logError(span, "failed to resolve group members: " + thr.getMessage());
+                return Future.failedFuture(thr);
             });
         }
         return resultFuture;
