@@ -10,7 +10,7 @@ For each device, registration information is stored that defines a device identi
 Each device belongs to exactly one tenant. Each device must have at least one set of credentials that are used to authenticate to Hono.
 
 To get an understanding of what is meant by the terms *tenant*, *device registration* and *credentials*, 
-it is recommended to read the [Device Identity]({{< ref "/concepts/device-identity" >}} page first.
+it is recommended to read the [Device Identity]({{< relref "/concepts/device-identity" >}}) page first.
 
 So in order to use a device with Hono, it has to be provisioned. 
 This means that registration information and at least one credential record must be stored in the device registry.
@@ -19,14 +19,16 @@ There are different ways to perform device provisioning.
 
 ## Manual Device Provisioning
 
-Devices can be provisioned using Hono's [Management API]({{< ref "/api/management" >}}) via REST.
+Devices can be provisioned using Hono's [Device Registry Management API]({{< relref "/api/management" >}}) via HTTP.
 
 If the desired *tenant* does not yet exist, it must be created first. 
-How to do this is described in the [User Guide]({{< ref "/user-guide/device-registry#add-a-tenant" >}}) of the Device Registry.
+How to do this is described in the [User Guide]({{< ref "/user-guide/device-registry#add-a-tenant" >}})
+of the Device Registry.
 
-The actual Device Provisioning is then performed as described under [Register Device]({{< ref "/user-guide/device-registry#register-device" >}}). 
-This creates both a device registration and an (empty) credentials record.
-The last step is to add real credentials, as described in [Update Credentials for a Device]({{< ref "/user-guide/device-registry#update-credentials-for-a-device" >}}).
+The actual Device Provisioning is then performed as described under
+[Register Device]({{< relref "/user-guide/device-registry#register-device" >}}).
+This creates both a device identity and an (empty) credentials record. The last step is to add real credentials
+as described in [Update Credentials for a Device]({{< relref "/user-guide/device-registry#update-credentials-for-a-device" >}}).
 
 
 ## Automatic Device Provisioning

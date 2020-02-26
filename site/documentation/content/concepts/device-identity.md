@@ -6,9 +6,14 @@ weight = 182
 This page describes how devices are represented and identified throughout Hono and its APIs.
 <!--more-->
 
-The main purpose of Hono is to provide a uniform API for applications to interact with devices, regardless of the particular communication protocol the devices natively use. In order to do so, Hono uses a unique *logical* identifier to refer to each device individually.
+The main purpose of Hono is to provide a uniform API for applications to interact with devices,
+regardless of the particular communication protocol the devices natively use.
+In order to do so, Hono uses a unique *logical* identifier to refer to each device individually.
 
-Hono does not make any assumptions about the format of a device identifier (or *device-id* for short). It basically is a string which is defined at the time a device is registered. Once registered, the device can be referred to by this identifier when using Hono's APIs until the device is unregistered. 
+Hono does not make any assumptions about the format of a device identifier (or *device-id* for short).
+It basically is a string which is defined at the time a device is being
+[provisioned]({{< relref "/concepts/device-provisioning" >}}). Once created, the device can be referred
+to by this identifier when using Hono's APIs until the device is being removed from the system.
 
 ## Tenant
 
