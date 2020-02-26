@@ -48,13 +48,15 @@ Setting up a multi-node Kubernetes cluster is a more advanced topic. Please foll
 
 This chapter describes how Hono can be deployed on Microsoft Azure. It includes:
 
-- [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview) templates for an automated infrastructure deployment.
-- Hono deployment into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
+- [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview)
+  templates for an automated infrastructure deployment.
+- Helm based deployment of Hono to [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
 - Push Hono docker images to an [Azure Container Registry (ACR)](https://azure.microsoft.com/en-us/services/container-registry/).
-- Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as broker for the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of a self hosted ActiveMQ Artemis.
-- [Virtual Network (VNet) service endpoints](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview) ensure protected communication between AKS and Azure Service Bus.
-
-<!--more-->
+- Optional [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview) as
+  broker for the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}})
+  instead of a self hosted ActiveMQ Artemis.
+- [Virtual Network (VNet) service endpoints](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview)
+  ensure protected communication between AKS and Azure Service Bus.
 
 {{% warning title="Use for demos only" %}}
 This deployment model is not meant for productive use but rather for evaluation as well as demonstration purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Hono.
@@ -64,7 +66,8 @@ This deployment model is not meant for productive use but rather for evaluation 
 
 - An [Azure subscription](https://azure.microsoft.com/en-us/get-started/).
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed to setup the infrastructure.
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm](https://helm.sh/docs/using_helm/#installing-helm) installed to deploy Hono into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes).
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm](https://helm.sh/docs/using_helm/#installing-helm)
+  installed to deploy Hono into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes)
 
 ### Setup
 
@@ -114,11 +117,9 @@ After the deployment is complete you can set your cluster in _kubectl_.
 az aks get-credentials --resource-group $resourcegroup_name --name $aks_cluster_name
 ```
 
-Next deploy helm on to the AKS cluster as well create retain storage for the device registry. It will take a moment until tiller is booted up.
+Next create retain storage for the device registry.
 
 ```bash
-kubectl apply -f helm-rbac.yaml
-helm init --service-account tiller
 kubectl apply -f managed-premium-retain.yaml
 ```
 

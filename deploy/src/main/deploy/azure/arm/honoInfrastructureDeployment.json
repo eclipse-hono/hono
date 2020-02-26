@@ -370,11 +370,11 @@
         },
         "serviceBusKey": {
             "type": "string",
-            "value": "[reference('honoServiceBusDeployment', '2019-06-01').outputs.DefaultSharedAccessPolicyPrimaryKey.value]"
+            "value": "[if(parameters('serviceBus'), reference('honoServiceBusDeployment', '2019-06-01').outputs.DefaultSharedAccessPolicyPrimaryKey.value, 'n/a')]"
         },
         "serviceBusKeyName": {
             "type": "string",
-            "value": "[reference('honoServiceBusDeployment', '2019-06-01').outputs.DefaultSharedAccessPolicyKeyName.value]"
+            "value": "[if(parameters('serviceBus'), reference('honoServiceBusDeployment', '2019-06-01').outputs.DefaultSharedAccessPolicyKeyName.value, 'n/a')]"
         },
         "serviceBusNamespaceName": {
             "type": "string",
