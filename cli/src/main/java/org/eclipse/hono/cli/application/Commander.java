@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli.app;
+package org.eclipse.hono.cli.application;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -19,7 +19,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.buffer.Buffer;
 import org.eclipse.hono.cli.AbstractCliClient;
-import org.eclipse.hono.cli.ClientConfig;
+import org.eclipse.hono.cli.client.ClientConfig;
 import org.eclipse.hono.cli.shell.InputReader;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
@@ -33,15 +33,26 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A command line client for sending commands to devices connected
- * to one of Hono's protocol adapters.
+ * A command line client for sending commands to devices connected to one of Hono's protocol adapters.
  * <p>
  * The commands to send are read from stdin.
  */
 public class Commander extends AbstractCliClient {
+    /**
+     * Spring Shell inputReader
+     */
     private final InputReader inputReader;
+    /**
+     * To execute commands in an other thread
+     */
     private WorkerExecutor workerExecutor;
+    /**
+     * Configuration used for the connection
+     */
     private final ClientConfig clientConfig;
+    /**
+     * To signal the CLI main class of the ended execution
+     */
     CountDownLatch latch;
 
     public Commander(ApplicationClientFactory clientFactory, Vertx vertx, ClientConfig clientConfig, InputReader inputReader) {
@@ -51,7 +62,8 @@ public class Commander extends AbstractCliClient {
         this.inputReader = inputReader;
     }
 
-    void start(CountDownLatch latch){
+    public void start(CountDownLatch latch){
+        this.latch = latch;
         workerExecutor = vertx.createSharedWorkerExecutor("user-input-pool", 3, TimeUnit.HOURS.toNanos(1));
         clientFactory.connect().setHandler(connectAttempt -> {
             if (connectAttempt.succeeded()) {
@@ -129,7 +141,7 @@ public class Commander extends AbstractCliClient {
         workerExecutor.executeBlocking(userInputFuture -> {
             System.out.println();
             System.out.println();
-            final String honoCmd = inputReader.prompt(">>>>>>>>> Enter name of command for device ["+clientConfig.deviceId+"] in tenant ["+clientConfig.deviceId+"] (prefix with 'ow:' to send one-way command):");
+            final String honoCmd = inputReader.prompt(">>>>>>>>> Enter name of command for device ["+clientConfig.deviceId+"] in tenant ["+clientConfig.tenantId+"] (prefix with 'ow:' to send one-way command):");
             final String honoPayload = inputReader.prompt(">>>>>>>>> Enter command payload:");
             final String honoContentType = inputReader.prompt(">>>>>>>>> Enter content type:");
             userInputFuture.complete(new Command(honoCmd, honoPayload, honoContentType));
@@ -144,7 +156,7 @@ public class Commander extends AbstractCliClient {
     }
 
     /**
-     * Command class that encapsulates hono command and payload.
+     * Command class that encapsulates Hono command and payload.
      */
     private static class Command {
 

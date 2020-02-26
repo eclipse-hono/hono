@@ -19,7 +19,7 @@ import org.springframework.shell.jline.PromptProvider;
 import org.springframework.stereotype.Component;
 
 @Component
-public class ClidemoPromptProvider implements PromptProvider {
+public class ClihonoPromptProvider implements PromptProvider {
 
     @Override
     public AttributedString getPrompt() {

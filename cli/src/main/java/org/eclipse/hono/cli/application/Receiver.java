@@ -11,27 +11,25 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli.app;
+package org.eclipse.hono.cli.application;
 
 import io.vertx.core.*;
 import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cli.AbstractCliClient;
-import org.eclipse.hono.cli.ClientConfig;
+import org.eclipse.hono.cli.client.ClientConfig;
 import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.util.MessageHelper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static org.eclipse.hono.cli.ClientConfig.*;
+import static org.eclipse.hono.cli.client.ClientConfig.*;
 
 /**
- * A command line client for receiving messages from via Hono's north bound Telemetry and/or Event API
+ * The methods of the command line client for receiving messages from via Hono's north bound Telemetry and/or Event API
  * <p>
  * Messages are output to stdout.
  * <p>
@@ -40,7 +38,13 @@ import static org.eclipse.hono.cli.ClientConfig.*;
  * it (found in the User Guide section).
  */
 public class Receiver extends AbstractCliClient{
+    /**
+     * Configuration used for the connection
+     */
     private final ClientConfig clientConfig;
+    /**
+     * To signal the CLI main class of the ended execution
+     */
     CountDownLatch latch;
 
     public Receiver(ApplicationClientFactory clientFactory, Vertx vertx, ClientConfig clientConfig) {
@@ -49,9 +53,9 @@ public class Receiver extends AbstractCliClient{
         this.clientConfig = clientConfig;
     }
 
-    void start(CountDownLatch latch){
+    public Future<CompositeFuture> start(CountDownLatch latch){
         this.latch = latch;
-        clientFactory.connect()
+        return clientFactory.connect()
                 .compose(con -> {
                     clientFactory.addReconnectListener(this::createConsumer);
                     return createConsumer(con);

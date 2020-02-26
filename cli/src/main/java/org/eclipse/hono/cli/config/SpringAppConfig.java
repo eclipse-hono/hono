@@ -27,7 +27,7 @@ import org.springframework.context.annotation.Configuration;
  * Configuration for CLI application.
  */
 @Configuration
-public class AppConfiguration {
+public class SpringAppConfig {
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
@@ -76,6 +76,7 @@ public class AppConfiguration {
         return ApplicationClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()));
     }
 
+//    This will be used with the #1765.
 //    @Bean
 //    public AmqpAdapterClientFactory AdapterFactory() {
 //        return AmqpAdapterClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()), ...);

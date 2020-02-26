@@ -18,39 +18,37 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 
-import javax.annotation.PostConstruct;
-
+import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import org.eclipse.hono.cli.ClientConfig;
+import org.eclipse.hono.cli.client.ClientConfig;
 
 /**
  * A Client for accessing Hono's Telemetry and Event APIs to send
- * telemetry data respectively events via the AMQP org.eclipse.hono.cli.app.adapter.
+ * telemetry data and events via the AMQP org.eclipse.hono.cli.app.adapter.
  */
 public class TelemetryAndEvent extends AmqpCliClient {
 
-    private final ClientConfig clientConfig;
-    CountDownLatch latch;
-
-    public TelemetryAndEvent(Vertx vertx, ClientConfig clientConfig) {
+    public TelemetryAndEvent(Vertx vertx, Context ctx, ClientConfig clientConfig) {
         this.vertx = vertx;
+        this.ctx = ctx;
         this.clientConfig = clientConfig;
     }
 
+//   This will be used with the #1765.
 //   public TelemetryAndEvent(AmqpAdapterClientFactory adapterFactory, Vertx vertx, ClientConfig clientConfig) {
 //        this.adapterFactory = adapterFactory;
 //        this.vertx = vertx;
 //        this.clientConfig = clientConfig;
 //    }
 
+
     public void start(CountDownLatch latch){
         this.latch = latch;
-
         final CompletableFuture<ProtonDelivery> messageSent = new CompletableFuture<>();
 
         sendMessage(messageSent);
@@ -79,39 +77,39 @@ public class TelemetryAndEvent extends AmqpCliClient {
 
         ctx.runOnContext(go -> {
             connectToAdapter()
-            .compose(con -> {
-                adapterConnection = con;
-                return createSender();
-            })
-            .map(sender -> {
-                final Message message = ProtonHelper.message(clientConfig.messageAddress, clientConfig.payload);
-                sender.send(message, delivery -> {
-                    adapterConnection.close();
-                    messageTracker.complete(delivery);
-                });
-                return sender;
-            })
-            .otherwise(t -> {
-                messageTracker.completeExceptionally(t);
-                return null;
-            });
+                    .compose(con -> {
+                        adapterConnection = con;
+                        return createSender();
+                    })
+                    .map(sender -> {
+                        final Message message = ProtonHelper.message(clientConfig.messageAddress, clientConfig.payload);
+                        sender.send(message, delivery -> {
+                            adapterConnection.close();
+                            messageTracker.complete(delivery);
+                        });
+                        return sender;
+                    })
+                    .otherwise(t -> {
+                        messageTracker.completeExceptionally(t);
+                        return null;
+                    });
         });
-     }
+    }
 
     private void printDelivery(final ProtonDelivery delivery) {
         final DeliveryState state = delivery.getRemoteState();
         writer.printf("[Delivery State: %s] %n", state.getType()).flush();
         switch(state.getType()) {
-        case Rejected:
-            final Rejected rejected = (Rejected) state;
-            if (rejected.getError() != null) {
-                writer.printf("Message rejected: [Error Condition: %s, Error Description: %s] %n",
-                        rejected.getError().getCondition(), rejected.getError().getDescription());
-                writer.flush();
-            }
-            break;
-        default:
-            break;
+            case Rejected:
+                final Rejected rejected = (Rejected) state;
+                if (rejected.getError() != null) {
+                    writer.printf("Message rejected: [Error Condition: %s, Error Description: %s] %n",
+                            rejected.getError().getCondition(), rejected.getError().getDescription());
+                    writer.flush();
+                }
+                break;
+            default:
+                break;
         }
     }
 

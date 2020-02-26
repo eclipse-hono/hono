@@ -16,16 +16,12 @@ package org.eclipse.hono.cli.adapter;
 import java.net.HttpURLConnection;
 import java.util.concurrent.CountDownLatch;
 
-import javax.annotation.PostConstruct;
-
 import io.vertx.core.Vertx;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.cli.ClientConfig;
+import org.eclipse.hono.cli.client.ClientConfig;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -42,15 +38,14 @@ import io.vertx.proton.ProtonSender;
 public class CommandAndControl extends AmqpCliClient {
 
     private ProtonSender sender;
-    private final ClientConfig clientConfig;
-    CountDownLatch latch;
 
     public CommandAndControl(Vertx vertx, ClientConfig clientConfig) {
         this.vertx = vertx;
         this.clientConfig = clientConfig;
     }
 
-//   public CommandAndControl(AmqpAdapterClientFactory adapterFactory, Vertx vertx, ClientConfig clientConfig) {
+//    This will be used with the #1765.
+//    public CommandAndControl(AmqpAdapterClientFactory adapterFactory, Vertx vertx, ClientConfig clientConfig) {
 //        this.adapterFactory = adapterFactory;
 //        this.vertx = vertx;
 //        this.clientConfig = clientConfig;
@@ -88,23 +83,23 @@ public class CommandAndControl extends AmqpCliClient {
                 });
             }
         })
-        .otherwise(t -> {
-            writer.printf("failed to create command receiver link: %s%n", t.getMessage()).flush();
-            latch.countDown();
-            return null;
-        });
+                .otherwise(t -> {
+                    writer.printf("failed to create command receiver link: %s%n", t.getMessage()).flush();
+                    latch.countDown();
+                    return null;
+                });
     }
 
     private Future<ProtonReceiver> startCommandReceiver(final ProtonMessageHandler msgHandler) {
         return connectToAdapter()
-        .compose(con -> {
-            log.info("connection to AMQP adapter established");
-            adapterConnection = con;
-            return createSender();
-        }).compose(s -> {
-            sender = s;
-            return subscribeToCommands(msgHandler);
-        });
+                .compose(con -> {
+                    log.info("connection to AMQP adapter established");
+                    adapterConnection = con;
+                    return createSender();
+                }).compose(s -> {
+                    sender = s;
+                    return subscribeToCommands(msgHandler);
+                });
     }
 
     /**

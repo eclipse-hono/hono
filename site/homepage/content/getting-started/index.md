@@ -362,7 +362,7 @@ ow:setVolume
 >>>>>>>>> Enter content type:
 application/json
 
-INFO  org.eclipse.hono.cli.app.Commander - Command sent to device
+INFO  org.eclipse.hono.cli.client.Commander - Command sent to device
 ~~~
 
 In the terminal for the simulated device you should see the received command as follows
@@ -385,7 +385,7 @@ setBrightness
 >>>>>>>>> Enter content type:
 application/json
 
-INFO  org.eclipse.hono.cli.app.Commander - Command sent to device... [waiting for response for max. 60 seconds]
+INFO  org.eclipse.hono.cli.client.Commander - Command sent to device... [waiting for response for max. 60 seconds]
 ~~~
 
 the application will wait up to 60 seconds for the device's response. 
@@ -410,7 +410,7 @@ The `200` at the end of the topic is an HTTP status code that reports the result
 If the Command Line Client has successfully received the response in time, it will print it to the console. This looks like this:
 
 ~~~sh
-INFO  org.eclipse.hono.cli.app.Commander - Received Command response: {"success": true}
+INFO  org.eclipse.hono.cli.client.Commander - Received Command response: {"success": true}
 ~~~
 
 If the 60 seconds have already expired, an error message is logged.

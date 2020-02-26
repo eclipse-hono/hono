@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.client;
 
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.core.MethodParameter;
@@ -45,8 +45,6 @@ public class ClientConfig implements  Cloneable{
         this.payload = payload;
         this.messageAddress = messageAddress;
     }
-
-
 
     @Component
     public static class MessageTypeProvider extends ValueProviderSupport {

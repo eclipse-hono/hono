@@ -13,13 +13,13 @@
 package org.eclipse.hono.cli.adapter;
 
 import java.io.PrintWriter;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 
 import org.eclipse.hono.cli.AbstractCliClient;
+import org.eclipse.hono.cli.client.ClientConfig;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -34,7 +34,6 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
  * Abstract base CLI connection for interacting with Hono's AMQP adapter.
  */
 public abstract class AmqpCliClient extends AbstractCliClient {
-    //TODO set parameters
     /**
      * A writer to stdout.
      */
@@ -43,20 +42,16 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      * The connection to the AMQP org.eclipse.hono.cli.app.adapter.
      */
     protected ProtonConnection adapterConnection;
-
-    private ClientConfigProperties properties = new ClientConfigProperties();
-
     /**
-     * Sets the configuration properties to use for connecting
+     * The configuration properties to use for connecting
      * to the AMQP org.eclipse.hono.cli.app.adapter.
-     * 
-     * @param props The properties.
-     * @throws NullPointerException if properties are {@code null}.
      */
-    @Autowired(required = false)
-    public void setClientConfig(final ClientConfigProperties props) {
-        this.properties = Objects.requireNonNull(props);
-    }
+    protected ClientConfig clientConfig;
+    /**
+     * To signal the CLI main class of the ended execution
+     */
+    protected CountDownLatch latch;
+
 
     /**
      * Creates anonymous sender link on the established connection
@@ -86,7 +81,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      *         be succeeded once the connection is open.
      */
     protected Future<ProtonConnection> connectToAdapter() {
-
+        ClientConfigProperties properties = this.clientConfig.honoClientConfig;
         final Promise<ProtonConnection> connectAttempt = Promise.promise();
         final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);
