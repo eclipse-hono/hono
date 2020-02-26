@@ -74,6 +74,18 @@ This deployment model is not meant for productive use but rather for evaluation 
 As described [here](https://docs.microsoft.com/en-gb/azure/aks/kubernetes-service-principal) we will create an explicit service principal. Later we add roles to this principal to access the [Azure Container Registry (ACR)](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-intro).
 
 ```bash
+# Create service principal
+service_principal=`az ad sp create-for-rbac --name http://honoServicePrincipal --skip-assignment --output tsv`
+app_id_principal=`echo $service_principal | cut -f1 -d ' '`
+password_principal=`echo $service_principal | cut -f4 -d ' '`
+object_id_principal=`az ad sp show --id $app_id_principal --query objectId --output tsv`
+```
+
+Note: it might take a few seconds until the principal is available for the next steps.
+
+Now we create the Azure Container Registry instance and provide read access to the service principal.
+
+```bash
 # Resource group where the ACR is deployed.
 acr_resourcegroupname={YOUR_ACR_RG}
 # Name of your ACR.
@@ -81,26 +93,16 @@ acr_registry_name={YOUR_ACR_NAME}
 # Full name of the ACR.
 acr_login_server=$acr_registry_name.azurecr.io
 
-# Create service principal
-service_principal=`az ad sp create-for-rbac --name http://honoServicePrincipal --skip-assignment --output tsv`
-app_id_principal=`echo $service_principal|cut -f1`
-password_principal=`echo $service_principal|cut -f4`
-object_id_principal=`az ad sp show --id $app_id_principal --query objectId --output tsv`
+az acr create --resource-group $acr_resourcegroupname --name $acr_registry-name  --sku Basic
 acr_id_access_registry=`az acr show --resource-group $acr_resourcegroupname --name $acr_registry_name --query "id" --output tsv`
-```
-
-Note: it might take a few seconds until the principal is available for the next steps.
-
-```bash
 az role assignment create --assignee $app_id_principal --scope $acr_id_access_registry --role Reader
-
-resourcegroup_name=hono
-az group create --name $resourcegroup_name --location "westeurope"
 ```
 
 With the next command we will use the provided [Azure Resource Manager (ARM)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview) templates to setup the AKS cluster. This might take a while.
 
 ```bash
+resourcegroup_name=hono
+az group create --name $resourcegroup_name --location "westeurope"
 unique_solution_prefix=myprefix
 cd deploy/src/main/deploy/azure/
 az group deployment create --name HonoBasicInfrastructure --resource-group $resourcegroup_name --template-file arm/honoInfrastructureDeployment.json --parameters uniqueSolutionPrefix=$unique_solution_prefix servicePrincipalObjectId=$object_id_principal servicePrincipalClientId=$app_id_principal servicePrincipalClientSecret=$password_principal
@@ -108,10 +110,14 @@ az group deployment create --name HonoBasicInfrastructure --resource-group $reso
 
 Notes:
 
-- add the following parameter in case you want to opt for the Azure Service Bus as broker in the [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of deploying a (self-hosted) ActiveMQ Artemis into AKS: _serviceBus=true_
-- add the following parameter to define the k8s version of the AKS cluster. The default as defined in the template [might not be supported](https://docs.microsoft.com/en-us/azure/aks/supported-kubernetes-versions) in your target Azure region, e.g. _kubernetesVersion=1.14.6_
+- add the following parameter in case you want to opt for the Azure Service Bus as broker in the
+  [Hono AMQP 1.0 Messaging Network]({{< relref "/architecture/component-view#amqp-1-0-messaging-network" >}}) instead of
+  deploying a (self-hosted) ActiveMQ Artemis into AKS: *serviceBus=true*
+- add the following parameter to define the k8s version of the AKS cluster. The default as defined in the
+  template [might not be supported](https://docs.microsoft.com/en-us/azure/aks/supported-kubernetes-versions) in your
+  target Azure region, e.g. *kubernetesVersion=1.14.6*
 
-After the deployment is complete you can set your cluster in _kubectl_.
+After the deployment is complete you can set your cluster in *kubectl*.
 
 ```bash
 az aks get-credentials --resource-group $resourcegroup_name --name $aks_cluster_name
@@ -123,15 +129,19 @@ Next create retain storage for the device registry.
 kubectl apply -f managed-premium-retain.yaml
 ```
 
-Now wait until the Azure deployment is complete and then continue with the [Helm deployment]({{< relref "helm-based-deployment.md" >}}) of Hono itself.
+Now Hono can be installed to the AKS cluster as describe in the [Helm based installation]({{< relref "helm-based-deployment.md" >}})
+guide.
 
 ### Monitoring
 
-You can monitor your cluster using [Azure Monitor for containers](https://docs.microsoft.com/en-us/azure/azure-monitor/insights/container-insights-overview).
+You can monitor your cluster using
+[Azure Monitor for containers](https://docs.microsoft.com/en-us/azure/azure-monitor/insights/container-insights-overview).
 
 Navigate to [https://portal.azure.com](https://portal.azure.com) -> your resource group -> your kubernetes cluster
 
-On an overview tab you fill find an information about your cluster (status, location, version, etc.). Also, here you will find a "Monitor Containers" link. Navigate to "Monitor Containers" and explore metrics and statuses of your Cluster, Nodes, Controllers and Containers.
+On an overview tab you fill find an information about your cluster (status, location, version, etc.). Also, here
+you will find a *Monitor Containers* link. Navigate to *Monitor Containers* and explore metrics and statuses of
+your Cluster, Nodes, Controllers and Containers.
 
 ### Cleaning up
 
