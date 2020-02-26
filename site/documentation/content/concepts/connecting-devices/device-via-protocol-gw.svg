@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="258px" preserveAspectRatio="none" style="width:860px;height:258px;" version="1.1" viewBox="0 0 860 258" width="860.4px" zoomAndPan="magnify"><defs><filter height="300%" id="f5bukth4lywls" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.4"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.8" dy="4.8" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><!--MD5=[e68735924c73d303307919df3c3a2fc4]
+entity Device1--><ellipse cx="43.2" cy="21" fill="#FEFECE" filter="url(#f5bukth4lywls)" rx="9.6" ry="9.6" style="stroke: #A80036; stroke-width: 1.7999999999999998;"/><path d="M43.2,30.6 L43.2,63 M27.6,40.2 L58.8,40.2 M43.2,63 L27.6,81 M43.2,63 L58.8,81 " fill="none" filter="url(#f5bukth4lywls)" style="stroke: #A80036; stroke-width: 1.7999999999999998;"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="72" x="7.2" y="103.1941">Device 1</text><!--MD5=[edd7c1fe627c3ac5789dce1f3265df01]
+entity Device2--><ellipse cx="43.2" cy="160.2" fill="#FEFECE" filter="url(#f5bukth4lywls)" rx="9.6" ry="9.6" style="stroke: #A80036; stroke-width: 1.7999999999999998;"/><path d="M43.2,169.8 L43.2,202.2 M27.6,179.4 L58.8,179.4 M43.2,202.2 L27.6,220.2 M43.2,202.2 L58.8,220.2 " fill="none" filter="url(#f5bukth4lywls)" style="stroke: #A80036; stroke-width: 1.7999999999999998;"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="72" x="7.2" y="242.3941">Device 2</text><!--MD5=[9eb86c2b3d925a16ba1bdada40016c70]
+entity Internet--><path d="M178.0785,111.9911 C181.1566,104.7471 185.9208,104.0503 191.7318,108.9078 C195.9269,103.1426 202.1208,101.7848 205.6861,109.557 C207.8641,103.1187 213.3368,102.8484 217.4908,107.4427 C221.7612,102.6094 228.6498,102.2137 230.9271,109.6292 C235.0531,103.9014 240.2471,102.523 244.5117,109.4807 C249.9286,102.9128 254.1463,103.5613 258.1011,110.9086 C269.008,114.0621 273.0529,119.26 266.907,130.1982 C273.7444,138.526 268.6192,147.2541 259.1418,148.7547 C256.574,155.2826 251.7863,157.1051 246.1448,152.2706 C242.3298,159.0009 237.1029,159.8808 231.6687,154.1519 C229.8371,161.5003 224.9712,164.7413 218.0647,159.7439 C211.8526,164.5902 207.367,161.9128 205.9568,154.8583 C199.5481,160.1761 194.1249,159.7161 190.723,151.4791 C185.8761,155.7777 180.9386,154.2352 178.9347,148.2274 C168.6822,143.8751 167.7751,135.6856 175.1704,128.0422 C167.7462,121.113 168.3415,115.8111 178.0785,111.9911 " fill="#FEFECE" style="stroke: #000000; stroke-width: 1.7999999999999998;"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="64.8" x="184.8" y="133.7941">Internet</text><!--MD5=[49cbbb1648246ecd0e2d56eda0c19f08]
+entity Gateway--><polygon fill="#FEFECE" filter="url(#f5bukth4lywls)" points="355.2,112.2,367.2,100.2,547.2,100.2,547.2,143.7563,535.2,155.7563,355.2,155.7563,355.2,112.2" style="stroke: #000000; stroke-width: 1.7999999999999998;"/><line style="stroke: #000000; stroke-width: 1.7999999999999998;" x1="535.2" x2="546" y1="112.2" y2="101.4"/><line style="stroke: #000000; stroke-width: 1.7999999999999998;" x1="355.2" x2="535.2" y1="112.2" y2="112.2"/><line style="stroke: #000000; stroke-width: 1.7999999999999998;" x1="535.2" x2="535.2" y1="112.2" y2="155.7563"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="144" x="373.2" y="139.7941">Protocol Gateway</text><!--MD5=[fe0bae4af69ca8947a410fa6d457e8ef]
+entity Adapter--><polygon fill="#FFA500" filter="url(#f5bukth4lywls)" points="667.2,112.2,679.2,100.2,834,100.2,834,143.7563,822,155.7563,667.2,155.7563,667.2,112.2" style="stroke: #000000; stroke-width: 1.7999999999999998;"/><line style="stroke: #000000; stroke-width: 1.7999999999999998;" x1="822" x2="832.8" y1="112.2" y2="101.4"/><line style="stroke: #000000; stroke-width: 1.7999999999999998;" x1="667.2" x2="822" y1="112.2" y2="112.2"/><line style="stroke: #000000; stroke-width: 1.7999999999999998;" x1="822" x2="822" y1="112.2" y2="155.7563"/><text fill="#000000" font-family="sans-serif" font-size="16.8" lengthAdjust="spacingAndGlyphs" textLength="118.8" x="685.2" y="139.7941">AMQP Adapter</text><!--MD5=[ce429b18c6ef410867aabdbdbb02d0ad]
+link Device1 to Internet--><path d="M79.54,72.4524 C104.6418,82.6332 138.7572,96.4704 166.596,107.7624 " fill="none" id="Device1-Internet" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="13.2" x="116.4" y="84.6803">IP</text><!--MD5=[9cea91f9ad61bafa4b0fc474e47adbe2]
+link Device2 to Internet--><path d="M79.54,183.1475 C104.6418,172.9662 138.7572,159.1294 166.596,147.8378 " fill="none" id="Device2-Internet" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="13.2" x="116.4" y="157.8803">IP</text><!--MD5=[f00776eec63b04abcec2ff72d8678bc4]
+link Internet to Gateway--><path d="M268.0836,127.8 C293.4708,127.8 325.2324,127.8 355.08,127.8 " fill="none" id="Internet-Gateway" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="13.2" x="304.8" y="123.0803">IP</text><!--MD5=[5afe34a06038127a4abb08f0ae358b6a]
+link Gateway to Adapter--><path d="M547.5984,127.8 C585.9432,127.8 629.7564,127.8 666.738,127.8 " fill="none" id="Gateway-Adapter" style="stroke: #A80036; stroke-width: 1.2;"/><text fill="#000000" font-family="sans-serif" font-size="15.6" lengthAdjust="spacingAndGlyphs" textLength="45.6" x="584.4" y="123.0803">AMQP</text><!--MD5=[603cbc848dece4b801483248f08729a4]
+@startuml
+left to right direction
+scale 1.2
+
+actor "Device 1" as Device1
+actor "Device 2" as Device2
+cloud Internet
+node "Protocol Gateway" as Gateway
+node "AMQP Adapter" as Adapter #orange
+
+Device1 - - Internet : IP
+Device2 - - Internet : IP
+Internet - - Gateway : IP
+Gateway - - Adapter : AMQP
+@enduml
+
+PlantUML version 1.2020.02beta5(Unknown compile time)
+(GPL source distribution)
+Java Runtime: Java(TM) SE Runtime Environment
+JVM: Java HotSpot(TM) 64-Bit Server VM
+Java Version: 1.7.0_25-b15
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>
