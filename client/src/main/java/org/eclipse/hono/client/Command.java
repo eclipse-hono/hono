@@ -109,7 +109,7 @@ public final class Command {
         } else {
             final ResourceIdentifier addressIdentifier = ResourceIdentifier.fromString(message.getAddress());
             if (!tenantId.equals(addressIdentifier.getTenantId())) {
-                validationErrorJoiner.add("address contains wrong tenant");
+                validationErrorJoiner.add("address contains wrong tenant '" + addressIdentifier.getTenantId() + "'");
             }
             if (addressIdentifier.getResourceId() == null) {
                 validationErrorJoiner.add("address is missing device-id part");

@@ -303,6 +303,7 @@ public class CommandTest {
         final Command command = Command.from(message, Constants.DEFAULT_TENANT, "4711");
         assertFalse(command.isValid());
         assertThat(command.getInvalidCommandReason()).contains("address");
+        assertThat(command.getInvalidCommandReason()).contains("other_tenant");
     }
 
     /**
