@@ -15,12 +15,12 @@ package org.eclipse.hono.adapter.lora.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,15 +31,30 @@ import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.DownstreamSender;
+import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.RegistrationClient;
+import org.eclipse.hono.client.RegistrationClientFactory;
+import org.eclipse.hono.client.TenantClient;
+import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.buffer.impl.BufferImpl;
+import io.opentracing.SpanContext;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link LoraProtocolAdapter}.
@@ -53,21 +68,72 @@ public class LoraProtocolAdapterTest {
     private static final String TEST_PROVIDER = "bumlux";
 
     private LoraProtocolAdapter adapter;
+    private TenantClientFactory tenantClientFactory;
+    private RegistrationClientFactory registrationClientFactory;
+    private DownstreamSenderFactory downstreamSenderFactory;
+    private DownstreamSender telemetrySender;
+    private DownstreamSender eventSender;
 
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
-        this.adapter = spy(LoraProtocolAdapter.class);
+        adapter = new LoraProtocolAdapter();
+        adapter.setConfig(new LoraProtocolAdapterProperties());
 
-        doAnswer(answer -> {
-            final RoutingContext ctx = answer.getArgument(0);
-            ctx.response().setStatusCode(HttpResponseStatus.ACCEPTED.code());
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
             return null;
-        }).when(this.adapter).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        }).when(tenantClientFactory).disconnect(any(Handler.class));
 
-        when(this.adapter.getConfig()).thenReturn(new LoraProtocolAdapterProperties());
+        registrationClientFactory = mock(RegistrationClientFactory.class);
+        when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(registrationClientFactory).disconnect(any(Handler.class));
+
+        downstreamSenderFactory = mock(DownstreamSenderFactory.class);
+        when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<Void>> shutdownHandler = invocation.getArgument(0);
+            shutdownHandler.handle(Future.succeededFuture());
+            return null;
+        }).when(downstreamSenderFactory).disconnect(any(Handler.class));
+
+        final TenantClient tenantClient = mock(TenantClient.class);
+        doAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        }).when(tenantClient).get(anyString(), (SpanContext) any());
+        doAnswer(invocation -> {
+            return Future.succeededFuture(TenantObject.from(invocation.getArgument(0), true));
+        }).when(tenantClient).get(anyString());
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+
+        final RegistrationClient regClient = mock(RegistrationClient.class);
+        when(regClient.assertRegistration(anyString(), any(), (SpanContext) any())).thenReturn(Future.succeededFuture(new JsonObject()));
+        when(registrationClientFactory.getOrCreateRegistrationClient(anyString())).thenReturn(Future.succeededFuture(regClient));
+
+        telemetrySender = mock(DownstreamSender.class);
+        when(telemetrySender.send(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(telemetrySender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(
+                Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.succeededFuture(telemetrySender));
+
+        eventSender = mock(DownstreamSender.class);
+        when(eventSender.send(any(Message.class), (SpanContext) any())).thenThrow(new UnsupportedOperationException());
+        when(eventSender.sendAndWaitForOutcome(any(Message.class), (SpanContext) any())).thenReturn(Future.succeededFuture(mock(ProtonDelivery.class)));
+        when(downstreamSenderFactory.getOrCreateEventSender(anyString())).thenReturn(Future.succeededFuture(eventSender));
+
+        adapter.setTenantClientFactory(tenantClientFactory);
+        adapter.setRegistrationClientFactory(registrationClientFactory);
+        adapter.setDownstreamSenderFactory(downstreamSenderFactory);
     }
 
     /**
@@ -77,14 +143,15 @@ public class LoraProtocolAdapterTest {
     public void handleProviderRouteSuccessfullyForUplinkMessage() {
         final LoraProvider providerMock = getLoraProviderMock();
         final RoutingContext routingContextMock = getRoutingContextMock();
+        final HttpServerRequest request = mock(HttpServerRequest.class);
+        when(request.getHeader(eq(Constants.HEADER_QOS_LEVEL))).thenReturn(null);
+        when(routingContextMock.request()).thenReturn(request);
 
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
 
-        verify(adapter).uploadTelemetryMessage(any(), eq(TEST_TENANT_ID), eq(TEST_DEVICE_ID),
-                argThat(buffer -> buffer.equals(new BufferImpl().appendString(TEST_PAYLOAD))),
-                eq(LoraConstants.CONTENT_TYPE_LORA_BASE + TEST_PROVIDER + LoraConstants.CONTENT_TYPE_LORA_POST_FIX));
+        verify(telemetrySender).send(any(Message.class), any(SpanContext.class));
 
         verify(routingContextMock.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
     }
@@ -113,7 +180,8 @@ public class LoraProtocolAdapterTest {
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verify(routingContextMock.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
     }
 
@@ -129,7 +197,8 @@ public class LoraProtocolAdapterTest {
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verify(routingContextMock.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
     }
 
@@ -145,7 +214,8 @@ public class LoraProtocolAdapterTest {
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verify(routingContextMock.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
     }
 
@@ -161,7 +231,8 @@ public class LoraProtocolAdapterTest {
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verifyUnauthorized(routingContextMock);
     }
 
@@ -177,7 +248,8 @@ public class LoraProtocolAdapterTest {
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verifyBadRequest(routingContextMock);
     }
 
@@ -193,7 +265,8 @@ public class LoraProtocolAdapterTest {
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verifyBadRequest(routingContextMock);
     }
 
@@ -208,7 +281,8 @@ public class LoraProtocolAdapterTest {
 
         adapter.handleProviderRoute(routingContextMock, providerMock);
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verifyBadRequest(routingContextMock);
     }
 
@@ -224,7 +298,8 @@ public class LoraProtocolAdapterTest {
         adapter.handleProviderRoute(routingContextMock, providerMock);
 
         verify(routingContextMock).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
-        verify(adapter, never()).uploadTelemetryMessage(any(), any(), any(), any(), any());
+        verify(telemetrySender, never()).send(any(Message.class), any(SpanContext.class));
+        verify(telemetrySender, never()).sendAndWaitForOutcome(any(Message.class), any(SpanContext.class));
         verifyBadRequest(routingContextMock);
     }
 
