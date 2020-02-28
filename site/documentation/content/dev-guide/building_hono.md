@@ -55,3 +55,14 @@ If you plan to build the Docker images more frequently, e.g. because you want to
 {{% note title="Be patient" %}}
 The first build might take several minutes because Docker will need to download all the base images that Hono is relying on. However, most of these will be cached by Docker so that subsequent builds will be running much faster.
 {{% /note %}}
+
+## Perform the integration tests
+
+The source code for Hono comes with a test suite for integration testing. To trigger these tests, change to the `tests` folder and execute:
+
+```
+# in the "hono/tests" folder containing the test suite
+mvn verify -Prun-tests
+```
+
+The tests are executed against the Docker images of the Hono components. Because of that, it is necessary to build the respective images as described above before the execution of the tests. The respective `Readme.md` file in the folder `hono/tests` contains more information regarding the test suite.
