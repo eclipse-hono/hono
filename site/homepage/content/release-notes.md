@@ -19,6 +19,19 @@ title = "Release Notes"
 * The `tenant` and `devices` endpoints of the management HTTP API now accept creation requests without a body.
     As there is no mandatory field, having a mandatory body was confusing. 
 
+## 1.1.1
+
+### Fixes & Enhancements
+
+* The *FireFly* LoRa adapter now supports mapping of the *mic* property.
+* A bug preventing the lora and SigFox adapters to start up correctly has been fixed.
+* The MQTT adapter failed to accept command response messages from authenticated gateways that had
+  been published to the `command//${device-id}/res/${req-id}/${status}` topic. This has been fixed
+  and the adapter now correctly uses the gateway's tenant in this case.
+* When a north bound application sent a command to a device that is connected via a gateway, the
+  AMQP adapter set the gateway's ID instead of the device's ID in the command response forwarded
+  to the application. This has been fixed.
+
 ## 1.1.0
 
 ### New Features
