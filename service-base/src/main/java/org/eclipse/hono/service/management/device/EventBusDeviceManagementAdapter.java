@@ -22,7 +22,6 @@ import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -135,12 +134,15 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
                 .compose(device -> {
                     log.debug("registering device [{}] for tenant [{}]", deviceId.orElse("<auto>"), tenantId);
                     final Promise<OperationResult<Id>> result = Promise.promise();
-                    getService().createDevice(tenantId, deviceId, device, span, result);
-                    return result.future().map(res -> {
-                        final String createdDeviceId = Optional.ofNullable(res.getPayload()).map(Id::getId)
-                                .orElse(null);
-                        return res.createResponse(request, JsonObject::mapFrom).setDeviceId(createdDeviceId);
-                    });
+                    return getService()
+                            .createDevice(tenantId, deviceId, device, span)
+                            .map(res -> {
+                                final String createdDeviceId = Optional.ofNullable(res.getPayload())
+                                        .map(Id::getId)
+                                        .orElse(null);
+                                return res.createResponse(request, JsonObject::mapFrom)
+                                        .setDeviceId(createdDeviceId);
+                            });
                 });
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -160,10 +162,10 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-            final Promise<OperationResult<Device>> readDeviceResult = Promise.promise();
-            getService().readDevice(tenantId, deviceId, span, readDeviceResult);
-            resultFuture = readDeviceResult.future()
-                    .map(res -> res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId));
+            resultFuture = getService()
+                    .readDevice(tenantId, deviceId, span)
+                    .map(res -> res.createResponse(request, JsonObject::mapFrom)
+                            .setDeviceId(deviceId));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
 
@@ -187,9 +189,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
             resultFuture = deviceFromPayload(request)
                     .compose(device -> {
                         log.debug("updating registration information for device [{}] of tenant [{}]", deviceId, tenantId);
-                        final Promise<OperationResult<Id>> updateResult = Promise.promise();
-                        getService().updateDevice(tenantId, deviceId, device, resourceVersion, span, updateResult);
-                        return updateResult.future()
+                        return getService().updateDevice(tenantId, deviceId, device, resourceVersion, span)
                                 .map(res -> res.createResponse(request, JsonObject::mapFrom).setDeviceId(deviceId));
                     });
         }
@@ -212,9 +212,7 @@ public abstract class EventBusDeviceManagementAdapter extends EventBusService
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("deleting device [{}] of tenant [{}]", deviceId, tenantId);
-            final Promise<Result<Void>> result = Promise.promise();
-            getService().deleteDevice(tenantId, deviceId, resourceVersion, span, result);
-            resultFuture = result.future()
+            resultFuture = getService().deleteDevice(tenantId, deviceId, resourceVersion, span)
                     .map(res -> res.createResponse(request, id -> null).setDeviceId(deviceId));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);

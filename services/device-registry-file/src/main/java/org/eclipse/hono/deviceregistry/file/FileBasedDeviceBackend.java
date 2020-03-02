@@ -100,46 +100,42 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
     }
 
     @Override
-    public void readDevice(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<OperationResult<Device>>> resultHandler) {
-        registrationService.readDevice(tenantId, deviceId, span, resultHandler);
+    public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
+        return registrationService.readDevice(tenantId, deviceId, span);
     }
 
     @Override
-    public void deleteDevice(final String tenantId, final String deviceId, final Optional<String> resourceVersion,
-            final Span span, final Handler<AsyncResult<Result<Void>>> resultHandler) {
+    public Future<Result<Void>> deleteDevice(final String tenantId, final String deviceId,
+            final Optional<String> resourceVersion,
+            final Span span) {
 
-        final Promise<Result<Void>> deleteAttempt = Promise.promise();
-        registrationService.deleteDevice(tenantId, deviceId, resourceVersion, span, deleteAttempt);
+        return registrationService.deleteDevice(tenantId, deviceId, resourceVersion, span)
+                .compose(r -> {
+                    if (r.getStatus() != HttpURLConnection.HTTP_NO_CONTENT) {
+                        return Future.succeededFuture(r);
+                    }
 
-        deleteAttempt.future()
-        .compose(r -> {
-            if (r.getStatus() != HttpURLConnection.HTTP_NO_CONTENT) {
-                return Future.succeededFuture(r);
-            }
+                    // now delete the credentials set
+                    final Promise<Result<Void>> f = Promise.promise();
+                    credentialsService.remove(
+                            tenantId,
+                            deviceId,
+                            span,
+                            f);
 
-            // now delete the credentials set
-            final Promise<Result<Void>> f = Promise.promise();
-            credentialsService.remove(
-                    tenantId,
-                    deviceId,
-                    span,
-                    f);
-
-            // pass on the original result
-            return f.future().map(r);
-        })
-        .setHandler(resultHandler);
+                    // pass on the original result
+                    return f.future().map(r);
+                });
     }
 
     @Override
-    public void createDevice(final String tenantId, final Optional<String> deviceId, final Device device,
-           final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
+    public Future<OperationResult<Id>> createDevice(
+            final String tenantId,
+            final Optional<String> deviceId,
+            final Device device,
+            final Span span) {
 
-        final Promise<OperationResult<Id>> createAttempt = Promise.promise();
-        registrationService.createDevice(tenantId, deviceId, device, span, createAttempt);
-
-        createAttempt.future()
+        return registrationService.createDevice(tenantId, deviceId, device, span)
                 .compose(r -> {
 
                     if (r.getStatus() != HttpURLConnection.HTTP_CREATED) {
@@ -158,17 +154,13 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
 
                     // pass on the original result
                     return f.future().map(r);
-
-                })
-                .setHandler(resultHandler);
-
+                });
     }
 
     @Override
-    public void updateDevice(final String tenantId, final String deviceId, final Device device,
-            final Optional<String> resourceVersion, final Span span,
-            final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
-        registrationService.updateDevice(tenantId, deviceId, device, resourceVersion, span, resultHandler);
+    public Future<OperationResult<Id>> updateDevice(final String tenantId, final String deviceId, final Device device,
+            final Optional<String> resourceVersion, final Span span) {
+        return registrationService.updateDevice(tenantId, deviceId, device, resourceVersion, span);
     }
 
     // CREDENTIALS
@@ -273,24 +265,23 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
         final Promise<OperationResult<List<CommonCredential>>> f = Promise.promise();
         credentialsService.readCredentials(tenantId, deviceId, span, f);
         f.future()
-        .compose(r -> {
-            if (r.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                final Promise<OperationResult<Device>> readAttempt = Promise.promise();
-                registrationService.readDevice(tenantId, deviceId, span, readAttempt);
-                return readAttempt.future().map(d -> {
-                    if (d.getStatus() == HttpURLConnection.HTTP_OK) {
-                        return OperationResult.ok(HttpURLConnection.HTTP_OK,
-                                Collections.<CommonCredential> emptyList(),
-                                r.getCacheDirective(),
-                                r.getResourceVersion());
+                .compose(r -> {
+                    if (r.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
+                        return registrationService.readDevice(tenantId, deviceId, span)
+                                .map(d -> {
+                                    if (d.getStatus() == HttpURLConnection.HTTP_OK) {
+                                        return OperationResult.ok(HttpURLConnection.HTTP_OK,
+                                                Collections.<CommonCredential> emptyList(),
+                                                r.getCacheDirective(),
+                                                r.getResourceVersion());
+                                    } else {
+                                        return r;
+                                    }
+                                });
                     } else {
-                        return r;
+                        return Future.succeededFuture(r);
                     }
-                });
-            } else {
-                return Future.succeededFuture(r);
-            }
-        }).setHandler(resultHandler);
+                }).setHandler(resultHandler);
     }
 
     Future<?> saveToFile() {

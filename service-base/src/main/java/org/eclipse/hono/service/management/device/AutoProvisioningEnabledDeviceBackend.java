@@ -22,9 +22,7 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 
@@ -70,10 +68,7 @@ public interface AutoProvisioningEnabledDeviceBackend extends DeviceBackend {
 
         // 1. create device
         final Device device = new Device().setEnabled(true).putExtension("comment", comment);
-        final Promise<OperationResult<Id>> createDeviceAttempt = Promise.promise();
-        createDevice(tenantId, Optional.empty(), device, span, createDeviceAttempt);
-
-        return createDeviceAttempt.future()
+        return createDevice(tenantId, Optional.empty(), device, span)
                 .compose(r -> {
                     if (r.isError()) {
                         return Future.succeededFuture(OperationResult.ok(r.getStatus(),
@@ -94,13 +89,12 @@ public interface AutoProvisioningEnabledDeviceBackend extends DeviceBackend {
                     return credPromise.future()
                             .compose(v -> {
                                 if (v.isError()) {
-                                    final Promise<Result<Void>> deleteDevicePromise = Promise.promise();
-                                    deleteDevice(tenantId, deviceId, Optional.empty(), span, deleteDevicePromise);
-                                    return deleteDevicePromise.future().map(OperationResult.ok(v.getStatus(),
-                                            "Auto-provisioning failed: credentials could not be set for device ["
-                                                    + deviceId + "]",
-                                            Optional.empty(),
-                                            Optional.empty()));
+                                    return deleteDevice(tenantId, deviceId, Optional.empty(), span)
+                                            .map(OperationResult.ok(v.getStatus(),
+                                                    "Auto-provisioning failed: credentials could not be set for device ["
+                                                            + deviceId + "]",
+                                                    Optional.empty(),
+                                                    Optional.empty()));
                                 } else {
                                     span.log("Auto-provisioning successful for device [" + deviceId + "]");
                                     return Future
