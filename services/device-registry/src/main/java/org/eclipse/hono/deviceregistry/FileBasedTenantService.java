@@ -15,12 +15,13 @@ package org.eclipse.hono.deviceregistry;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
@@ -69,7 +70,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     private static final Logger log = LoggerFactory.getLogger(FileBasedTenantService.class);
 
     // <ID, tenant>
-    private final Map<String, Versioned<Tenant>> tenants = new HashMap<>();
+    private final ConcurrentMap<String, Versioned<Tenant>> tenants = new ConcurrentHashMap<>();
     private boolean running = false;
     private boolean dirty = false;
     private FileBasedTenantsConfigProperties config;

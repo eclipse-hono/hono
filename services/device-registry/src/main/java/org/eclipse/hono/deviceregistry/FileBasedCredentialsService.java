@@ -16,15 +16,14 @@ package org.eclipse.hono.deviceregistry;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.auth.BCryptHelper;
@@ -88,9 +87,9 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     private static final Logger log = LoggerFactory.getLogger(FileBasedCredentialsService.class);
 
     // <tenantId, <authId, credentialsData[]>>
-    private final Map<String, Map<String, JsonArray>> credentials = new HashMap<>();
+    private final ConcurrentMap<String, ConcurrentMap<String, JsonArray>> credentials = new ConcurrentHashMap<>();
     // <tenantId, <deviceId, version>>
-    private final Map<String, Map<String, String>> versions = new HashMap<>();
+    private final ConcurrentMap<String, ConcurrentMap<String, String>> versions = new ConcurrentHashMap<>();
     private boolean running = false;
     private boolean dirty = false;
     private FileBasedCredentialsConfigProperties config;
@@ -204,7 +203,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     int addCredentialsForTenant(final JsonObject tenant) {
         int count = 0;
         final String tenantId = tenant.getString(FIELD_TENANT);
-        final Map<String, JsonArray> credentialsMap = new HashMap<>();
+        final ConcurrentMap<String, JsonArray> credentialsMap = new ConcurrentHashMap<>();
         for (final Object credentialsObj : tenant.getJsonArray(ARRAY_CREDENTIALS)) {
             final JsonObject credentials = (JsonObject) credentialsObj;
             final JsonArray authIdCredentials;
@@ -246,7 +245,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             return checkFileExists(true).compose(s -> {
                 final AtomicInteger idCount = new AtomicInteger();
                 final JsonArray tenants = new JsonArray();
-                for (final Entry<String, Map<String, JsonArray>> entry : credentials.entrySet()) {
+                for (final Entry<String, ConcurrentMap<String, JsonArray>> entry : credentials.entrySet()) {
                     final JsonArray credentialsArray = new JsonArray();
                     for (final JsonArray singleAuthIdCredentials : entry.getValue().values()) {
                         credentialsArray.addAll(singleAuthIdCredentials.copy());
@@ -375,7 +374,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         Objects.requireNonNull(authId);
         Objects.requireNonNull(type);
 
-        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
+        final ConcurrentMap<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
         if (credentialsForTenant == null) {
             TracingHelper.logError(span, "no credentials found for tenant");
             return null;
@@ -484,7 +483,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
 
         // authId->credentials[]
-        final Map<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
+        final ConcurrentMap<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
 
         if (!credentialsForTenant.isEmpty()) {
             try {
@@ -655,7 +654,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
      */
     private void removeAllForDevice(final String tenantId, final String deviceId, final Span span) {
 
-        final Map<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
+        final ConcurrentMap<String, JsonArray> credentialsForTenant = createOrGetCredentialsForTenant(tenantId);
 
         for (final JsonArray versionedCredentials : credentialsForTenant.values()) {
 
@@ -690,7 +689,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
-        final Map<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
+        final ConcurrentMap<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
         if (credentialsForTenant == null) {
             TracingHelper.logError(span, "No credentials found for tenant");
             resultHandler.handle(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_NOT_FOUND, null, Optional.empty(),
@@ -768,7 +767,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             return true;
         }
 
-        final String version = versions.getOrDefault(tenantId, Collections.emptyMap()).get(deviceId);
+        final String version = versions.getOrDefault(tenantId, new ConcurrentHashMap<>()).get(deviceId);
         if (version == null) {
             // we have no version, and never told anyone, so the requested version of wrong.
             return false;
@@ -782,12 +781,12 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         if (version != null) {
 
             versions
-                    .computeIfAbsent(tenantId, key -> new HashMap<>())
+                    .computeIfAbsent(tenantId, key -> new ConcurrentHashMap<>())
                     .put(deviceId, version);
 
         } else {
 
-            versions.getOrDefault(tenantId, Collections.emptyMap()).remove(deviceId);
+            versions.getOrDefault(tenantId, new ConcurrentHashMap<>()).remove(deviceId);
 
         }
 
@@ -796,7 +795,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     private String getOrCreateResourceVersion(final String tenantId, final String deviceId) {
-        return versions.computeIfAbsent(tenantId, key -> new HashMap<>())
+        return versions.computeIfAbsent(tenantId, key -> new ConcurrentHashMap<>())
                 .computeIfAbsent(deviceId, key -> UUID.randomUUID().toString());
     }
 
@@ -818,12 +817,12 @@ public final class FileBasedCredentialsService extends AbstractVerticle
      * @param tenantId The tenant to get
      * @return The map, never returns {@code null}.
      */
-    private Map<String, JsonArray> createOrGetCredentialsForTenant(final String tenantId) {
-        return credentials.computeIfAbsent(tenantId, id -> new HashMap<>());
+    private ConcurrentMap<String, JsonArray> createOrGetCredentialsForTenant(final String tenantId) {
+        return credentials.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
 
     private JsonArray createOrGetAuthIdCredentials(final String authId,
-            final Map<String, JsonArray> credentialsForTenant) {
+            final ConcurrentMap<String, JsonArray> credentialsForTenant) {
         return credentialsForTenant.computeIfAbsent(authId, id -> new JsonArray());
     }
 
