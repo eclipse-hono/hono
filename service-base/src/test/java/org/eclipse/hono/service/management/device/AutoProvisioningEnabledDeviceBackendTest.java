@@ -80,11 +80,9 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         final AutoProvisioningEnabledDeviceBackend underTest = mock(AutoProvisioningEnabledDeviceBackend.class);
         when(underTest.provisionDevice(anyString(), any(), any())).thenCallRealMethod();
 
-        doAnswer(invocation -> {
-            final Promise<OperationResult<Id>> promise = invocation.getArgument(4);
-            promise.complete(OperationResult.ok(201, Id.of(DEVICE_ID), Optional.empty(), Optional.empty()));
-            return null;
-        }).when(underTest).createDevice(any(), any(), any(), any(), any(Handler.class));
+        when(underTest.createDevice(any(), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(
+                        OperationResult.ok(201, Id.of(DEVICE_ID), Optional.empty(), Optional.empty())));
 
         doAnswer(invocation -> {
             final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
@@ -98,7 +96,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         // THEN the device is created and credentials are set
         result.setHandler(ctx.succeeding(ok -> {
             ctx.verify(() -> {
-                verify(underTest).createDevice(eq(TENANT_ID), any(), any(), any(), any());
+                verify(underTest).createDevice(eq(TENANT_ID), any(), any(), any());
                 verify(underTest).updateCredentials(eq(TENANT_ID), eq(DEVICE_ID), any(), any(), any(), any());
             });
             ctx.completeNow();
@@ -119,17 +117,12 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         final AutoProvisioningEnabledDeviceBackend underTest = mock(AutoProvisioningEnabledDeviceBackend.class);
         when(underTest.provisionDevice(anyString(), any(), any())).thenCallRealMethod();
 
-        doAnswer(invocation -> {
-            final Promise<OperationResult<Id>> promise = invocation.getArgument(4);
-            promise.complete(OperationResult.ok(201, Id.of(DEVICE_ID), Optional.empty(), Optional.empty()));
-            return null;
-        }).when(underTest).createDevice(any(), any(), any(), any(), any(Handler.class));
+        when(underTest.createDevice(any(), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(
+                        OperationResult.ok(201, Id.of(DEVICE_ID), Optional.empty(), Optional.empty())));
 
-        doAnswer(invocation -> {
-            final Promise<Result<Void>> promise = invocation.getArgument(4);
-            promise.complete(Result.from(204));
-            return null;
-        }).when(underTest).deleteDevice(any(), any(), any(), any(), any(Handler.class));
+        when(underTest.deleteDevice(any(), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(Result.from(204)));
 
         doAnswer(invocation -> {
             final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
@@ -142,7 +135,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
 
         // THEN the device is deleted
         result.setHandler(ctx.succeeding(ok -> {
-            ctx.verify(() -> verify(underTest).deleteDevice(eq(TENANT_ID), eq(DEVICE_ID), any(), any(), any()));
+            ctx.verify(() -> verify(underTest).deleteDevice(eq(TENANT_ID), eq(DEVICE_ID), any(), any()));
             ctx.completeNow();
         }));
     }

@@ -339,7 +339,8 @@ public class FileBasedRegistrationService extends AbstractVerticle
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(convertResult(deviceId, readDevice(tenantId, deviceId, NoopSpan.INSTANCE))));
+        resultHandler.handle(Future
+                .succeededFuture(convertResult(deviceId, processReadDevice(tenantId, deviceId, NoopSpan.INSTANCE))));
     }
 
     private void resolveGroupMembers(final String tenantId, final JsonArray viaGroups,
@@ -378,17 +379,15 @@ public class FileBasedRegistrationService extends AbstractVerticle
     }
 
     @Override
-    public void readDevice(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<OperationResult<Device>>> resultHandler) {
+    public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(readDevice(tenantId, deviceId, span)));
+        return Future.succeededFuture(processReadDevice(tenantId, deviceId, span));
     }
 
-    OperationResult<Device> readDevice(final String tenantId, final String deviceId, final Span span) {
+    OperationResult<Device> processReadDevice(final String tenantId, final String deviceId, final Span span) {
         final Versioned<Device> device = getRegistrationData(tenantId, deviceId);
 
         if (device == null) {
@@ -415,18 +414,18 @@ public class FileBasedRegistrationService extends AbstractVerticle
     }
 
     @Override
-    public void deleteDevice(final String tenantId, final String deviceId, final Optional<String> resourceVersion,
-            final Span span, final Handler<AsyncResult<Result<Void>>> resultHandler) {
+    public Future<Result<Void>> deleteDevice(final String tenantId, final String deviceId,
+            final Optional<String> resourceVersion,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resourceVersion);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(deleteDevice(tenantId, deviceId, resourceVersion, span)));
+        return Future.succeededFuture(processDeleteDevice(tenantId, deviceId, resourceVersion, span));
     }
 
-    Result<Void> deleteDevice(final String tenantId, final String deviceId,
+    Result<Void> processDeleteDevice(final String tenantId, final String deviceId,
             final Optional<String> resourceVersion, final Span span) {
 
         Objects.requireNonNull(tenantId);
@@ -460,14 +459,16 @@ public class FileBasedRegistrationService extends AbstractVerticle
     }
 
     @Override
-    public void createDevice(final String tenantId, final Optional<String> deviceId, final Device device,
-           final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
+    public Future<OperationResult<Id>> createDevice(
+            final String tenantId, 
+            final Optional<String> deviceId,
+            final Device device,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(createDevice(tenantId, deviceId, device, span)));
+        return Future.succeededFuture(processCreateDevice(tenantId, deviceId, device, span));
     }
 
     /**
@@ -479,7 +480,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
      * @param span The tracing span to use.
      * @return The outcome of the operation indicating success or failure.
      */
-    public OperationResult<Id> createDevice(final String tenantId, final Optional<String> deviceId,
+    public OperationResult<Id> processCreateDevice(final String tenantId, final Optional<String> deviceId,
             final Device device, final Span span) {
 
         Objects.requireNonNull(tenantId);
@@ -504,19 +505,17 @@ public class FileBasedRegistrationService extends AbstractVerticle
     }
 
     @Override
-    public void updateDevice(final String tenantId, final String deviceId, final Device device,
-            final Optional<String> resourceVersion, final Span span,
-            final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
+    public Future<OperationResult<Id>> updateDevice(final String tenantId, final String deviceId, final Device device,
+            final Optional<String> resourceVersion, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resourceVersion);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(updateDevice(tenantId, deviceId, device, resourceVersion, span)));
+        return Future.succeededFuture(processUpdateDevice(tenantId, deviceId, device, resourceVersion, span));
     }
 
-    OperationResult<Id> updateDevice(final String tenantId, final String deviceId, final Device device,
+    OperationResult<Id> processUpdateDevice(final String tenantId, final String deviceId, final Device device,
             final Optional<String> resourceVersion, final Span span) {
 
         Objects.requireNonNull(tenantId);

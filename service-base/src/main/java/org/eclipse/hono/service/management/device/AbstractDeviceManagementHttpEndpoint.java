@@ -23,14 +23,12 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -129,24 +127,23 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
         final HttpServerResponse response = ctx.response();
 
         logger.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
-        final Promise<OperationResult<Device>> result = Promise.promise();
-        result.future().setHandler(handler -> {
-            final OperationResult<Device> operationResult = handler.result();
-            final int status = operationResult.getStatus();
-            response.setStatusCode(status);
-            switch (status) {
-                case HttpURLConnection.HTTP_OK:
-                    operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
-                    HttpUtils.setResponseBody(response, JsonObject.mapFrom(operationResult.getPayload()));
-                    // falls through intentionally
-                default:
-                    Tags.HTTP_STATUS.set(span, status);
-                    span.finish();
-                    response.end();
-            }
-        });
-
-        getService().readDevice(tenantId, deviceId, span, result);
+        getService()
+                .readDevice(tenantId, deviceId, span)
+                .setHandler(handler -> {
+                    final OperationResult<Device> operationResult = handler.result();
+                    final int status = operationResult.getStatus();
+                    response.setStatusCode(status);
+                    switch (status) {
+                    case HttpURLConnection.HTTP_OK:
+                        operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
+                        HttpUtils.setResponseBody(response, JsonObject.mapFrom(operationResult.getPayload()));
+                        // falls through intentionally
+                    default:
+                        Tags.HTTP_STATUS.set(span, status);
+                        span.finish();
+                        response.end();
+                    }
+                });
     }
 
     private void doCreateDevice(final RoutingContext ctx) {
@@ -170,23 +167,22 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
                 payload);
 
         final Device device = fromPayload(payload);
-
-        final Promise<OperationResult<Id>> result = Promise.promise();
-        result.future().setHandler(handler -> {
-            final OperationResult<Id> operationResult = handler.result();
-
-            final String createdDeviceId = Optional.ofNullable(operationResult.getPayload()).map(Id::getId).orElse(null);
-            writeOperationResponse(
-                    ctx,
-                    operationResult,
-                    (response) -> response.putHeader(
-                            HttpHeaders.LOCATION,
-                            String.format("/%s/%s/%s", getName(), tenantId,
-                                    createdDeviceId)),
-                    span);
-        });
-
-        getService().createDevice(tenantId, Optional.ofNullable(deviceId), device, span, result);
+        getService()
+                .createDevice(tenantId, Optional.ofNullable(deviceId), device, span)
+                .setHandler(handler -> {
+                    final OperationResult<Id> operationResult = handler.result();
+                    final String createdDeviceId = Optional.ofNullable(operationResult.getPayload())
+                            .map(Id::getId)
+                            .orElse(null);
+                    writeOperationResponse(
+                            ctx,
+                            operationResult,
+                            (response) -> response.putHeader(
+                                    HttpHeaders.LOCATION,
+                                    String.format("/%s/%s/%s", getName(), tenantId,
+                                            createdDeviceId)),
+                            span);
+                });
     }
 
     private void doUpdateDevice(final RoutingContext ctx) {
@@ -206,13 +202,9 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
         final Device device = fromPayload(payload);
-        final Promise<OperationResult<Id>> result = Promise.promise();
 
-        result.future().setHandler(handler -> {
-                    writeOperationResponse(ctx, handler.result(), null, span);
-                });
-
-        getService().updateDevice(tenantId, deviceId, device, resourceVersion, span, result);
+        getService().updateDevice(tenantId, deviceId, device, resourceVersion, span)
+                .setHandler(handler -> writeOperationResponse(ctx, handler.result(), null, span));
     }
 
     private void doDeleteDevice(final RoutingContext ctx) {
@@ -226,13 +218,8 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
-        final Promise<Result<Void>> result = Promise.promise();
-
-        result.future().setHandler(handler -> {
-                    writeResponse(ctx, handler.result(), null, span);
-                });
-
-        getService().deleteDevice(tenantId, deviceId, resourceVersion, span, result);
+        getService().deleteDevice(tenantId, deviceId, resourceVersion, span)
+                .setHandler(handler -> writeResponse(ctx, handler.result(), null, span));
     }
 
     private static Device fromPayload(final JsonObject payload) throws ClientErrorException {
