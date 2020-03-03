@@ -329,8 +329,8 @@ public abstract class AbstractCredentialsServiceTest {
                         tenantId,
                         type,
                         authId,
-                        CLIENT_CONTEXT,
-                        ctx.succeeding(s4 -> ctx.verify(() -> {
+                        CLIENT_CONTEXT)
+                        .setHandler(ctx.succeeding(s4 -> ctx.verify(() -> {
 
                             adapterValidation.accept(s4);
 
@@ -698,39 +698,37 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> {
-                    getCredentialsManagementService()
-                            .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
-                                    ctx.succeeding(s -> phase1.complete()));
-                }));
+                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                        .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
+                                ctx.succeeding(s -> phase1.complete()))));
 
         // validate credentials - enabled
 
         final Promise<?> phase2 = Promise.promise();
 
-        phase1.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase1.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        phase2.complete();
-            })));
-        }));
+                            phase2.complete();
+                        })))));
 
         // validate credentials - disabled
 
         final Promise<?> phase3 = Promise.promise();
 
         phase2.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, authId)
+                    .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
 
@@ -774,8 +772,8 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase2 = Promise.promise();
 
         phase1.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                    .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -784,7 +782,8 @@ public abstract class AbstractCredentialsServiceTest {
                         assertEquals(authId, creds.getAuthId());
                         assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
                         assertEquals(1, creds.getSecrets().size());
-                        assertNotNull(creds.getSecrets().getJsonObject(0).getString(RegistryManagementConstants.FIELD_ID));
+                        assertNotNull(
+                                creds.getSecrets().getJsonObject(0).getString(RegistryManagementConstants.FIELD_ID));
 
                         phase2.complete();
                     })));
@@ -937,27 +936,27 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase2 = Promise.promise();
         final List<String> secretIDs = new ArrayList<>();
 
-        phase1.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase1.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(2, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(2, creds.getSecrets().size());
 
-                        for (Object secret : creds.getSecrets()) {
-                            final String id = ((JsonObject) secret).getString(RegistryManagementConstants.FIELD_ID);
-                            assertNotNull(id);
-                            secretIDs.add(id);
-                        }
+                            for (Object secret : creds.getSecrets()) {
+                                final String id = ((JsonObject) secret).getString(RegistryManagementConstants.FIELD_ID);
+                                assertNotNull(id);
+                                secretIDs.add(id);
+                            }
 
-                        phase2.complete();
-                    })));
-        }));
+                            phase2.complete();
+                        })))));
 
         // re-set credentials
         final Promise<?> phase3 = Promise.promise();
@@ -980,25 +979,25 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase4 = Promise.promise();
 
-        phase3.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase3.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        final String id = creds.getSecrets().getJsonObject(0)
-                                .getString(RegistryManagementConstants.FIELD_ID);
-                        assertEquals(id, secretIDs.get(0));
+                            final String id = creds.getSecrets().getJsonObject(0)
+                                    .getString(RegistryManagementConstants.FIELD_ID);
+                            assertEquals(id, secretIDs.get(0));
 
-                        phase4.complete();
-                    })));
-        }));
+                            phase4.complete();
+                        })))));
 
         // finally complete
 
@@ -1025,8 +1024,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase1 = Promise.promise();
 
-        getDeviceManagementService()
-                .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+        getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
                 .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                                 ctx.succeeding(s -> phase1.complete()))));
@@ -1036,26 +1034,26 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase2 = Promise.promise();
         final List<String> secretIDs = new ArrayList<>();
 
-        phase1.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase1.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        final String id = (creds.getSecrets().getJsonObject(0))
-                                .getString(RegistryManagementConstants.FIELD_ID);
-                        assertNotNull(id);
-                        secretIDs.add(id);
+                            final String id = (creds.getSecrets().getJsonObject(0))
+                                    .getString(RegistryManagementConstants.FIELD_ID);
+                            assertNotNull(id);
+                            secretIDs.add(id);
 
-                        phase2.complete();
-                    })));
-        }));
+                            phase2.complete();
+                        })))));
 
         // re-set credentials
         final Promise<?> phase3 = Promise.promise();
@@ -1073,25 +1071,25 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase4 = Promise.promise();
 
-        phase3.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase3.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        final String id = creds.getSecrets().getJsonObject(0)
-                                .getString(RegistryManagementConstants.FIELD_ID);
-                        assertEquals(id, secretIDs.get(0));
+                            final String id = creds.getSecrets().getJsonObject(0)
+                                    .getString(RegistryManagementConstants.FIELD_ID);
+                            assertEquals(id, secretIDs.get(0));
 
-                        phase4.complete();
-                    })));
-        }));
+                            phase4.complete();
+                        })))));
 
         // finally complete
 
@@ -1129,26 +1127,26 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase2 = Promise.promise();
         final List<String> secretIDs = new ArrayList<>();
 
-        phase1.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase1.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        final String id = (creds.getSecrets().getJsonObject(0))
-                                .getString(RegistryManagementConstants.FIELD_ID);
-                        assertNotNull(id);
-                        secretIDs.add(id);
+                            final String id = (creds.getSecrets().getJsonObject(0))
+                                    .getString(RegistryManagementConstants.FIELD_ID);
+                            assertNotNull(id);
+                            secretIDs.add(id);
 
-                        phase2.complete();
-                    })));
-        }));
+                            phase2.complete();
+                        })))));
 
         // re-set credentials
         final Promise<?> phase3 = Promise.promise();
@@ -1177,29 +1175,29 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase4 = Promise.promise();
 
-        phase3.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase3.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        final String id = creds.getSecrets().getJsonObject(0)
-                                .getString(RegistryManagementConstants.FIELD_ID);
-                        assertEquals(id, secretIDs.get(0));
+                            final String id = creds.getSecrets().getJsonObject(0)
+                                    .getString(RegistryManagementConstants.FIELD_ID);
+                            assertEquals(id, secretIDs.get(0));
 
-                        final String comment = creds.getSecrets().getJsonObject(0)
-                                .getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT);
-                        assertEquals("secret comment", comment);
+                            final String comment = creds.getSecrets().getJsonObject(0)
+                                    .getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT);
+                            assertEquals("secret comment", comment);
 
-                        phase4.complete();
-                    })));
-        }));
+                            phase4.complete();
+                        })))));
 
         // finally complete
 
@@ -1228,8 +1226,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase1 = Promise.promise();
 
-        getDeviceManagementService()
-                .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+        getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
                 .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE,
                                 ctx.succeeding(s -> phase1.complete()))));
@@ -1239,29 +1236,29 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase2 = Promise.promise();
         final List<String> secretIDs = new ArrayList<>();
 
-        phase1.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase1.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        final String id = (creds.getSecrets().getJsonObject(0))
-                                .getString(RegistryManagementConstants.FIELD_ID);
-                        assertNotNull(id);
-                        secretIDs.add(id);
-                        final String notBefore = (creds.getSecrets().getJsonObject(0))
-                                .getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
-                        assertNotNull(notBefore);
+                            final String id = (creds.getSecrets().getJsonObject(0))
+                                    .getString(RegistryManagementConstants.FIELD_ID);
+                            assertNotNull(id);
+                            secretIDs.add(id);
+                            final String notBefore = (creds.getSecrets().getJsonObject(0))
+                                    .getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+                            assertNotNull(notBefore);
 
-                        phase2.complete();
-                    })));
-        }));
+                            phase2.complete();
+                        })))));
 
         // re-set credentials
         final Promise<?> phase3 = Promise.promise();
@@ -1289,33 +1286,33 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase4 = Promise.promise();
 
-        phase3.future().setHandler(ctx.succeeding(n -> {
-            getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    authId, ctx.succeeding(s -> ctx.verify(() -> {
+        phase3.future()
+                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
+                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
-                        assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
-                        final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
+                            final CredentialsObject creds = s.getPayload().mapTo(CredentialsObject.class);
 
-                        assertEquals(authId, creds.getAuthId());
-                        assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
-                        assertEquals(1, creds.getSecrets().size());
+                            assertEquals(authId, creds.getAuthId());
+                            assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
+                            assertEquals(1, creds.getSecrets().size());
 
-                        final String id = creds.getSecrets().getJsonObject(0)
-                                .getString(RegistryManagementConstants.FIELD_ID);
-                        assertEquals(id, secretIDs.get(0));
+                            final String id = creds.getSecrets().getJsonObject(0)
+                                    .getString(RegistryManagementConstants.FIELD_ID);
+                            assertEquals(id, secretIDs.get(0));
 
-                        final String comment = creds.getSecrets().getJsonObject(0)
-                                .getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT);
-                        assertEquals("secret comment", comment);
+                            final String comment = creds.getSecrets().getJsonObject(0)
+                                    .getString(RegistryManagementConstants.FIELD_SECRETS_COMMENT);
+                            assertEquals("secret comment", comment);
 
-                        final String notBefore = (creds.getSecrets().getJsonObject(0))
-                                .getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
-                        assertNull(notBefore);
+                            final String notBefore = (creds.getSecrets().getJsonObject(0))
+                                    .getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
+                            assertNull(notBefore);
 
-                        phase4.complete();
-                    })));
-        }));
+                            phase4.complete();
+                        })))));
 
         // finally complete
 
@@ -1391,15 +1388,14 @@ public abstract class AbstractCredentialsServiceTest {
             final String type,
             final int expectedStatusCode) {
 
-        final Promise<CredentialsResult<JsonObject>> result = Promise.promise();
-        svc.get(tenant, type, authId, result);
-        return result.future().map(r -> {
-            if (r.getStatus() == expectedStatusCode) {
-                return null;
-            } else {
-                throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
-            }
-        });
+        return svc.get(tenant, type, authId)
+                .map(r -> {
+                    if (r.getStatus() == expectedStatusCode) {
+                        return null;
+                    } else {
+                        throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
+                    }
+                });
     }
 
 }

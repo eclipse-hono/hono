@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,8 +17,7 @@ import org.eclipse.hono.util.CredentialsResult;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -35,7 +34,7 @@ public interface CredentialsService {
      * @param tenantId The tenant the device belongs to.
      * @param type The type of credentials to get.
      * @param authId The authentication identifier of the device to get credentials for (may be {@code null}.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *         The <em>status</em> will be
      *         <ul>
      *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
@@ -46,15 +45,14 @@ public interface CredentialsService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    default void get(final String tenantId, final String type, final String authId,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, NoopSpan.INSTANCE, resultHandler);
+    default Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId) {
+        return get(tenantId, type, authId, NoopSpan.INSTANCE);
     }
 
     /**
      * Gets credentials for a device.
      * <p>
-     * This default implementation simply returns the result of {@link #get(String, String, String, Handler)}.
+     * This default implementation simply returns the result of {@link #get(String, String, String)}.
      * 
      * @param tenantId The tenant the device belongs to.
      * @param type The type of credentials to get.
@@ -62,7 +60,7 @@ public interface CredentialsService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *         The <em>status</em> will be
      *         <ul>
      *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
@@ -73,8 +71,7 @@ public interface CredentialsService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    void get(String tenantId, String type, String authId, Span span,
-            Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+    Future<CredentialsResult<JsonObject>> get(String tenantId, String type, String authId, Span span);
 
     /**
      * Gets credentials for a device, providing additional client connection context.
@@ -83,7 +80,7 @@ public interface CredentialsService {
      * @param type The type of credentials to get.
      * @param authId The authentication identifier of the device to get credentials for (may be {@code null}.
      * @param clientContext Optional bag of properties that can be used to identify the device
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *         The <em>status</em> will be
      *         <ul>
      *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
@@ -94,15 +91,15 @@ public interface CredentialsService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    default void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE, resultHandler);
+    default Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
+            final JsonObject clientContext) {
+        return get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE);
     }
 
     /**
      * Gets credentials for a device, providing additional client connection context.
      * <p>
-     * This default implementation simply returns the result of {@link #get(String, String, String, JsonObject, Handler)}.
+     * This default implementation simply returns the result of {@link #get(String, String, String, JsonObject)}.
      *
      * @param tenantId The tenant the device belongs to.
      * @param type The type of credentials to get.
@@ -111,7 +108,7 @@ public interface CredentialsService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *         The <em>status</em> will be
      *         <ul>
      *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
@@ -122,7 +119,7 @@ public interface CredentialsService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
      */
-    void get(String tenantId, String type, String authId, JsonObject clientContext, Span span,
-            Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler);
+    Future<CredentialsResult<JsonObject>> get(String tenantId, String type, String authId, JsonObject clientContext,
+            Span span);
 
 }

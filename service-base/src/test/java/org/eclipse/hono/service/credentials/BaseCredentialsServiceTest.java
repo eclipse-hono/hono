@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,8 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -112,13 +111,17 @@ public class BaseCredentialsServiceTest {
         final var service = new CredentialsService() {
 
             @Override
-            public void get(final String tenantId, final String type, final String authId, final Span span,
-                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+            public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type,
+                    final String authId,
+                    final Span span) {
+                return null;
             }
 
             @Override
-            public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Span span,
-                    final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+            public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type,
+                    final String authId,
+                    final JsonObject clientContext, final Span span) {
+                return null;
             }
         };
 

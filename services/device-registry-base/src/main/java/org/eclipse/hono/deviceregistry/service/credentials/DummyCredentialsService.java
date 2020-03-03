@@ -28,9 +28,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -44,14 +42,15 @@ public final class DummyCredentialsService implements CredentialsService {
     private static final String PWD_HASH = getBase64EncodedSha256HashForPassword("hono-secret");
 
     @Override
-    public void get(final String tenantId, final String type, final String authId, final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, null, span, resultHandler);
+    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
+            final Span span) {
+        return get(tenantId, type, authId, null, span);
     }
 
     @Override
-    public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
-            final Span span, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
+            final JsonObject clientContext,
+            final Span span) {
 
         final JsonObject result = JsonObject.mapFrom(CredentialsObject.fromHashedPassword(
                 authId,
@@ -60,8 +59,8 @@ public final class DummyCredentialsService implements CredentialsService {
                 CredentialsConstants.HASH_FUNCTION_SHA256,
                 null, null,
                 null));
-        resultHandler.handle(Future.succeededFuture(
-                CredentialsResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(result), CacheDirective.noCacheDirective())));
+        return Future.succeededFuture(CredentialsResult
+                .from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(result), CacheDirective.noCacheDirective()));
     }
 
     private static String getBase64EncodedSha256HashForPassword(final String password) {

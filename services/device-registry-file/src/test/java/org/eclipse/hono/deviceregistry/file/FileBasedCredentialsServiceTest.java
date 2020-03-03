@@ -48,7 +48,6 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -591,14 +590,12 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                 .compose(ok -> {
                     // WHEN trying to retrieve credentials for a device that provided
                     // a client context that contains a value for the property
-                    final Promise<CredentialsResult<JsonObject>> result = Promise.promise();
-                    getCredentialsService().get(
+                    return getCredentialsService().get(
                             tenantId,
                             CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY,
                             authId,
-                            new JsonObject().put("property-to-match", providedContextValue),
-                            result);
-                    return result.future();
+                            new JsonObject().put("property-to-match", providedContextValue)
+                    );
                 })
                 .setHandler(ctx.succeeding(s -> {
                     // THEN the request contains the expected status code

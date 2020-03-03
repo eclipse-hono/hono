@@ -283,9 +283,9 @@ public final class FileBasedCredentialsService extends AbstractVerticle
      * The result object will include a <em>no-cache</em> directive.
      */
     @Override
-    public void get(final String tenantId, final String type, final String authId, final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, null, span, resultHandler);
+    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
+            final Span span) {
+        return get(tenantId, type, authId, null, span);
     }
 
     /**
@@ -296,25 +296,23 @@ public final class FileBasedCredentialsService extends AbstractVerticle
      * directive will be included.
      */
     @Override
-    public void get(
+    public Future<CredentialsResult<JsonObject>> get(
             final String tenantId,
             final String type,
             final String authId,
             final JsonObject clientContext,
-            final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(type);
         Objects.requireNonNull(authId);
-        Objects.requireNonNull(resultHandler);
 
         final JsonObject data = getSingleCredentials(tenantId, authId, type, clientContext, span);
         if (data == null) {
-            resultHandler.handle(Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+            return Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND));
         } else {
-            resultHandler.handle(Future.succeededFuture(
-                    CredentialsResult.from(HttpURLConnection.HTTP_OK, data.copy(), getCacheDirective(type))));
+            return Future.succeededFuture(
+                    CredentialsResult.from(HttpURLConnection.HTTP_OK, data.copy(), getCacheDirective(type)));
         }
     }
 
@@ -829,15 +827,14 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void get(final String tenantId, final String type, final String authId,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, NoopSpan.INSTANCE, resultHandler);
+    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId) {
+        return get(tenantId, type, authId, NoopSpan.INSTANCE);
     }
 
     @Override
-    public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE, resultHandler);
+    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
+            final JsonObject clientContext) {
+        return get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE);
     }
 
     /**
