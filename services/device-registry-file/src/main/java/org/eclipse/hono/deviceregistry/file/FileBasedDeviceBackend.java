@@ -165,42 +165,42 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
     // CREDENTIALS
 
     @Override
-    public final void get(final String tenantId, final String type, final String authId,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        credentialsService.get(tenantId, type, authId, resultHandler);
+    public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type,
+            final String authId) {
+        return credentialsService.get(tenantId, type, authId);
     }
 
     @Override
-    public void get(final String tenantId, final String type, final String authId, final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        credentialsService.get(tenantId, type, authId, span, resultHandler);
+    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
+            final Span span) {
+        return credentialsService.get(tenantId, type, authId, span);
     }
 
     @Override
-    public final void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE, resultHandler);
+    public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type,
+            final String authId, final JsonObject clientContext) {
+        return get(tenantId, type, authId, clientContext, NoopSpan.INSTANCE);
     }
 
     @Override
-    public void get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
-            final Span span,
-            final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
-        credentialsService.get(tenantId, type, authId, clientContext, span, ar -> {
-            if (ar.succeeded() && ar.result().getStatus() == HttpURLConnection.HTTP_NOT_FOUND
-                    && isAutoProvisioningEnabled(type, clientContext)) {
-                provisionDevice(tenantId, authId, clientContext, span, resultHandler);
-            } else {
-                resultHandler.handle(ar);
-            }
-        });
+    public  Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
+            final Span span) {
+        return credentialsService.get(tenantId, type, authId, clientContext, span)
+                .compose(result -> {
+                    if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND
+                            && isAutoProvisioningEnabled(type, clientContext)) {
+                        return provisionDevice(tenantId, authId, clientContext, span);
+                    }
+                    return Future.succeededFuture(result);
+                });
     }
 
     /**
      * Parses certificate, provisions device and returns the new credentials.
      */
-    private void provisionDevice(final String tenantId, final String authId, final JsonObject clientContext,
-            final Span span, final Handler<AsyncResult<CredentialsResult<JsonObject>>> resultHandler) {
+    private Future<CredentialsResult<JsonObject>> provisionDevice(final String tenantId, final String authId,
+            final JsonObject clientContext,
+            final Span span) {
 
         final X509Certificate cert;
         try {
@@ -214,27 +214,24 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
         } catch (final CertificateException | ClassCastException | IllegalArgumentException e) {
             TracingHelper.logError(span, e);
             final int status = HttpURLConnection.HTTP_BAD_REQUEST;
-            resultHandler.handle(Future.succeededFuture(createErrorCredentialsResult(status, e.getMessage())));
-            return;
+            return Future.succeededFuture(createErrorCredentialsResult(status, e.getMessage()));
         }
 
-        final Future<OperationResult<String>> provisionFuture = provisionDevice(tenantId, cert, span);
-        provisionFuture.compose(r -> {
-            if (r.isError()) {
-                TracingHelper.logError(span, r.getPayload());
-                return Future.succeededFuture(createErrorCredentialsResult(r.getStatus(), r.getPayload()));
-            } else {
-                return getNewCredentials(tenantId, authId, span);
-            }
-        }).setHandler(resultHandler);
+        return provisionDevice(tenantId, cert, span)
+                .compose(r -> {
+                    if (r.isError()) {
+                        TracingHelper.logError(span, r.getPayload());
+                        return Future.succeededFuture(createErrorCredentialsResult(r.getStatus(), r.getPayload()));
+                    } else {
+                        return getNewCredentials(tenantId, authId, span);
+                    }
+                });
     }
 
     private Future<CredentialsResult<JsonObject>> getNewCredentials(final String tenantId, final String authId,
             final Span span) {
 
-        final Promise<CredentialsResult<JsonObject>> promise = Promise.promise();
-        credentialsService.get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, span, promise);
-        return promise.future()
+        return credentialsService.get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, span)
                 .map(r -> r.isOk() ? CredentialsResult.from(HttpURLConnection.HTTP_CREATED, r.getPayload()) : r);
     }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
@@ -30,7 +29,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -145,9 +143,7 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
         log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         TracingHelper.TAG_AUTH_ID.set(span, authId);
-        final Promise<CredentialsResult<JsonObject>> result = Promise.promise();
-        getService().get(tenantId, type, authId, payload, span, result);
-        return result.future()
+        return getService().get(tenantId, type, authId, payload, span)
                 .map(res -> {
                     final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
                             .map(p -> getTypesafeValueForField(String.class, p,

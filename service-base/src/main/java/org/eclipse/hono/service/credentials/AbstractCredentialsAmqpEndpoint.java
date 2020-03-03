@@ -22,14 +22,12 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -154,11 +152,8 @@ public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestRes
         log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         TracingHelper.TAG_AUTH_ID.set(span, authId);
-        final Promise<CredentialsResult<JsonObject>> result = Promise.promise();
 
-        getService().get(tenantId, type, authId, payload, span, result);
-
-        return result.future()
+        return getService().get(tenantId, type, authId, payload, span)
                 .map(res -> {
                     final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
                             .map(p -> getTypesafeValueForField(String.class, p,
@@ -171,8 +166,7 @@ public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestRes
                             CredentialsConstants.CREDENTIALS_ENDPOINT,
                             tenantId,
                             request,
-                            res
-                    );
+                            res);
                 });
     }
 
