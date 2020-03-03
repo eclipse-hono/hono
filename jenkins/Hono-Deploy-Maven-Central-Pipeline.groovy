@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -62,7 +62,7 @@ def buildAndDeploy(def utils) {
                 mavenLocalRepo: '.repository',
                 mavenSettingsFilePath: "${params.MAVEN_SETTINGS_FILE}",
                 options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
-            sh "mvn deploy -X -pl :hono-service-auth,:hono-service-device-registry,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am -DskipTests=true -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
+            sh "mvn deploy -X -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am -DskipTests=true -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
         }
     }
 }
