@@ -49,6 +49,7 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -526,6 +527,46 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
     @Test
     public void testGetCredentialsFailsForNonMatchingClientContext(final VertxTestContext ctx) {
         testGetCredentialsWithClientContext(ctx, "expected-value", "other-value", HttpURLConnection.HTTP_NOT_FOUND);
+    }
+
+
+    /**
+     * Verifies that an unauthorised hashing algorithm is refused by the device registry.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSetCredentialsWithUnauthorisedHashingAlgorithmFails(final VertxTestContext ctx) {
+
+        // GIVEN a service configured to allow only SHA-256.
+        final String[] whitelist = {RegistryManagementConstants.HASH_FUNCTION_SHA256};
+        credentialsConfig.setHashAlgorithmsWhitelist(whitelist);
+
+        // 4700
+        final PasswordCredential passwordCredential = new PasswordCredential();
+        passwordCredential.setAuthId("bumlux");
+
+        final PasswordSecret hashedPassword = new PasswordSecret();
+        hashedPassword.setPasswordHash("$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.");
+        hashedPassword.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);
+        passwordCredential.setSecrets(Collections.singletonList(hashedPassword));
+
+        final Promise<OperationResult<Void>> result = Promise.promise();
+
+        // WHEN trying to set the credentials
+            getCredentialsManagementService().updateCredentials(
+                "tenant",
+                "device",
+                Collections.singletonList(passwordCredential),
+                Optional.empty(),
+                NoopSpan.INSTANCE,
+                ctx.succeeding(s -> ctx.verify(() -> {
+
+                    // THEN the update fails with a 400 BAD REQUEST
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                    ctx.completeNow();
+                }))
+        );
     }
 
     private void testGetCredentialsWithClientContext(

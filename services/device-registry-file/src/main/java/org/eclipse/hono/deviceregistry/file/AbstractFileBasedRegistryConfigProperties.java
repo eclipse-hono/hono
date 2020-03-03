@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Common configuration properties for file based implementations of the APIs of Hono's device registry as own server.
  * <p>
@@ -31,6 +34,7 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
     private boolean modificationEnabled = true;
     private boolean startEmpty = false;
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
+    private Set<String> hashAlgorithmsWhitelist = new HashSet();
 
     /**
      * Gets the path to the file that the registry should be persisted to periodically.
@@ -45,7 +49,7 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
      * operations may be cached for.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_AGE_SECONDS} seconds.
-     * 
+     *
      * @param maxAge The period of time in seconds.
      * @throws IllegalArgumentException if max age is &lt; 0.
      */
@@ -61,7 +65,7 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
      * operations may be cached for.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_AGE_SECONDS} seconds.
-     * 
+     *
      * @return The period of time in seconds.
      */
     public final int getCacheMaxAge() {
@@ -163,5 +167,35 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
      */
     public final void setStartEmpty(final boolean flag) {
         this.startEmpty = flag;
+    }
+
+    /**
+     * Get the list of authorised hashing algorithms for already hashed passwords.
+     * The device registry will not accept credentials using a hashing
+     * algorithm that is not present in that list.
+     * If the list is empty, the device registry will accept any hashing algorithm.
+     * <p>
+     * Default value is an empty HashSet.
+     *
+     * @return The list of authorized algorithms.
+     */
+    public Set<String> getHashAlgorithmsWhitelist() {
+        return hashAlgorithmsWhitelist;
+    }
+
+    /**
+     * Set the list of authorised hashing algorithms for already hashed passwords.
+     * The device registry will not accept credentials using a hashing
+     * algorithm that is not present in that list.
+     * <p>
+     * The default value is empty.
+     *
+     * @param hashAlgorithmsWhitelist The list of authorized algorithms.
+     */
+    public void setHashAlgorithmsWhitelist(final String[] hashAlgorithmsWhitelist) {
+
+        for (String s : hashAlgorithmsWhitelist) {
+            this.hashAlgorithmsWhitelist.add(s);
+        }
     }
 }
