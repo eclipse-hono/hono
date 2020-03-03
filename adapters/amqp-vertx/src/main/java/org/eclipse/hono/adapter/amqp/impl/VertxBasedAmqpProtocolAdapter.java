@@ -66,6 +66,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
@@ -652,7 +653,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     protected Future<ProtonDelivery> onMessageReceived(final AmqpContext ctx) {
 
-        final Span msgSpan = newSpan("upload message", ctx.getAuthenticatedDevice(), ctx.getTraceSamplingPriority());
+        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, ctx.getMessage());
+        final Span msgSpan = newSpan("upload message", ctx.getAuthenticatedDevice(), ctx.getTraceSamplingPriority(),
+                spanContext);
         msgSpan.log(Collections.singletonMap(Tags.MESSAGE_BUS_DESTINATION.getKey(), ctx.getAddress()));
 
         return validateEndpoint(ctx)
@@ -747,7 +750,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private Span newSpan(final String operationName, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
+        return newSpan(operationName, authenticatedDevice, traceSamplingPriority, null);
+    }
+
+    private Span newSpan(final String operationName, final Device authenticatedDevice,
+            final OptionalInt traceSamplingPriority, final SpanContext context) {
         final Span span = tracer.buildSpan(operationName)
+                .asChildOf(context)
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
