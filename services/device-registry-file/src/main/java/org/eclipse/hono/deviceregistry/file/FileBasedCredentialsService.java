@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -613,6 +614,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
                 passwordSecret.encode(passwordEncoder);
                 passwordSecret.checkValidity();
+                verifyHashAlgorithmIsAuthorised(passwordSecret);
                 if (!passwordSecret.containsOnlySecretId()) {
                     switch (passwordSecret.getHashFunction()) {
                     case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
@@ -627,6 +629,33 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                 // pass
             }
         }
+    }
+
+    /**
+     * Verifies that a hash algorithm in the supplied PasswordSecret is authorised.
+     * <p>
+     * The value must be present in the whitelist provided in the configuration
+     * by {@link #getHashAlgorithmsWhitelist()}
+     * If the whitelist is empty, any value will be accepted.
+     *
+     * @param secret The PasswordSecret object to verify.
+     * @throws IllegalStateException if the hash algorithm provided in the PasswordSecret is not in the whitelist.
+     */
+    protected void verifyHashAlgorithmIsAuthorised(final PasswordSecret secret){
+
+        Objects.requireNonNull(secret);
+        if (getHashAlgorithmsWhitelist().isEmpty()
+            || secret.containsOnlySecretId()) {
+            return;
+        }
+
+        final String hashAlgorithm = secret.getHashFunction();
+        Objects.requireNonNull(hashAlgorithm);
+
+        if (getHashAlgorithmsWhitelist().contains(hashAlgorithm)) {
+                return;
+        }
+        throw new IllegalStateException("Hashing algorithm is not in whitelist: " + hashAlgorithm);
     }
 
     /**
@@ -856,6 +885,10 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
     protected int getMaxBcryptIterations() {
         return getConfig().getMaxBcryptIterations();
+    }
+
+    protected Set<String> getHashAlgorithmsWhitelist() {
+        return getConfig().getHashAlgorithmsWhitelist();
     }
 
     /**

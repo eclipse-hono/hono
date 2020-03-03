@@ -893,27 +893,24 @@ components:
                  "hash-function":
                     type: string
                     example: bcrypt
-                    description: __DEPRECATED!__ The name of the hash function used to create the password hash (defined in `pwd-hash` property).
+                    description: The name of the hash function used to create the password hash (defined in `pwd-hash` property).
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
-                    deprecated: true
                  "pwd-hash":
                     type: string
                     format: byte
-                    description: __DEPRECATED!__ The password hash created using the `hash-function` and optional `salt` values.
+                    description: The password hash created using the `hash-function` and optional `salt` values.
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
-                    deprecated: true
                  "salt":
                     type: string
                     format: byte
-                    description: __DEPRECATED!__ The Base64 encoding of the salt used in the password hash (defined in the `pwd-hash` property).
+                    description: The Base64 encoding of the salt used in the password hash (defined in the `pwd-hash` property).
                                  If the password is defined using a `pwd-plain` property, this value will be ignored by the device registry.
                                  This property should be empty when returning passwords from the device registry using only secret metadata.
                                  In this case the id field must be set instead.
-                    deprecated: true
                  "pwd-plain":
                     type: string
                     format: byte
