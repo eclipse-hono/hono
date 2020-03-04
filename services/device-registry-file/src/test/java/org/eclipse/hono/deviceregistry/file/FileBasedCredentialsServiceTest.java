@@ -37,7 +37,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
-import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -323,17 +322,15 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                 .compose(s -> assertRegistered(svc,
                         Constants.DEFAULT_TENANT, "sensor1",
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
-                .compose(s -> {
-                    final Promise<OperationResult<List<CommonCredential>>> result = Promise.promise();
-                    getCredentialsManagementService().readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE, result);
-                    return result.future().map(r -> {
-                        if (r.getStatus() == HttpURLConnection.HTTP_OK) {
-                            return null;
-                        } else {
-                            throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
-                        }
-                    });
-                })
+                .compose(s -> getCredentialsManagementService()
+                        .readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE)
+                        .map(r -> {
+                            if (r.getStatus() == HttpURLConnection.HTTP_OK) {
+                                return null;
+                            } else {
+                                throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
+                            }
+                        }))
                 .setHandler(ctx.completing());
 
         start(startTracker);
@@ -489,15 +486,12 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         // containing a set of credentials
         setCredentials(getCredentialsManagementService(), "tenant", "device", Collections.singletonList(secret))
                 .compose(ok -> {
-                    final Promise<OperationResult<Void>> result = Promise.promise();
                     // WHEN trying to update the credentials
                     final PasswordCredential newSecret = createPasswordCredential("myId", "baz", OptionalInt.empty());
-                    svc.updateCredentials("tenant", "device",
+                    return svc.updateCredentials("tenant", "device",
                             Collections.singletonList(newSecret),
                             Optional.empty(),
-                            NoopSpan.INSTANCE,
-                            result);
-                    return result.future();
+                            NoopSpan.INSTANCE);
                 })
                 .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
                     // THEN the update fails with a 403
@@ -556,8 +550,8 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                 "device",
                 Collections.singletonList(passwordCredential),
                 Optional.empty(),
-                NoopSpan.INSTANCE,
-                ctx.succeeding(s -> ctx.verify(() -> {
+                NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
 
                     // THEN the update fails with a 400 BAD REQUEST
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);

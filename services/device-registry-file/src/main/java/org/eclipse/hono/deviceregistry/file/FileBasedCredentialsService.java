@@ -459,12 +459,12 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void updateCredentials(final String tenantId, final String deviceId, final List<CommonCredential> secrets,
+    public Future<OperationResult<Void>> updateCredentials(final String tenantId, final String deviceId,
+            final List<CommonCredential> secrets,
             final Optional<String> resourceVersion,
-            final Span span,
-            final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
+            final Span span) {
 
-        resultHandler.handle(Future.succeededFuture(set(tenantId, deviceId, resourceVersion, span, secrets)));
+        return Future.succeededFuture(set(tenantId, deviceId, resourceVersion, span, secrets));
 
     }
 
@@ -709,19 +709,17 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void readCredentials(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler) {
+    public Future<OperationResult<List<CommonCredential>>> readCredentials(final String tenantId, final String deviceId,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
 
         final ConcurrentMap<String, JsonArray> credentialsForTenant = credentials.get(tenantId);
         if (credentialsForTenant == null) {
             TracingHelper.logError(span, "No credentials found for tenant");
-            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_NOT_FOUND, null, Optional.empty(),
-                    Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
-            return;
+            return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_NOT_FOUND, null, Optional.empty(),
+                    Optional.of(getOrCreateResourceVersion(tenantId, deviceId))));
         }
 
         final JsonArray matchingCredentials = new JsonArray();
@@ -731,9 +729,8 @@ public final class FileBasedCredentialsService extends AbstractVerticle
         }
         if (matchingCredentials.isEmpty()) {
             TracingHelper.logError(span, "No credentials found for device");
-            resultHandler.handle(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_NOT_FOUND, null, Optional.empty(),
-                    Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
-            return;
+            return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_NOT_FOUND, null, Optional.empty(),
+                    Optional.of(getOrCreateResourceVersion(tenantId, deviceId))));
         }
 
         // convert credentials
@@ -747,13 +744,12 @@ public final class FileBasedCredentialsService extends AbstractVerticle
             credentials.add(cred);
         }
 
-        resultHandler.handle(Future.succeededFuture(
+        return Future.succeededFuture(
                 OperationResult.ok(HttpURLConnection.HTTP_OK,
                         credentials,
                         // TODO check cache directive
                         Optional.empty(),
-                        Optional.of(getOrCreateResourceVersion(tenantId, deviceId)))));
-
+                        Optional.of(getOrCreateResourceVersion(tenantId, deviceId))));
     }
 
     /**
