@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -34,7 +35,6 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -389,7 +389,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
         return OperationResult.ok(HttpURLConnection.HTTP_OK,
                 new Device(device.getValue()),
-                Optional.ofNullable(getCacheDirective(deviceId, tenantId)),
+                Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                 Optional.ofNullable(device.getVersion()));
     }
 
@@ -551,14 +551,6 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
     private ConcurrentMap<String, Versioned<Device>> getDevicesForTenant(final String tenantId) {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
-    }
-
-    private CacheDirective getCacheDirective(final String deviceId, final String tenantId) {
-        if (getConfig().getCacheMaxAge() > 0) {
-            return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());
-        } else {
-            return CacheDirective.noCacheDirective();
-        }
     }
 
     /**

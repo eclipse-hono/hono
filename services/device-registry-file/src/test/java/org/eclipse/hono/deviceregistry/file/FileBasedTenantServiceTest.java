@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
@@ -443,7 +444,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC")
                 .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false));
 
-        final JsonObject target = FileBasedTenantService.convertTenant("4711", source, true);
+        final JsonObject target = DeviceRegistryUtils.convertTenant("4711", source, true);
 
         assertThat(target.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("4711");
         assertThat(target.getBoolean(TenantConstants.FIELD_ENABLED)).isTrue();
