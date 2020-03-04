@@ -16,7 +16,6 @@ package org.eclipse.hono.service.management.device;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,8 +36,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -84,12 +81,8 @@ public class AutoProvisioningEnabledDeviceBackendTest {
                 .thenReturn(Future.succeededFuture(
                         OperationResult.ok(201, Id.of(DEVICE_ID), Optional.empty(), Optional.empty())));
 
-        doAnswer(invocation -> {
-            final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
-            promise.complete(OperationResult.empty(204));
-            return null;
-        }).when(underTest).updateCredentials(any(), any(), any(), any(), any(), any(Handler.class));
-
+        when(underTest.updateCredentials(any(), any(), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(OperationResult.empty(204)));
         // WHEN provisioning a device from a certificate
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);
 
@@ -97,7 +90,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         result.setHandler(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 verify(underTest).createDevice(eq(TENANT_ID), any(), any(), any());
-                verify(underTest).updateCredentials(eq(TENANT_ID), eq(DEVICE_ID), any(), any(), any(), any());
+                verify(underTest).updateCredentials(eq(TENANT_ID), eq(DEVICE_ID), any(), any(), any());
             });
             ctx.completeNow();
         }));
@@ -124,11 +117,8 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         when(underTest.deleteDevice(any(), any(), any(), any()))
                 .thenReturn(Future.succeededFuture(Result.from(204)));
 
-        doAnswer(invocation -> {
-            final Promise<OperationResult<Void>> promise = invocation.getArgument(5);
-            promise.complete(OperationResult.empty(403)); // creation of credentials fails
-            return null;
-        }).when(underTest).updateCredentials(any(), any(), any(), any(), any(), any(Handler.class));
+        when(underTest.updateCredentials(any(), any(), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(OperationResult.empty(403)));
 
         // WHEN provisioning a device from a certificate
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);

@@ -28,7 +28,6 @@ import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 
 /**
  * Interface that adds automatic device provisioning to the DeviceBackend.
@@ -84,9 +83,7 @@ public interface AutoProvisioningEnabledDeviceBackend extends DeviceBackend {
 
                     final String deviceId = r.getPayload().getId();
 
-                    final Promise<OperationResult<Void>> credPromise = Promise.promise();
-                    updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span, credPromise);
-                    return credPromise.future()
+                    return updateCredentials(tenantId, deviceId, List.of(certCredential), Optional.empty(), span)
                             .compose(v -> {
                                 if (v.isError()) {
                                     return deleteDevice(tenantId, deviceId, Optional.empty(), span)

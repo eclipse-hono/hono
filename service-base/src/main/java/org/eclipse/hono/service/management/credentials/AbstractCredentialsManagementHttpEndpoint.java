@@ -31,7 +31,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -134,18 +133,15 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
 
         logger.debug("updating credentials [tenant: {}, device-id: {}] - {}", tenantId, deviceId, credentials);
 
-        final Promise<OperationResult<Void>> result = Promise.promise();
-        result.future().setHandler(handler -> {
-                final OperationResult<Void> operationResult = handler.result();
-                writeOperationResponse(
-                        ctx,
-                        operationResult,
-                        null,
-                        span);
-        });
-
-        getService().updateCredentials(tenantId, deviceId, commonCredentials, resourceVersion, span, result);
-
+        getService().updateCredentials(tenantId, deviceId, commonCredentials, resourceVersion, span)
+                .setHandler(handler -> {
+                    final OperationResult<Void> operationResult = handler.result();
+                    writeOperationResponse(
+                            ctx,
+                            operationResult,
+                            null,
+                            span);
+                });
     }
 
     private void getCredentialsForDevice(final RoutingContext ctx) {
@@ -160,30 +156,28 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
         final HttpServerResponse response = ctx.response();
 
         logger.debug("getCredentialsForDevice [tenant: {}, device-id: {}]]", tenantId, deviceId);
-        final Promise<OperationResult<List<CommonCredential>>> result = Promise.promise();
 
-        result.future().setHandler(handler -> {
-            final OperationResult<List<CommonCredential>> operationResult = handler.result();
-            final int status = operationResult.getStatus();
-            response.setStatusCode(status);
-            switch (status) {
-                case HttpURLConnection.HTTP_OK:
-                    final JsonArray credentialsArray = new JsonArray();
-                    for (final CommonCredential credential : operationResult.getPayload()) {
-                        credentialsArray.add(JsonObject.mapFrom(credential));
+        getService().readCredentials(tenantId, deviceId, span)
+                .setHandler(handler -> {
+                    final OperationResult<List<CommonCredential>> operationResult = handler.result();
+                    final int status = operationResult.getStatus();
+                    response.setStatusCode(status);
+                    switch (status) {
+                    case HttpURLConnection.HTTP_OK:
+                        final JsonArray credentialsArray = new JsonArray();
+                        for (final CommonCredential credential : operationResult.getPayload()) {
+                            credentialsArray.add(JsonObject.mapFrom(credential));
+                        }
+                        operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
+                        HttpUtils.setResponseBody(response, credentialsArray);
+
+                        // falls through intentionally
+                    default:
+                        Tags.HTTP_STATUS.set(span, status);
+                        span.finish();
+                        response.end();
                     }
-                    operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
-                    HttpUtils.setResponseBody(response, credentialsArray);
-
-                // falls through intentionally
-                default:
-                    Tags.HTTP_STATUS.set(span, status);
-                    span.finish();
-                    response.end();
-            }
-        });
-
-        getService().readCredentials(tenantId, deviceId, span, result);
+                });
     }
 
     /**

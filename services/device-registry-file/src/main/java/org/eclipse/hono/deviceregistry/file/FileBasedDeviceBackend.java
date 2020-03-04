@@ -43,10 +43,8 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
@@ -141,18 +139,15 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
                         return Future.succeededFuture(r);
                     }
 
-                    // now create the empty credentials set
-                    final Promise<OperationResult<Void>> f = Promise.promise();
-                    credentialsService.updateCredentials(
+                    // now create the empty credentials set and pass on the original result
+                    return credentialsService.updateCredentials(
                             tenantId,
                             r.getPayload().getId(),
                             Collections.emptyList(),
                             Optional.empty(),
-                            span,
-                            f);
+                            span
+                    ).map(r);
 
-                    // pass on the original result
-                    return f.future().map(r);
                 });
     }
 
@@ -246,21 +241,18 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
     }
 
     @Override
-    public void updateCredentials(final String tenantId, final String deviceId,
+    public Future<OperationResult<Void>> updateCredentials(final String tenantId, final String deviceId,
             final List<CommonCredential> credentials, final Optional<String> resourceVersion,
-            final Span span,
-            final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
+            final Span span) {
         //TODO check if device exists
-        credentialsService.updateCredentials(tenantId, deviceId, credentials, resourceVersion, span, resultHandler);
+        return credentialsService.updateCredentials(tenantId, deviceId, credentials, resourceVersion, span);
     }
 
     @Override
-    public void readCredentials(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<OperationResult<List<CommonCredential>>>> resultHandler) {
+    public Future<OperationResult<List<CommonCredential>>> readCredentials(final String tenantId, final String deviceId,
+            final Span span) {
 
-        final Promise<OperationResult<List<CommonCredential>>> f = Promise.promise();
-        credentialsService.readCredentials(tenantId, deviceId, span, f);
-        f.future()
+        return credentialsService.readCredentials(tenantId, deviceId, span)
                 .compose(r -> {
                     if (r.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
                         return registrationService.readDevice(tenantId, deviceId, span)
@@ -277,7 +269,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
                     } else {
                         return Future.succeededFuture(r);
                     }
-                }).setHandler(resultHandler);
+                });
     }
 
     Future<?> saveToFile() {
