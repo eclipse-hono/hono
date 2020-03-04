@@ -45,20 +45,23 @@ import org.eclipse.hono.cli.client.ClientConfig.MessageTypeProvider;
  */
 @Component
 public class ApplicationClient extends AbstractCliClient {
-
     /**
      * Spring Shell output helper.
      * <p>
      * it can be passed to the method class instead to use the log (it's more stylish).
      */
     @Autowired
-    ShellHelper shellHelper;
+    public ShellHelper shellHelper;
     /**
      * Spring Shell inputReader.
      */
     @Autowired
-    InputReader inputReader;
-
+    public InputReader inputReader;
+    /**
+     * Class that contains all parameters for the connection to Hono and for the execution of the commands.
+     * Handling it a part allow to clone it and maintain a default config during the whole execution.
+     */
+    protected ClientConfig clientConfig;
     /**
      * All parameters that can be setted with the spring configuration at startup.
      * There will be injected with values and the stored in the configuration class, to allow the overriding of the parameters.
@@ -77,11 +80,6 @@ public class ApplicationClient extends AbstractCliClient {
     private String messageAddress;
     @Value(value = "${message.payload:}")//The payload to send.
     private String messagePayload;
-    /**
-     * Class that contains all parameters for the connection to Hono and for the execution of the commands.
-     * Handling it a part allow to clone it and maintain a default config during the whole execution.
-     */
-    private ClientConfig clientConfig;
     /**
      * To stop the executions of internal commands.
      */
@@ -265,7 +263,7 @@ public class ApplicationClient extends AbstractCliClient {
                 try {
                     clientFactory = ApplicationClientFactory.create(HonoConnection.newConnection(vertx, fork.honoClientConfig));
                     latch = new CountDownLatch(1);
-                    final CommandAndControl CaCAPIInstance = new CommandAndControl(vertx, fork);
+                    final CommandAndControl CaCAPIInstance = new CommandAndControl(vertx, ctx, fork);
                     CaCAPIInstance.start(latch);
                     //to handle forced interruption
                     Signal.handle(new Signal("INT"), new SignalHandler() {

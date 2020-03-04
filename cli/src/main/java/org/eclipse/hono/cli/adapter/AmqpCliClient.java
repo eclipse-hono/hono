@@ -16,6 +16,8 @@ import java.io.PrintWriter;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
+import io.vertx.core.Context;
+import io.vertx.core.Vertx;
 import org.eclipse.hono.cli.AbstractCliClient;
 import org.eclipse.hono.cli.client.ClientConfig;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -33,15 +35,16 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
 /**
  * Abstract base CLI connection for interacting with Hono's AMQP adapter.
  */
-public abstract class AmqpCliClient extends AbstractCliClient {
+public class AmqpCliClient extends AbstractCliClient {
+
+    /**
+     * The connection to the AMQP org.eclipse.hono.cli.app.adapter.
+     */
+    public ProtonConnection adapterConnection;
     /**
      * A writer to stdout.
      */
     protected PrintWriter writer = new PrintWriter(System.out);
-    /**
-     * The connection to the AMQP org.eclipse.hono.cli.app.adapter.
-     */
-    protected ProtonConnection adapterConnection;
     /**
      * The configuration properties to use for connecting
      * to the AMQP org.eclipse.hono.cli.app.adapter.
@@ -52,6 +55,18 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      */
     protected CountDownLatch latch;
 
+    /**
+     * Constructor to create the config environment for the execution of the command.
+     *
+     * @param vertx The instance of vert.x connection.
+     * @param ctx The context of vert.x connection.
+     * @param clientConfig The class with all config parameters .
+     */
+    public AmqpCliClient(final Vertx vertx, final Context ctx, final ClientConfig clientConfig) {
+        this.vertx = vertx;
+        this.clientConfig = clientConfig;
+        this.ctx = ctx;
+    }
 
     /**
      * Creates anonymous sender link on the established connection
@@ -62,7 +77,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      * @throws IllegalStateException if the connection to the org.eclipse.hono.cli.app.adapter is
      *         not established.
      */
-    protected Future<ProtonSender> createSender() {
+    public Future<ProtonSender> createSender() {
         if (adapterConnection == null || adapterConnection.isDisconnected()) {
             throw new IllegalStateException("connection to AMQP org.eclipse.hono.cli.app.adapter not established");
         }
@@ -80,7 +95,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      * @return A future containing the established connection. The future will
      *         be succeeded once the connection is open.
      */
-    protected Future<ProtonConnection> connectToAdapter() {
+    public Future<ProtonConnection> connectToAdapter() {
         final ClientConfigProperties properties = this.clientConfig.honoClientConfig;
         final Promise<ProtonConnection> connectAttempt = Promise.promise();
         final ProtonClientOptions options = new ProtonClientOptions();

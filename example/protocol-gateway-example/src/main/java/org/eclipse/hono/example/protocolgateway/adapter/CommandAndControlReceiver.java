@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cli.adapter.AmqpCliClient;
+import org.eclipse.hono.cli.client.ApplicationClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.example.protocolgateway.interfaces.CommandHandler;
 import org.eclipse.hono.util.CommandConstants;
@@ -41,8 +42,9 @@ import io.vertx.proton.ProtonSender;
  * @see org.eclipse.hono.cli.adapter.CommandAndControl
  */
 @Component
-public class CommandAndControlReceiver extends AmqpCliClient {
+public class CommandAndControlReceiver extends ApplicationClient {
 
+    private final AmqpCliClient client = new AmqpCliClient(vertx, ctx, clientConfig);
     private static final Logger log = LoggerFactory.getLogger(CommandAndControlReceiver.class);
     private ProtonSender sender;
     private CommandHandler commandHandler;
@@ -79,14 +81,14 @@ public class CommandAndControlReceiver extends AmqpCliClient {
             }
         };
 
-        connectToAdapter()
+        client.connectToAdapter()
                 .compose(con -> {
-                    this.adapterConnection = con;
-                    return createSender();
+                    client.adapterConnection = con;
+                    return client.createSender();
                 }).map(s -> {
             this.sender = s;
             final Promise<ProtonReceiver> result = Promise.promise();
-            final ProtonReceiver receiver = adapterConnection.createReceiver(CommandConstants.COMMAND_ENDPOINT);
+            final ProtonReceiver receiver = client.adapterConnection.createReceiver(CommandConstants.COMMAND_ENDPOINT);
             receiver.setQoS(ProtonQoS.AT_LEAST_ONCE);
             receiver.handler(messageHandler);
             receiver.openHandler(result);
@@ -114,7 +116,7 @@ public class CommandAndControlReceiver extends AmqpCliClient {
         props.setPort(port);
         props.setUsername(username);
         props.setPassword(password);
-        setClientConfig(props);
+        setClientConfigProperties(props);
         this.commandHandler = commandHandler;
     }
 }

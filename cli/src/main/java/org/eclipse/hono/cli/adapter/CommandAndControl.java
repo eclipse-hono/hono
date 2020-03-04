@@ -16,6 +16,7 @@ package org.eclipse.hono.cli.adapter;
 import java.net.HttpURLConnection;
 import java.util.concurrent.CountDownLatch;
 
+import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
@@ -41,12 +42,13 @@ public class CommandAndControl extends AmqpCliClient {
 
     /**
      * Constructor to create the config environment for the execution of the command.
+     *
      * @param vertx The instance of vert.x connection.
-     * @param clientConfig The class with all config parameters.
+     * @param ctx The context of vert.x connection.
+     * @param clientConfig The class with all config parameters .
      */
-    public CommandAndControl(final Vertx vertx, final ClientConfig clientConfig) {
-        this.vertx = vertx;
-        this.clientConfig = clientConfig;
+    public CommandAndControl(final Vertx vertx, final Context ctx, final ClientConfig clientConfig) {
+        super(vertx, ctx, clientConfig);
     }
 
 //    This will be used with the #1765.

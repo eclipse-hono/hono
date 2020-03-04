@@ -35,14 +35,13 @@ public class TelemetryAndEvent extends AmqpCliClient {
 
     /**
      * Constructor to create the config environment for the execution of the command.
+     *
      * @param vertx The instance of vert.x connection.
      * @param ctx The context of vert.x connection.
      * @param clientConfig The class with all config parameters .
      */
     public TelemetryAndEvent(final Vertx vertx, final Context ctx, final ClientConfig clientConfig) {
-        this.vertx = vertx;
-        this.ctx = ctx;
-        this.clientConfig = clientConfig;
+        super(vertx, ctx, clientConfig);
     }
 
 //   This will be used with the #1765.

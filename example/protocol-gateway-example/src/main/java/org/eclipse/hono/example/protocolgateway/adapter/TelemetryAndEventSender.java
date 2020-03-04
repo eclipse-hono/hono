@@ -16,7 +16,9 @@
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.cli.Application;
 import org.eclipse.hono.cli.adapter.AmqpCliClient;
+import org.eclipse.hono.cli.client.ApplicationClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.stereotype.Component;
 
@@ -30,8 +32,9 @@ import java.util.concurrent.CompletableFuture;
  * @see org.eclipse.hono.cli.adapter.TelemetryAndEvent
  */
 @Component
-public class TelemetryAndEventSender extends AmqpCliClient {
+public class TelemetryAndEventSender extends ApplicationClient {
 
+    private final AmqpCliClient client = new AmqpCliClient(vertx, ctx, clientConfig);
     /**
      * Sends message to Hono AMQP adapter.
      *
@@ -55,15 +58,15 @@ public class TelemetryAndEventSender extends AmqpCliClient {
                 throw new IllegalArgumentException(String.format("Illegal argument for messageAddress: \"%s\"", messageAddress));
         }
 
-        connectToAdapter()
+        client.connectToAdapter()
                 .compose(con -> {
-                    adapterConnection = con;
-                    return createSender();
+                    client.adapterConnection = con;
+                    return client.createSender();
                 })
                 .map(sender -> {
                     final Message message = ProtonHelper.message(messageAddressChecked, messagePayload);
                     sender.send(message, delivery -> {
-                        adapterConnection.close();
+                        client.adapterConnection.close();
                         messageTracker.complete(delivery);
                     });
                     return sender;
@@ -91,6 +94,6 @@ public class TelemetryAndEventSender extends AmqpCliClient {
         props.setUsername(username);
         props.setPassword(password);
 
-        setClientConfig(props);
+        setClientConfigProperties(props);
     }
 }
