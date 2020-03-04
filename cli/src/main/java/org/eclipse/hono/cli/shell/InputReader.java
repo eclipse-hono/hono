@@ -16,8 +16,16 @@ package org.eclipse.hono.cli.shell;
 import org.jline.reader.LineReader;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Iterator;
 
+/**
+ * The input reader is used to interact with the user through the shell.
+ */
 public class InputReader {
 
     public static final Character DEFAULT_MASK = '*';
@@ -28,33 +36,59 @@ public class InputReader {
 
     private ShellHelper shellHelper;
 
-    public InputReader(LineReader lineReader, ShellHelper shellHelper) {
+    /**
+     * Constructor.
+     *
+     * @param lineReader Instance or reader
+     * @param shellHelper Instance of helper
+     */
+    public InputReader(final LineReader lineReader, final ShellHelper shellHelper) {
         this(lineReader, shellHelper, null);
     }
 
-    public InputReader(LineReader lineReader, ShellHelper shellHelper, Character mask) {
+    /**
+     * Constructor.
+     *
+     * @param lineReader Instance or reader
+     * @param shellHelper Instance of helper
+     * @param mask Character used for pearsing the input
+     */
+    public InputReader(final LineReader lineReader, final ShellHelper shellHelper, final Character mask) {
         this.lineReader = lineReader;
         this.shellHelper = shellHelper;
         this.mask = mask != null ? mask : DEFAULT_MASK;
     }
 
-    public String prompt(String prompt) {
+    /**
+     * Prompts user for input.
+     *
+     * @param prompt Question
+     * @return A string with the answer to print
+     */
+    public String prompt(final String prompt) {
         return prompt(prompt, null, true);
     }
 
-    public String prompt(String prompt, String defaultValue) {
+    /**
+     * Prompts user for input.
+     *
+     * @param prompt Question
+     * @param defaultValue Default
+     * @return A string with the answer to print
+     */
+    public String prompt(final String prompt, final String defaultValue) {
         return prompt(prompt, defaultValue, true);
     }
 
     /**
      * Prompts user for input.
      *
-     * @param prompt
-     * @param defaultValue
-     * @param echo
-     * @return
+     * @param prompt Question
+     * @param defaultValue Default
+     * @param echo Flag for parsing the input
+     * @return A string with the answer to print
      */
-    public String prompt(String prompt, String defaultValue, boolean echo) {
+    public String prompt(final String prompt, final String defaultValue, final boolean echo) {
         String answer = "";
 
         if (echo) {
@@ -76,11 +110,14 @@ public class InputReader {
      * Passing "" or null among optionsAsList means that empty answer is allowed, in these cases this method returns
      * empty String "" as the result of its execution.
      *
-     *
+     * @param prompt Question
+     * @param defaultValue  Default
+     * @param optionsAsList List of options
+     * @return A string with the answer to print
      */
-    public String promptWithOptions(String prompt, String defaultValue, List<String> optionsAsList) {
+    public String promptWithOptions(final String prompt, final String defaultValue, final List<String> optionsAsList) {
         String answer;
-        List<String> allowedAnswers = new ArrayList<>(optionsAsList);
+        final List<String> allowedAnswers = new ArrayList<>(optionsAsList);
         if (StringUtils.hasText(defaultValue)) {
             allowedAnswers.add("");
         }
@@ -94,8 +131,8 @@ public class InputReader {
         return answer;
     }
 
-    private List<String> formatOptions(String defaultValue, List<String> optionsAsList) {
-        List<String> result = new ArrayList();
+    private List<String> formatOptions(final String defaultValue, final List<String> optionsAsList) {
+        final List<String> result = new ArrayList();
         for (String option : optionsAsList) {
             String val = option;
             if ("".equals(option) || option == null) {
@@ -114,10 +151,16 @@ public class InputReader {
     /**
      * Loops until one value from the list of options is selected, printing each option on its own line.
      *
+     * @param headingMessage Header
+     * @param promptMessage  Label
+     * @param options Map of options
+     * @param ignoreCase Flag for case sensitive
+     * @param defaultValue Default
+     * @return A string with the answer to print
      */
-    public String selectFromList(String headingMessage, String promptMessage, Map<String, String> options, boolean ignoreCase, String defaultValue) {
+    public String selectFromList(final String headingMessage, final String promptMessage, final Map<String, String> options, final boolean ignoreCase, final String defaultValue) {
         String answer;
-        Set<String> allowedAnswers = new HashSet<>(options.keySet());
+        final Set<String> allowedAnswers = new HashSet<>(options.keySet());
         if (defaultValue != null && !defaultValue.equals("")) {
             allowedAnswers.add("");
         }
@@ -137,7 +180,7 @@ public class InputReader {
                 }
             }
             answer = lineReader.readLine(String.format("%s: ", promptMessage));
-        } while (!containsString(allowedAnswers, answer, ignoreCase) && "" != answer);
+        } while (!containsString(allowedAnswers, answer, ignoreCase) && !answer.equals(""));
 
         if (StringUtils.isEmpty(answer) && allowedAnswers.contains("")) {
             return defaultValue;
@@ -145,14 +188,15 @@ public class InputReader {
         return answer;
     }
 
-    private boolean containsString(Set<String> l, String s, boolean ignoreCase){
+    private boolean containsString(final Set<String> l, final String s, final boolean ignoreCase){
         if (!ignoreCase) {
             return l.contains(s);
         }
-        Iterator<String> it = l.iterator();
-        while(it.hasNext()) {
-            if(it.next().equalsIgnoreCase(s))
+        final Iterator<String> it = l.iterator();
+        while (it.hasNext()) {
+            if (it.next().equalsIgnoreCase(s)) {
                 return true;
+            }
         }
         return false;
     }

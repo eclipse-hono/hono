@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.cli.shell;
 
+/**
+ * Class to handle the prompt color for custom messages.
+ */
 public enum PromptColor {
     BLACK(0),
     RED(1),
@@ -25,11 +28,18 @@ public enum PromptColor {
     BRIGHT(8);
 
     private final int value;
-
-    PromptColor(int value) {
+    /**
+     * Constructor to set the color.
+     * @param value The color
+     */
+    PromptColor(final int value) {
         this.value = value;
     }
 
+    /**
+     * Getter of the color.
+     * @return The color
+     */
     public int toJlineAttributedStyle() {
         return this.value;
     }

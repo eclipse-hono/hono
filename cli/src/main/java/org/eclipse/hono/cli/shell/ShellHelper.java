@@ -16,8 +16,10 @@ package org.eclipse.hono.cli.shell;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
-import org.springframework.beans.factory.annotation.Value;
 
+/**
+ * The helper to interact with the user through the shell.
+ */
 public class ShellHelper {
 
     public String infoColor="CYAN";
@@ -26,8 +28,12 @@ public class ShellHelper {
     public String errorColor="RED";
 
     private Terminal terminal;
-
-    public ShellHelper(Terminal terminal) {
+    /**
+     * Constructor.
+     *
+     * @param terminal A terminal instance.
+     */
+    public ShellHelper(final Terminal terminal) {
         this.terminal = terminal;
     }
 
@@ -38,23 +44,47 @@ public class ShellHelper {
      * @param color   color to print
      * @return colored message
      */
-    public String getColored(String message, PromptColor color) {
+    public String getColored(final String message, final PromptColor color) {
         return (new AttributedStringBuilder()).append(message, AttributedStyle.DEFAULT.foreground(color.toJlineAttributedStyle())).toAnsi();
     }
 
-    public String getInfoMessage(String message) {
+    /**
+     * Public method to get the colored message based on the the specific type.
+     *
+     * @param message message to return
+     * @return colored message
+     */
+    public String getInfoMessage(final String message) {
         return getColored(message, PromptColor.valueOf(infoColor));
     }
 
-    public String getSuccessMessage(String message) {
+    /**
+     * Public method to get the colored message based on the the specific type.
+     *
+     * @param message message to return
+     * @return colored message
+     */
+    public String getSuccessMessage(final String message) {
         return getColored(message, PromptColor.valueOf(successColor));
     }
 
-    public String getWarningMessage(String message) {
+    /**
+     * Public method to get the colored message based on the the specific type.
+     *
+     * @param message message to return
+     * @return colored message
+     */
+    public String getWarningMessage(final String message) {
         return getColored(message, PromptColor.valueOf(warningColor));
     }
 
-    public String getErrorMessage(String message) {
+    /**
+     * Public method to get the colored message based on the the specific type.
+     *
+     * @param message message to return
+     * @return colored message
+     */
+    public String getErrorMessage(final String message) {
         return getColored(message, PromptColor.valueOf(errorColor));
     }
 
@@ -65,7 +95,7 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void print(String message) {
+    public void print(final String message) {
         print(message, null);
     }
 
@@ -74,7 +104,7 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printSuccess(String message) {
+    public void printSuccess(final String message) {
         print(message, PromptColor.valueOf(successColor));
     }
 
@@ -83,7 +113,7 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printInfo(String message) {
+    public void printInfo(final String message) {
         print(message, PromptColor.valueOf(infoColor));
     }
 
@@ -92,7 +122,7 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printWarning(String message) {
+    public void printWarning(final String message) {
         print(message, PromptColor.valueOf(warningColor));
     }
 
@@ -101,7 +131,7 @@ public class ShellHelper {
      *
      * @param message message to print
      */
-    public void printError(String message) {
+    public void printError(final String message) {
         print(message, PromptColor.valueOf(errorColor));
     }
 
@@ -111,7 +141,7 @@ public class ShellHelper {
      * @param message message to print
      * @param color   (optional) prompt color
      */
-    public void print(String message, PromptColor color) {
+    public void print(final String message, final PromptColor color) {
         String toPrint = message;
         if (color != null) {
             toPrint = getColored(message, color);
@@ -126,7 +156,7 @@ public class ShellHelper {
         return terminal;
     }
 
-    public void setTerminal(Terminal terminal) {
+    public void setTerminal(final Terminal terminal) {
         this.terminal = terminal;
     }
 }

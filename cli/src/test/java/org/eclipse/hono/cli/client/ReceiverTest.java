@@ -43,8 +43,8 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class ReceiverTest {
 
-    private Receiver receiver;
     public ClientConfig clientConfig;
+    private Receiver receiver;
 
     /**
      * Sets up the receiver with mocks.
@@ -66,7 +66,7 @@ public class ReceiverTest {
                 .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         clientConfig.tenantId = "TEST_TENANT";
         clientConfig.messageType = "all";
-        receiver = new Receiver(connection,vertx,clientConfig);
+        receiver = new Receiver(connection, vertx, clientConfig);
     }
 
     /**

@@ -39,7 +39,12 @@ public class CommandAndControl extends AmqpCliClient {
 
     private ProtonSender sender;
 
-    public CommandAndControl(Vertx vertx, ClientConfig clientConfig) {
+    /**
+     * Constructor to create the config environment for the execution of the command.
+     * @param vertx The instance of vert.x connection.
+     * @param clientConfig The class with all config parameters.
+     */
+    public CommandAndControl(final Vertx vertx, final ClientConfig clientConfig) {
         this.vertx = vertx;
         this.clientConfig = clientConfig;
     }
@@ -51,8 +56,11 @@ public class CommandAndControl extends AmqpCliClient {
 //        this.clientConfig = clientConfig;
 //    }
 
-
-    public void start(CountDownLatch latch){
+    /**
+     * Entrypoint to start the command.
+     * @param latch The handle to signal the ended execution and return to the shell.
+     */
+    public void start(final CountDownLatch latch){
         this.latch = latch;
         startCommandReceiver((d, m) -> {
 

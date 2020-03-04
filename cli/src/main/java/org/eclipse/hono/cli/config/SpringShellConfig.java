@@ -13,7 +13,9 @@
 
 package org.eclipse.hono.cli.config;
 
-import org.eclipse.hono.cli.shell.*;
+import org.eclipse.hono.cli.shell.InputReader;
+import org.eclipse.hono.cli.shell.PromptColor;
+import org.eclipse.hono.cli.shell.ShellHelper;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -26,23 +28,38 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.shell.jline.JLineShellAutoConfiguration;
 
+/**
+ * Configuration for the Spring shell.
+ */
 @Configuration
 public class SpringShellConfig {
-
+    /**
+     * Exposes a terminal helper instance to be used to interact with the user through the shell.
+     * @param terminal Instance of terminal.
+     * @return The shell helper.
+     */
     @Bean
-    public ShellHelper shellHelper(@Lazy Terminal terminal) {
+    public ShellHelper shellHelper(@Lazy final Terminal terminal) {
             return new ShellHelper(terminal);
     }
-
+    /**
+     * Exposes a terminal input instance to interact with the shell.
+     * @param terminal Instance of terminal.
+     * @param parser Parser.
+     * @param completer Completer.
+     * @param history Instance of History.
+     * @param shellHelper Instance of helper.
+     * @return The shell inputReader.
+     */
     @Bean
     public InputReader inputReader(
-            @Lazy Terminal terminal,
-            @Lazy Parser parser,
-            JLineShellAutoConfiguration.CompleterAdapter completer,
-            @Lazy History history,
-            ShellHelper shellHelper
+            @Lazy final Terminal terminal,
+            @Lazy final Parser parser,
+            final JLineShellAutoConfiguration.CompleterAdapter completer,
+            @Lazy final History history,
+            final ShellHelper shellHelper
     ) {
-        LineReaderBuilder lineReaderBuilder = LineReaderBuilder.builder()
+        final LineReaderBuilder lineReaderBuilder = LineReaderBuilder.builder()
             .terminal(terminal)
             .completer(completer)
             .history(history)
@@ -54,7 +71,7 @@ public class SpringShellConfig {
             }
         ).parser(parser);
 
-        LineReader lineReader = lineReaderBuilder.build();
+        final LineReader lineReader = lineReaderBuilder.build();
         lineReader.unsetOpt(LineReader.Option.INSERT_TAB);
         return new InputReader(lineReader, shellHelper);
     }

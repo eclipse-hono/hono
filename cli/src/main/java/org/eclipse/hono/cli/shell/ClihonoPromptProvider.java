@@ -18,9 +18,15 @@ import org.jline.utils.AttributedStyle;
 import org.springframework.shell.jline.PromptProvider;
 import org.springframework.stereotype.Component;
 
+/**
+ * Shell class.
+ */
 @Component
 public class ClihonoPromptProvider implements PromptProvider {
-
+    /**
+     * Override the shell config to set the custom prefix.
+     * @return The attribute custom string.
+     */
     @Override
     public AttributedString getPrompt() {
         return new AttributedString("HONO:>", AttributedStyle.DEFAULT.foreground(AttributedStyle.BLUE));

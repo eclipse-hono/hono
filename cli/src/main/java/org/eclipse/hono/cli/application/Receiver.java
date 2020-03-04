@@ -13,7 +13,11 @@
 
 package org.eclipse.hono.cli.application;
 
-import io.vertx.core.*;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cli.AbstractCliClient;
@@ -26,8 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import static org.eclipse.hono.cli.client.ClientConfig.*;
-
 /**
  * The methods of the command line client for receiving messages from via Hono's north bound Telemetry and/or Event API
  * <p>
@@ -39,21 +41,32 @@ import static org.eclipse.hono.cli.client.ClientConfig.*;
  */
 public class Receiver extends AbstractCliClient{
     /**
-     * Configuration used for the connection
-     */
-    private final ClientConfig clientConfig;
-    /**
-     * To signal the CLI main class of the ended execution
+     * To signal the CLI main class of the ended execution.
      */
     CountDownLatch latch;
+    /**
+     * Configuration used for the connection.
+     */
+    private final ClientConfig clientConfig;
 
-    public Receiver(ApplicationClientFactory clientFactory, Vertx vertx, ClientConfig clientConfig) {
+    /**
+     * Constructor to create the config environment for the execution of the command.
+     * @param clientFactory The factory with client's methods.
+     * @param vertx The instance of vert.x connection.
+     * @param clientConfig The class with all config parameters.
+     */
+    public Receiver(final ApplicationClientFactory clientFactory, final Vertx vertx, final ClientConfig clientConfig) {
         this.clientFactory = clientFactory;
         this.vertx = vertx;
         this.clientConfig = clientConfig;
     }
 
-    public Future<CompositeFuture> start(CountDownLatch latch){
+    /**
+     * Entrypoint to start the command.
+     * @param latch The handle to signal the ended execution and return to the shell.
+     * @return A Future used for testing
+     */
+    public Future<CompositeFuture> start(final CountDownLatch latch){
         this.latch = latch;
         return clientFactory.connect()
                 .compose(con -> {
@@ -73,14 +86,14 @@ public class Receiver extends AbstractCliClient{
 
         @SuppressWarnings("rawtypes")
         final List<Future> consumerFutures = new ArrayList<>();
-        if (clientConfig.messageType.equals(TYPE_EVENT) || clientConfig.messageType.equals(TYPE_ALL)) {
+        if (clientConfig.messageType.equals(ClientConfig.TYPE_EVENT) || clientConfig.messageType.equals(ClientConfig.TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createEventConsumer(clientConfig.tenantId, msg -> handleMessage(TYPE_EVENT, msg), closeHandler));
+                    clientFactory.createEventConsumer(clientConfig.tenantId, msg -> handleMessage(ClientConfig.TYPE_EVENT, msg), closeHandler));
         }
 
-        if (clientConfig.messageType.equals(TYPE_TELEMETRY) ||clientConfig. messageType.equals(TYPE_ALL)) {
+        if (clientConfig.messageType.equals(ClientConfig.TYPE_TELEMETRY) ||clientConfig. messageType.equals(ClientConfig.TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createTelemetryConsumer(clientConfig.tenantId, msg -> handleMessage(TYPE_TELEMETRY, msg), closeHandler));
+                    clientFactory.createTelemetryConsumer(clientConfig.tenantId, msg -> handleMessage(ClientConfig.TYPE_TELEMETRY, msg), closeHandler));
         }
 
         if (consumerFutures.isEmpty()) {

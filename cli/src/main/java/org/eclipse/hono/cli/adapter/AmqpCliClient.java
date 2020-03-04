@@ -48,7 +48,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      */
     protected ClientConfig clientConfig;
     /**
-     * To signal the CLI main class of the ended execution
+     * To signal the CLI main class of the ended execution.
      */
     protected CountDownLatch latch;
 
@@ -81,7 +81,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
      *         be succeeded once the connection is open.
      */
     protected Future<ProtonConnection> connectToAdapter() {
-        ClientConfigProperties properties = this.clientConfig.honoClientConfig;
+        final ClientConfigProperties properties = this.clientConfig.honoClientConfig;
         final Promise<ProtonConnection> connectAttempt = Promise.promise();
         final ProtonClientOptions options = new ProtonClientOptions();
         final ProtonClient client = ProtonClient.create(vertx);

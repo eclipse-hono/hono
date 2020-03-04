@@ -23,10 +23,18 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Configuration class. Holds all the parameters to execute a command.
+ * <p>
+ * A default instance will be created at startup and it will be cloned and modified with custom
+ * parameter for the execution of the command.
+ */
 public class ClientConfig implements  Cloneable{
     public static final String TYPE_TELEMETRY = "telemetry";
     public static final String TYPE_EVENT = "event";
     public static final String TYPE_ALL = "all";
+
+    public ClientConfigProperties honoClientConfig;
 
     public String tenantId;
     public String deviceId;
@@ -36,7 +44,18 @@ public class ClientConfig implements  Cloneable{
     public String messageAddress;
     public String payload;
 
-    public ClientConfig(String tenantId, String deviceId, String messageType, int connectionRetryInterval, int requestTimeoutInSecs, String messageAddress, String payload) {
+    /**
+     * Constructor.
+     *
+     * @param tenantId Parameter for command execution
+     * @param deviceId Parameter for command execution
+     * @param messageType Parameter for command execution
+     * @param connectionRetryInterval Parameter for command execution
+     * @param requestTimeoutInSecs Parameter for command execution
+     * @param messageAddress Parameter for command execution
+     * @param payload Parameter for command execution
+     */
+    public ClientConfig(final String tenantId, final String deviceId, final String messageType, final int connectionRetryInterval, final int requestTimeoutInSecs, final String messageAddress, final String payload) {
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.messageType = messageType;
@@ -46,6 +65,9 @@ public class ClientConfig implements  Cloneable{
         this.messageAddress = messageAddress;
     }
 
+    /**
+     * MessageTypes class container.
+     */
     @Component
     public static class MessageTypeProvider extends ValueProviderSupport {
 
@@ -56,17 +78,16 @@ public class ClientConfig implements  Cloneable{
         };
 
         @Override
-        public List<CompletionProposal> complete(MethodParameter parameter, CompletionContext completionContext, String[] hints) {
+        public List<CompletionProposal> complete(final MethodParameter parameter, final CompletionContext completionContext, final String[] hints) {
             return Arrays.stream(VALUES).map(CompletionProposal::new).collect(Collectors.toList());
         }
-    }
 
-    public ClientConfigProperties honoClientConfig;
+    }
 
     @Override
     public Object clone() throws CloneNotSupportedException {
-        ClientConfigProperties cfp = new ClientConfigProperties(this.honoClientConfig);
-        ClientConfig clone = new ClientConfig(this.tenantId, this.deviceId, this.messageType, this.connectionRetryInterval, this.requestTimeoutInSecs, this.messageAddress, this.payload);
+        final ClientConfigProperties cfp = new ClientConfigProperties(this.honoClientConfig);
+        final ClientConfig clone = new ClientConfig(this.tenantId, this.deviceId, this.messageType, this.connectionRetryInterval, this.requestTimeoutInSecs, this.messageAddress, this.payload);
         clone.honoClientConfig = cfp;
         return clone;
     }

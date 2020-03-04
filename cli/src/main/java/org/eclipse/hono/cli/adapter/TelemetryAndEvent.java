@@ -33,7 +33,13 @@ import org.eclipse.hono.cli.client.ClientConfig;
  */
 public class TelemetryAndEvent extends AmqpCliClient {
 
-    public TelemetryAndEvent(Vertx vertx, Context ctx, ClientConfig clientConfig) {
+    /**
+     * Constructor to create the config environment for the execution of the command.
+     * @param vertx The instance of vert.x connection.
+     * @param ctx The context of vert.x connection.
+     * @param clientConfig The class with all config parameters .
+     */
+    public TelemetryAndEvent(final Vertx vertx, final Context ctx, final ClientConfig clientConfig) {
         this.vertx = vertx;
         this.ctx = ctx;
         this.clientConfig = clientConfig;
@@ -46,8 +52,11 @@ public class TelemetryAndEvent extends AmqpCliClient {
 //        this.clientConfig = clientConfig;
 //    }
 
-
-    public void start(CountDownLatch latch){
+    /**
+     * Entrypoint to start the command.
+     * @param latch The handle to signal the ended execution and return to the shell.
+     */
+    public void start(final CountDownLatch latch){
         this.latch = latch;
         final CompletableFuture<ProtonDelivery> messageSent = new CompletableFuture<>();
 

@@ -39,30 +39,42 @@ import java.util.concurrent.TimeUnit;
  */
 public class Commander extends AbstractCliClient {
     /**
-     * Spring Shell inputReader
+     * To signal the CLI main class of the ended execution.
+     */
+    CountDownLatch latch;
+    /**
+     * Spring Shell inputReader.
      */
     private final InputReader inputReader;
     /**
-     * To execute commands in an other thread
+     * To execute commands in an other thread.
      */
     private WorkerExecutor workerExecutor;
     /**
-     * Configuration used for the connection
+     * Configuration used for the connection.
      */
     private final ClientConfig clientConfig;
-    /**
-     * To signal the CLI main class of the ended execution
-     */
-    CountDownLatch latch;
 
-    public Commander(ApplicationClientFactory clientFactory, Vertx vertx, ClientConfig clientConfig, InputReader inputReader) {
+
+    /**
+     * Constructor to create the config environment for the execution of the command.
+     * @param clientFactory The factory with client's methods.
+     * @param vertx The instance of vert.x connection.
+     * @param clientConfig The class with all config parameters.
+     * @param inputReader The shell's inputReader.
+     */
+    public Commander(final ApplicationClientFactory clientFactory, final Vertx vertx, final ClientConfig clientConfig, final InputReader inputReader) {
         this.clientFactory = clientFactory;
         this.vertx = vertx;
         this.clientConfig = clientConfig;
         this.inputReader = inputReader;
     }
 
-    public void start(CountDownLatch latch){
+    /**
+     * Entrypoint to start the command.
+     * @param latch The handle to signal the ended execution and return to the shell.
+     */
+    public void start(final CountDownLatch latch){
         this.latch = latch;
         workerExecutor = vertx.createSharedWorkerExecutor("user-input-pool", 3, TimeUnit.HOURS.toNanos(1));
         clientFactory.connect().setHandler(connectAttempt -> {
@@ -75,7 +87,7 @@ public class Commander extends AbstractCliClient {
         });
     }
 
-    public void startCommandClient(final HonoConnection connection) {
+    private void startCommandClient(final HonoConnection connection) {
         getCommandFromUser()
         .compose(this::processCommand)
         .setHandler(sendAttempt -> startCommandClient(connection));
