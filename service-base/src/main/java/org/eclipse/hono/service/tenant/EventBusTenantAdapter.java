@@ -43,7 +43,10 @@ import io.vertx.core.json.JsonObject;
  * In particular, this base class provides support for receiving service invocation request messages
  * via vert.x' event bus and routing them to specific methods accepting the
  * query parameters contained in the request message.
+ * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
+ *             Please use {@link org.eclipse.hono.service.tenant.AbstractTenantAmqpEndpoint} based implementation in the future.
  */
+@Deprecated
 public abstract class EventBusTenantAdapter extends EventBusService implements Verticle {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant";

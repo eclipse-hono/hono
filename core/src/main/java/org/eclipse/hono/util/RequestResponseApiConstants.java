@@ -129,6 +129,56 @@ public abstract class RequestResponseApiConstants {
     }
 
     /**
+     * Creates an AMQP message from a result to a service invocation.
+     *
+     * @param endpoint The service endpoint that the operation has been invoked on.
+     * @param tenantId The id of the tenant (may be {@code null}).
+     * @param request The request message.
+     * @param result The result message.
+     * @return The AMQP message.
+     * @throws NullPointerException if endpoint, request or result is {@code null}.
+     * @throws IllegalArgumentException if the result does not contain a correlation ID.
+     */
+    public static final Message getAmqpReply(final String endpoint, final String tenantId, final Message request, final RequestResponseResult<JsonObject> result) {
+
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(request);
+        Objects.requireNonNull(result);
+
+        final Object correlationId = MessageHelper.getCorrelationId(request);
+
+        if (correlationId == null) {
+            throw new IllegalArgumentException("request must contain correlation ID");
+        }
+
+        final String deviceId = MessageHelper.getDeviceId(request);
+
+        final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
+
+        final Message message = ProtonHelper.message();
+        message.setMessageId(UUID.randomUUID().toString());
+        message.setCorrelationId(correlationId.toString());
+        message.setAddress(address.toString());
+
+        final Map<String, Object> map = new HashMap<>();
+        map.put(MessageHelper.APP_PROPERTY_STATUS, result.getStatus());
+        if (tenantId != null) {
+            map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
+        if (deviceId != null) {
+            map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        }
+        if (result.getCacheDirective() != null) {
+            map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, result.getCacheDirective().toString());
+        }
+        message.setApplicationProperties(new ApplicationProperties(map));
+
+        MessageHelper.setJsonPayload(message, result.getPayload());
+
+        return message;
+    }
+
+    /**
      * Creates an AMQP (response) message for conveying an erroneous outcome of an operation.
      * 
      * @param status The status code.
