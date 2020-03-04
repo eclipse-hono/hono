@@ -31,6 +31,7 @@ import org.springframework.stereotype.Repository;
 import io.opentracing.Span;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
@@ -65,26 +66,27 @@ public final class FileBasedTenantBackend extends AbstractVerticle implements Te
     // Tenant management API
 
     @Override
-    public void createTenant(final Optional<String> tenantId, final Tenant tenantObj,
-            final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
-        tenantService.createTenant(tenantId, tenantObj, span, resultHandler);
+    public Future<OperationResult<Id>> createTenant(final Optional<String> tenantId, final Tenant tenantObj,
+            final Span span) {
+        return tenantService.createTenant(tenantId, tenantObj, span);
     }
 
     @Override
-    public void readTenant(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
-        tenantService.readTenant(tenantId, span, resultHandler);
+    public Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
+        return tenantService.readTenant(tenantId, span);
     }
 
     @Override
-    public void updateTenant(final String tenantId, final Tenant tenantObj, final Optional<String> resourceVersion,
-            final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
-        tenantService.updateTenant(tenantId, tenantObj, resourceVersion, span, resultHandler);
+    public Future<OperationResult<Void>> updateTenant(final String tenantId, final Tenant tenantObj,
+            final Optional<String> resourceVersion,
+            final Span span) {
+        return tenantService.updateTenant(tenantId, tenantObj, resourceVersion, span);
     }
 
     @Override
-    public void deleteTenant(final String tenantId, final Optional<String> resourceVersion, final Span span,
-            final Handler<AsyncResult<Result<Void>>> resultHandler) {
-        tenantService.deleteTenant(tenantId, resourceVersion, span, resultHandler);
+    public Future<Result<Void>> deleteTenant(final String tenantId, final Optional<String> resourceVersion,
+            final Span span) {
+        return tenantService.deleteTenant(tenantId, resourceVersion, span);
     }
 
     // Tenant AMQP API

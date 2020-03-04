@@ -20,8 +20,7 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 
 /**
  * A service for managing tenant information.
@@ -39,7 +38,7 @@ public interface TenantManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *              An implementation should log (error) events on this span and it may set tags and use this span as the
      *              parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be
      *             <ul>
      *             <li><em>201 Created</em> if the tenant has been added successfully.</li>
@@ -49,7 +48,7 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/createTenant">
      *      Device Registry Management API - Create Tenant</a>
      */
-    void createTenant(Optional<String> tenantId, Tenant tenantObj, Span span, Handler<AsyncResult<OperationResult<Id>>> resultHandler);
+    Future<OperationResult<Id>> createTenant(Optional<String> tenantId, Tenant tenantObj, Span span);
 
     /**
      * Reads tenant configuration information for a tenant identifier.
@@ -58,7 +57,7 @@ public interface TenantManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation. The <em>status</em> will be
+     * @return A future indicating the outcome of the operation. The <em>status</em> will be
      *            <ul>
      *            <li><em>200 OK</em> if a tenant with the given ID is registered. The <em>payload</em> will contain the
      *            tenant's configuration information.</li>
@@ -68,7 +67,7 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/getTenant">
      *      Device Registry Management API - Get Tenant</a>
      */
-    void readTenant(String tenantId, Span span, Handler<AsyncResult<OperationResult<Tenant>>> resultHandler);
+    Future<OperationResult<Tenant>> readTenant(String tenantId, Span span);
 
     /**
      * Updates configuration information of a tenant.
@@ -79,7 +78,7 @@ public interface TenantManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *             An implementation should log (error) events on this span and it may set tags and use this span as the
      *             parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be
      *             <ul>
      *             <li><em>204 No Content</em> if the tenant has been updated successfully.</li>
@@ -89,8 +88,8 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/updateTenant">
      *      Device Registry Management API - Update Tenant</a>
      */
-    void updateTenant(String tenantId, Tenant tenantObj, Optional<String> resourceVersion,
-            Span span, Handler<AsyncResult<OperationResult<Void>>> resultHandler);
+    Future<OperationResult<Void>> updateTenant(String tenantId, Tenant tenantObj, Optional<String> resourceVersion,
+            Span span);
 
     /**
      * Removes a tenant.
@@ -100,7 +99,7 @@ public interface TenantManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *              An implementation should log (error) events on this span and it may set tags and use this span as the
      *              parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be
      *             <ul>
      *             <li><em>204 No Content</em> if the tenant has been removed successfully.</li>
@@ -110,5 +109,5 @@ public interface TenantManagementService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/deleteTenant">
      *      Device Registry Management API - Delete Tenant</a>
      */
-    void deleteTenant(String tenantId, Optional<String> resourceVersion, Span span, Handler<AsyncResult<Result<Void>>> resultHandler);
+    Future<Result<Void>> deleteTenant(String tenantId, Optional<String> resourceVersion, Span span);
 }
