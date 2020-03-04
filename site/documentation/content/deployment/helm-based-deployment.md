@@ -52,7 +52,7 @@ The image names that Hono should use for starting up containers can be configure
 
 ```yaml
 deviceRegistryExample:
-  imageName: "my.registry.io/eclipse/hono-service-device-registry:1.0.3-CUSTOM"
+  imageName: "my.registry.io/eclipse/hono-service-device-registry-file:1.0.3-CUSTOM"
 authServer:
   imageName: "my.registry.io/eclipse/hono-service-auth:1.0.3-CUSTOM"
 deviceConnectionService:
