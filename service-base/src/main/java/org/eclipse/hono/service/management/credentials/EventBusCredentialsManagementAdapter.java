@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -30,7 +29,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -110,12 +108,9 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "missing payload"));
         } else {
             resultFuture = credentialsFromPayload(request)
-                    .compose(secrets -> {
-                        final Promise<OperationResult<Void>> result = Promise.promise();
-                        getService().updateCredentials(tenantId, deviceId, secrets, resourceVersion, span, result);
-                        return result.future()
-                                .map(res -> res.createResponse(request, id -> null).setDeviceId(deviceId));
-                    });
+                    .compose(secrets -> getService()
+                            .updateCredentials(tenantId, deviceId, secrets, resourceVersion, span)
+                            .map(res -> res.createResponse(request, id -> null).setDeviceId(deviceId)));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -207,23 +202,20 @@ public abstract class EventBusCredentialsManagementAdapter extends EventBusServi
         final String deviceId = request.getDeviceId();
         final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId, getClass().getSimpleName());
+        final Span span = AbstractHttpEndpoint
+                .newChildSpan(SPAN_NAME_GET_CREDENTIAL, spanContext, tracer, tenantId, deviceId,
+                        getClass().getSimpleName());
 
-        final Promise<OperationResult<List<CommonCredential>>> getResult = Promise.promise();
-        getService().readCredentials(tenantId, deviceId, span, getResult);
-
-        final Future<EventBusMessage> resultFuture = getResult.future()
-                .map(res -> {
-                    return res.createResponse(request, credentials -> {
-                        final JsonObject ret = new JsonObject();
-                        final JsonArray credentialsArray = new JsonArray();
-                        for (final CommonCredential credential : credentials) {
-                            credentialsArray.add(JsonObject.mapFrom(credential));
-                        }
-                        ret.put(RegistryManagementConstants.CREDENTIALS_OBJECT, credentialsArray);
-                        return ret;
-                    }).setDeviceId(deviceId);
-                });
+        final Future<EventBusMessage> resultFuture = getService().readCredentials(tenantId, deviceId, span)
+                .map(res -> res.createResponse(request, credentials -> {
+                    final JsonObject ret = new JsonObject();
+                    final JsonArray credentialsArray = new JsonArray();
+                    for (final CommonCredential credential : credentials) {
+                        credentialsArray.add(JsonObject.mapFrom(credential));
+                    }
+                    ret.put(RegistryManagementConstants.CREDENTIALS_OBJECT, credentialsArray);
+                    return ret;
+                }).setDeviceId(deviceId));
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
 
