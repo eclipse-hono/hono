@@ -69,6 +69,7 @@ public class ClientConfigPropertiesTest {
         other.setReconnectMinDelay(100);
         other.setRequestTimeout(2000);
         other.setSendMessageTimeout(1000);
+        other.setServerRole("role");
         other.setTlsEnabled(true);
         other.setUsername("user");
 
@@ -95,6 +96,7 @@ public class ClientConfigPropertiesTest {
         assertThat(newProps.getReconnectMinDelay()).isEqualTo(100);
         assertThat(newProps.getRequestTimeout()).isEqualTo(2000);
         assertThat(newProps.getSendMessageTimeout()).isEqualTo(1000);
+        assertThat(newProps.getServerRole()).isEqualTo("role");
         assertThat(newProps.isTlsEnabled()).isTrue();
         assertThat(newProps.getUsername()).isEqualTo("user");
         // AbstractConfig props

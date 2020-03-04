@@ -386,14 +386,19 @@ public class HonoConnectionImpl implements HonoConnection {
         executeOnContext(ignore -> {
 
             if (isConnectedInternal()) {
-                log.debug("already connected to server [{}:{}]", connectionFactory.getHost(),
-                        connectionFactory.getPort());
+                log.debug("already connected to server [{}:{}, role: {}]",
+                        connectionFactory.getHost(),
+                        connectionFactory.getPort(),
+                        connectionFactory.getServerRole());
                 wrappedConnectionHandler.handle(Future.succeededFuture(this));
             } else if (connecting.compareAndSet(false, true)) {
                 deferredConnectionCheckHandler.setConnectionAttemptInProgress();
 
-                log.debug("starting attempt [#{}] to connect to server [{}:{}]",
-                        connectAttempts.get() + 1, connectionFactory.getHost(), connectionFactory.getPort());
+                log.debug("starting attempt [#{}] to connect to server [{}:{}, role: {}]",
+                        connectAttempts.get() + 1,
+                        connectionFactory.getHost(),
+                        connectionFactory.getPort(),
+                        connectionFactory.getServerRole());
 
                 clientOptions = options;
                 connectionFactory.connect(
@@ -418,9 +423,12 @@ public class HonoConnectionImpl implements HonoConnection {
                                             new ClientErrorException(HttpURLConnection.HTTP_CONFLICT,
                                                     "client is already shut down")));
                                 } else {
-                                    log.debug("attempt [#{}]: connected to server [{}:{}]; remote container: {}",
-                                            connectAttempts.get() + 1, connectionFactory.getHost(),
-                                            connectionFactory.getPort(), newConnection.getRemoteContainer());
+                                    log.debug("attempt [#{}]: connected to server [{}:{}, role: {}]; remote container: {}",
+                                            connectAttempts.get() + 1,
+                                            connectionFactory.getHost(),
+                                            connectionFactory.getPort(),
+                                            connectionFactory.getServerRole(),
+                                            newConnection.getRemoteContainer());
                                     setConnection(newConnection);
                                     wrappedConnectionHandler.handle(Future.succeededFuture(this));
                                 }
@@ -438,11 +446,16 @@ public class HonoConnectionImpl implements HonoConnection {
             final Handler<ProtonConnection> connectionLossHandler) {
 
         if (remoteClose.failed()) {
-            log.info("remote server [{}:{}] closed connection with error condition: {}",
-                    connectionFactory.getHost(), connectionFactory.getPort(), remoteClose.cause().getMessage());
+            log.info("remote server [{}:{}, role: {}] closed connection with error condition: {}",
+                    connectionFactory.getHost(),
+                    connectionFactory.getPort(),
+                    connectionFactory.getServerRole(),
+                    remoteClose.cause().getMessage());
         } else {
-            log.info("remote server [{}:{}] closed connection", connectionFactory.getHost(),
-                    connectionFactory.getPort());
+            log.info("remote server [{}:{}, role: {}] closed connection",
+                    connectionFactory.getHost(),
+                    connectionFactory.getPort(),
+                    connectionFactory.getServerRole());
         }
         connection.disconnectHandler(null);
         connection.close();
@@ -454,7 +467,10 @@ public class HonoConnectionImpl implements HonoConnection {
         if (con != connection) {
             log.warn("cannot handle failure of unknown connection");
         } else {
-            log.debug("lost connection to server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+            log.debug("lost connection to server [{}:{}, role: {}]",
+                    connectionFactory.getHost(),
+                    connectionFactory.getPort(),
+                    connectionFactory.getServerRole());
             handleConnectionLoss(connectionLossHandler);
         }
     }
@@ -533,8 +549,11 @@ public class HonoConnectionImpl implements HonoConnection {
         }
         final int reconnectAttempt = connectAttempts.getAndIncrement();
         if (clientConfigProperties.getReconnectAttempts() - reconnectAttempt == 0) {
-            log.info("max number of attempts [{}] to re-connect to peer [{}:{}] have been made, giving up",
-                    clientConfigProperties.getReconnectAttempts(), connectionFactory.getHost(), connectionFactory.getPort());
+            log.info("max number of attempts [{}] to re-connect to server [{}:{}, role: {}] have been made, giving up",
+                    clientConfigProperties.getReconnectAttempts(),
+                    connectionFactory.getHost(),
+                    connectionFactory.getPort(),
+                    connectionFactory.getServerRole());
             clearState();
             failConnectionAttempt(connectionFailureCause, connectionHandler);
 
@@ -574,9 +593,17 @@ public class HonoConnectionImpl implements HonoConnection {
      */
     private void logConnectionError(final Throwable connectionFailureCause) {
         if (isNoteworthyError(connectionFailureCause)) {
-            log.warn("connection attempt failed", connectionFailureCause);
+            log.warn("attempt to connect to server [{}:{}, role: {}] failed",
+                    clientConfigProperties.getHost(),
+                    clientConfigProperties.getPort(),
+                    connectionFactory.getServerRole(),
+                    connectionFailureCause);
         } else {
-            log.debug("connection attempt failed", connectionFailureCause);
+            log.debug("attempt to connect to server [{}:{}, role: {}] failed",
+                    clientConfigProperties.getHost(),
+                    clientConfigProperties.getPort(),
+                    connectionFactory.getServerRole(),
+                    connectionFailureCause);
         }
     }
 
@@ -590,8 +617,11 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void failConnectionAttempt(final Throwable connectionFailureCause, final Handler<AsyncResult<HonoConnection>> connectionHandler) {
 
-        log.info("stopping connection attempt to server [host: {}, port: {}] due to terminal error",
-                connectionFactory.getHost(), connectionFactory.getPort(), connectionFailureCause);
+        log.info("stopping connection attempt to server [{}:{}, role: {}] due to terminal error",
+                connectionFactory.getHost(),
+                connectionFactory.getPort(),
+                connectionFactory.getServerRole(),
+                connectionFailureCause);
 
         final ServiceInvocationException serviceInvocationException;
         if (connectionFailureCause == null) {
@@ -981,8 +1011,11 @@ public class HonoConnectionImpl implements HonoConnection {
                 // use a timeout slightly higher than the one used in closeConnection()
                 final int timeout = getCloseConnectionTimeout() + 20;
                 if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
-                    log.warn("Disconnecting from the server [{}:{}] timed out after {}ms",
-                            connectionFactory.getHost(), connectionFactory.getPort(), timeout);
+                    log.warn("Disconnecting from server [{}:{}, role: {}] timed out after {}ms",
+                            connectionFactory.getHost(),
+                            connectionFactory.getPort(),
+                            connectionFactory.getServerRole(),
+                            timeout);
                 }
             } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -1037,12 +1070,18 @@ public class HonoConnectionImpl implements HonoConnection {
                     connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
                     final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
                         if (remoteClose.succeeded()) {
-                            log.info("closed connection to container [{}] at [{}:{}]",
-                                    connectionToClose.getRemoteContainer(), connectionFactory.getHost(), connectionFactory.getPort());
+                            log.info("closed connection to container [{}] at [{}:{}, role: {}]",
+                                    connectionToClose.getRemoteContainer(),
+                                    connectionFactory.getHost(),
+                                    connectionFactory.getPort(),
+                                    connectionFactory.getServerRole());
                         } else {
-                            log.info("closed connection to container [{}] at [{}:{}]",
-                                    connectionToClose.getRemoteContainer(), connectionFactory.getHost(),
-                                    connectionFactory.getPort(), remoteClose.cause());
+                            log.info("closed connection to container [{}] at [{}:{}, role: {}]",
+                                    connectionToClose.getRemoteContainer(),
+                                    connectionFactory.getHost(),
+                                    connectionFactory.getPort(),
+                                    connectionFactory.getServerRole(),
+                                    remoteClose.cause());
                         }
                         clearState();
                         r.complete();
@@ -1058,12 +1097,18 @@ public class HonoConnectionImpl implements HonoConnection {
                             closeHandler.handle(remoteClose);
                         }
                     });
-                    log.info("closing connection to container [{}] at [{}:{}] ...",
-                            connectionToClose.getRemoteContainer(), connectionFactory.getHost(), connectionFactory.getPort());
+                    log.info("closing connection to container [{}] at [{}:{}, role: {}] ...",
+                            connectionToClose.getRemoteContainer(),
+                            connectionFactory.getHost(),
+                            connectionFactory.getPort(),
+                            connectionFactory.getServerRole());
                     connectionToClose.close();
                 }).setHandler(handler);
             } else {
-                log.info("connection to server [{}:{}] already closed", connectionFactory.getHost(), connectionFactory.getPort());
+                log.info("connection to server [{}:{}, role: {}] already closed",
+                        connectionFactory.getHost(),
+                        connectionFactory.getPort(),
+                        connectionFactory.getServerRole());
                 handler.handle(Future.succeededFuture());
             }
         }

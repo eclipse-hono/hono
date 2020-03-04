@@ -94,6 +94,7 @@ public class ClientConfigProperties extends AbstractConfig {
     private long sendMessageTimeoutMillis = DEFAULT_SEND_MESSAGE_TIMEOUT;
     private boolean tlsEnabled = false;
     private String username;
+    private String serverRole = "unknown";
 
     /**
      * Creates new properties with default values.
@@ -127,6 +128,7 @@ public class ClientConfigProperties extends AbstractConfig {
         this.reconnectDelayIncrementMillis = otherProperties.reconnectDelayIncrementMillis;
         this.requestTimeoutMillis = otherProperties.requestTimeoutMillis;
         this.sendMessageTimeoutMillis = otherProperties.sendMessageTimeoutMillis;
+        this.serverRole = otherProperties.serverRole;
         this.tlsEnabled = otherProperties.tlsEnabled;
         this.username = otherProperties.username;
     }
@@ -278,15 +280,16 @@ public class ClientConfigProperties extends AbstractConfig {
 
         if (username == null && password == null && credentialsPath != null) {
             try (FileInputStream fis = new FileInputStream(credentialsPath)) {
-                LOG.info("loading credentials for [{}] from [{}]", host, credentialsPath);
+                LOG.info("loading credentials for [{}:{}, role: {}] from [{}]",
+                        host, port, serverRole, credentialsPath);
                 final Properties props = new Properties();
                 props.load(fis);
                 this.username = props.getProperty("username");
                 this.password = Optional.ofNullable(props.getProperty("password"))
                         .map(pwd -> pwd.toCharArray()).orElse(null);
             } catch (IOException e) {
-                LOG.warn("could not load client credentials for [{}] from file [{}]",
-                        host, credentialsPath, e);
+                LOG.warn("could not load client credentials for [{}:{}, role: {}] from file [{}]",
+                        host, port, serverRole, credentialsPath, e);
             }
         }
     }
@@ -756,5 +759,28 @@ public class ClientConfigProperties extends AbstractConfig {
         } else {
             this.idleTimeoutMillis = idleTimeoutMillis;
         }
+    }
+
+    /**
+     * Sets the name of the role that the server plays from the client's perspective.
+     * <p>
+     * The default value of this property is <em>unknown</em>.
+     * 
+     * @param roleName The name.
+     * @throws NullPointerException if name is {@code null}.
+     */
+    public final void setServerRole(final String roleName) {
+        this.serverRole = Objects.requireNonNull(roleName);
+    }
+
+    /**
+     * Gets the name of the role that the server plays from the client's perspective.
+     * <p>
+     * The default value of this property is <em>unknown</em>.
+     * 
+     * @return The name.
+     */
+    public final String getServerRole() {
+        return serverRole;
     }
 }

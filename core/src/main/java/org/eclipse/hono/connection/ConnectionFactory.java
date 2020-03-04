@@ -56,6 +56,15 @@ public interface ConnectionFactory {
     String getPathSeparator();
 
     /**
+     * Gets the name of the role that the server plays from the client's perspective.
+     * 
+     * @return The name or {@code null} if not set.
+     */
+    default String getServerRole() {
+        return null;
+    }
+
+    /**
      * Connects to a server.
      *
      * @param options The client options to use for connecting. If {@code null} default options will be used.

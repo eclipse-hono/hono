@@ -105,6 +105,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public ClientConfigProperties downstreamSenderFactoryConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
+        config.setServerRole("AMQP Messaging Network");
         customizeDownstreamSenderFactoryConfig(config);
         return config;
     }
@@ -162,6 +163,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public RequestResponseClientConfigProperties registrationClientFactoryConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        config.setServerRole("Device Registration");
         customizeRegistrationClientFactoryConfig(config);
         return config;
     }
@@ -225,6 +227,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public RequestResponseClientConfigProperties credentialsClientFactoryConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        config.setServerRole("Credentials");
         customizeCredentialsClientFactoryConfig(config);
         return config;
     }
@@ -288,6 +291,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public RequestResponseClientConfigProperties tenantServiceClientConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        config.setServerRole("Tenant");
         customizeTenantClientFactoryConfig(config);
         return config;
     }
@@ -352,6 +356,7 @@ public abstract class AbstractAdapterConfig {
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
     public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        config.setServerRole("Device Connection");
         customizeDeviceConnectionClientFactoryConfig(config);
         return config;
     }
@@ -404,7 +409,23 @@ public abstract class AbstractAdapterConfig {
     @ConfigurationProperties(prefix = "hono.command")
     @Bean
     public ClientConfigProperties commandConsumerFactoryConfig() {
-        return new ClientConfigProperties();
+        final ClientConfigProperties config = new ClientConfigProperties();
+        config.setServerRole("Command & Control");
+        customizeCommandConsumerFactoryConfig(config);
+        return config;
+    }
+
+    /**
+     * Further customizes the client properties provided by the {@link #commandConsumerFactoryConfig()}
+     * method.
+     * <p>
+     * This method does nothing by default. Subclasses may override this method to set additional
+     * properties programmatically.
+     *
+     * @param config The client configuration to customize.
+     */
+    protected void customizeCommandConsumerFactoryConfig(final ClientConfigProperties config) {
+        // empty by default
     }
 
     /**
@@ -422,31 +443,24 @@ public abstract class AbstractAdapterConfig {
      * Exposes a factory for creating clients for receiving upstream commands
      * via the AMQP Messaging Network.
      *
-     * @param gatewayMapper The component to use for mapping device IDs to gateway IDs.
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public CommandConsumerFactory commandConsumerFactory(final GatewayMapper gatewayMapper) {
-        return CommandConsumerFactory.create(commandConsumerConnection(), gatewayMapper);
+    public CommandConsumerFactory commandConsumerFactory() {
+        return CommandConsumerFactory.create(commandConsumerConnection(), gatewayMapper());
     }
 
     /**
      * Exposes the component for mapping a device id to a corresponding gateway id.
      *
-     * @param registrationClientFactory The factory to use for creating clients for the Device Registration service.
-     * @param deviceConnectionClientFactory The factory to use for creating clients for accessing device connection information.
-     * @param tracer The Open Tracing tracer to use for tracking the processing of requests.
      * @return The newly created mapper instance.
      */
     @Bean
     @Scope("prototype")
-    public GatewayMapper gatewayMapper(
-            final RegistrationClientFactory registrationClientFactory,
-            final BasicDeviceConnectionClientFactory deviceConnectionClientFactory,
-            final Tracer tracer) {
+    public GatewayMapper gatewayMapper() {
 
-        return GatewayMapper.create(registrationClientFactory, deviceConnectionClientFactory, tracer);
+        return GatewayMapper.create(registrationClientFactory(), deviceConnectionClientFactory(), getTracer());
     }
 
     /**
