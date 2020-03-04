@@ -275,12 +275,11 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void readTenant(final String tenantId, final Span span, final Handler<AsyncResult<OperationResult<Tenant>>> resultHandler) {
+    public Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, span)));
+        return Future.succeededFuture(getTenantResult(tenantId, span));
     }
 
     OperationResult<Tenant> getTenantResult(final String tenantId, final Span span) {
@@ -345,14 +344,13 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void deleteTenant(final String tenantId, final Optional<String> resourceVersion, final Span span,
-            final Handler<AsyncResult<Result<Void>>> resultHandler) {
+    public Future<Result<Void>> deleteTenant(final String tenantId, final Optional<String> resourceVersion,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(resultHandler);
         Objects.requireNonNull(resourceVersion);
 
-        resultHandler.handle(Future.succeededFuture(removeTenant(tenantId, resourceVersion, span)));
+        return Future.succeededFuture(removeTenant(tenantId, resourceVersion, span));
     }
 
     Result<Void> removeTenant(final String tenantId, final Optional<String> resourceVersion, final Span span) {
@@ -381,15 +379,14 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void createTenant(final Optional<String> tenantId, final Tenant tenantSpec,
-            final Span span, final Handler<AsyncResult<OperationResult<Id>>> resultHandler) {
+    public Future<OperationResult<Id>> createTenant(final Optional<String> tenantId, final Tenant tenantSpec,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
-        Objects.requireNonNull(resultHandler);
 
         final String tenantIdValue = tenantId.orElseGet(this::generateTenantId);
-        resultHandler.handle(Future.succeededFuture(add(tenantIdValue, tenantSpec, span)));
+        return Future.succeededFuture(add(tenantIdValue, tenantSpec, span));
     }
 
     /**
@@ -440,18 +437,17 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
      * @param tenantId The tenant to update
      * @param tenantSpec The new tenant information
      * @param expectedResourceVersion The version identifier of the tenant information to update.
-     * @param resultHandler The handler receiving the result of the operation.
-     *
+     * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if either of the input parameters is {@code null}.
      */
     @Override
-    public void updateTenant(final String tenantId, final Tenant tenantSpec, final Optional<String> expectedResourceVersion,
-            final Span span, final Handler<AsyncResult<OperationResult<Void>>> resultHandler) {
+    public Future<OperationResult<Void>> updateTenant(final String tenantId, final Tenant tenantSpec,
+            final Optional<String> expectedResourceVersion,
+            final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(update(tenantId, tenantSpec, expectedResourceVersion, span)));
+        return Future.succeededFuture(update(tenantId, tenantSpec, expectedResourceVersion, span));
     }
 
     /**

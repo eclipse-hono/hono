@@ -22,8 +22,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
-import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -31,7 +29,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -109,12 +106,12 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
 
-            final Promise<OperationResult<Id>> addResult = Promise.promise();
-            getService().createTenant(tenantId, payload.mapTo(Tenant.class), span, addResult);
-            resultFuture = addResult.future().map(res -> {
-                final String createdTenantId = Optional.ofNullable(res.getPayload()).map(Id::getId).orElse(null);
-                return res.createResponse(request, JsonObject::mapFrom).setTenant(createdTenantId);
-            });
+            resultFuture = getService().createTenant(tenantId, payload.mapTo(Tenant.class), span)
+                    .map(res -> {
+                        final String createdTenantId = Optional.ofNullable(res.getPayload()).map(Id::getId)
+                                .orElse(null);
+                        return res.createResponse(request, JsonObject::mapFrom).setTenant(createdTenantId);
+                    });
         } else {
             log.debug("request contains malformed payload");
             TracingHelper.logError(span, "request contains malformed payload");
@@ -142,9 +139,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
 
-            final Promise<OperationResult<Void>> updateResult = Promise.promise();
-            getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span, updateResult);
-            resultFuture = updateResult.future()
+            resultFuture = getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span)
                     .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         } else {
             log.debug("request contains malformed payload");
@@ -170,9 +165,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         } else {
             log.debug("deleting tenant [{}]", tenantId);
 
-            final Promise<Result<Void>> removeResult = Promise.promise();
-            getService().deleteTenant(tenantId, resourceVersion, span, removeResult);
-            resultFuture = removeResult.future()
+            resultFuture = getService().deleteTenant(tenantId, resourceVersion, span)
                     .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
@@ -192,9 +185,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("retrieving tenant [id: {}]", tenantId);
-            final Promise<OperationResult<Tenant>> readResult = Promise.promise();
-            getService().readTenant(tenantId, span, readResult);
-            resultFuture = readResult.future()
+            resultFuture = getService().readTenant(tenantId, span)
                     .map(res -> res.createResponse(request, JsonObject::mapFrom).setTenant(tenantId));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);

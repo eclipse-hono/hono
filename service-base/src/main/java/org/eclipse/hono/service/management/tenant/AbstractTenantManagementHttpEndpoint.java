@@ -24,14 +24,12 @@ import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
@@ -163,21 +161,21 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
 
-            final Promise<OperationResult<Id>> result = Promise.promise();
-            result.future().setHandler(handler -> {
-                final OperationResult<Id> operationResult = handler.result();
+            getService().createTenant(Optional.ofNullable(tenantId), payload.mapTo(Tenant.class), span)
+                    .setHandler(handler -> {
+                        final OperationResult<Id> operationResult = handler.result();
 
-                final String createdTenantId = Optional.ofNullable(operationResult.getPayload()).map(Id::getId).orElse(null);
-                writeOperationResponse(
-                        ctx,
-                        operationResult,
-                        (response) -> response.putHeader(
-                                HttpHeaders.LOCATION,
-                                String.format("/%s/%s", getName(), createdTenantId)),
-                        span);
-            });
+                        final String createdTenantId = Optional.ofNullable(operationResult.getPayload()).map(Id::getId)
+                                .orElse(null);
+                        writeOperationResponse(
+                                ctx,
+                                operationResult,
+                                (response) -> response.putHeader(
+                                        HttpHeaders.LOCATION,
+                                        String.format("/%s/%s", getName(), createdTenantId)),
+                                span);
+                    });
 
-            getService().createTenant(Optional.ofNullable(tenantId), payload.mapTo(Tenant.class), span, result);
         } else {
             final String msg = "request contains malformed payload";
             logger.debug(msg);
@@ -196,23 +194,22 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
         final HttpServerResponse response = ctx.response();
 
         logger.debug("retrieving tenant [id: {}]", tenantId);
-        final Promise<OperationResult<Tenant>> result = Promise.promise();
-        result.future().setHandler(handler -> {
-            final OperationResult<Tenant> operationResult = handler.result();
-            final int status = operationResult.getStatus();
-            response.setStatusCode(status);
-            switch (status) {
-                case HttpURLConnection.HTTP_OK:
-                    operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
-                    HttpUtils.setResponseBody(response, JsonObject.mapFrom(operationResult.getPayload()));
-                    // falls through intentionally
-                default:
-                    Tags.HTTP_STATUS.set(span, status);
-                    span.finish();
-                    response.end();
-            }
-        });
-        getService().readTenant(tenantId, span, result);
+        getService().readTenant(tenantId, span)
+                .setHandler(handler -> {
+                    final OperationResult<Tenant> operationResult = handler.result();
+                    final int status = operationResult.getStatus();
+                    response.setStatusCode(status);
+                    switch (status) {
+                    case HttpURLConnection.HTTP_OK:
+                        operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
+                        HttpUtils.setResponseBody(response, JsonObject.mapFrom(operationResult.getPayload()));
+                        // falls through intentionally
+                    default:
+                        Tags.HTTP_STATUS.set(span, status);
+                        span.finish();
+                        response.end();
+                    }
+                });
     }
 
     private void updateTenant(final RoutingContext ctx) {
@@ -232,13 +229,10 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
             final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
-            final Promise<OperationResult<Void>> result = Promise.promise();
 
-            result.future().setHandler(handler -> {
-                writeOperationResponse(ctx, handler.result(), null, span);
-            });
+            getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span)
+                    .setHandler(handler -> writeOperationResponse(ctx, handler.result(), null, span));
 
-            getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span, result);
         } else {
             final String msg = "request contains malformed payload";
             logger.debug(msg);
@@ -259,13 +253,8 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
-        final Promise<Result<Void>> result = Promise.promise();
-
-        result.future().setHandler(handler -> {
-                    writeResponse(ctx, handler.result(), null, span);
-                });
-
-        getService().deleteTenant(tenantId, resourceVersion, span, result);
+        getService().deleteTenant(tenantId, resourceVersion, span)
+                .setHandler(handler -> writeResponse(ctx, handler.result(), null, span));
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {

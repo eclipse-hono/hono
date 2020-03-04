@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,6 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
@@ -79,18 +78,10 @@ public abstract class AbstractTenantServiceTest {
     public void testAddTenantFailsForDuplicateTenantId(final VertxTestContext ctx) {
 
         addTenant("tenant")
-        .compose(ok -> {
-                    final Promise<OperationResult<Id>> result = Promise.promise();
-                    getTenantManagementService().createTenant(
-                    Optional.of("tenant"),
-                    buildTenantPayload(), NoopSpan.INSTANCE,
-                            result);
-            return result.future();
-        })
-        .map(r -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_CONFLICT, r.getStatus());
-        }))
-        .setHandler(ctx.completing());
+                .compose(ok -> getTenantManagementService()
+                        .createTenant(Optional.of("tenant"), buildTenantPayload(), NoopSpan.INSTANCE))
+                .map(r -> ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CONFLICT, r.getStatus())))
+                .setHandler(ctx.completing());
     }
 
     /**
@@ -105,8 +96,8 @@ public abstract class AbstractTenantServiceTest {
         getTenantManagementService().createTenant(
                 Optional.empty(),
                 buildTenantPayload(),
-                NoopSpan.INSTANCE,
-                ctx.succeeding(s -> {
+                NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         final String id = s.getPayload().getId();
                         assertNotNull(id);
@@ -126,8 +117,8 @@ public abstract class AbstractTenantServiceTest {
         getTenantManagementService().createTenant(
                 Optional.of("tenant"),
                 buildTenantPayload(),
-                NoopSpan.INSTANCE,
-                ctx.succeeding(s -> {
+                NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         final String id = s.getPayload().getId();
                         final String version = s.getResourceVersion().orElse(null);
@@ -152,11 +143,9 @@ public abstract class AbstractTenantServiceTest {
             getTenantManagementService().deleteTenant(
                     "tenant",
                     Optional.empty(),
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
-                        ctx.verify(() -> {
-                            assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
-                        });
+                    NoopSpan.INSTANCE)
+                    .setHandler(ctx.succeeding(s -> {
+                        ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
             );
@@ -178,8 +167,8 @@ public abstract class AbstractTenantServiceTest {
             getTenantManagementService().deleteTenant(
                     "tenant",
                     Optional.of(version),
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
+                    NoopSpan.INSTANCE)
+                    .setHandler(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -202,8 +191,8 @@ public abstract class AbstractTenantServiceTest {
             getTenantManagementService().deleteTenant(
                     "tenant",
                     Optional.of(version + "abc"),
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
+                    NoopSpan.INSTANCE)
+                    .setHandler(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -227,8 +216,8 @@ public abstract class AbstractTenantServiceTest {
                     "tenant",
                     buildTenantPayload(),
                     Optional.of(version + "abc"),
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
+                    NoopSpan.INSTANCE)
+                    .setHandler(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -253,8 +242,8 @@ public abstract class AbstractTenantServiceTest {
                     "tenant",
                     buildTenantPayload(),
                     Optional.of(version),
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
+                    NoopSpan.INSTANCE)
+                    .setHandler(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -276,8 +265,8 @@ public abstract class AbstractTenantServiceTest {
                     "tenant",
                     buildTenantPayload(),
                     Optional.empty(),
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
+                    NoopSpan.INSTANCE)
+                    .setHandler(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -303,17 +292,17 @@ public abstract class AbstractTenantServiceTest {
                 .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
 
         addTenant("tenant", tenant)
-        .map(ok -> {
-            getTenantManagementService().createTenant(
-                    Optional.of("newTenant"),
-                    tenant,
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
-                        ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus()));
-                        ctx.completeNow();
-                    }));
-            return null;
-        });
+            .map(ok -> {
+                getTenantManagementService().createTenant(
+                        Optional.of("newTenant"),
+                        tenant,
+                        NoopSpan.INSTANCE)
+                        .setHandler(ctx.succeeding(s -> {
+                            ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus()));
+                            ctx.completeNow();
+                        }));
+                return null;
+            });
     }
 
     /**
@@ -490,15 +479,9 @@ public abstract class AbstractTenantServiceTest {
 
         addTenant("tenant")
         .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
-        .compose(ok -> {
-            final Promise<Result<Void>> result = Promise.promise();
-            getTenantManagementService().deleteTenant("tenant", Optional.empty(), NoopSpan.INSTANCE, result);
-            return result.future();
-        })
+        .compose(ok -> getTenantManagementService().deleteTenant("tenant", Optional.empty(), NoopSpan.INSTANCE))
         .compose(s -> {
-            ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
-            });
+            ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
             return assertTenantDoesNotExist(getTenantManagementService(), "tenant");
         })
         .setHandler(ctx.completing());
@@ -518,16 +501,13 @@ public abstract class AbstractTenantServiceTest {
 
         addTenant("tenant", origPayload)
         .compose(ok -> {
-            final Promise<OperationResult<Void>> updateResult = Promise.promise();
             final JsonObject updatedPayload = JsonObject.mapFrom(origPayload).copy();
             updatedPayload.put(RegistryManagementConstants.FIELD_EXT, extensions);
-            getTenantManagementService().updateTenant(
+            return getTenantManagementService().updateTenant(
                     "tenant",
                     updatedPayload.mapTo(Tenant.class),
                     Optional.empty(),
-                    NoopSpan.INSTANCE,
-                    updateResult);
-            return updateResult.future();
+                    NoopSpan.INSTANCE);
         }).compose(updateResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
@@ -569,14 +549,11 @@ public abstract class AbstractTenantServiceTest {
         .compose(ok -> {
             // WHEN updating the second tenant to use the same CA as the first tenant
             tenantTwo.setTrustedCertificateAuthorities(List.of(trustedCa));
-            final Promise<OperationResult<Void>> result = Promise.promise();
-            getTenantManagementService().updateTenant(
+            return getTenantManagementService().updateTenant(
                     "tenantTwo",
                     tenantTwo,
                     null,
-                    NoopSpan.INSTANCE,
-                    result);
-            return result.future();
+                    NoopSpan.INSTANCE);
         })
         .setHandler(ctx.succeeding(s -> {
             ctx.verify(() -> {
@@ -620,15 +597,14 @@ public abstract class AbstractTenantServiceTest {
             final String tenantId,
             final int expectedStatusCode) {
 
-        final Promise<OperationResult<Tenant>> result = Promise.promise();
-        svc.readTenant(tenantId, NoopSpan.INSTANCE, result);
-        return result.future().map(r -> {
-            if (r.getStatus() == expectedStatusCode) {
-                return r;
-            } else {
-                throw StatusCodeMapper.from(r.getStatus(), null);
-            }
-        });
+        return svc.readTenant(tenantId, NoopSpan.INSTANCE)
+                .map(r -> {
+                    if (r.getStatus() == expectedStatusCode) {
+                        return r;
+                    } else {
+                        throw StatusCodeMapper.from(r.getStatus(), null);
+                    }
+                });
     }
 
     /**
@@ -651,15 +627,14 @@ public abstract class AbstractTenantServiceTest {
      */
     protected Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenant) {
 
-        final Promise<OperationResult<Id>> result = Promise.promise();
-        getTenantManagementService().createTenant(Optional.ofNullable(tenantId), tenant, NoopSpan.INSTANCE, result);
-        return result.future().map(response -> {
-            if (response.getStatus() == HttpURLConnection.HTTP_CREATED) {
-                return response;
-            } else {
-                throw StatusCodeMapper.from(response.getStatus(), null);
-            }
-        });
+        return getTenantManagementService().createTenant(Optional.ofNullable(tenantId), tenant, NoopSpan.INSTANCE)
+                .map(response -> {
+                    if (response.getStatus() == HttpURLConnection.HTTP_CREATED) {
+                        return response;
+                    } else {
+                        throw StatusCodeMapper.from(response.getStatus(), null);
+                    }
+                });
     }
 
     /**

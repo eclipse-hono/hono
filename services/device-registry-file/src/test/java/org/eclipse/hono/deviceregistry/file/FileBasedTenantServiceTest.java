@@ -335,8 +335,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         svc.createTenant(
                 Optional.of("fancy-new-tenant"),
                 new Tenant(),
-                NoopSpan.INSTANCE,
-                ctx.succeeding(s -> {
+                NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         // THEN the request succeeds
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
@@ -361,8 +361,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         svc.deleteTenant(
                 "tenant",
                 Optional.empty(),
-                NoopSpan.INSTANCE,
-                ctx.succeeding(s -> {
+                NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         // THEN the update fails
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
@@ -388,8 +388,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 "tenant",
                 new Tenant(),
                 null,
-                NoopSpan.INSTANCE,
-                ctx.succeeding(s -> {
+                NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         // THEN the update fails
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
