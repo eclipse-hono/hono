@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -108,6 +108,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * @param otherProperties The properties to copy.
      */
     public ClientConfigProperties(final ClientConfigProperties otherProperties) {
+        super(otherProperties);
         this.amqpHostname = otherProperties.amqpHostname;
         this.connectTimeoutMillis = otherProperties.connectTimeoutMillis;
         this.credentialsPath = otherProperties.credentialsPath;

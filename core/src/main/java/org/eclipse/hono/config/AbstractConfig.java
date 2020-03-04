@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.config;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,6 +55,32 @@ public abstract class AbstractConfig {
     private FileFormat trustStoreFormat;
     private FileFormat keyFormat;
     private List<String> secureProtocols = Collections.singletonList("TLSv1.2");
+
+    /**
+     * Creates a new empty instance.
+     */
+    protected AbstractConfig() {
+    }
+
+    /**
+     * Creates a new instance from another instance.
+     * 
+     * @param other The other instance. All of the other instance's properties
+     *              are copied to the newly created instance.
+     */
+    protected AbstractConfig(final AbstractConfig other) {
+        this.certPath = other.certPath;
+        this.keyCertOptions = other.keyCertOptions;
+        this.keyFormat = other.keyFormat;
+        this.keyPath = other.keyPath;
+        this.keyStorePassword = other.keyStorePassword;
+        this.keyStorePath = other.keyStorePath;
+        this.pathSeparator = other.pathSeparator;
+        this.secureProtocols = new LinkedList<>(other.secureProtocols);
+        this.trustStoreFormat = other.trustStoreFormat;
+        this.trustStorePassword = other.trustStorePassword;
+        this.trustStorePath = other.trustStorePath;
+    }
 
     /**
      * Checks if a given port number is valid.

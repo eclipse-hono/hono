@@ -15,6 +15,9 @@ package org.eclipse.hono.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -144,5 +147,48 @@ public class AbstractConfigTest {
         cfg.setTrustStorePath(PREFIX_KEY_PATH + "doest-not-exist");
         assertThatThrownBy(() -> cfg.getTrustOptions())
             .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that the constructor copies all properties.
+     */
+    @Test
+    public void testConstructorCopiesAllProperties() {
+
+        final List<String> protocols = Collections.singletonList("TLS1.2");
+        final TestConfig other = new TestConfig();
+        other.setCertPath("cert/path");
+        other.setKeyFormat(FileFormat.PEM);
+        other.setKeyPath("key/path");
+        other.setKeyStorePath("keystore/path");
+        other.setKeyStorePassword("pwd");
+        other.setPathSeparator("::");
+        Collections.singletonList("TLS1.2");
+        other.setSecureProtocols(protocols);
+        other.setTrustStoreFormat(FileFormat.PKCS12);
+        other.setTrustStorePassword("tpwd");
+        other.setTrustStorePath("truststore/path");
+
+        final TestConfig newConfig = new TestConfig(other);
+        assertThat(newConfig.getCertPath()).isEqualTo("cert/path");
+        assertThat(newConfig.getKeyFormat()).isEqualTo(FileFormat.PEM);
+        assertThat(newConfig.getKeyPath()).isEqualTo("key/path");
+        assertThat(newConfig.getKeyStorePassword()).isEqualTo("pwd");
+        assertThat(newConfig.getKeyStorePath()).isEqualTo("keystore/path");
+        assertThat(newConfig.getPathSeparator()).isEqualTo("::");
+        assertThat(newConfig.getSecureProtocols()).hasSameElementsAs(protocols);
+        assertThat(newConfig.getTrustStoreFormat()).isEqualTo(FileFormat.PKCS12);
+        assertThat(newConfig.getTrustStorePassword()).isEqualTo("tpwd");
+        assertThat(newConfig.getTrustStorePath()).isEqualTo("truststore/path");
+    }
+
+    private class TestConfig extends AbstractConfig {
+        private TestConfig() {
+            super();
+        }
+
+        private TestConfig(final TestConfig other) {
+            super(other);
+        }
     }
 }
