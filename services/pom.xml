@@ -30,6 +30,7 @@
     <module>device-connection</module>
     <module>device-registry-base</module>
     <module>device-registry-file</module>
+    <module>device-registry-mongodb</module>
   </modules>
 
   <name>Hono Services</name>

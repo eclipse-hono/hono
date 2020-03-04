@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2020 Contributors to the Eclipse Foundation
+   
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+   
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+   
+    SPDX-License-Identifier: EPL-2.0
+ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-services</artifactId>
+        <version>1.2.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>hono-service-device-registry-mongodb</artifactId>
+    <name>Hono Mongodb Based Device Registry</name>
+    <description>A Mongodb based device registry for Hono implementing the Device Registration and Credentials APIs.
+    </description>
+    <url>https://www.eclipse.org/hono</url>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-service-device-registry-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-mongo-client</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>build-docker-image</id>
+            <activation>
+                <property>
+                    <name>docker.host</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <configuration>
+                            <images>
+                                <image>
+                                    <build>
+                                        <from>${java-base-image.name}</from>
+                                        <labels>
+                                            <implemented.api.1>Tenant</implemented.api.1>
+                                            <implemented.api.2>Device Registration</implemented.api.2>
+                                            <implemented.api.3>Credentials</implemented.api.3>
+                                        </labels>
+                                        <ports>
+                                            <port>5671</port>
+                                            <port>5672</port>
+                                            <port>8080</port>
+                                            <port>8443</port>
+                                            <port>${vertx.health.port}</port>
+                                        </ports>
+                                        <cmd>
+                                            <exec>
+                                                <arg>java</arg>
+                                                <arg>--illegal-access=permit</arg>
+                                                <arg>-Dvertx.cacheDirBase=/tmp</arg>
+                                                <arg>-Dloader.home=/opt/hono</arg>
+                                                <arg>-Dloader.path=extensions</arg>
+                                                <arg>-cp</arg>
+                                                <arg>/opt/hono/${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</arg>
+                                                <arg>org.springframework.boot.loader.PropertiesLauncher</arg>
+                                            </exec>
+                                        </cmd>
+                                        <assembly>
+                                            <mode>dir</mode>
+                                            <basedir>/</basedir>
+                                            <inline>
+                                                <fileSets>
+                                                    <fileSet>
+                                                        <directory>${project.build.directory}</directory>
+                                                        <outputDirectory>opt/hono</outputDirectory>
+                                                        <includes>
+                                                            <include>${project.artifactId}-${project.version}-${classifier.spring.boot.artifact}.jar</include>
+                                                        </includes>
+                                                    </fileSet>
+                                                </fileSets>
+                                            </inline>
+                                        </assembly>
+                                    </build>
+                                </image>
+                            </images>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>jaeger</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.jaegertracing</groupId>
+                    <artifactId>jaeger-client</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>docker-push-image</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>docker-push-image</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>push</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

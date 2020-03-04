@@ -1,0 +1,15 @@
+
+  ______     _ _                  _    _                   
+ |  ____|   | (_)                | |  | |                  
+ | |__   ___| |_ _ __  ___  ___  | |__| | ___  _ __   ___  
+ |  __| / __| | | '_ \/ __|/ _ \ |  __  |/ _ \| '_ \ / _ \ 
+ | |___| (__| | | |_) \__ \  __/ | |  | | (_) | | | | (_) |
+ |______\___|_|_| .__/|___/\___| |_|  |_|\___/|_| |_|\___/ 
+                | |                                        
+                |_|                                        
+
+Eclipse Hono Device Registry Server ${application.formatted-version}
+using Spring Boot ${spring-boot.formatted-version}
+
+Go to https://www.eclipse.org/hono for more information.
+
