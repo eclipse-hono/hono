@@ -14,7 +14,6 @@
 package org.eclipse.hono.deviceregistry.file;
 
 import java.net.HttpURLConnection;
-import java.time.Instant;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -22,10 +21,10 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -34,10 +33,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -290,7 +286,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             return OperationResult.ok(
                     HttpURLConnection.HTTP_OK,
                     tenant.getValue(),
-                    Optional.ofNullable(getCacheDirective()),
+                    Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                     Optional.ofNullable(tenant.getVersion()));
         }
     }
@@ -305,8 +301,8 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         } else {
             return TenantResult.from(
                     HttpURLConnection.HTTP_OK,
-                    convertTenant(tenantId, tenant.getValue(), true),
-                    getCacheDirective());
+                    DeviceRegistryUtils.convertTenant(tenantId, tenant.getValue(), true),
+                    DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()));
         }
     }
 
@@ -332,8 +328,8 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             } else {
                 return TenantResult.from(
                         HttpURLConnection.HTTP_OK,
-                        convertTenant(tenant.getKey(), tenant.getValue().getValue(), true),
-                        getCacheDirective());
+                        DeviceRegistryUtils.convertTenant(tenant.getKey(), tenant.getValue().getValue(), true),
+                        DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()));
             }
         }
     }
@@ -507,63 +503,6 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         }
     }
 
-    static JsonObject convertTenant(final String tenantId, final Tenant source) {
-        return convertTenant(tenantId, source, false);
-    }
-
-    static JsonObject convertTenant(final String tenantId, final Tenant source, final boolean filterAuthorities) {
-
-        final Instant now = Instant.now();
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(source);
-
-        final TenantObject target = TenantObject.from(tenantId, Optional.ofNullable(source.isEnabled()).orElse(true));
-        target.setResourceLimits(source.getResourceLimits());
-        target.setTracingConfig(source.getTracing());
-
-        Optional.ofNullable(source.getMinimumMessageSize())
-        .ifPresent(size -> target.setMinimumMessageSize(size));
-
-        Optional.ofNullable(source.getDefaults())
-        .map(JsonObject::new)
-        .ifPresent(defaults -> target.setDefaults(defaults));
-
-        Optional.ofNullable(source.getAdapters())
-                .filter(adapters -> !adapters.isEmpty())
-                .map(adapters -> adapters.stream()
-                                .map(adapter -> JsonObject.mapFrom(adapter))
-                                .map(json -> json.mapTo(org.eclipse.hono.util.Adapter.class))
-                                .collect(Collectors.toList()))
-                .ifPresent(adapters -> target.setAdapters(adapters));
-
-        Optional.ofNullable(source.getExtensions())
-        .map(JsonObject::new)
-        .ifPresent(extensions -> target.setProperty(RegistryManagementConstants.FIELD_EXT, extensions));
-
-        Optional.ofNullable(source.getTrustedCertificateAuthorities())
-        .map(list -> list.stream()
-                .filter(ca -> {
-                    if (filterAuthorities) {
-                        // filter out CAs which are not valid at this point in time
-                        return !now.isBefore(ca.getNotBefore()) && !now.isAfter(ca.getNotAfter());
-                    } else {
-                        return true;
-                    }
-                })
-                .map(ca -> JsonObject.mapFrom(ca))
-                .map(json -> {
-                    // validity period is not included in TenantObject
-                    json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE);
-                    json.remove(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER);
-                    return json;
-                })
-                .collect(JsonArray::new, JsonArray::add, JsonArray::add))
-        .ifPresent(authorities -> target.setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, authorities));
-
-        return JsonObject.mapFrom(target);
-    }
-
     private Map.Entry<String, Versioned<Tenant>> getByCa(final X500Principal subjectDn) {
 
         if (subjectDn == null) {
@@ -573,14 +512,6 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                     .filter(entry -> entry.getValue().getValue().hasTrustedCertificateAuthoritySubjectDN(subjectDn))
                     .findFirst()
                     .orElse(null);
-        }
-    }
-
-    private CacheDirective getCacheDirective() {
-        if (getConfig().getCacheMaxAge() > 0) {
-            return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());
-        } else {
-            return CacheDirective.noCacheDirective();
         }
     }
 
