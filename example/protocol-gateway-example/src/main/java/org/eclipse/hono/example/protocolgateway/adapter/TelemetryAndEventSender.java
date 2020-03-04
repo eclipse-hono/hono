@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 public class TelemetryAndEventSender extends ApplicationClient {
 
     private final AmqpCliClient client = new AmqpCliClient(vertx, ctx, clientConfig);
+
     /**
      * Sends message to Hono AMQP adapter.
      *
