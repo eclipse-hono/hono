@@ -25,6 +25,7 @@ import org.eclipse.hono.deviceregistry.file.FileBasedCredentialsConfigProperties
 import org.eclipse.hono.deviceregistry.file.FileBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
+import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantAmqpEndpoint;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -36,7 +37,6 @@ import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.RegistrationAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantManagementHttpEndpoint;
-import org.eclipse.hono.service.tenant.TenantAmqpEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -165,7 +165,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint tenantAmqpEndpoint() {
-        return new TenantAmqpEndpoint(vertx());
+        return new AutowiredTenantAmqpEndpoint(vertx());
     }
 
     /**

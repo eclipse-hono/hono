@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,10 +10,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
 package org.eclipse.hono.deviceregistry.service.tenant;
 
-import org.eclipse.hono.service.tenant.EventBusTenantAdapter;
+import io.vertx.core.Vertx;
+
+import org.eclipse.hono.service.tenant.AbstractTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,24 +25,30 @@ import org.springframework.stereotype.Component;
  * <p>
  * This wires up the actual service instance with the mapping to the AMQP endpoint. It is intended to be used
  * in a Spring Boot environment.
- * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
- *             Please use {@link org.eclipse.hono.service.tenant.AbstractTenantAmqpEndpoint} based implementation in the future.
  */
 @Component
-@Deprecated(forRemoval = true)
-public final class AutowiredTenantAdapter extends EventBusTenantAdapter {
+public class AutowiredTenantAmqpEndpoint extends AbstractTenantAmqpEndpoint {
 
     private TenantService service;
+
+    /**
+     * Creates a new tenant endpoint for a vertx instance.
+     *
+     * @param vertx The vertx instance to use.
+     */
+    @Autowired
+    public AutowiredTenantAmqpEndpoint(final Vertx vertx) {
+        super(vertx);
+    }
+
+    @Override
+    protected TenantService getService() {
+        return service;
+    }
 
     @Autowired
     @Qualifier("backend")
     public void setService(final TenantService service) {
         this.service = service;
     }
-
-    @Override
-    protected TenantService getService() {
-        return this.service;
-    }
-
 }

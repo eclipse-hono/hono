@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
  * in a Spring Boot environment.
  *
  * @deprecated This class will be removed in future versions as HTTP endpoint does not use event bus anymore.
- *             Please use {@link org.eclipse.hono.service.management.tenant.AbstractTenantManagementHttpEndpoint} based implementation in the future. *
+ *             Please use {@link org.eclipse.hono.service.management.tenant.AbstractTenantManagementHttpEndpoint} based implementation in the future.
  */
 @Component
 @ConditionalOnBean(TenantManagementService.class)
