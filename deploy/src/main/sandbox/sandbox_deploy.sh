@@ -170,7 +170,7 @@ docker service create $CREATE_OPTIONS --name ${hono.registration.service} -p 256
   --env SPRING_PROFILES_ACTIVE=dev,prometheus \
   --mount type=volume,source=device-registry,target=/var/lib/hono/device-registry \
   --mount type=volume,source=hono-extensions,target=/opt/hono/extensions,readonly \
-  ${docker.image.org-name}/hono-service-device-registry:$HONO_VERSION
+  ${docker.image.org-name}/hono-service-device-registry-file:$HONO_VERSION
 echo ... done
 
 echo

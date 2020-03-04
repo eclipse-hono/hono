@@ -23,7 +23,7 @@ IMAGES="hono-adapter-amqp-vertx \
         hono-adapter-sigfox-vertx \
         hono-service-auth \
         hono-service-device-connection \
-        hono-service-device-registry"
+        hono-service-device-registry-file"
 
 if [ -n "$TAG" ]
 then
