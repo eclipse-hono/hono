@@ -235,6 +235,17 @@ public final class MessageHelper {
     }
 
     /**
+     * Gets the value of a message's {@link #APP_PROPERTY_GATEWAY_ID} application property.
+     *
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     */
+    public static String getGatewayId(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_GATEWAY_ID, String.class);
+    }
+
+    /**
      * Gets the registration assertion conveyed in an AMQP 1.0 message.
      * <p>
      * The assertion is expected to be contained in the messages's <em>application-properties</em> under key
@@ -354,7 +365,7 @@ public final class MessageHelper {
      * the String's UTF-8 encoding is returned.</li>
      * <li>In all other cases, {@code null} is returned.</li>
      * </ul>
-     * 
+     *
      * @param msg The AMQP 1.0 message to parse the body of.
      * @return The bytes representing the payload or {@code null} if
      *         the message neither has a <em>Data</em> nor <em>AmqpValue</em> section.
@@ -397,7 +408,7 @@ public final class MessageHelper {
      * the String is returned as is.</li>
      * <li>In all other cases, {@code null} is returned.</li>
      * </ul>
-     * 
+     *
      * @param message The AMQP 1.0 message to parse the body of.
      * @return The String representation of the payload data or {@code null} if the message
      *         body does not contain data that can be decoded into a String.
@@ -455,7 +466,7 @@ public final class MessageHelper {
      * @param msg The message.
      * @param deviceId The device identifier to add.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * 
+     *
      */
     public static void addDeviceId(final Message msg, final String deviceId) {
         addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
@@ -501,7 +512,7 @@ public final class MessageHelper {
 
     /**
      * Sets the <em>time-to-live</em> of the AMQP 1.0 message.
-     * 
+     *
      * @param message the message for that the <em>time-to-live</em> is set.
      * @param timeToLive The <em>time-to-live</em> duration to be set in the message.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -549,7 +560,7 @@ public final class MessageHelper {
      * Adds a property indicating the outcome of an operation to a (response) message.
      * <p>
      * The value will be stored in the message's  {@link #APP_PROPERTY_STATUS} application property.
-     * 
+     *
      * @param msg The message to add the status to.
      * @param status The status to set.
      * @throws NullPointerException if any of the parameters are {@code null}.
@@ -734,10 +745,10 @@ public final class MessageHelper {
      * The message's <em>content-type</em> will be set to {@link #CONTENT_TYPE_APPLICATION_JSON}.
      * The message's Data section will contain the UTF-8 encoding of the given JSON object.
      * </p>
-     * 
+     *
      * @param message The message.
      * @param payload The payload or {@code null} if there is no payload to convey in the message body.
-     * 
+     *
      * @throws NullPointerException If message is {@code null}.
      */
     public static void setJsonPayload(final Message message, final JsonObject payload) {
@@ -753,10 +764,10 @@ public final class MessageHelper {
      * The message's Data section will contain the UTF-8 encoding of the given payload.
      * <b>Note:</b> No formal check is done if the payload actually is a JSON string.
      * </p>
-     * 
+     *
      * @param message The message.
      * @param payload The payload or {@code null} if there is no payload to convey in the message body.
-     * 
+     *
      * @throws NullPointerException If message is {@code null}.
      */
     public static void setJsonPayload(final Message message, final String payload) {
@@ -768,12 +779,12 @@ public final class MessageHelper {
 
     /**
      * Sets the payload of an AMQP message using a <em>Data</em> section.
-     * 
+     *
      * @param message The message.
      * @param contentType The type of the payload. If {@code null} the message's <em>content-type</em>
      *                    property will not be set.
      * @param payload The payload or {@code null} if there is no payload to convey in the message body.
-     * 
+     *
      * @throws NullPointerException If message is {@code null}.
      */
     public static void setPayload(final Message message, final String contentType, final Buffer payload) {
@@ -784,12 +795,12 @@ public final class MessageHelper {
 
     /**
      * Sets the payload of an AMQP message using a <em>Data</em> section.
-     * 
+     *
      * @param message The message.
      * @param contentType The type of the payload. The message's <em>content-type</em> property
      *                    will only be set if both this and the payload parameter are not {@code null}.
      * @param payload The payload or {@code null} if there is no payload to convey in the message body.
-     * 
+     *
      * @throws NullPointerException If message is {@code null}.
      */
     public static void setPayload(final Message message, final String contentType, final byte[] payload) {
@@ -805,7 +816,7 @@ public final class MessageHelper {
 
     /**
      * Checks if a message's body consists of an AMQP <em>Data</em> section.
-     * 
+     *
      * @param message The message to check.
      * @return {@code true} if the body consists of a Data section, {@code false} otherwise.
      * @throws NullPointerException If message is {@code null}.
@@ -818,7 +829,7 @@ public final class MessageHelper {
 
     /**
      * Checks if a message's body consists of an AMQP <em>AmqpValue</em> section.
-     * 
+     *
      * @param message The message to check.
      * @return {@code true} if the body consists of an AmqpValue section, {@code false} otherwise.
      * @throws NullPointerException If message is {@code null}.
@@ -852,7 +863,7 @@ public final class MessageHelper {
 
     /**
      * Gets the identifier to use for correlating to a given message.
-     * 
+     *
      * @param message The message to correlate to.
      * @return The value of the message's <em>correlation-id</em> property, if not {@code null}.
      *         Otherwise, the value of the <em>message-id</em> property or {@code null}
@@ -965,7 +976,7 @@ public final class MessageHelper {
      * as specified by the <a href="https://www.eclipse.org/hono/docs/api/tenant/#resource-limits-configuration-format">
      * Tenant API</a>.</li>
      * </ul>
-     * 
+     *
      * @param msg The message to add the properties to.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
@@ -1100,8 +1111,8 @@ public final class MessageHelper {
      * Adds default properties to an AMQP message.
      * <p>
      * This method also sets the message's <em>time-to-live</em> (TTL) property
-     * as described in 
-     * 
+     * as described in
+     *
      * @param message The message to add the properties to.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target

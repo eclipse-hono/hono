@@ -41,7 +41,10 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * This base class provides support for receiving <em>assert Registration</em> request messages via vert.x' event bus
  * and routing them to specific methods accepting the query parameters contained in the request message.
+ * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
+ *             Please use {@link org.eclipse.hono.service.registration.AbstractRegistrationAmqpEndpoint} based implementation in the future.
  */
+@Deprecated
 public abstract class EventBusRegistrationAdapter extends EventBusService implements Verticle {
 
     /**
@@ -54,7 +57,7 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
 
     /**
      * The service to forward requests to.
-     * 
+     *
      * @return The service to bind to, must never return {@code null}.
      */
     protected abstract RegistrationService getService();
@@ -69,7 +72,7 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
      * <p>
      * This method validates the request parameters against the Device Registration API
      * specification before invoking the corresponding {@code RegistrationService} methods.
-     * 
+     *
      * @param requestMessage The request message.
      * @return A future indicating the outcome of the service invocation.
      * @throws NullPointerException If the request message is {@code null}.
@@ -155,7 +158,7 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
      * Creates a new <em>OpenTracing</em> span for tracing the execution of a registration service operation.
      * <p>
      * The returned span will already contain tags for the given tenant, device and gateway ids (if either is not {@code null}).
-     * 
+     *
      * @param operationName The operation name that the span should be created for.
      * @param spanContext Existing span context.
      * @param tenantId The tenant id.
@@ -188,7 +191,7 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
     /**
      * Handles an unimplemented operation by invoking the given handler with a successful Future
      * containing an empty result with a <em>501 Not Implemented</em> status code.
-     * 
+     *
      * @param resultHandler The handler.
      */
     protected void handleUnimplementedOperation(final Handler<AsyncResult<RegistrationResult>> resultHandler) {
@@ -239,7 +242,7 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
      * <p>
      * This default implementation returns a directive to cache values for
      * {@link #DEFAULT_MAX_AGE_SECONDS} seconds.
-     * 
+     *
      * @param deviceId The identifier of the device that is the subject of the assertion.
      * @param tenantId The tenant that the device belongs to.
      * @return The cache directive.
