@@ -25,8 +25,7 @@ import org.eclipse.hono.service.deviceconnection.EventBusDeviceConnectionAdapter
 import org.eclipse.hono.util.DeviceConnectionResult;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 
@@ -52,32 +51,28 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
      * {@inheritDoc}
      */
     @Override
-    public void setLastKnownGatewayForDevice(
+    public Future<DeviceConnectionResult> setLastKnownGatewayForDevice(
             final String tenantId,
             final String deviceId,
             final String gatewayId,
-            final Span span,
-            final Handler<AsyncResult<DeviceConnectionResult>> resultHandler) {
+            final Span span) {
 
-        cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span.context())
-            .map(ok -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
-            .setHandler(resultHandler);
+        return cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span.context())
+                .map(ok -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void getLastKnownGatewayForDevice(
+    public Future<DeviceConnectionResult> getLastKnownGatewayForDevice(
             final String tenantId,
             final String deviceId,
-            final Span span,
-            final Handler<AsyncResult<DeviceConnectionResult>> resultHandler) {
+            final Span span) {
 
-        cache.getLastKnownGatewayForDevice(tenantId, deviceId, span.context())
-            .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
-            .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)))
-            .setHandler(resultHandler);
+        return cache.getLastKnownGatewayForDevice(tenantId, deviceId, span.context())
+                .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
+                .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
     /**

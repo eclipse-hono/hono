@@ -33,9 +33,7 @@ import org.springframework.stereotype.Repository;
 
 import io.opentracing.Span;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -62,8 +60,8 @@ public final class MapBasedDeviceConnectionService extends AbstractVerticle impl
     }
 
     @Override
-    public void setLastKnownGatewayForDevice(final String tenantId, final String deviceId, final String gatewayId,
-            final Span span, final Handler<AsyncResult<DeviceConnectionResult>> resultHandler) {
+    public Future<DeviceConnectionResult> setLastKnownGatewayForDevice(final String tenantId, final String deviceId,
+            final String gatewayId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
@@ -83,12 +81,12 @@ public final class MapBasedDeviceConnectionService extends AbstractVerticle impl
                     deviceId, tenantId, getConfig().getMaxDevicesPerTenant());
             result = DeviceConnectionResult.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
-        resultHandler.handle(Future.succeededFuture(result));
+        return Future.succeededFuture(result);
     }
 
     @Override
-    public void getLastKnownGatewayForDevice(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<DeviceConnectionResult>> resultHandler) {
+    public Future<DeviceConnectionResult> getLastKnownGatewayForDevice(final String tenantId, final String deviceId,
+            final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
@@ -104,7 +102,7 @@ public final class MapBasedDeviceConnectionService extends AbstractVerticle impl
         } else {
             result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NOT_FOUND);
         }
-        resultHandler.handle(Future.succeededFuture(result));
+        return Future.succeededFuture(result);
     }
 
     private JsonObject createLastKnownGatewayJson(final String gatewayId) {
