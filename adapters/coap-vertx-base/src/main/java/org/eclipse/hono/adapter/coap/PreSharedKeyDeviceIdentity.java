@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,8 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.opentracing.Span;
 
 /**
  * Helper class to represent the device identity based on pre shared key identity.
@@ -55,15 +57,17 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
     /**
      * Creates a new instance.
      *
+     * @param span The current open tracing span.
      * @param identity The identity provided by the device using the pre shared key handshake.
      * @param separateRegex The regular expression to split identity for multi tenant.
      * @return The instance of the created object. Will be null if the identity is null, or the identity does not comply
      *         to the structure defined by the separateRegex.
      */
-    public static final PreSharedKeyDeviceIdentity create(final String identity, final String separateRegex) {
+    public static final PreSharedKeyDeviceIdentity create(final Span span, final String identity, final String separateRegex) {
 
         if (identity == null) {
             LOG.trace("username must not be null");
+            span.log("PSK identity must not be null");
             return null;
         }
 
@@ -74,6 +78,8 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
             final String[] userComponents = identity.split(separateRegex, 2);
             if (userComponents.length != 2) {
                 LOG.trace("username [{}] does not comply with expected pattern [<authId>@<tenantId>]", identity);
+                span.log("PSK identity [" + identity + "] does not comply with expected pattern [<authId>"
+                        + separateRegex + "<tenantId>]");
                 return null;
             }
             return new PreSharedKeyDeviceIdentity(userComponents[1], userComponents[0]);
