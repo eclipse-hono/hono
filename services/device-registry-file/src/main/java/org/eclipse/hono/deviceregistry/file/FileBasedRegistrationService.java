@@ -48,9 +48,7 @@ import org.springframework.stereotype.Component;
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
@@ -90,20 +88,18 @@ public class FileBasedRegistrationService extends AbstractVerticle
      * <p>
      * This helps work around Java's inability to inherit from multiple base classes. We create a new Registration
      * service, overriding the implementation of {@link AbstractRegistrationService} with the implementation of our
-     * {@link FileBasedRegistrationService#getDevice(String, String, Handler)}.
+     * {@link FileBasedRegistrationService#getDevice(String, String)}.
      */
     private final AbstractRegistrationService registrationService = new AbstractRegistrationService() {
 
         @Override
-        public void getDevice(final String tenantId, final String deviceId, final Span span,
-                final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-            FileBasedRegistrationService.this.getDevice(tenantId, deviceId, resultHandler);
+        public Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
+            return FileBasedRegistrationService.this.getDevice(tenantId, deviceId);
         }
 
         @Override
-        public void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span,
-                final Handler<AsyncResult<JsonArray>> resultHandler) {
-            FileBasedRegistrationService.this.resolveGroupMembers(tenantId, viaGroups, resultHandler);
+        public Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
+            return FileBasedRegistrationService.this.resolveGroupMembers(tenantId, viaGroups);
         }
     };
 
@@ -321,41 +317,37 @@ public class FileBasedRegistrationService extends AbstractVerticle
     ///// DEVICES
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        registrationService.assertRegistration(tenantId, deviceId, resultHandler);
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId) {
+        return registrationService.assertRegistration(tenantId, deviceId);
     }
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        registrationService.assertRegistration(tenantId, deviceId, gatewayId, resultHandler);
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
+            final String gatewayId) {
+        return registrationService.assertRegistration(tenantId, deviceId, gatewayId);
     }
 
-    private void getDevice(final String tenantId, final String deviceId,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    private Future<RegistrationResult> getDevice(final String tenantId, final String deviceId) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future
-                .succeededFuture(convertResult(deviceId, processReadDevice(tenantId, deviceId, NoopSpan.INSTANCE))));
+        return Future
+                .succeededFuture(convertResult(deviceId, processReadDevice(tenantId, deviceId, NoopSpan.INSTANCE)));
     }
 
-    private void resolveGroupMembers(final String tenantId, final JsonArray viaGroups,
-            final Handler<AsyncResult<JsonArray>> resultHandler) {
+    private Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(viaGroups);
-        Objects.requireNonNull(resultHandler);
 
         final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
         final List<String> gatewaySet = devices.entrySet().stream()
-                .filter(entry -> entry.getValue().getValue().getMemberOf().stream().anyMatch(group -> viaGroups.contains(group)))
+                .filter(entry -> entry.getValue().getValue().getMemberOf().stream()
+                        .anyMatch(group -> viaGroups.contains(group)))
                 .map(Entry::getKey)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        resultHandler.handle(Future.succeededFuture(new JsonArray(gatewaySet)));
+        return Future.succeededFuture(new JsonArray(gatewaySet));
     }
 
     private RegistrationResult convertResult(final String deviceId, final OperationResult<Device> result) {

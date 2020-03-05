@@ -88,15 +88,14 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
     // DEVICES
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        registrationService.assertRegistration(tenantId, deviceId, resultHandler);
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId) {
+        return registrationService.assertRegistration(tenantId, deviceId);
     }
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        registrationService.assertRegistration(tenantId, deviceId, gatewayId, resultHandler);
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
+            final String gatewayId) {
+        return registrationService.assertRegistration(tenantId, deviceId, gatewayId);
     }
 
     @Override

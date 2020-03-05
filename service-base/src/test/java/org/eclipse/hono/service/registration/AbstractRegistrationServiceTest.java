@@ -155,11 +155,12 @@ public abstract class AbstractRegistrationServiceTest {
                     assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                     assertNotNull(s.getPayload());
 
-                    getRegistrationService().assertRegistration(TENANT, DEVICE, ctx.succeeding(s2 -> {
-                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
-                        assertNotNull(s2.getPayload());
-                        ctx.completeNow();
-                    }));
+                    getRegistrationService().assertRegistration(TENANT, DEVICE)
+                            .setHandler(ctx.succeeding(s2 -> {
+                                assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                                assertNotNull(s2.getPayload());
+                                ctx.completeNow();
+                            }));
                 })));
     }
 
@@ -190,17 +191,18 @@ public abstract class AbstractRegistrationServiceTest {
                     assertNotNull(s.getPayload());
                     assertEquals(vias, s.getPayload().getVia());
                     assertEquals(viaGroups, s.getPayload().getViaGroups());
-                    getRegistrationService().assertRegistration(TENANT, deviceId, ctx.succeeding(s2 -> {
-                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
-                        assertNotNull(s2.getPayload());
+                    getRegistrationService().assertRegistration(TENANT, deviceId)
+                            .setHandler(ctx.succeeding(s2 -> {
+                                assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                                assertNotNull(s2.getPayload());
 
-                        // assert "via"
-                        final JsonArray viaJson = s2.getPayload().getJsonArray("via");
-                        assertNotNull(viaJson);
-                        assertEquals(vias, viaJson.stream().map(Object::toString).collect(Collectors.toList()));
+                                // assert "via"
+                                final JsonArray viaJson = s2.getPayload().getJsonArray("via");
+                                assertNotNull(viaJson);
+                                assertEquals(vias, viaJson.stream().map(Object::toString).collect(Collectors.toList()));
 
-                        ctx.completeNow();
-                    }));
+                                ctx.completeNow();
+                            }));
                 })));
     }
 
@@ -235,17 +237,18 @@ public abstract class AbstractRegistrationServiceTest {
                     assertNotNull(s.getPayload());
                     assertEquals(vias, s.getPayload().getVia());
 
-                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
-                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
-                        assertNotNull(s2.getPayload());
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId)
+                            .setHandler(ctx.succeeding(s2 -> {
+                                assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                                assertNotNull(s2.getPayload());
 
-                        // assert "via"
-                        final JsonArray viaJson = s2.getPayload().getJsonArray("via");
-                        assertNotNull(viaJson);
-                        assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
+                                // assert "via"
+                                final JsonArray viaJson = s2.getPayload().getJsonArray("via");
+                                assertNotNull(viaJson);
+                                assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
 
-                        ctx.completeNow();
-                    }));
+                                ctx.completeNow();
+                            }));
 
                 })));
     }
@@ -297,17 +300,18 @@ public abstract class AbstractRegistrationServiceTest {
                     assertNotNull(s.getPayload());
                     assertEquals(vias, s.getPayload().getVia());
 
-                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
-                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
-                        assertNotNull(s2.getPayload());
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId)
+                            .setHandler(ctx.succeeding(s2 -> {
+                                assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                                assertNotNull(s2.getPayload());
 
-                        // assert "via"
-                        final JsonArray viaJson = s2.getPayload().getJsonArray("via");
-                        assertNotNull(viaJson);
-                        assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
+                                // assert "via"
+                                final JsonArray viaJson = s2.getPayload().getJsonArray("via");
+                                assertNotNull(viaJson);
+                                assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
 
-                        ctx.completeNow();
-                    }));
+                                ctx.completeNow();
+                            }));
 
                 })));
     }
@@ -358,17 +362,18 @@ public abstract class AbstractRegistrationServiceTest {
                     assertNotNull(s.getPayload());
                     assertEquals(vias, s.getPayload().getVia());
 
-                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
-                        assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
-                        assertNotNull(s2.getPayload());
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId)
+                            .setHandler(ctx.succeeding(s2 -> {
+                                assertEquals(HttpURLConnection.HTTP_OK, s2.getStatus());
+                                assertNotNull(s2.getPayload());
 
-                        // assert "via"
-                        final JsonArray viaJson = s2.getPayload().getJsonArray("via");
-                        assertNotNull(viaJson);
-                        assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
+                                // assert "via"
+                                final JsonArray viaJson = s2.getPayload().getJsonArray("via");
+                                assertNotNull(viaJson);
+                                assertEquals(new JsonArray().add("a").add("b").add("c"), viaJson);
 
-                        ctx.completeNow();
-                    }));
+                                ctx.completeNow();
+                            }));
 
                 })));
     }
@@ -416,12 +421,13 @@ public abstract class AbstractRegistrationServiceTest {
                     assertNotNull(s.getPayload());
                     assertEquals(vias, s.getPayload().getVia());
 
-                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId, ctx.succeeding(s2 -> {
-                        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s2.getStatus());
-                        assertNull(s2.getPayload());
+                    getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId)
+                            .setHandler(ctx.succeeding(s2 -> {
+                                assertEquals(HttpURLConnection.HTTP_FORBIDDEN, s2.getStatus());
+                                assertNull(s2.getPayload());
 
-                        ctx.completeNow();
-                    }));
+                                ctx.completeNow();
+                            }));
 
                 })));
     }
@@ -548,8 +554,7 @@ public abstract class AbstractRegistrationServiceTest {
                 }).compose(rr -> {
                     final String resourceVersion = rr.getResourceVersion().orElse(null);
 
-                    return getDeviceManagementService().updateDevice(
-                            TENANT, DEVICE,
+                    return getDeviceManagementService().updateDevice(TENANT, DEVICE,
                             new JsonObject().put("ext", new JsonObject().put("customKey", "customValue"))
                                     .mapTo(Device.class),
                             Optional.of(resourceVersion + "abc"), NoopSpan.INSTANCE);
@@ -557,7 +562,7 @@ public abstract class AbstractRegistrationServiceTest {
                         ctx.succeeding(response -> ctx.verify(() -> {
                             assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, response.getStatus());
                             register.flag();
-                })));
+                        })));
     }
 
     /**
@@ -739,19 +744,15 @@ public abstract class AbstractRegistrationServiceTest {
 
         // read adapter data
 
-        final Promise<RegistrationResult> f2 = Promise.promise();
-        if (gatewayId.isPresent()) {
-            getRegistrationService().assertRegistration(tenant, deviceId, gatewayId.get(), f2);
-        } else {
-            getRegistrationService().assertRegistration(tenant, deviceId, f2);
-        }
-
+        final Future<RegistrationResult> f2 = gatewayId
+                .map(id -> getRegistrationService().assertRegistration(tenant, deviceId, id))
+                .orElseGet(() -> getRegistrationService().assertRegistration(tenant, deviceId));
         return CompositeFuture.all(
                 f1.map(r -> {
                     managementAssertions.handle(r);
                     return null;
                 }),
-                f2.future().map(r -> {
+                f2.map(r -> {
                     adapterAssertions.handle(r);
                     return null;
                 }));
