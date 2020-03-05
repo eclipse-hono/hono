@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -46,6 +47,7 @@ class HotrodBasedDeviceConnectionInfoTest {
 
     private DeviceConnectionInfo info;
     private RemoteCache<String, String> cache;
+    private Tracer tracer;
 
     /**
      * Sets up the fixture.
@@ -54,7 +56,8 @@ class HotrodBasedDeviceConnectionInfoTest {
     @BeforeEach
     void setUp() {
         cache = mock(RemoteCache.class);
-        info = new HotrodBasedDeviceConnectionInfo(cache);
+        tracer = mock(Tracer.class);
+        info = new HotrodBasedDeviceConnectionInfo(cache, tracer);
     }
 
     /**

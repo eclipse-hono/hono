@@ -182,7 +182,7 @@ public class ApplicationConfig {
      */
     @Bean
     public HotrodCache<String, String> remoteCache(final Vertx vertx) {
-        return new HotrodCache<String, String>(
+        return new HotrodCache<>(
                 vertx,
                 remoteCacheManager(),
                 DeviceConnectionConstants.CACHE_NAME,
@@ -194,11 +194,13 @@ public class ApplicationConfig {
      * Exposes a Device Connection service as a Spring bean.
      * 
      * @param cache The remote cache.
+     * @param tracer The tracer instance.
      * @return The service implementation.
      */
     @Bean
-    public RemoteCacheBasedDeviceConnectionService deviceConnectionService(final HotrodCache<String, String> cache) {
-        return new RemoteCacheBasedDeviceConnectionService(new HotrodBasedDeviceConnectionInfo(cache));
+    public RemoteCacheBasedDeviceConnectionService deviceConnectionService(final HotrodCache<String, String> cache,
+            final Tracer tracer) {
+        return new RemoteCacheBasedDeviceConnectionService(new HotrodBasedDeviceConnectionInfo(cache, tracer));
     }
 
     /**
