@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,9 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
@@ -59,13 +57,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert the device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4712", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 404
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
-            //  and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4712")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 404
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -80,13 +79,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert a device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "non-existent", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 404
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
-            //  and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "non-existent")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 404
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -101,13 +101,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert the device's registration status for a gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "non-existent-gw", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 403 status
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-            //  and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "non-existent-gw")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 403 status
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -124,13 +125,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert the device's registration status for a gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4713", "gw-3", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 403 status
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-            //  and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4713", "gw-3")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 403 status
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -148,13 +150,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert the device's registration status for the wrong gateway
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-2", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 403 status
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-            // and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", "gw-2")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 403 status
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -172,13 +175,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert the device's registration status for the wrong gateway group
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-2", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 403 status
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-            // and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-2")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 403 status
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
 
@@ -197,13 +201,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert the device's registration status for the wrong gateway group
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-3", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 403 status
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-            // and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-3")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 403 status
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -221,18 +226,19 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationService();
 
         // WHEN trying to assert the device's registration status for the wrong gateway group
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4716", "gw-4", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a 403 status
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-            // and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4716", "gw-4")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a 403 status
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
      * Verifies that the getDevice method returns "not implemented" if the base
-     * {@link AbstractRegistrationService#getDevice(String, String, Span, Handler)} implementation is used.
+     * {@link AbstractRegistrationService#getDevice(String, String, Span)} implementation is used.
      *
      * @param ctx The vert.x unit test context.
      */
@@ -243,14 +249,14 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = newRegistrationServiceWithoutImpls();
 
         // WHEN trying to get a device's data
-        registrationService.getDevice(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE,
-                ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the assertion fails with a status code 501
-            assertEquals(HttpURLConnection.HTTP_NOT_IMPLEMENTED, result.getStatus());
-            // and the response payload is empty
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+        registrationService.getDevice(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the assertion fails with a status code 501
+                    assertEquals(HttpURLConnection.HTTP_NOT_IMPLEMENTED, result.getStatus());
+                    // and the response payload is empty
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -265,18 +271,19 @@ public class BaseRegistrationServiceTest {
         final AbstractRegistrationService registrationService = spy(newRegistrationService());
 
         // WHEN trying to assert the device's registration status
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711", ctx.succeeding(result -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4711")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+                    final JsonObject payload = result.getPayload();
+                    assertNotNull(payload);
 
-            // THEN the response contains the registered default content type
-            final JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
-            assertNotNull(defaults);
-            assertEquals("application/default", defaults.getString(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
+                    // THEN the response contains the registered default content type
+                    final JsonObject defaults = payload.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
+                    assertNotNull(defaults);
+                    assertEquals("application/default", defaults.getString(MessageHelper.SYS_PROPERTY_CONTENT_TYPE));
 
-            ctx.completeNow();
-        })));
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -297,28 +304,30 @@ public class BaseRegistrationServiceTest {
 
 
         // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-5", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
-            assertNotNull(via);
-            assertEquals(via, new JsonArray().add("gw-5").add("gw-6"));
-            assertion.flag();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-5")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the response contains a 200 status
+                    assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+                    final JsonObject payload = result.getPayload();
+                    assertNotNull(payload);
+                    final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+                    assertNotNull(via);
+                    assertEquals(via, new JsonArray().add("gw-5").add("gw-6"));
+                    assertion.flag();
+                })));
 
         // WHEN trying to assert the device's registration status for gateway 4
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-6", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
-            assertNotNull(via);
-            assertEquals(via, new JsonArray().add("gw-5").add("gw-6"));
-            assertion.flag();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4715", "gw-6")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the response contains a 200 status
+                    assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+                    final JsonObject payload = result.getPayload();
+                    assertNotNull(payload);
+                    final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+                    assertNotNull(via);
+                    assertEquals(via, new JsonArray().add("gw-5").add("gw-6"));
+                    assertion.flag();
+                })));
     }
 
     /**
@@ -337,28 +346,30 @@ public class BaseRegistrationServiceTest {
         final Checkpoint assertion = ctx.checkpoint(2);
 
         // WHEN trying to assert the device's registration status for gateway 1
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
-            assertNotNull(via);
-            assertEquals(via, new JsonArray().add("gw-1").add("gw-4"));
-            assertion.flag();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-1")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the response contains a 200 status
+                    assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+                    final JsonObject payload = result.getPayload();
+                    assertNotNull(payload);
+                    final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+                    assertNotNull(via);
+                    assertEquals(via, new JsonArray().add("gw-1").add("gw-4"));
+                    assertion.flag();
+                })));
 
         // WHEN trying to assert the device's registration status for gateway 4
-        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-4", ctx.succeeding(result -> ctx.verify(() -> {
-            // THEN the response contains a 200 status
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            final JsonObject payload = result.getPayload();
-            assertNotNull(payload);
-            final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
-            assertNotNull(via);
-            assertEquals(via, new JsonArray().add("gw-1").add("gw-4"));
-            assertion.flag();
-        })));
+        registrationService.assertRegistration(Constants.DEFAULT_TENANT, "4714", "gw-4")
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN the response contains a 200 status
+                    assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+                    final JsonObject payload = result.getPayload();
+                    assertNotNull(payload);
+                    final JsonArray via = payload.getJsonArray(RegistrationConstants.FIELD_VIA);
+                    assertNotNull(via);
+                    assertEquals(via, new JsonArray().add("gw-1").add("gw-4"));
+                    assertion.flag();
+                })));
     }
 
     /**
@@ -376,17 +387,15 @@ public class BaseRegistrationServiceTest {
         return new AbstractRegistrationService() {
 
             @Override
-            public void getDevice(final String tenantId, final String deviceId, final Span span,
-                    final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-                devices.apply(deviceId).setHandler(resultHandler);
+            public Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
+                return devices.apply(deviceId);
             }
 
             @Override
-            protected void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span, final Handler<AsyncResult<JsonArray>> resultHandler) {
-                resolveGatewayGroups.apply(viaGroups).setHandler(resultHandler);
+            protected Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups,
+                    final Span span) {
+                return resolveGatewayGroups.apply(viaGroups);
             }
-
-
         };
     }
 
@@ -400,17 +409,15 @@ public class BaseRegistrationServiceTest {
         return new AbstractRegistrationService() {
 
             @Override
-            protected void getDevice(final String tenantId, final String deviceId, final Span span,
-                    final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-                resultHandler.handle(
-                        Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED)));
+            protected Future<RegistrationResult> getDevice(final String tenantId, final String deviceId,
+                    final Span span) {
+                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
             }
 
             @Override
-            protected void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span, final Handler<AsyncResult<JsonArray>> resultHandler) {
-                resultHandler.handle(
-                        Future.succeededFuture(new JsonArray())
-                );
+            protected Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups,
+                    final Span span) {
+                return Future.succeededFuture(new JsonArray());
             }
         };
     }

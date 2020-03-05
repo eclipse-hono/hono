@@ -23,9 +23,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -38,31 +36,28 @@ import io.vertx.core.json.JsonObject;
 public class DummyRegistrationService extends AbstractRegistrationService {
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        assertRegistration(tenantId, deviceId, null, span, resultHandler);
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final Span span) {
+        return assertRegistration(tenantId, deviceId, null, span);
     }
 
     @Override
-    public void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
-            final Span span, final Handler<AsyncResult<RegistrationResult>> resultHandler) {
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
+            final String gatewayId, final Span span) {
         final JsonObject deviceData = new JsonObject();
-        getAssertionPayload(tenantId, deviceId, deviceData)
+        return getAssertionPayload(tenantId, deviceId, deviceData)
                 .compose(payload -> Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, payload)))
-                .recover(thr -> Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(thr))))
-                .setHandler(resultHandler);
+                .recover(thr -> Future
+                        .succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(thr))));
     }
 
     @Override
-    protected void getDevice(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        resultHandler.handle(Future.failedFuture("Not implemented"));
+    protected Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
+        return Future.failedFuture("Not implemented");
     }
 
     @Override
-    protected void resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span,
-            final Handler<AsyncResult<JsonArray>> resultHandler) {
-        resultHandler.handle(Future.failedFuture("Not implemented"));
+    protected Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
+        return Future.failedFuture("Not implemented");
     }
 
 }

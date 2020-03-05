@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,7 @@ package org.eclipse.hono.service.registration;
 import org.eclipse.hono.util.RegistrationResult;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 
 /**
  * A minimal service for keeping record of device identities.
@@ -32,7 +31,7 @@ public interface RegistrationService {
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be
      *             <ul>
      *             <li><em>200 OK</em> if a device with the given ID is registered for
@@ -45,19 +44,19 @@ public interface RegistrationService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
-    void assertRegistration(String tenantId, String deviceId, Handler<AsyncResult<RegistrationResult>> resultHandler);
+    Future<RegistrationResult> assertRegistration(String tenantId, String deviceId);
 
     /**
      * Asserts that a device is registered with a given tenant and is enabled.
      * <p>
-     * This default implementation simply returns the result of {@link #assertRegistration(String, String, Handler)}.
+     * This default implementation simply returns the result of {@link #assertRegistration(String, String)}.
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be
      *             <ul>
      *             <li><em>200 OK</em> if a device with the given ID is registered for
@@ -70,9 +69,9 @@ public interface RegistrationService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
-    default void assertRegistration(final String tenantId, final String deviceId, final Span span,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        assertRegistration(tenantId, deviceId, resultHandler);
+    default Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
+            final Span span) {
+        return assertRegistration(tenantId, deviceId);
     }
 
     /**
@@ -88,7 +87,7 @@ public interface RegistrationService {
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
      * @param gatewayId The gateway that wants to act on behalf of the device.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be
      *             <ul>
      *             <li><em>200 OK</em> if a device with the given ID is registered for
@@ -103,7 +102,7 @@ public interface RegistrationService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
-    void assertRegistration(String tenantId, String deviceId, String gatewayId, Handler<AsyncResult<RegistrationResult>> resultHandler);
+    Future<RegistrationResult> assertRegistration(String tenantId, String deviceId, String gatewayId);
 
     /**
      * Asserts that a device is authorized to act as a <em>gateway</em> for another device.
@@ -115,7 +114,7 @@ public interface RegistrationService {
      * Such a check might be based on a specific role that the client needs to have or on an
      * explicitly defined relation between the gateway and the device(s).
      * <p>
-     * This default implementation simply returns the result of {@link #assertRegistration(String, String, String, Handler)}.
+     * This default implementation simply returns the result of {@link #assertRegistration(String, String, String)}.
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The ID of the device to get the assertion for.
@@ -123,7 +122,7 @@ public interface RegistrationService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be
      *             <ul>
      *             <li><em>200 OK</em> if a device with the given ID is registered for
@@ -138,10 +137,9 @@ public interface RegistrationService {
      * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#assert-device-registration">
      *      Device Registration API - Assert Device Registration</a>
      */
-    default void assertRegistration(final String tenantId, final String deviceId, final String gatewayId,
-            final Span span,
-            final Handler<AsyncResult<RegistrationResult>> resultHandler) {
-        assertRegistration(tenantId, deviceId, gatewayId, resultHandler);
+    default Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
+            final String gatewayId, final Span span) {
+        return assertRegistration(tenantId, deviceId, gatewayId);
     }
 
 }

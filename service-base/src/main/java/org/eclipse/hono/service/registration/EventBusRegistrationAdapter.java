@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.eclipse.hono.service.registration;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
@@ -31,7 +32,6 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -100,21 +100,18 @@ public abstract class EventBusRegistrationAdapter extends EventBusService implem
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final Promise<RegistrationResult> result = Promise.promise();
-            if (gatewayId == null) {
-                log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
-                getService().assertRegistration(tenantId, deviceId, span, result);
-            } else {
-                log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
-                        deviceId, tenantId, gatewayId);
-                getService().assertRegistration(tenantId, deviceId, gatewayId, span, result);
-            }
-            resultFuture = result.future().map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setDeviceId(deviceId)
-                        .setJsonPayload(res.getPayload())
-                        .setCacheDirective(res.getCacheDirective());
-            });
+            resultFuture = Optional.ofNullable(gatewayId)
+                    .map(ok -> {
+                        log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
+                                deviceId, tenantId, gatewayId);
+                        return getService().assertRegistration(tenantId, deviceId, gatewayId, span);
+                    }).orElseGet(() -> {
+                        log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
+                        return getService().assertRegistration(tenantId, deviceId, span);
+                    }).map(res -> request.getResponse(res.getStatus())
+                            .setDeviceId(deviceId)
+                            .setJsonPayload(res.getPayload())
+                            .setCacheDirective(res.getCacheDirective()));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
