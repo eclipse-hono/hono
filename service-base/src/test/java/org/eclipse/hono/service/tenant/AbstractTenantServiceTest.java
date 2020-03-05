@@ -37,12 +37,10 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
-import org.eclipse.hono.util.TenantResult;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxTestContext;
@@ -314,9 +312,9 @@ public abstract class AbstractTenantServiceTest {
     public void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
 
         getTenantService().get(
-                "notExistingTenant", 
-                NoopSpan.INSTANCE,
-                ctx.succeeding(s -> {
+                "notExistingTenant",
+                NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(s -> {
                     ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus()));
                     ctx.completeNow();
                 }));
@@ -344,10 +342,8 @@ public abstract class AbstractTenantServiceTest {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
             });
-            final Promise<TenantResult<JsonObject>> result = Promise.promise();
             // WHEN retrieving the tenant using the Tenant API
-            getTenantService().get("tenant", null, result);
-            return result.future();
+            return getTenantService().get("tenant", null);
         })
         .setHandler(ctx.succeeding(response -> {
             // THEN the properties of the originally registered tenant
@@ -388,8 +384,8 @@ public abstract class AbstractTenantServiceTest {
         addTenant("tenant")
         .map(ok -> {
             getTenantService().get(
-                    "tenant", 
-                    ctx.succeeding(s -> {
+                    "tenant")
+                    .setHandler(ctx.succeeding(s -> {
                         ctx.verify(() -> {
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                             assertEquals("tenant", s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
@@ -425,22 +421,23 @@ public abstract class AbstractTenantServiceTest {
                         .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS))));
 
         addTenant("tenant", tenant)
-        .map(ok -> {
-            getTenantService().get(
-                    subjectDn,
-                    NoopSpan.INSTANCE,
-                    ctx.succeeding(s -> {
-                        ctx.verify(() -> {
-                            assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
-                            final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
-                            assertEquals("tenant", obj.getTenantId());
-                            final JsonArray ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class);
-                            assertEquals(expectedCaList, ca);
-                        });
-                        ctx.completeNow();
-                    }));
-            return null;
-        });
+                .map(ok -> {
+                    getTenantService().get(
+                            subjectDn,
+                            NoopSpan.INSTANCE)
+                            .setHandler(ctx.succeeding(s -> {
+                                ctx.verify(() -> {
+                                    assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
+                                    final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
+                                    assertEquals("tenant", obj.getTenantId());
+                                    final JsonArray ca = obj.getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                                            JsonArray.class);
+                                    assertEquals(expectedCaList, ca);
+                                });
+                                ctx.completeNow();
+                            }));
+                    return null;
+                });
     }
 
     /**
@@ -460,13 +457,14 @@ public abstract class AbstractTenantServiceTest {
                 .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
 
         addTenant("tenant", tenant)
-        .map(ok -> {
-            getTenantService().get(unknownSubjectDn, null, ctx.succeeding(s -> ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
-                ctx.completeNow();
-            })));
-            return null;
-        });
+                .map(ok -> {
+                    getTenantService().get(unknownSubjectDn, null)
+                            .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                                assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
+                                ctx.completeNow();
+                            })));
+                    return null;
+                });
     }
 
     /**
@@ -512,9 +510,7 @@ public abstract class AbstractTenantServiceTest {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
             });
-            final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
-            getTenantService().get("tenant", null, getResult);
-            return getResult.future();
+            return getTenantService().get("tenant", null);
         }).setHandler(ctx.succeeding(getResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_OK, getResult.getStatus());

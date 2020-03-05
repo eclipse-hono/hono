@@ -25,9 +25,7 @@ import org.springframework.stereotype.Service;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -39,23 +37,20 @@ import io.vertx.core.json.JsonObject;
 public class DummyTenantService implements TenantService {
 
     @Override
-    public void get(final String tenantId, final Span span,
-            final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public Future<TenantResult<JsonObject>> get(final String tenantId, final Span span) {
         final TenantObject tenant = new TenantObject();
         tenant.setTenantId(tenantId);
         tenant.setEnabled(true);
-        resultHandler.handle(Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK,
-                JsonObject.mapFrom(tenant),
-                null)));
+        return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_OK, JsonObject.mapFrom(tenant), null));
     }
 
     @Override
-    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        get(tenantId, NoopSpan.INSTANCE, resultHandler);
+    public Future<TenantResult<JsonObject>> get(final String tenantId) {
+        return get(tenantId, NoopSpan.INSTANCE);
     }
 
     @Override
-    public void get(final X500Principal subjectDn, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        get(subjectDn, NoopSpan.INSTANCE, resultHandler);
+    public Future<TenantResult<JsonObject>> get(final X500Principal subjectDn) {
+        return get(subjectDn, NoopSpan.INSTANCE);
     }
 }
