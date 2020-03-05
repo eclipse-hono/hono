@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,8 +16,7 @@ package org.eclipse.hono.service.deviceconnection;
 import org.eclipse.hono.util.DeviceConnectionResult;
 
 import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 
 /**
  * A service for keeping record of device connection information.
@@ -38,15 +37,15 @@ public interface DeviceConnectionService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *             The <em>status</em> will be <em>204 No Content</em> if the operation completed successfully.
      *             <br>
      *             An implementation may return a <em>404 Not Found</em> status in order to indicate that 
      *             no device and/or gateway with the given identifier exists for the given tenant.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void setLastKnownGatewayForDevice(String tenantId, String deviceId, String gatewayId, Span span,
-            Handler<AsyncResult<DeviceConnectionResult>> resultHandler);
+    Future<DeviceConnectionResult> setLastKnownGatewayForDevice(String tenantId, String deviceId, String gatewayId,
+            Span span);
 
     /**
      * Gets the gateway that last acted on behalf of the given device.
@@ -59,7 +58,7 @@ public interface DeviceConnectionService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @param resultHandler The handler to invoke with the result of the operation.
+     * @return A future indicating the outcome of the operation.
      *            The <em>status</em> will be
      *            <ul>
      *            <li><em>200 OK</em> if a result could be determined. The <em>payload</em>
@@ -70,6 +69,5 @@ public interface DeviceConnectionService {
      *            no device with the given identifier exists for the given tenant.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    void getLastKnownGatewayForDevice(String tenantId, String deviceId, Span span,
-            Handler<AsyncResult<DeviceConnectionResult>> resultHandler);
+    Future<DeviceConnectionResult> getLastKnownGatewayForDevice(String tenantId, String deviceId, Span span);
 }

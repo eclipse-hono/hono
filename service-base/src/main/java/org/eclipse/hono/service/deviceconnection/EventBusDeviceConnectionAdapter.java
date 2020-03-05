@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.eclipse.hono.util.DeviceConnectionResult;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -29,7 +28,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 
 /**
@@ -98,14 +96,12 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final Promise<DeviceConnectionResult> result = Promise.promise();
             log.debug("getting last known gateway for tenant [{}], device [{}]", tenantId, deviceId);
-            getService().getLastKnownGatewayForDevice(tenantId, deviceId, span, result);
 
-            resultFuture = result.future()
+            resultFuture = getService().getLastKnownGatewayForDevice(tenantId, deviceId, span)
                     .map(res -> request.getResponse(res.getStatus())
-                                .setJsonPayload(res.getPayload())
-                                .setCacheDirective(res.getCacheDirective()));
+                            .setJsonPayload(res.getPayload())
+                            .setCacheDirective(res.getCacheDirective()));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -128,15 +124,12 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             TracingHelper.logError(span, "missing tenant, device and/or gateway");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final Promise<DeviceConnectionResult> result = Promise.promise();
             log.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
-            getService().setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span, result);
 
-            resultFuture = result.future().map(res -> {
-                return request.getResponse(res.getStatus())
-                        .setJsonPayload(res.getPayload())
-                        .setCacheDirective(res.getCacheDirective());
-            });
+            resultFuture = getService().setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span)
+                    .map(res -> request.getResponse(res.getStatus())
+                            .setJsonPayload(res.getPayload())
+                            .setCacheDirective(res.getCacheDirective()));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }

@@ -21,14 +21,12 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.eclipse.hono.util.DeviceConnectionResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
 import io.vertx.core.Context;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.VertxExtension;
@@ -74,23 +72,19 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testSetAndGetLastKnownGatewayForDevice(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String gatewayId = "testGateway";
-        final Promise<DeviceConnectionResult> setLastGwResult = Promise.promise();
-        svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
-        setLastGwResult.future()
-        .compose(deviceConnectionResult -> {
-            ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
-            });
-            final Promise<DeviceConnectionResult> getLastGwResult = Promise.promise();
-            svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span, getLastGwResult);
-            return getLastGwResult.future();
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
-            assertNotNull(result.getPayload());
-            assertEquals(gatewayId, result.getPayload().getString(DeviceConnectionConstants.FIELD_GATEWAY_ID));
-            assertNotNull(result.getPayload().getString(DeviceConnectionConstants.FIELD_LAST_UPDATED));
-            ctx.completeNow();
-        })));
+        svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span)
+                .compose(deviceConnectionResult -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
+                    });
+                    return svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span);
+                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
+                    assertNotNull(result.getPayload());
+                    assertEquals(gatewayId, result.getPayload().getString(DeviceConnectionConstants.FIELD_GATEWAY_ID));
+                    assertNotNull(result.getPayload().getString(DeviceConnectionConstants.FIELD_LAST_UPDATED));
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -102,14 +96,12 @@ public class MapBasedDeviceConnectionServiceTest {
     @Test
     public void testGetLastKnownGatewayForDeviceNotFound(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
-        final Promise<DeviceConnectionResult> getLastGwResult = Promise.promise();
-        svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span, getLastGwResult);
-        getLastGwResult.future()
-        .setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, deviceConnectionResult.getStatus());
-            assertNull(deviceConnectionResult.getPayload());
-            ctx.completeNow();
-        })));
+        svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span)
+                .setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, deviceConnectionResult.getStatus());
+                    assertNull(deviceConnectionResult.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -123,21 +115,17 @@ public class MapBasedDeviceConnectionServiceTest {
         props.setMaxDevicesPerTenant(1);
         final String deviceId = "testDevice";
         final String gatewayId = "testGateway";
-        final Promise<DeviceConnectionResult> setLastGwResult = Promise.promise();
-        svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
-        setLastGwResult.future()
-        .compose(deviceConnectionResult -> {
-            ctx.verify(() -> {
-                assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
-            });
-            // set another entry
-            final Promise<DeviceConnectionResult> setLastGwResult2 = Promise.promise();
-            svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "testDevice2", gatewayId, span, setLastGwResult2);
-            return setLastGwResult2.future();
-        }).setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_FORBIDDEN, deviceConnectionResult.getStatus());
-            assertNull(deviceConnectionResult.getPayload());
-            ctx.completeNow();
-        })));
+        svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span)
+                .compose(deviceConnectionResult -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
+                    });
+                    // set another entry
+                    return svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "testDevice2", gatewayId, span);
+                }).setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_FORBIDDEN, deviceConnectionResult.getStatus());
+                    assertNull(deviceConnectionResult.getPayload());
+                    ctx.completeNow();
+                })));
     }
 }

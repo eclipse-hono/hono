@@ -27,7 +27,6 @@ import java.net.HttpURLConnection;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.DeviceConnectionResult;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -107,11 +106,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
             .thenReturn(Future.succeededFuture());
 
         givenAStartedService()
-        .compose(ok -> {
-            final Promise<DeviceConnectionResult> setLastGwResult = Promise.promise();
-            svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span, setLastGwResult);
-            return setLastGwResult.future();
-        })
+        .compose(ok -> svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span))
         .setHandler(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
@@ -135,11 +130,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
             .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         givenAStartedService()
-        .compose(ok -> {
-            final Promise<DeviceConnectionResult> getLastGwResult = Promise.promise();
-            svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span, getLastGwResult);
-            return getLastGwResult.future();
-        })
+        .compose(ok -> svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span))
         .setHandler(ctx.succeeding(deviceConnectionResult -> {
             ctx.verify(() -> {
                 assertThat(deviceConnectionResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
