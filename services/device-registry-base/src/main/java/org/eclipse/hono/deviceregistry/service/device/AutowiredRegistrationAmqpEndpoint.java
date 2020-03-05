@@ -10,29 +10,36 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
 package org.eclipse.hono.deviceregistry.service.device;
 
-import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.registration.EventBusRegistrationAdapter;
+import org.eclipse.hono.service.registration.AbstractRegistrationAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Vertx;
+
 /**
- * A default event bus based service implementation of the {@link DeviceManagementService}.
+ * A default service implementation of the {@link org.eclipse.hono.service.registration.RegistrationService}.
  * <p>
- * This wires up the actual service instance with the mapping to the event bus implementation. It is intended to be used
+ * This wires up the actual service instance with the mapping to the AMQP endpoint. It is intended to be used
  * in a Spring Boot environment.
- * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
- *             Please use {@link org.eclipse.hono.service.registration.AbstractRegistrationAmqpEndpoint} based implementation in the future.
  */
 @Component
-@Deprecated(forRemoval = true)
-public final class AutowiredRegistrationAdapter extends EventBusRegistrationAdapter {
+public final class AutowiredRegistrationAmqpEndpoint extends AbstractRegistrationAmqpEndpoint {
 
     private RegistrationService service;
+
+    /**
+     * Creates a new registration endpoint for a vertx instance.
+     *
+     * @param vertx The vertx instance to use.
+     */
+    @Autowired
+    public AutowiredRegistrationAmqpEndpoint(final Vertx vertx) {
+        super(vertx);
+    }
 
     @Autowired
     @Qualifier("backend")
