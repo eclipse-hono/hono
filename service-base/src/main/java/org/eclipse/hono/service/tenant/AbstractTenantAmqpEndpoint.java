@@ -26,12 +26,10 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantResult;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -142,9 +140,8 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
     private Future<Message> processGetByIdRequest(final Message request, final String tenantId,
             final Span span) {
 
-        final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
-        getService().get(tenantId, span, getResult);
-        return getResult.future().map(tr -> TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, tenantId, request, tr));
+        return getService().get(tenantId, span)
+                .map(tr -> TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, tenantId, request, tr));
     }
 
     private Future<Message> processGetByCaRequest(final Message request, final String subjectDn,
@@ -153,9 +150,7 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
         try {
             final X500Principal dn = new X500Principal(subjectDn);
             log.debug("retrieving tenant [subject DN: {}]", subjectDn);
-            final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
-            getService().get(dn, span, getResult);
-            return getResult.future().map(tr -> {
+            return getService().get(dn, span).map(tr -> {
                 String tenantId = null;
                 if (tr.isOk() && tr.getPayload() != null) {
                     tenantId = getTypesafeValueForField(String.class, tr.getPayload(),

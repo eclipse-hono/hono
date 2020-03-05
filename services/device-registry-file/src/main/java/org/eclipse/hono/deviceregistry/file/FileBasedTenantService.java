@@ -48,9 +48,7 @@ import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
@@ -256,22 +254,21 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        get(tenantId, null, resultHandler);
+    public Future<TenantResult<JsonObject>> get(final String tenantId) {
+        return get(tenantId, null);
     }
 
     @Override
-    public void get(final String tenantId, final Span span, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        resultHandler.handle(Future.succeededFuture(getTenantObjectResult(tenantId, span)));
+    public Future<TenantResult<JsonObject>> get(final String tenantId, final Span span) {
+        return Future.succeededFuture(getTenantObjectResult(tenantId, span));
     }
 
     @Override
-    public void get(final X500Principal subjectDn, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public Future<TenantResult<JsonObject>> get(final X500Principal subjectDn) {
 
         Objects.requireNonNull(subjectDn);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(getForCertificateAuthority(subjectDn, null)));
+        return Future.succeededFuture(getForCertificateAuthority(subjectDn, null));
     }
 
     @Override
@@ -314,13 +311,11 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void get(final X500Principal subjectDn, final Span span,
-            final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
+    public Future<TenantResult<JsonObject>> get(final X500Principal subjectDn, final Span span) {
 
         Objects.requireNonNull(subjectDn);
-        Objects.requireNonNull(resultHandler);
 
-        resultHandler.handle(Future.succeededFuture(getForCertificateAuthority(subjectDn, span)));
+        return Future.succeededFuture(getForCertificateAuthority(subjectDn, span));
     }
 
     private TenantResult<JsonObject> getForCertificateAuthority(final X500Principal subjectDn, final Span span) {

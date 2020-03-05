@@ -30,9 +30,7 @@ import org.springframework.stereotype.Repository;
 
 import io.opentracing.Span;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -92,12 +90,12 @@ public final class FileBasedTenantBackend extends AbstractVerticle implements Te
     // Tenant AMQP API
 
     @Override
-    public void get(final String tenantId, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        tenantService.get(tenantId, resultHandler);
+    public Future<TenantResult<JsonObject>> get(final String tenantId) {
+        return tenantService.get(tenantId);
     }
 
     @Override
-    public void get(final X500Principal subjectDn, final Handler<AsyncResult<TenantResult<JsonObject>>> resultHandler) {
-        tenantService.get(subjectDn, resultHandler);
+    public Future<TenantResult<JsonObject>> get(final X500Principal subjectDn) {
+        return tenantService.get(subjectDn);
     }
 }

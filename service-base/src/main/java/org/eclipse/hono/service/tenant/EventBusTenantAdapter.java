@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,14 +25,12 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantResult;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
@@ -134,14 +132,11 @@ public abstract class EventBusTenantAdapter extends EventBusService implements V
     private Future<EventBusMessage> processGetByIdRequest(final EventBusMessage request, final String tenantId,
             final Span span) {
 
-        final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
-        getService().get(tenantId, span, getResult);
-        return getResult.future().map(tr -> {
-            return request.getResponse(tr.getStatus())
-                    .setJsonPayload(tr.getPayload())
-                    .setTenant(tenantId)
-                    .setCacheDirective(tr.getCacheDirective());
-        });
+        return getService().get(tenantId, span)
+                .map(tr -> request.getResponse(tr.getStatus())
+                        .setJsonPayload(tr.getPayload())
+                        .setTenant(tenantId)
+                        .setCacheDirective(tr.getCacheDirective()));
     }
 
     private Future<EventBusMessage> processGetByCaRequest(final EventBusMessage request, final String subjectDn,
@@ -150,20 +145,19 @@ public abstract class EventBusTenantAdapter extends EventBusService implements V
         try {
             final X500Principal dn = new X500Principal(subjectDn);
             log.debug("retrieving tenant [subject DN: {}]", subjectDn);
-            final Promise<TenantResult<JsonObject>> getResult = Promise.promise();
-            getService().get(dn, span, getResult);
-            return getResult.future().map(tr -> {
-                final EventBusMessage response = request.getResponse(tr.getStatus())
-                        .setJsonPayload(tr.getPayload())
-                        .setCacheDirective(tr.getCacheDirective());
-                if (tr.isOk() && tr.getPayload() != null) {
-                    final String tenantId = getTypesafeValueForField(String.class, tr.getPayload(),
-                            TenantConstants.FIELD_PAYLOAD_TENANT_ID);
-                    span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-                    response.setTenant(tenantId);
-                }
-                return response;
-            });
+            return getService().get(dn, span)
+                    .map(tr -> {
+                        final EventBusMessage response = request.getResponse(tr.getStatus())
+                                .setJsonPayload(tr.getPayload())
+                                .setCacheDirective(tr.getCacheDirective());
+                        if (tr.isOk() && tr.getPayload() != null) {
+                            final String tenantId = getTypesafeValueForField(String.class, tr.getPayload(),
+                                    TenantConstants.FIELD_PAYLOAD_TENANT_ID);
+                            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+                            response.setTenant(tenantId);
+                        }
+                        return response;
+                    });
         } catch (final IllegalArgumentException e) {
             TracingHelper.logError(span, "illegal subject DN provided by client: " + subjectDn);
             // the given subject DN is invalid
