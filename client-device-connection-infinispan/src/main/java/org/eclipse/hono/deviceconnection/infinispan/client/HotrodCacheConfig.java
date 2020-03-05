@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
+import java.util.Optional;
+
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.infinispan.client.hotrod.RemoteCacheManager;
@@ -22,6 +24,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import io.opentracing.Tracer;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 
 /**
@@ -66,7 +70,7 @@ public class HotrodCacheConfig {
     @Bean
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public HotrodCache<String, String> remoteCache(final Vertx vertx) {
-        return new HotrodCache<String, String>(
+        return new HotrodCache<>(
                 vertx,
                 remoteCacheManager(),
                 DeviceConnectionConstants.CACHE_NAME,
@@ -79,12 +83,15 @@ public class HotrodCacheConfig {
      * in an Infinispan data grid.
      *
      * @param cache The remote cache in the Infinispan data grid.
+     * @param tracer The OpenTracing {@code Tracer} to use for tracking requests done by clients created by this factory.
+     *               If an empty Optional is given, the {@code NoopTracer} from OpenTracing will be used.
      * @return The factory.
      */
     @Bean
     @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
-    public BasicDeviceConnectionClientFactory hotrodBasedDeviceConnectionClientFactory(final HotrodCache<String, String> cache) {
-        return new HotrodBasedDeviceConnectionClientFactory(cache);
+    public BasicDeviceConnectionClientFactory hotrodBasedDeviceConnectionClientFactory(
+            final HotrodCache<String, String> cache, final Optional<Tracer> tracer) {
+        return new HotrodBasedDeviceConnectionClientFactory(cache, tracer.orElse(NoopTracerFactory.create()));
     }
 }

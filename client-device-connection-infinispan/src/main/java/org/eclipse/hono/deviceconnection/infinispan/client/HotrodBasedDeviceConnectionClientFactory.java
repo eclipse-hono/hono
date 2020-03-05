@@ -21,11 +21,11 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.ReconnectListener;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -42,13 +42,16 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
             .maximumSize(100)
             .build();
     private final HotrodCache<String, String> cache;
+    private final Tracer tracer;
 
     /**
      * @param cache The cache representing the data grid.
-     * @throws NullPointerException if cache is {@code null}.
+     * @param tracer The OpenTracing {@code Tracer} to use for tracking requests done by clients created by this factory.
+     * @throws NullPointerException if cache or tracer is {@code null}.
      */
-    public HotrodBasedDeviceConnectionClientFactory(@Autowired final HotrodCache<String, String> cache) {
+    public HotrodBasedDeviceConnectionClientFactory(final HotrodCache<String, String> cache, final Tracer tracer) {
         this.cache = Objects.requireNonNull(cache);
+        this.tracer = Objects.requireNonNull(tracer);
     }
 
     /**
@@ -107,7 +110,7 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
     @Override
     public Future<DeviceConnectionClient> getOrCreateDeviceConnectionClient(final String tenantId) {
         final DeviceConnectionClient result = clients.get(tenantId, key -> {
-            final DeviceConnectionInfo info = new HotrodBasedDeviceConnectionInfo(cache);
+            final DeviceConnectionInfo info = new HotrodBasedDeviceConnectionInfo(cache, tracer);
             return new HotrodBasedDeviceConnectionClient(key, info);
         });
         return Future.succeededFuture(result);

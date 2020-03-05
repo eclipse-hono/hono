@@ -23,7 +23,6 @@ import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.deviceconnection.EventBusDeviceConnectionAdapter;
 import org.eclipse.hono.util.DeviceConnectionResult;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
@@ -45,7 +44,7 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
      * @param cache The remote cache.
      * @throws NullPointerException if the cache is {@code null}.
      */
-    public RemoteCacheBasedDeviceConnectionService(@Autowired final DeviceConnectionInfo cache) {
+    public RemoteCacheBasedDeviceConnectionService(final DeviceConnectionInfo cache) {
         this.cache = Objects.requireNonNull(cache);
     }
 

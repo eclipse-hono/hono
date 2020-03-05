@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -42,14 +43,18 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
     private static final Logger LOG = LoggerFactory.getLogger(HotrodBasedDeviceConnectionInfo.class);
 
     final RemoteCache<String, String> cache;
+    final Tracer tracer;
 
     /**
      * Creates a client for accessing device connection information.
      * 
      * @param cache The remote cache that contains the data.
+     * @param tracer The tracer instance.
+     * @throws NullPointerException if cache or tracer is {@code null}.
      */
-    public HotrodBasedDeviceConnectionInfo(final RemoteCache<String, String> cache) {
+    public HotrodBasedDeviceConnectionInfo(final RemoteCache<String, String> cache, final Tracer tracer) {
         this.cache = Objects.requireNonNull(cache);
+        this.tracer = Objects.requireNonNull(tracer);
     }
 
     private static String getKey(final String tenantId, final String deviceId) {
