@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -132,7 +132,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
 
         if (clientIdentity instanceof PreSharedKeyIdentity) {
             final Span span = newSpan("PSK-getDeviceIdentityInfo");
-            final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(clientIdentity.getName());
+            final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(span, clientIdentity.getName());
             span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceIdentity.getTenantId())
                 .setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdentity.getAuthId());
             final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
@@ -169,7 +169,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
     public SecretKey getKey(final PskPublicInformation identity) {
         final Span span = newSpan("PSK-getSecretKey");
 
-        final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(identity.getPublicInfoAsString());
+        final PreSharedKeyDeviceIdentity handshakeIdentity = getHandshakeIdentity(span, identity.getPublicInfoAsString());
         if (handshakeIdentity == null) {
             span.finish();
             return null;
@@ -246,8 +246,8 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * @param identity pre-shared-key handshake identity.
      * @return tenant aware identity.
      */
-    private PreSharedKeyDeviceIdentity getHandshakeIdentity(final String identity) {
+    private PreSharedKeyDeviceIdentity getHandshakeIdentity(final Span span, final String identity) {
         final String splitRegex = config.isSingleTenant() ? null : config.getIdSplitRegex();
-        return PreSharedKeyDeviceIdentity.create(identity, splitRegex);
+        return PreSharedKeyDeviceIdentity.create(span, identity, splitRegex);
     }
 }
