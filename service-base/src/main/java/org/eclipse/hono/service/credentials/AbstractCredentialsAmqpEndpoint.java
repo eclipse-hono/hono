@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,91 +12,99 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
+
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
-import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.TenantConstants;
-
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.tag.Tags;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Verticle;
-import io.vertx.core.json.JsonObject;
+import org.eclipse.hono.util.ResourceIdentifier;
 
 /**
- * Adapter to bind {@link CredentialsService} to the vertx event bus.
+ * An {@code AmqpEndpoint} for managing device credential information.
  * <p>
- * This base class provides support for receiving <em>Get</em> request messages via vert.x' event bus and routing them
- * to specific methods accepting the query parameters contained in the request message.
- * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
- *             Please use {@link org.eclipse.hono.service.credentials.AbstractCredentialsAmqpEndpoint} based implementation in the future.
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
+ * It receives AMQP 1.0 messages representing requests and forward them to the credential service implementation.
+ * The outcome is then returned to the peer in a response message.
  */
-@Deprecated
-public abstract class EventBusCredentialsAdapter extends EventBusService implements Verticle {
+public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestResponseEndpoint<ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_CREDENTIALS = "get Credentials";
 
     /**
+     * Creates a new credentials endpoint for a vertx instance.
+     *
+     * @param vertx The vertx instance to use.
+     */
+    public AbstractCredentialsAmqpEndpoint(final Vertx vertx) {
+        super(vertx);
+    }
+
+    @Override
+    public final String getName() {
+        return CredentialsConstants.CREDENTIALS_ENDPOINT;
+    }
+
+    /**
      * The service to forward requests to.
-     * 
+     *
      * @return The service to bind to, must never return {@code null}.
      */
     protected abstract CredentialsService getService();
 
+
     @Override
-    protected String getEventBusAddress() {
-        return CredentialsConstants.EVENT_BUS_ADDRESS_CREDENTIALS_IN;
-    }
+    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
 
-    /**
-     * Processes a Credentials API request received via the vert.x event bus.
-     * <p>
-     * This method validates the request parameters against the Credentials API
-     * specification before invoking the corresponding {@code CredentialsService} methods.
-     *
-     * @param request The request message.
-     * @return A future indicating the outcome of the service invocation.
-     * @throws NullPointerException If the request message is {@code null}.
-     */
-    @Override
-    public Future<EventBusMessage> processRequest(final EventBusMessage request) {
+        Objects.requireNonNull(requestMessage);
 
-        Objects.requireNonNull(request);
-
-        final String operation = request.getOperation();
-
-        switch (CredentialsConstants.CredentialsAction.from(operation)) {
-            case get:
-                return processGetRequest(request);
-            default:
-                return processCustomCredentialsMessage(request);
+        switch (CredentialsConstants.CredentialsAction.from(requestMessage.getSubject())) {
+        case get:
+            return processGetRequest(requestMessage, targetAddress);
+        default:
+            return processCustomCredentialsMessage(requestMessage);
         }
     }
 
     /**
      * Processes a <em>get Credentials</em> request message.
-     * 
+     *
      * @param request The request message.
+     * @param targetAddress The address the message is sent to.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
+    protected Future<Message> processGetRequest(final Message request, final ResourceIdentifier targetAddress) {
 
-        final String tenantId = request.getTenant();
-        final JsonObject payload = request.getJsonPayload();
+        final String tenantId = targetAddress.getTenantId();
+        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, request);
+        final Span span = newChildSpan(SPAN_NAME_GET_CREDENTIALS, spanContext, tenantId);
 
-        final Span span = newChildSpan(SPAN_NAME_GET_CREDENTIALS, request.getSpanContext(), tenantId);
-        final Future<EventBusMessage> resultFuture;
+        JsonObject payload = null;
+        try {
+        payload = MessageHelper.getJsonPayload(request);
+        } catch (DecodeException e) {
+            logger.debug("failed to decode AMQP request message", e);
+            return Future.failedFuture(
+                    new ClientErrorException(
+                            HttpURLConnection.HTTP_BAD_REQUEST,
+                            "request message body contains malformed JSON"));
+        }
+        final Future<Message> resultFuture;
+
         if (tenantId == null || payload == null) {
             TracingHelper.logError(span, "missing tenant and/or payload");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -127,7 +135,7 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
 
     /**
      * Processes a <em>get Credentials by Device ID</em> request message.
-     * 
+     *
      * @param request The request message.
      * @param tenantId The tenant id.
      * @param type The secret type.
@@ -135,64 +143,44 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
      * @param span The tracing span.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<EventBusMessage> processGetByDeviceIdRequest(final EventBusMessage request, final String tenantId,
+    protected Future<Message> processGetByDeviceIdRequest(final Message request, final String tenantId,
             final String type, final String deviceId, final Span span) {
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 
-    private Future<EventBusMessage> processGetByAuthIdRequest(final EventBusMessage request, final String tenantId,
+    private Future<Message> processGetByAuthIdRequest(final Message request, final String tenantId,
             final JsonObject payload, final String type, final String authId, final Span span) {
+
         log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         TracingHelper.TAG_AUTH_ID.set(span, authId);
         final Promise<CredentialsResult<JsonObject>> result = Promise.promise();
+
         getService().get(tenantId, type, authId, payload, span, result);
+
         return result.future()
                 .map(res -> {
                     final String deviceIdFromPayload = Optional.ofNullable(res.getPayload())
                             .map(p -> getTypesafeValueForField(String.class, p,
-                                    TenantConstants.FIELD_PAYLOAD_DEVICE_ID))
+                                    CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))
                             .orElse(null);
                     if (deviceIdFromPayload != null) {
                         span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdFromPayload);
                     }
-                    return request.getResponse(res.getStatus())
-                            .setDeviceId(deviceIdFromPayload)
-                            .setJsonPayload(res.getPayload())
-                            .setCacheDirective(res.getCacheDirective());
+                    return CredentialsConstants.getAmqpReply(
+                            CredentialsConstants.CREDENTIALS_ENDPOINT,
+                            tenantId,
+                            request,
+                            res
+                    );
                 });
-    }
-
-    /**
-     * Creates a new <em>OpenTracing</em> span for tracing the execution of a credentials service operation.
-     * <p>
-     * The returned span will already contain a tag for the given tenant (if it is not {@code null}).
-     *
-     * @param operationName The operation name that the span should be created for.
-     * @param spanContext Existing span context.
-     * @param tenantId The tenant id.
-     * @return The new {@code Span}.
-     * @throws NullPointerException if operationName is {@code null}.
-     */
-    protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId) {
-        Objects.requireNonNull(operationName);
-        // we set the component tag to the class name because we have no access to
-        // the name of the enclosing component we are running in
-        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
-        if (tenantId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        return spanBuilder.start();
     }
 
     /**
      * Processes a request for a non-standard operation.
      * <p>
      * Subclasses should override this method in order to support additional, custom
-     * operations that are not defined by Hono's Credentials API.
+     * operations that are not defined by Hono's Tenant API.
      * <p>
      * This default implementation simply returns a future that is failed with a
      * {@link ClientErrorException} with an error code <em>400 Bad Request</em>.
@@ -200,9 +188,13 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
      * @param request The request to process.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<EventBusMessage> processCustomCredentialsMessage(final EventBusMessage request) {
-        log.debug("invalid operation in request message [{}]", request.getOperation());
+    protected Future<Message> processCustomCredentialsMessage(final Message request) {
+        log.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
+    @Override
+    protected boolean passesFormalVerification(final ResourceIdentifier linkTarget, final Message msg) {
+        return CredentialsMessageFilter.verify(linkTarget, msg);
+    }
 }
