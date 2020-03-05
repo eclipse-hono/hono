@@ -124,7 +124,7 @@ public class CredentialsJmsIT extends CredentialsApiTests {
      */
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     @Test
-    public void testGetCredentialsFailsForMalformedSearchCiteria(final VertxTestContext ctx) {
+    public void testGetCredentialsFailsForMalformedSearchCriteria(final VertxTestContext ctx) {
 
         getJmsBasedClient(Constants.DEFAULT_TENANT)
         .compose(client -> client.sendRequest(

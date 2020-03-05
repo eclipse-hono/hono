@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,38 +10,44 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
 package org.eclipse.hono.deviceregistry.service.credentials;
 
+import io.vertx.core.Vertx;
+import org.eclipse.hono.service.credentials.AbstractCredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
-import org.eclipse.hono.service.credentials.EventBusCredentialsAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
- * A default event bus based service implementation of the {@link CredentialsService}.
+ * A default service implementation of the {@link org.eclipse.hono.service.credentials.CredentialsService}.
  * <p>
- * This wires up the actual service instance with the mapping to the event bus implementation. It is intended to be used
+ * This wires up the actual service instance with the mapping to the AMQP endpoint. It is intended to be used
  * in a Spring Boot environment.
- * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
- *             Please use {@link org.eclipse.hono.service.credentials.AbstractCredentialsAmqpEndpoint} based implementation in the future.
  */
 @Component
-@Deprecated(forRemoval = true)
-public final class AutowiredCredentialsAdapter extends EventBusCredentialsAdapter {
+public class AutowiredCredentialsAmqpEndpoint extends AbstractCredentialsAmqpEndpoint {
 
     private CredentialsService service;
+
+    /**
+     * Creates a new tenant endpoint for a vertx instance.
+     *
+     * @param vertx The vertx instance to use.
+     */
+    @Autowired
+    public AutowiredCredentialsAmqpEndpoint(final Vertx vertx) {
+        super(vertx);
+    }
+
+    @Override
+    protected CredentialsService getService() {
+        return service;
+    }
 
     @Autowired
     @Qualifier("backend")
     public void setService(final CredentialsService service) {
         this.service = service;
     }
-
-    @Override
-    protected CredentialsService getService() {
-        return this.service;
-    }
-
 }

@@ -24,15 +24,15 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedTenantsConfigProperties;
-import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsManagementHttpEndpoint;
-import org.eclipse.hono.deviceregistry.service.device.AutowiredDeviceManagementHttpEndpoint;
+import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.credentials.CredentialsAmqpEndpoint;
+import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsManagementHttpEndpoint;
+import org.eclipse.hono.deviceregistry.service.device.AutowiredDeviceManagementHttpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -65,7 +65,7 @@ public class ApplicationConfig {
      * This method creates new Vert.x default options and invokes
      * {@link VertxProperties#configureVertx(VertxOptions)} on the object returned
      * by {@link #vertxProperties()}.
-     * 
+     *
      * @return The Vert.x instance.
      */
     @Bean
@@ -75,7 +75,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes configuration properties for Vert.x.
-     * 
+     *
      * @return The properties.
      */
     @ConfigurationProperties("hono.vertx")
@@ -90,7 +90,7 @@ public class ApplicationConfig {
      * The Tracer will be resolved by means of a Java service lookup.
      * If no tracer can be resolved this way, the {@code NoopTracer} is
      * returned.
-     * 
+     *
      * @return The tracer.
      */
     @Bean
@@ -124,7 +124,7 @@ public class ApplicationConfig {
 
     /**
      * Gets properties for configuring the Device Registry's AMQP 1.0 endpoint.
-     * 
+     *
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_AMQP)
@@ -137,7 +137,7 @@ public class ApplicationConfig {
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
-     * 
+     *
      * @return The handler.
      */
     @Bean
@@ -148,13 +148,13 @@ public class ApplicationConfig {
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
-     * 
+     *
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
     public AmqpEndpoint credentialsAmqpEndpoint() {
-        return new CredentialsAmqpEndpoint(vertx());
+        return new AutowiredCredentialsAmqpEndpoint(vertx());
     }
 
     /**
@@ -181,7 +181,7 @@ public class ApplicationConfig {
 
     /**
      * Gets properties for configuring the HTTP based Device Registry Management endpoint.
-     * 
+     *
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_REST)
@@ -195,7 +195,7 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an HTTP protocol handler for the <em>devices</em> resources
      * of Hono's Device Registry Management API's.
-     * 
+     *
      * @return The handler.
      */
     @Bean
@@ -231,7 +231,7 @@ public class ApplicationConfig {
     /**
      * Gets properties for configuring {@code FileBasedRegistrationService} which implements
      * the <em>Device Registration</em> API.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -243,7 +243,7 @@ public class ApplicationConfig {
     /**
      * Gets properties for configuring {@code FileBasedCredentialsService} which implements
      * the <em>Credentials</em> API.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -278,7 +278,7 @@ public class ApplicationConfig {
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean
@@ -301,7 +301,7 @@ public class ApplicationConfig {
     /**
      * Exposes a password encoder to use for encoding clear text passwords
      * and for matching password hashes.
-     * 
+     *
      * @return The encoder.
      */
     @Bean

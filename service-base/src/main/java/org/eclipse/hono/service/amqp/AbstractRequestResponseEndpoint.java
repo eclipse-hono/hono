@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.amqp;
 
+import io.opentracing.Tracer;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
@@ -463,6 +464,32 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
         Objects.requireNonNull(field);
 
         final Object result = payload.getValue(field);
+
+        if (clazz.isInstance(result)) {
+            return clazz.cast(result);
+        }
+
+        return null;
+    }
+
+    /**
+     * Removes a property value of a given type from a JSON object.
+     *
+     * @param clazz Type class of the type
+     * @param payload The object to get the property from.
+     * @param field The name of the property.
+     * @param <T> The type of the field.
+     * @return The property value or {@code null} if no such property exists or is not of the expected type.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    protected static final <T> T removeTypesafeValueForField(final Class<T> clazz, final JsonObject payload,
+            final String field) {
+
+        Objects.requireNonNull(clazz);
+        Objects.requireNonNull(payload);
+        Objects.requireNonNull(field);
+
+        final Object result = payload.remove(field);
 
         if (clazz.isInstance(result)) {
             return clazz.cast(result);
