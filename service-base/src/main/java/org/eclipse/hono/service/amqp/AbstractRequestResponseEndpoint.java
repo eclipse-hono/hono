@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.amqp;
 
-import io.opentracing.Tracer;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;

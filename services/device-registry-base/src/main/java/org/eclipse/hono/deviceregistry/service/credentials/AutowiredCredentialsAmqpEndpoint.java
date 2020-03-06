@@ -12,12 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.credentials;
 
-import io.vertx.core.Vertx;
 import org.eclipse.hono.service.credentials.AbstractCredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+
+import io.vertx.core.Vertx;
 
 /**
  * A default service implementation of the {@link org.eclipse.hono.service.credentials.CredentialsService}.

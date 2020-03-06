@@ -12,14 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.credentials;
 
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
-
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
@@ -33,6 +25,14 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 
 /**
  * An {@code AmqpEndpoint} for managing device credential information.
@@ -95,7 +95,7 @@ public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestRes
 
         JsonObject payload = null;
         try {
-        payload = MessageHelper.getJsonPayload(request);
+            payload = MessageHelper.getJsonPayload(request);
         } catch (DecodeException e) {
             logger.debug("failed to decode AMQP request message", e);
             return Future.failedFuture(

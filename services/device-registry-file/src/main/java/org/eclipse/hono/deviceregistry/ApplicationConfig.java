@@ -25,14 +25,14 @@ import org.eclipse.hono.deviceregistry.file.FileBasedCredentialsConfigProperties
 import org.eclipse.hono.deviceregistry.file.FileBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsAmqpEndpoint;
+import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsManagementHttpEndpoint;
+import org.eclipse.hono.deviceregistry.service.device.AutowiredDeviceManagementHttpEndpoint;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsManagementHttpEndpoint;
-import org.eclipse.hono.deviceregistry.service.device.AutowiredDeviceManagementHttpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
