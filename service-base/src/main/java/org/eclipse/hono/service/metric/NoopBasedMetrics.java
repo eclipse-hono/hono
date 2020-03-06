@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,9 +15,9 @@ package org.eclipse.hono.service.metric;
 
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
-import org.eclipse.hono.util.TenantObject;
 
 /**
  * A no-op metrics implementation.

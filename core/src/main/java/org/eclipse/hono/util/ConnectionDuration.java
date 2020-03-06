@@ -12,13 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.Instant;
+import java.util.Objects;
+
 import org.eclipse.hono.annotation.HonoTimestamp;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * The resource limits definition corresponding to the connection duration.
@@ -50,7 +50,7 @@ public class ConnectionDuration {
      * Sets the point in time on which the connection duration limit came into effect.
      *
      * @param effectiveSince the point in time on which the connection duration limit came into effect
-     *                       and it comply to the {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME}.
+     *                       and it comply to the {@link java.time.format.DateTimeFormatter#ISO_OFFSET_DATE_TIME}.
      * @return  a reference to this for fluent use.
      * @throws NullPointerException if effectiveSince is {@code null}.
      */

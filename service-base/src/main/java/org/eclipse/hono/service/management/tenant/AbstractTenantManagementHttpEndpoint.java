@@ -12,18 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.tenant;
 
-import io.opentracing.Span;
-import io.opentracing.tag.Tags;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
+import java.net.HttpURLConnection;
+import java.util.EnumSet;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -36,10 +28,19 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.springframework.beans.factory.annotation.Autowired;
-import java.net.HttpURLConnection;
-import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Optional;
+
+import io.opentracing.Span;
+import io.opentracing.tag.Tags;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 /**
  * An {@code HttpEndpoint} for managing tenant information.

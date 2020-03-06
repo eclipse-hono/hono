@@ -15,13 +15,13 @@ package org.eclipse.hono.service.management.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
-import java.util.ArrayList;
 
 /**
  * Verifies {@link Device}.

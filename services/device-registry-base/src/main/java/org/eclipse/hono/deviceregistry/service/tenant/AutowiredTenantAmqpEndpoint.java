@@ -12,13 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.tenant;
 
-import io.vertx.core.Vertx;
-
 import org.eclipse.hono.service.tenant.AbstractTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+
+import io.vertx.core.Vertx;
 
 /**
  * A default event bus based service implementation of the {@link TenantService}.

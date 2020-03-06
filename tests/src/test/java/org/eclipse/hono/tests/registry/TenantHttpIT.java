@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,13 +21,13 @@ import java.net.HttpURLConnection;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.util.ResourceLimits;
-import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;

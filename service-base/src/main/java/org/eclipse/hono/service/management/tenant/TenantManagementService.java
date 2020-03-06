@@ -13,13 +13,15 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import io.opentracing.Span;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
 import java.util.Optional;
+
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+
+import io.opentracing.Span;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 
 /**
  * A service for managing tenant information.

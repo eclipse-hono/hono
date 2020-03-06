@@ -13,6 +13,22 @@
 
 package org.eclipse.hono.service.management.credentials;
 
+import java.net.HttpURLConnection;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.RegistryManagementConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Promise;
@@ -25,21 +41,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import java.net.HttpURLConnection;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
-import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.http.TracingHandler;
-import org.eclipse.hono.service.management.OperationResult;
-
-import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.RegistryManagementConstants;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * An {@code HttpEndpoint} for managing device credentials.

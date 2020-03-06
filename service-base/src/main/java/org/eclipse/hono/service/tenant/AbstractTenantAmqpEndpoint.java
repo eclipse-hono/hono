@@ -12,13 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.tenant;
 
-import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
+import java.net.HttpURLConnection;
+import java.util.Objects;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
@@ -30,9 +27,14 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantResult;
-import javax.security.auth.x500.X500Principal;
-import java.net.HttpURLConnection;
-import java.util.Objects;
+
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 
 /**
  * An {@code AmqpEndpoint} for managing tenant information.

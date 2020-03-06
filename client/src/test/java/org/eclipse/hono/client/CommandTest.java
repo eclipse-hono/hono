@@ -22,12 +22,13 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.vertx.proton.ProtonHelper;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
+
+import io.vertx.proton.ProtonHelper;
 
 /**
  * Verifies behavior of {@link Command}.

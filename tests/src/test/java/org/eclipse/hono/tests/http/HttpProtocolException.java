@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.http;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+
 import io.vertx.core.Future;
 
 /**

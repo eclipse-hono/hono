@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,9 @@
 
 package org.eclipse.hono.service.metric;
 
-import io.micrometer.core.instrument.Timer.Sample;
 import org.eclipse.hono.util.TenantObject;
+
+import io.micrometer.core.instrument.Timer.Sample;
 
 /**
  * A collector for metrics.

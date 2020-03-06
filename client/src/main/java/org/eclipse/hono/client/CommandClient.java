@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,12 @@
 
 package org.eclipse.hono.client;
 
+import java.util.Map;
+
 import org.eclipse.hono.util.BufferResult;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-
-import java.util.Map;
 
 /**
  * A client for accessing Hono's Command and Control API.

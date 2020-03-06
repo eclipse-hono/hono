@@ -12,10 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.Objects;
 
 /**
  * The period definition corresponding to a resource limit for a tenant.

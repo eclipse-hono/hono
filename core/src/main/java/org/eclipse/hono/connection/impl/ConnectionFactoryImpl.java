@@ -19,8 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.connection.ConnectTimeoutException;
+import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

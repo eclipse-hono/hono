@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import io.opentracing.noop.NoopSpan;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.service.management.Id;
@@ -43,6 +42,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import io.opentracing.Span;
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,12 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.MoreObjects.ToStringHelper;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 import io.vertx.core.json.JsonObject;
 
 /**

@@ -13,9 +13,10 @@
 
 package org.eclipse.hono.example.protocolgateway.controller;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.proton.ProtonDelivery;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.eclipse.hono.example.protocolgateway.adapter.CommandAndControlReceiver;
 import org.eclipse.hono.example.protocolgateway.adapter.TelemetryAndEventSender;
@@ -25,9 +26,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * Example protocol gateway service to send AMQP messages to Hono amqp adapter using Hono cli module classes.

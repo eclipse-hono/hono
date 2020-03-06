@@ -13,10 +13,6 @@
 
 package org.eclipse.hono.service.http;
 
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpServerResponse;
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
 import java.util.Objects;
@@ -38,10 +34,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.MIMEHeader;

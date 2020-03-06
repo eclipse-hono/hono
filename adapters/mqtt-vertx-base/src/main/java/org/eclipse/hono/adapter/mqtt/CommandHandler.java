@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,14 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import io.opentracing.log.Fields;
-import io.vertx.core.Vertx;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -23,13 +29,8 @@ import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
+import io.opentracing.log.Fields;
+import io.vertx.core.Vertx;
 
 /**
  * A class that tracks command subscriptions, unsubscriptions and handles PUBACKs.

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,15 +13,15 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import io.vertx.core.json.JsonArray;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * A LoRaWAN provider with API for Actility.

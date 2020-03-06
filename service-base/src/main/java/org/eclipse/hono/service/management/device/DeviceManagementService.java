@@ -13,14 +13,14 @@
 
 package org.eclipse.hono.service.management.device;
 
-import io.opentracing.Span;
-import io.vertx.core.Future;
-
 import java.util.Optional;
 
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
+
+import io.opentracing.Span;
+import io.vertx.core.Future;
 
 /**
  * A service for managing device registration information.

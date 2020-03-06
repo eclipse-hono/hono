@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry;
 
 import java.io.IOException;
+
 import com.google.common.io.Resources;
 
 import io.vertx.core.buffer.Buffer;

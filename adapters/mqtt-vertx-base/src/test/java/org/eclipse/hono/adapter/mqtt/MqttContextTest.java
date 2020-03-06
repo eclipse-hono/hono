@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,8 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -23,10 +24,10 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
+import org.junit.jupiter.api.Test;
 
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-import org.junit.jupiter.api.Test;
 
 /**
  * Verifies behavior of {@link MqttContext}.

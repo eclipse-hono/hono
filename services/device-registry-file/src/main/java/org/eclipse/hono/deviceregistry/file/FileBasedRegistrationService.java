@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -37,7 +38,6 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,12 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import io.vertx.core.json.JsonObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies behavior of {@link LoriotProvider}.

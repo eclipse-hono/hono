@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,13 +15,14 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.util.Objects;
 
-import io.netty.handler.codec.mqtt.MqttQoS;
-import io.vertx.mqtt.MqttTopicSubscription;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.netty.handler.codec.mqtt.MqttQoS;
+import io.vertx.mqtt.MqttTopicSubscription;
 
 /**
  * The MQTT subscription of devices, to get commands.

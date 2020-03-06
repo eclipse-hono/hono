@@ -22,10 +22,10 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.sasl.SaslException;
 
-import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.client.impl;
 
-import io.vertx.core.buffer.Buffer;
-
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RequestResponseResult;
+
+import io.vertx.core.buffer.Buffer;
 
 
 /**

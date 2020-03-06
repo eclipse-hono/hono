@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.config;
 
-import org.eclipse.hono.util.Constants;
 import java.util.Objects;
 
 /**
@@ -80,7 +79,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * <p>
      * In this mode clients do not need to specify a <em>tenant</em>
      * component in resource addresses. The server will use the
-     * {@link Constants#DEFAULT_TENANT} instead.
+     * {@link org.eclipse.hono.util.Constants#DEFAULT_TENANT} instead.
      *
      * @return {@code true} if the server is configured to run in single-tenant mode.
      */
@@ -93,7 +92,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * <p>
      * In this mode clients do not need to specify a <em>tenant</em>
      * component in resource addresses. The server will use the
-     * {@link Constants#DEFAULT_TENANT} instead.
+     * {@link org.eclipse.hono.util.Constants#DEFAULT_TENANT} instead.
      * <p>
      * The default value of this property is {@code false}.
      *

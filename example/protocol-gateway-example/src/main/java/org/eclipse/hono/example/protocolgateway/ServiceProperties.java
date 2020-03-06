@@ -13,10 +13,11 @@
 
 package org.eclipse.hono.example.protocolgateway;
 
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 
 /**
  * Configure vertx, which is used in {@link org.eclipse.hono.cli.adapter.AmqpCliClient}.

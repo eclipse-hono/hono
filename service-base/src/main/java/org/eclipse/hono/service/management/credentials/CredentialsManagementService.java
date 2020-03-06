@@ -12,12 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import io.opentracing.Span;
 import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.hono.service.management.OperationResult;
 
+import io.opentracing.Span;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 

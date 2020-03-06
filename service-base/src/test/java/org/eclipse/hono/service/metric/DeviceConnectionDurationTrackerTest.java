@@ -12,11 +12,6 @@
  */
 package org.eclipse.hono.service.metric;
 
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,6 +19,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 
 /**
  * Verifies behavior of {@link DeviceConnectionDurationTracker}.

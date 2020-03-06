@@ -20,9 +20,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.http.CaseInsensitiveHeaders;
-
 import io.vertx.core.MultiMap;
+import io.vertx.core.http.CaseInsensitiveHeaders;
 
 /**
  * Tests verifying the behavior of {@link MultiMapInjectAdapter} and {@link MultiMapExtractAdapter}.

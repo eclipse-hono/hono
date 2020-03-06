@@ -13,16 +13,6 @@
 
 package org.eclipse.hono.example.protocolgateway;
 
-import io.vertx.core.Future;
-import org.eclipse.hono.example.protocolgateway.controller.ProtocolGatewayExample;
-import org.eclipse.hono.example.protocolgateway.interfaces.CommandHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -31,6 +21,18 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+
+import javax.annotation.PostConstruct;
+
+import org.eclipse.hono.example.protocolgateway.controller.ProtocolGatewayExample;
+import org.eclipse.hono.example.protocolgateway.interfaces.CommandHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import io.vertx.core.Future;
 
 /**
  * Example TCP server to send event and telemetry messages to Hono AMQP adapter and receive commands.

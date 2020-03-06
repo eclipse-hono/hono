@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 
-import io.vertx.core.Future;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -47,6 +46,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;

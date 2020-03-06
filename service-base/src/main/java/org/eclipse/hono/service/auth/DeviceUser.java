@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,13 @@
 
 package org.eclipse.hono.service.auth;
 
+import org.eclipse.hono.auth.Device;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.User;
-import org.eclipse.hono.auth.Device;
 
 /**
  * A class that implements the {@link User} interface for devices that then can be used for authorization validation.

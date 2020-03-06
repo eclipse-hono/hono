@@ -13,14 +13,15 @@
 
  package org.eclipse.hono.example.protocolgateway.adapter;
 
-import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.cli.adapter.AmqpCliClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
+import io.vertx.proton.ProtonDelivery;
+import io.vertx.proton.ProtonHelper;
 
 /**
  * Adapter for telemetry or event messages using methods and properties from {@link AmqpCliClient} to simplify handling.

@@ -16,6 +16,7 @@ package org.eclipse.hono.service.management.device;
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
 import java.util.Optional;
+
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractHttpEndpoint;

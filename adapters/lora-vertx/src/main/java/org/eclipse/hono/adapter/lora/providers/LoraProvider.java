@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Map;
+
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.client.Command;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -21,8 +23,6 @@ import org.eclipse.hono.util.CredentialsObject;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
-
-import java.util.Map;
 
 /**
  * A LoraWAN provider which can send and receive messages from and to LoRa devices.

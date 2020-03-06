@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,9 +52,9 @@ import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;

@@ -34,7 +34,7 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
     private boolean modificationEnabled = true;
     private boolean startEmpty = false;
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
-    private Set<String> hashAlgorithmsWhitelist = new HashSet();
+    private Set<String> hashAlgorithmsWhitelist = new HashSet<>();
 
     /**
      * Gets the path to the file that the registry should be persisted to periodically.

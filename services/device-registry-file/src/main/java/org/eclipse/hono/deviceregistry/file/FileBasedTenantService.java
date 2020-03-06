@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -38,7 +39,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

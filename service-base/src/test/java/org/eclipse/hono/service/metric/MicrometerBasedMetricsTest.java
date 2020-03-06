@@ -38,6 +38,7 @@ import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -50,7 +51,6 @@ import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
-import org.mockito.Mockito;
 
 /**
  * Verifies behavior of {@link MicrometerBasedMetrics}.

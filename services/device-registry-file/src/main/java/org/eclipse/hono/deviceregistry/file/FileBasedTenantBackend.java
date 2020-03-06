@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
-import io.opentracing.Span;
 import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
@@ -29,6 +28,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
+import io.opentracing.Span;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Base64;
+import java.util.Objects;
+
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 
@@ -20,9 +23,6 @@ import com.google.common.io.BaseEncoding;
 
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
-
-import java.util.Base64;
-import java.util.Objects;
 
 /**
  * A utility class to provide common features for different @{@link LoraProvider}s.

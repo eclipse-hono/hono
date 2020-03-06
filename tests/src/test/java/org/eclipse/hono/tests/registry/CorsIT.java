@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,12 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import io.vertx.core.MultiMap;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import java.net.HttpURLConnection;
 
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
@@ -27,7 +22,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import java.net.HttpURLConnection;
+
+import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying CORS compliance of the device registry management API.

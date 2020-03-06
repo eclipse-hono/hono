@@ -54,6 +54,15 @@
 
     <!-- imports -->
 
+    <module name="ImportOrder">
+      <property name="groups" value="/^java\./,javax,org,com"/>
+      <property name="ordered" value="true"/>
+      <property name="separated" value="true"/>
+      <property name="option" value="top"/>
+      <property name="staticGroups" value="/^java\./,javax,org,com"/>
+      <property name="sortStaticImportsAlphabetically" value="true"/>
+    </module>
+
     <module name="AvoidStarImport">
       <property name="allowStaticMemberImports" value="true"/>
     </module>
@@ -74,6 +83,7 @@
                org.mockito.Mockito.*,
                org.mockito.ArgumentMatchers.*"/>
     </module>
+
     <!-- style -->
 
     <module name="DeclarationOrder"/>

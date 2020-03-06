@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,11 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies behavior of {@link PropertyBag}.

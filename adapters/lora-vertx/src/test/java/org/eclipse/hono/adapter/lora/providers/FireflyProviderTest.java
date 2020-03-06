@@ -16,12 +16,13 @@ package org.eclipse.hono.adapter.lora.providers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.vertx.core.json.JsonObject;
+import java.util.Map;
+
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies behavior of {@link FireflyProvider}.

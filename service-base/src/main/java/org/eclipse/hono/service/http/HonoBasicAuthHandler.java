@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.service.http;
 
-import io.vertx.ext.web.impl.RoutingContextDecorator;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.SpanContext;
@@ -26,11 +24,12 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl;
+import io.vertx.ext.web.impl.RoutingContextDecorator;
 
 
 /**
  * A Hono specific version of vert.x web's standard {@code BasicAuthHandlerImpl}
- * that extracts and handles a {@link ServiceInvocationException} conveyed as the
+ * that extracts and handles a {@link org.eclipse.hono.client.ServiceInvocationException} conveyed as the
  * root cause in an {@code HttpStatusException} when an authentication failure
  * occurs.
  */

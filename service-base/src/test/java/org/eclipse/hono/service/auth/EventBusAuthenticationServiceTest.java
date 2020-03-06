@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.service.auth;
 
-import java.net.HttpURLConnection;
-
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.net.HttpURLConnection;
 
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.client.ClientErrorException;

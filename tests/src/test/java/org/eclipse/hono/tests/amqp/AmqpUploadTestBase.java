@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,10 +28,10 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
+import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;

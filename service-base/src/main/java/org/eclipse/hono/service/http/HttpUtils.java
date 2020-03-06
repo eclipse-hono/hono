@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,18 +21,18 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.EventConstants;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-
-import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
 
 /**
  * A collection of utility methods for processing HTTP requests.

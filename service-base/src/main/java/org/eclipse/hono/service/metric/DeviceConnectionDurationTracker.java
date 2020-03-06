@@ -12,16 +12,17 @@
  *******************************************************************************/
 package org.eclipse.hono.service.metric;
 
-import io.vertx.core.Vertx;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.vertx.core.Vertx;
 
 /**
  *  A class that tracks and reports the device connection duration for tenants.

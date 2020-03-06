@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,11 +13,12 @@
 
 package org.eclipse.hono.service.http;
 
-import io.opentracing.SpanContext;
-import io.vertx.ext.web.RoutingContext;
+import java.util.Objects;
+
 import org.eclipse.hono.util.ExecutionContext;
 
-import java.util.Objects;
+import io.opentracing.SpanContext;
+import io.vertx.ext.web.RoutingContext;
 
 /**
  * Represents the context for the handling of a Vert.x HTTP request, wrapping the Vert.x {@link RoutingContext} as well
