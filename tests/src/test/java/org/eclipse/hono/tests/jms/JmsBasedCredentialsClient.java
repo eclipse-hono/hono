@@ -135,7 +135,7 @@ public class JmsBasedCredentialsClient extends JmsBasedRequestResponseClient<Cre
             return send(request)
                     .compose(credentialsResult -> {
                         final Promise<CredentialsObject> result = Promise.promise();
-                        switch(credentialsResult.getStatus()) {
+                        switch (credentialsResult.getStatus()) {
                         case HttpURLConnection.HTTP_OK:
                         case HttpURLConnection.HTTP_CREATED:
                             result.complete(credentialsResult.getPayload());

@@ -300,7 +300,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             final Promise<?> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
                 replenishedSender.sendQueueDrainHandler(null);
-                switch(senderQoS) {
+                switch (senderQoS) {
                 case AT_LEAST_ONCE:
                     replenishedSender.send(msg, delivery -> {
                         if (Accepted.class.isInstance(delivery.getRemoteState())) {

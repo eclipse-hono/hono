@@ -723,7 +723,7 @@ public class ClientConfigProperties extends AbstractConfig {
      * @return The heartbeatInterval in milliseconds.
      */
     public final int getHeartbeatInterval() {
-        return idleTimeoutMillis/2;
+        return idleTimeoutMillis / 2;
     }
 
     /**

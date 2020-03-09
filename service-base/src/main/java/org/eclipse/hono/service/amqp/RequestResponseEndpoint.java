@@ -299,7 +299,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
             return (ServiceInvocationException) error;
         } else if (error instanceof ReplyException) {
             final ReplyException ex = (ReplyException) error;
-            switch(ex.failureType()) {
+            switch (ex.failureType()) {
             case TIMEOUT:
                 return new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE,

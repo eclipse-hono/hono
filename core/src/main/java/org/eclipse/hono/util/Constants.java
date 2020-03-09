@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,11 +35,11 @@ public final class Constants {
     /**
      * Indicates that an AMQP request cannot be processed due to a perceived client error.
      */
-    public static final Symbol AMQP_BAD_REQUEST= Symbol.valueOf("hono:bad-request");
+    public static final Symbol AMQP_BAD_REQUEST = Symbol.valueOf("hono:bad-request");
     /**
      * Indicates that an AMQP connection is closed due to inactivity.
      */
-    public static final Symbol AMQP_ERROR_INACTIVITY= Symbol.valueOf("hono:inactivity");
+    public static final Symbol AMQP_ERROR_INACTIVITY = Symbol.valueOf("hono:inactivity");
 
     /**
      * The default separator character for target addresses.
@@ -53,27 +53,27 @@ public final class Constants {
     /**
      * The type of the AMQP protocol adapter.
      */
-    public static final String PROTOCOL_ADAPTER_TYPE_AMQP= "hono-amqp";
+    public static final String PROTOCOL_ADAPTER_TYPE_AMQP = "hono-amqp";
     /**
      * The type of the CoAP protocol adapter.
      */
-    public static final String PROTOCOL_ADAPTER_TYPE_COAP= "hono-coap";
+    public static final String PROTOCOL_ADAPTER_TYPE_COAP = "hono-coap";
     /**
      * The type of the HTTP protocol adapter.
      */
-    public static final String PROTOCOL_ADAPTER_TYPE_HTTP= "hono-http";
+    public static final String PROTOCOL_ADAPTER_TYPE_HTTP = "hono-http";
     /**
      * The type of the Eclipse Kura protocol adapter.
      */
-    public static final String PROTOCOL_ADAPTER_TYPE_KURA= "hono-kura-mqtt";
+    public static final String PROTOCOL_ADAPTER_TYPE_KURA = "hono-kura-mqtt";
     /**
      * The type of the LoRaWAN protocol adapter.
      */
-    public static final String PROTOCOL_ADAPTER_TYPE_LORA= "hono-lora";
+    public static final String PROTOCOL_ADAPTER_TYPE_LORA = "hono-lora";
     /**
      * The type of the MQTT protocol adapter.
      */
-    public static final String PROTOCOL_ADAPTER_TYPE_MQTT= "hono-mqtt";
+    public static final String PROTOCOL_ADAPTER_TYPE_MQTT = "hono-mqtt";
     /**
      * The type of the sigfox protocol adapter.
      */

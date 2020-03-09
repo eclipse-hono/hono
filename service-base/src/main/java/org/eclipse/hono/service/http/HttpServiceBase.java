@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,7 +87,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      *
      * @param authHandler The handler.
      */
-    @Autowired(required=false)
+    @Autowired(required = false)
     public void setAuthHandler(final AuthHandler authHandler) {
         this.authHandler = authHandler;
     }

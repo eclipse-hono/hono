@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -210,7 +210,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
                 if (LoraMessageType.UPLINK.equals(type)) {
                     final String payload = provider.extractPayload(loraMessage);
-                    if (payload == null){
+                    if (payload == null) {
                         throw new LoraProviderMalformedPayloadException("Payload == null", new NullPointerException("payload"));
                     }
                     final Buffer payloadInBuffer = new BufferImpl().appendString(payload);

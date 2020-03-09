@@ -641,7 +641,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
      * @param secret The PasswordSecret object to verify.
      * @throws IllegalStateException if the hash algorithm provided in the PasswordSecret is not in the whitelist.
      */
-    protected void verifyHashAlgorithmIsAuthorised(final PasswordSecret secret){
+    protected void verifyHashAlgorithmIsAuthorised(final PasswordSecret secret) {
 
         Objects.requireNonNull(secret);
         if (getHashAlgorithmsWhitelist().isEmpty()
@@ -858,7 +858,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     private CacheDirective getCacheDirective(final String type) {
 
         if (getConfig().getCacheMaxAge() > 0) {
-            switch(type) {
+            switch (type) {
             case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
             case CredentialsConstants.SECRETS_TYPE_X509_CERT:
                 return CacheDirective.maxAgeDirective(getConfig().getCacheMaxAge());

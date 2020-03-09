@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -79,8 +79,8 @@ public class ReceiverTest {
         receiver.messageType = "telemetry";
 
         receiver.start().setHandler(
-                context.succeeding(result ->{
-                   context.verify(()->{
+                context.succeeding(result -> {
+                   context.verify(() -> {
                        assertNotNull(result.list());
                        assertEquals(result.size(), 1);
                    });
@@ -113,7 +113,7 @@ public class ReceiverTest {
      */
     @Test
     public void testDefaultStart(final VertxTestContext context) {
-        receiver.messageType="all";
+        receiver.messageType = "all";
 
         receiver.start().setHandler(
                 context.succeeding(result -> {

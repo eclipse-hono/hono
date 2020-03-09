@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -103,7 +103,7 @@ public class TelemetryAndEventCli extends AmqpCliClient {
     private void printDelivery(final ProtonDelivery delivery) {
         final DeliveryState state = delivery.getRemoteState();
         writer.printf("[Delivery State: %s] %n", state.getType()).flush();
-        switch(state.getType()) {
+        switch (state.getType()) {
         case Rejected:
             final Rejected rejected = (Rejected) state;
             if (rejected.getError() != null) {

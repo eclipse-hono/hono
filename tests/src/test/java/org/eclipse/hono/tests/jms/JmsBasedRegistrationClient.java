@@ -136,7 +136,7 @@ public class JmsBasedRegistrationClient extends JmsBasedRequestResponseClient<Re
             return send(request)
                     .compose(registrationResult -> {
                         final Promise<JsonObject> result = Promise.promise();
-                        switch(registrationResult.getStatus()) {
+                        switch (registrationResult.getStatus()) {
                         case HttpURLConnection.HTTP_OK:
                             result.complete(registrationResult.getPayload());
                             break;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -158,7 +158,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     "text/plain",
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND/2),
+                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
                     200);
         }, endpointConfig, COMMANDS_TO_SEND, MqttQoS.AT_MOST_ONCE);
     }
@@ -233,7 +233,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     "text/plain",
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND/2),
+                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
                     200)
                     .map(response -> {
                         ctx.verify(() -> {

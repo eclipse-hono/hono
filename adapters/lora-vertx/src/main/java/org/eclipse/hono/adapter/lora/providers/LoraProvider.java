@@ -96,7 +96,7 @@ public interface LoraProvider {
      * @param loraMessage from which the payload should be extracted.
      * @return Normalized data map.
      */
-    default Map<String, Object> extractNormalizedData(JsonObject loraMessage){
+    default Map<String, Object> extractNormalizedData(JsonObject loraMessage) {
         return null;
     }
 
@@ -106,7 +106,7 @@ public interface LoraProvider {
      * @param loraMessage from which the payload should be extracted.
      * @return Data which could not be normalized as a JsonObject.
      */
-    default JsonObject extractAdditionalData(JsonObject loraMessage){
+    default JsonObject extractAdditionalData(JsonObject loraMessage) {
         return null;
     }
 

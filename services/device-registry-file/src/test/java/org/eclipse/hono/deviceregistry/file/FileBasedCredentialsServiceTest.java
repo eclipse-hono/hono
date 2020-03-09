@@ -145,7 +145,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
      */
     @Override
     protected CacheDirective getExpectedCacheDirective(final String credentialsType) {
-        switch(credentialsType) {
+        switch (credentialsType) {
         case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
         case CredentialsConstants.SECRETS_TYPE_X509_CERT:
             return CacheDirective.maxAgeDirective(registrationConfig.getCacheMaxAge());
@@ -550,8 +550,6 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         hashedPassword.setPasswordHash("$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.");
         hashedPassword.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);
         passwordCredential.setSecrets(Collections.singletonList(hashedPassword));
-
-        final Promise<OperationResult<Void>> result = Promise.promise();
 
         // WHEN trying to set the credentials
             getCredentialsManagementService().updateCredentials(

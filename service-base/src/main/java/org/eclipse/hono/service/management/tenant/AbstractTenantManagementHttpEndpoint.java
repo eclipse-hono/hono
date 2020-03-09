@@ -55,7 +55,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";
     private static final String SPAN_NAME_UPDATE_TENANT = "update Tenant from management API";
-    private static final String SPAN_NAME_REMOVE_TENANT= "remove Tenant from management API";
+    private static final String SPAN_NAME_REMOVE_TENANT = "remove Tenant from management API";
 
     private static final String TENANT_MANAGEMENT_ENDPOINT_NAME = String.format("%s/%s",
             RegistryManagementConstants.API_VERSION,

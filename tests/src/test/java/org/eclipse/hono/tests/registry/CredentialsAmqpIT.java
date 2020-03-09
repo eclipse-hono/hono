@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -65,7 +65,7 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
      * @param ctx The vert.x test context.
      */
     @AfterEach
-    public void cleanupDeviceRegistry(final VertxTestContext ctx){
+    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
         ctx.completeNow();
     }
