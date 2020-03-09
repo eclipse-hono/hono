@@ -117,7 +117,7 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantRe
             return send(request)
                     .compose(tenantResult -> {
                         final Promise<TenantObject> result = Promise.promise();
-                        switch(tenantResult.getStatus()) {
+                        switch (tenantResult.getStatus()) {
                         case HttpURLConnection.HTTP_OK:
                             result.complete(tenantResult.getPayload());
                             break;

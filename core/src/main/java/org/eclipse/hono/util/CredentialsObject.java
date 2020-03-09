@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -288,7 +288,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
         } else {
 
             try {
-                switch(getType()) {
+                switch (getType()) {
                 case CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD:
                     checkSecrets(secrets, secret -> {
                         checkHashedPassword(secret);

@@ -44,7 +44,7 @@ public class FireflyProvider implements LoraProvider {
     private static final String FIELD_FIREFLY_LSNR = "lsnr";
     private static final String FIELD_FIREFLY_DATA_RATE = "datr";
     private static final String FIELD_FIREFLY_CODING_RATE = "codr";
-    private static final String FIELD_FIREFLY_FREQUENCY ="freq";
+    private static final String FIELD_FIREFLY_FREQUENCY = "freq";
     private static final String FIELD_FIREFLY_PARSED_PACKET = "parsed_packet";
     private static final String FIELD_FIREFLY_FRAME_COUNT = "fcnt";
     private static final String FIELD_FIREFLY_BANDWIDTH = "bandwidth";

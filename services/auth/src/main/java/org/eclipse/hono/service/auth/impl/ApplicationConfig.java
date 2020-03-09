@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -77,7 +77,7 @@ public class ApplicationConfig {
      */
     @Bean(name = BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER)
     @Scope("prototype")
-    public SimpleAuthenticationServer simpleAuthenticationServer(){
+    public SimpleAuthenticationServer simpleAuthenticationServer() {
         return new SimpleAuthenticationServer();
     }
 

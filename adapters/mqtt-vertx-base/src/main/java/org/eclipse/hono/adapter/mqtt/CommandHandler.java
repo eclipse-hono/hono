@@ -241,7 +241,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
          * @throws NullPointerException if any of the parameters are {@code null}.
          */        
         private static PendingCommandRequest from(final Long timerId, final TenantObject tenantObject,
-                final CommandSubscription subscription, final CommandContext commandContext){
+                final CommandSubscription subscription, final CommandContext commandContext) {
             Objects.requireNonNull(timerId);
             Objects.requireNonNull(tenantObject);
             Objects.requireNonNull(subscription);

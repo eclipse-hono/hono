@@ -67,7 +67,7 @@ public class ConnectionDuration {
      * @return The maximum connection duration in minutes or {@link TenantConstants#UNLIMITED_MINUTES}
      *         if not set.
      */
-    public final long getMaxMinutes(){
+    public final long getMaxMinutes() {
         return maxMinutes;
     }
 

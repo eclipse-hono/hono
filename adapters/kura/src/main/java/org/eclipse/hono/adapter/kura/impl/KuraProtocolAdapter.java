@@ -94,7 +94,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
 
     private static String getEndpoint(final MqttQoS level) {
 
-        switch(level) {
+        switch (level) {
         case AT_MOST_ONCE:
             return TelemetryConstants.TELEMETRY_ENDPOINT;
         default:

@@ -283,7 +283,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
         resultHandler.handle(Future.succeededFuture(getTenantResult(tenantId, span)));
     }
 
-    OperationResult<Tenant> getTenantResult(final String tenantId, final Span span){
+    OperationResult<Tenant> getTenantResult(final String tenantId, final Span span) {
 
         final Versioned<Tenant> tenant = tenants.get(tenantId);
 

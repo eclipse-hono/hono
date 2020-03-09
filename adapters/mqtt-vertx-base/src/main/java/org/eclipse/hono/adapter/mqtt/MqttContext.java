@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -195,7 +195,7 @@ public final class MqttContext extends MapBasedExecutionContext {
      * @return The property bag object or {@code null} if
      *         there is no property bag set in the topic.
      */
-    public PropertyBag propertyBag(){
+    public PropertyBag propertyBag() {
         return this.propertyBag;
     }
 

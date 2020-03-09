@@ -65,7 +65,7 @@ public class EventBusTenantManagementAdapterTest {
      * Verifies that the given payload is valid.
      */
     @Test
-    public void verifyValidPayload(){
+    public void verifyValidPayload() {
         assertTrue(adapter.isValidRequestPayload(buildTenantPayload()));
     }
 

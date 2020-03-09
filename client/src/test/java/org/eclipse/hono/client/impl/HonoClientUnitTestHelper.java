@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,9 @@ import io.vertx.proton.ProtonSender;
  */
 public final class HonoClientUnitTestHelper {
 
-    private HonoClientUnitTestHelper() {}
+    private HonoClientUnitTestHelper() {
+        // prevent instantiation
+    }
 
     /**
      * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its runOnContext method.

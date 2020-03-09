@@ -50,7 +50,7 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";
     private static final String SPAN_NAME_UPDATE_TENANT = "update Tenant from management API";
-    private static final String SPAN_NAME_REMOVE_TENANT= "remove Tenant from management API";
+    private static final String SPAN_NAME_REMOVE_TENANT = "remove Tenant from management API";
 
     /**
      * The service to forward requests to.

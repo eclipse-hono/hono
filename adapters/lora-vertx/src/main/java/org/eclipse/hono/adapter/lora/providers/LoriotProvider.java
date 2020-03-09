@@ -36,7 +36,7 @@ public class LoriotProvider implements LoraProvider {
     private static final String FIELD_LORIOT_DATARATE = "dr";
     private static final String FIELD_LORIOT_FUNCTION_PORT = "port";
     private static final String FIELD_LORIOT_FRAME_COUNT = "fcnt";
-    private static final String FIELD_LORIOT_FREQUENCY ="freq";
+    private static final String FIELD_LORIOT_FREQUENCY = "freq";
     private static final String FIELD_LORIOT_GATEWAYS = "gws";
     private static final String FIELD_LORIOT_GATEWAY_EUI = "gweui";
     private static final String FIELD_LORIOT_RSSI = "rssi";

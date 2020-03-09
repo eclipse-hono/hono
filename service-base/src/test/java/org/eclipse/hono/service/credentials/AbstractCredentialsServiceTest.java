@@ -949,7 +949,7 @@ public abstract class AbstractCredentialsServiceTest {
                         assertEquals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, creds.getType());
                         assertEquals(2, creds.getSecrets().size());
 
-                        for (Object secret : creds.getSecrets()){
+                        for (Object secret : creds.getSecrets()) {
                             final String id = ((JsonObject) secret).getString(RegistryManagementConstants.FIELD_ID);
                             assertNotNull(id);
                             secretIDs.add(id);

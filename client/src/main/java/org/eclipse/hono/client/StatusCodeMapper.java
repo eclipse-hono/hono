@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -85,7 +85,7 @@ public abstract class StatusCodeMapper {
         if (200 <= statusCode && statusCode < 300) {
             throw new IllegalArgumentException("status code " + statusCode + " does not represent an error");
         } else if (400 <= statusCode && statusCode < 500) {
-            switch(statusCode) {
+            switch (statusCode) {
             case HttpURLConnection.HTTP_CONFLICT:
                 return new ResourceConflictException(detailMessage);
             default:

@@ -690,8 +690,8 @@ public abstract class CoapTestBase {
                                 "application/json",
                                 inputData.toBuffer(),
                                 // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                                IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
-                                notification.get().getMillisecondsUntilExpiry()/2);
+                                IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
+                                notification.get().getMillisecondsUntilExpiry() / 2);
                     }
                 },
                 count -> {
@@ -830,7 +830,7 @@ public abstract class CoapTestBase {
     private URI getRequestUri(final String scheme, final String resource) {
 
         final int port;
-        switch(scheme) {
+        switch (scheme) {
         case "coap": 
             port = IntegrationTestSupport.COAP_PORT;
             break;

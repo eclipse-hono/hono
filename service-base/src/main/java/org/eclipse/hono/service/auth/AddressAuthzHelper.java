@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -163,7 +163,7 @@ public class AddressAuthzHelper {
     private static String[] getAuthorities(final String activities) {
 
         final Set<String> result = activities.chars().mapToObj(act -> {
-            switch(act) {
+            switch (act) {
                 case 'R':
                     return "recv";
                 case 'W':

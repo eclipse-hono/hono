@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,7 +45,7 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean(name = BEAN_NAME_KURA_PROTOCOL_ADAPTER)
     @Scope("prototype")
-    public KuraProtocolAdapter kuraProtocolAdapter(){
+    public KuraProtocolAdapter kuraProtocolAdapter() {
         return new KuraProtocolAdapter();
     }
 

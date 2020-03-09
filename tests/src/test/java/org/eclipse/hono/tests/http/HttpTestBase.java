@@ -835,7 +835,7 @@ public abstract class HttpTestBase {
                     assertThat(notification.getDeviceId()).isEqualTo(deviceId);
                 });
             });
-            switch(msg.getContentType()) {
+            switch (msg.getContentType()) {
             case "text/msg1":
                 logger.debug("received first message");
                 firstMessageReceived.countDown();
@@ -1080,7 +1080,7 @@ public abstract class HttpTestBase {
                                         "application/json",
                                         inputData.toBuffer(),
                                         // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
+                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
                                         notification.getMillisecondsUntilExpiry())
                                         .map(response -> {
                                             ctx.verify(() -> {
@@ -1196,7 +1196,7 @@ public abstract class HttpTestBase {
                                         "application/json",
                                         inputData.toBuffer(),
                                         // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND/2),
+                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
                                         notification.getMillisecondsUntilExpiry());
                             })
                             .orElseGet(() -> Future.succeededFuture());

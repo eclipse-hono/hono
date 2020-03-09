@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -239,7 +239,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             "text/plain",
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend/2),
+                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
                             200);
                 }, commandsToSend);
     }
@@ -368,7 +368,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             "text/plain",
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend/2),
+                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
                             200)
                             .map(response -> {
                                 ctx.verify(() -> {
