@@ -71,10 +71,10 @@ public abstract class AbstractRegistrationAmqpEndpoint extends AbstractRequestRe
         final String operation = requestMessage.getSubject();
 
         switch (operation) {
-        case RegistrationConstants.ACTION_ASSERT:
-            return processAssertRequest(requestMessage, targetAddress);
-        default:
-            return processCustomRegistrationMessage(requestMessage);
+            case RegistrationConstants.ACTION_ASSERT:
+                return processAssertRequest(requestMessage, targetAddress);
+            default:
+                return processCustomRegistrationMessage(requestMessage);
         }
     }
 
@@ -100,14 +100,12 @@ public abstract class AbstractRegistrationAmqpEndpoint extends AbstractRequestRe
                         deviceId, tenantId, gatewayId);
                 result = getService().assertRegistration(tenantId, deviceId, gatewayId, span);
             }
-            resultFuture = result.map(res -> {
-                return RegistrationConstants.getAmqpReply(
-                        RegistrationConstants.REGISTRATION_ENDPOINT,
-                        tenantId,
-                        request,
-                        res
-                );
-            });
+            resultFuture = result.map(res -> RegistrationConstants.getAmqpReply(
+                    RegistrationConstants.REGISTRATION_ENDPOINT,
+                    tenantId,
+                    request,
+                    res
+            ));
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
