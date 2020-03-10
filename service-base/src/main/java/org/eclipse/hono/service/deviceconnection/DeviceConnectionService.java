@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service.deviceconnection;
 
+import java.util.List;
+
 import org.eclipse.hono.util.DeviceConnectionResult;
 
 import io.opentracing.Span;
@@ -70,4 +72,62 @@ public interface DeviceConnectionService {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<DeviceConnectionResult> getLastKnownGatewayForDevice(String tenantId, String deviceId, Span span);
+
+    /**
+     * Sets the protocol adapter instance that handles commands for the given device or gateway.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param adapterInstanceId The protocol adapter instance id.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status</em> will be <em>204 No Content</em> if the operation completed successfully.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId, Span span);
+
+    /**
+     * Removes the mapping information that associates the given device with the given protocol adapter instance
+     * that handles commands for the given device. The mapping entry is only deleted if its value
+     * contains the given protocol adapter instance id.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param adapterInstanceId The protocol adapter instance id that the entry to be removed has to contain.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *            implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status</em> will be <em>204 No Content</em> if the entry was successfully removed.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId, Span span);
+
+    /**
+     * Gets information about the adapter instances that can handle a command for the given device.
+     * <p>
+     * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device Connection API
+     * specification</a> for a detailed description of the method's behaviour and the returned JSON object.
+     * <p>
+     * If no adapter instances are found, the result handler will be invoked with an error status.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The device id.
+     * @param viaGateways The list of gateways that may act on behalf of the given device.
+     * @param span The currently active OpenTracing span or {@code null} if no span is currently active.
+     *            Implementing classes should use this as the parent for any span they create for tracing
+     *            the execution of this operation.
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status</em> will be
+     *         <ul>
+     *         <li><em>200 OK</em> if instances have been found. The
+     *         <em>payload</em> will consist of the JSON object containing one or more mappings from device id
+     *         to adapter instance id.</li>
+     *         <li><em>404 Not Found</em> if no instances were found.</li>
+     *         </ul>
+     * @throws NullPointerException if any of the parameters except context is {@code null}.
+     */
+    Future<DeviceConnectionResult> getCommandHandlingAdapterInstances(String tenantId, String deviceId, List<String> viaGateways, Span span);
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.client.DeviceConnectionClient;
@@ -103,7 +104,6 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
      */
     @Override
     public Future<Void> setLastKnownGatewayForDevice(final String deviceId, final String gatewayId, final SpanContext context) {
-
         return cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, context);
     }
 
@@ -112,7 +112,30 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
      */
     @Override
     public Future<JsonObject> getLastKnownGatewayForDevice(final String deviceId, final SpanContext context) {
-
         return cache.getLastKnownGatewayForDevice(tenantId, deviceId, context);
+    }
+
+    @Override
+    public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
+            final SpanContext context) {
+        // TODO use this:
+//        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
+        return Future.failedFuture("not implemented yet");
+    }
+
+    @Override
+    public Future<Void> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
+            final SpanContext context) {
+        // TODO use this:
+//        return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
+        return Future.failedFuture("not implemented yet");
+    }
+
+    @Override
+    public Future<JsonObject> getCommandHandlingAdapterInstances(final String deviceId, final List<String> viaGateways,
+            final SpanContext context) {
+        // TODO use this:
+//        return cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), context);
+        return Future.failedFuture("not implemented yet");
     }
 }

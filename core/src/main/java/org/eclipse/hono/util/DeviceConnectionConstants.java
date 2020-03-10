@@ -29,11 +29,27 @@ public final class DeviceConnectionConstants extends RequestResponseApiConstants
      * The name of the field that contains the identifier of a gateway.
      */
     public static final String FIELD_GATEWAY_ID = "gateway-id";
+
     /**
      * The name of the optional field in the result of the <em>get last known gateway for device</em> operation
      * that contains the date when the last known gateway id was last updated.
      */
     public static final String FIELD_LAST_UPDATED = "last-updated";
+
+    /**
+     * The name of the field that contains the list of objects with protocol adapter instance id and device id.
+     */
+    public static final String FIELD_ADAPTER_INSTANCES = "adapter-instances";
+
+    /**
+     * The name of the field that contains the identifier of the protocol adapter instance.
+     */
+    public static final String FIELD_ADAPTER_INSTANCE_ID = "adapter-instance-id";
+
+    /**
+     * The name of the field that contains the array of gateway ids.
+     */
+    public static final String FIELD_GATEWAY_IDS = "gateway-ids";
 
     /**
      * The name of the Device Connection API endpoint.
@@ -57,6 +73,18 @@ public final class DeviceConnectionConstants extends RequestResponseApiConstants
          * The <em>set last known gateway for device</em> operation.
          */
         SET_LAST_GATEWAY("set-last-gw"),
+        /**
+         * The <em>get command handling protocol adapter instances</em> operation.
+         */
+        GET_CMD_HANDLING_ADAPTER_INSTANCES("get-cmd-handling-adapter-instances"),
+        /**
+         * The <em>set command handling protocol adapter instance</em> operation.
+         */
+        SET_CMD_HANDLING_ADAPTER_INSTANCE("set-cmd-handling-adapter-instance"),
+        /**
+         * The <em>remove command handling protocol adapter instance</em> operation.
+         */
+        REMOVE_CMD_HANDLING_ADAPTER_INSTANCE("remove-cmd-handling-adapter-instance"),
         /**
          * The <em>unknown</em> operation.
          */
