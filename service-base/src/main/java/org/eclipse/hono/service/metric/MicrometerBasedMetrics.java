@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
+import org.eclipse.hono.service.util.ServiceBaseUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -227,7 +228,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .minimumExpectedValue(0L)
             .tags(tags)
             .register(this.registry)
-            .record(calculatePayloadSize(payloadSize, tenantObject));
+            .record(ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));
 
         updateLastSeenTimestamp(tenantId);
     }
@@ -262,7 +263,7 @@ public class MicrometerBasedMetrics implements Metrics {
             .minimumExpectedValue(0L)
             .tags(tags)
             .register(this.registry)
-            .record(calculatePayloadSize(payloadSize, tenantObject));
+            .record(ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantObject));
 
         updateLastSeenTimestamp(tenantId);
     }
@@ -309,39 +310,6 @@ public class MicrometerBasedMetrics implements Metrics {
             final Supplier<V> instanceSupplier) {
 
         return gaugeForKey(name, map, tenant, Tags.of(MetricsTags.getTenantTag(tenant)), instanceSupplier);
-    }
-
-    /**
-     * Calculates the payload size based on the configured minimum message size.
-     * <p>
-     * If no minimum message size is configured for a tenant then the actual
-     * payload size of the message is returned.
-     * <p>
-     * Example: The minimum message size for a tenant is configured as 4096 bytes (4KB).
-     * So the payload size of a message of size 1KB is calculated as 4KB and for
-     * message of size 10KB is calculated as 12KB.
-     *
-     * @param payloadSize The size of the message payload in bytes.
-     * @param tenantObject The TenantObject.
-     *
-     * @return The calculated payload size.
-     */
-    protected final int calculatePayloadSize(final int payloadSize, final TenantObject tenantObject) {
-
-        if (tenantObject == null) {
-            return payloadSize;
-        }
-
-        final int minimumMessageSize = tenantObject.getMinimumMessageSize();
-        if (minimumMessageSize > 0 && payloadSize > 0) {
-            final int modValue = payloadSize % minimumMessageSize;
-            if (modValue == 0) {
-                return payloadSize;
-            } else {
-                return payloadSize + (minimumMessageSize - modValue);
-            }
-        }
-        return payloadSize;
     }
 
     // visible for testing

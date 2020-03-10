@@ -54,6 +54,7 @@ import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
+import org.eclipse.hono.service.util.ServiceBaseUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -621,7 +622,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         Objects.requireNonNull(tenantConfig);
 
-        return resourceLimitChecks.isMessageLimitReached(tenantConfig, payloadSize, spanContext)
+        return resourceLimitChecks
+                .isMessageLimitReached(tenantConfig,
+                        ServiceBaseUtils.calculatePayloadSize(payloadSize, tenantConfig),
+                        spanContext)
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {

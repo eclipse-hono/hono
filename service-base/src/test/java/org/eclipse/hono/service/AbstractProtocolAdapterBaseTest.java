@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,6 +46,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -556,6 +557,43 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
             // THEN the connection limit check fails
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
+            ctx.completeNow();
+        }));
+    }
+
+    /**
+     * Verifies that the message limit check fails, if the maximum number of messages
+     * for a tenant have been reached. Also verifies that the payload size of the incoming
+     * message is calculated based on the configured minimum message size.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCheckMessageLimitFailsIfMessageLimitIsReached(final VertxTestContext ctx) {
+        // GIVEN a tenant with a minimum message size of 4kb configured 
+        final TenantObject tenant = TenantObject.from("my-tenant", Boolean.TRUE);
+        tenant.setMinimumMessageSize(4096);
+
+        final ArgumentCaptor<Long> payloadSizeCaptor = ArgumentCaptor.forClass(Long.class);
+
+        // And for that tenant, the maximum messages limit has been already reached
+        final ResourceLimitChecks checks = mock(ResourceLimitChecks.class);
+        when(checks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(checks.isMessageLimitReached(any(TenantObject.class), payloadSizeCaptor.capture(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        when(checks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        adapter.setResourceLimitChecks(checks);
+
+        // WHEN a device sends a message with a payload size of 5000 bytes
+        adapter.checkMessageLimit(tenant, 5000, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
+            // THEN the payload size used for the message limit checks is calculated based on the minimum message size.
+            // In this case it should be 8kb
+            assertEquals(8 * 1024, payloadSizeCaptor.getValue());
+            // THEN the message limit check fails
+            ctx.verify(
+                    () -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS)));
             ctx.completeNow();
         }));
     }
