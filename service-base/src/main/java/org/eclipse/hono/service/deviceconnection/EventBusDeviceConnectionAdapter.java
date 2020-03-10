@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.service.deviceconnection;
 
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -29,6 +30,8 @@ import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Adapter to bind {@link DeviceConnectionService} to the vertx event bus.
@@ -41,6 +44,9 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
 
     private static final String SPAN_NAME_GET_LAST_GATEWAY = "get last known gateway";
     private static final String SPAN_NAME_SET_LAST_GATEWAY = "set last known gateway";
+    private static final String SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES = "get command handling adapter instances";
+    private static final String SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE = "set command handling adapter instance";
+    private static final String SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE = "remove command handling adapter instance";
 
     /**
      * The service to forward requests to.
@@ -74,6 +80,12 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             return processGetLastGatewayRequest(request);
         case SET_LAST_GATEWAY:
             return processSetLastGatewayRequest(request);
+        case GET_CMD_HANDLING_ADAPTER_INSTANCES:
+            return processGetCmdHandlingAdapterInstances(request);
+        case SET_CMD_HANDLING_ADAPTER_INSTANCE:
+            return processSetCmdHandlingAdapterInstance(request);
+        case REMOVE_CMD_HANDLING_ADAPTER_INSTANCE:
+            return processRemoveCmdHandlingAdapterInstance(request);
         default:
             return processCustomOperationMessage(request);
         }
@@ -130,6 +142,103 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
                     .map(res -> request.getResponse(res.getStatus())
                             .setJsonPayload(res.getPayload())
                             .setCacheDirective(res.getCacheDirective()));
+        }
+        return finishSpanOnFutureCompletion(span, resultFuture);
+    }
+
+    /**
+     * Processes a <em>get command handling protocol adapter instance</em> request message.
+     *
+     * @param request The request message.
+     * @return The response to send to the client via the event bus.
+     */
+    protected Future<EventBusMessage> processGetCmdHandlingAdapterInstances(final EventBusMessage request) {
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final JsonObject payload = request.getJsonPayload();
+        final SpanContext spanContext = request.getSpanContext();
+
+        final Span span = newChildSpan(SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES, spanContext, tenantId, deviceId, null);
+        final Future<EventBusMessage> resultFuture;
+        if (tenantId == null || deviceId == null || payload == null) {
+            TracingHelper.logError(span, "missing tenant, device and/or payload");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            final Object gatewaysValue = payload.getValue(DeviceConnectionConstants.FIELD_GATEWAY_IDS);
+            if (!(gatewaysValue instanceof JsonArray)) {
+                TracingHelper.logError(span, "payload JSON is missing valid '" + DeviceConnectionConstants.FIELD_GATEWAY_IDS + "' field value");
+                resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+            } else {
+                log.debug("getting command handling adapter instances for tenant [{}], device [{}]", tenantId, deviceId);
+
+                @SuppressWarnings("unchecked")
+                final List<String> list = ((JsonArray) gatewaysValue).getList();
+                resultFuture = getService().getCommandHandlingAdapterInstances(tenantId, deviceId, list, span)
+                        .map(res -> request.getResponse(res.getStatus())
+                                    .setJsonPayload(res.getPayload())
+                                    .setCacheDirective(res.getCacheDirective())
+                        );
+            }
+        }
+        return finishSpanOnFutureCompletion(span, resultFuture);
+    }
+
+    /**
+     * Processes a <em>set protocol adapter instance for command handler</em> request message.
+     *
+     * @param request The request message.
+     * @return The response to send to the client via the event bus.
+     */
+    protected Future<EventBusMessage> processSetCmdHandlingAdapterInstance(final EventBusMessage request) {
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final String adapterInstanceId = request.getProperty(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID);
+        final SpanContext spanContext = request.getSpanContext();
+
+        final Span span = newChildSpan(SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE, spanContext, tenantId, deviceId, null);
+        final Future<EventBusMessage> resultFuture;
+        if (tenantId == null || deviceId == null || adapterInstanceId == null) {
+            TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+            log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {}", tenantId, deviceId, adapterInstanceId);
+
+            resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
+                    .map(res -> request.getResponse(res.getStatus())
+                        .setJsonPayload(res.getPayload())
+                        .setCacheDirective(res.getCacheDirective())
+            );
+        }
+        return finishSpanOnFutureCompletion(span, resultFuture);
+    }
+
+    /**
+     * Processes a <em>remove command handling protocol adapter instance</em> request message.
+     *
+     * @param request The request message.
+     * @return The response to send to the client via the event bus.
+     */
+    protected Future<EventBusMessage> processRemoveCmdHandlingAdapterInstance(final EventBusMessage request) {
+        final String tenantId = request.getTenant();
+        final String deviceId = request.getDeviceId();
+        final String adapterInstanceId = request.getProperty(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID);
+        final SpanContext spanContext = request.getSpanContext();
+
+        final Span span = newChildSpan(SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE, spanContext, tenantId, deviceId, null);
+        final Future<EventBusMessage> resultFuture;
+        if (tenantId == null || deviceId == null || adapterInstanceId == null) {
+            TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        } else {
+            span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+            log.debug("removing command handling adapter instance for tenant [{}], device [{}] with value {}", tenantId, deviceId, adapterInstanceId);
+
+            resultFuture = getService().removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
+                    .map(res -> request.getResponse(res.getStatus())
+                        .setJsonPayload(res.getPayload())
+                        .setCacheDirective(res.getCacheDirective())
+            );
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }

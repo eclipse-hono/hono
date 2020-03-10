@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -27,6 +28,7 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +39,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
@@ -226,4 +229,89 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
                 },
                 currentSpan);
     }
+
+    @Override
+    public Future<Void> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId, final SpanContext context) {
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(adapterInstanceId);
+
+        final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+        properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+
+        final Span currentSpan = newChildSpan(context, "remove command handling adapter instance");
+        final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
+        createAndSendRequest(
+                DeviceConnectionConstants.DeviceConnectionAction.REMOVE_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
+                properties,
+                null,
+                null,
+                resultTracker,
+                null,
+                currentSpan);
+        return mapResultAndFinishSpan(resultTracker.future(), result -> {
+            switch (result.getStatus()) {
+                case HttpURLConnection.HTTP_NO_CONTENT:
+                    return null;
+                default:
+                    throw StatusCodeMapper.from(result);
+            }
+        }, currentSpan);
+    }
+
+    @Override
+    public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId, final SpanContext context) {
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(adapterInstanceId);
+
+        final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+        properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+
+        final Span currentSpan = newChildSpan(context, "set command handling adapter instance");
+        final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
+        createAndSendRequest(
+                DeviceConnectionConstants.DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
+                properties,
+                null,
+                null,
+                resultTracker,
+                null,
+                currentSpan);
+        return mapResultAndFinishSpan(resultTracker.future(), result -> {
+            switch (result.getStatus()) {
+                case HttpURLConnection.HTTP_NO_CONTENT:
+                    return null;
+                default:
+                    throw StatusCodeMapper.from(result);
+            }
+        }, currentSpan);
+    }
+
+    @Override
+    public Future<JsonObject> getCommandHandlingAdapterInstances(final String deviceId, final List<String> viaGateways, final SpanContext context) {
+        Objects.requireNonNull(deviceId);
+        final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
+
+        final Map<String, Object> properties = createDeviceIdProperties(deviceId);
+        final JsonObject payload = new JsonObject();
+        payload.put(DeviceConnectionConstants.FIELD_GATEWAY_IDS, new JsonArray(viaGateways));
+
+        final Span currentSpan = newChildSpan(context, "get command handling adapter instances");
+        createAndSendRequest(
+                DeviceConnectionConstants.DeviceConnectionAction.GET_CMD_HANDLING_ADAPTER_INSTANCES.getSubject(),
+                properties,
+                payload.toBuffer(),
+                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                resultTracker,
+                null,
+                currentSpan);
+        return mapResultAndFinishSpan(resultTracker.future(), result -> {
+            switch (result.getStatus()) {
+                case HttpURLConnection.HTTP_OK:
+                    return result.getPayload();
+                default:
+                    throw StatusCodeMapper.from(result);
+            }
+        }, currentSpan);
+    }
+
 }
