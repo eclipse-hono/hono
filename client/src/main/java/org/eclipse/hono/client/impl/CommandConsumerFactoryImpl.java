@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -48,7 +47,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.proton.ProtonReceiver;
 
 /**
  * A factory for creating clients for the <em>AMQP 1.0 Messaging Network</em> to receive commands and send responses.
@@ -347,8 +345,6 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
 
     private Future<MessageConsumer> newMappingAndDelegatingCommandConsumer(final String tenantId) {
 
-        final AtomicReference<ProtonReceiver> receiverRefHolder = new AtomicReference<>();
-
         final DelegateViaDownstreamPeerCommandHandler delegatingCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
                 (tenantIdParam, deviceIdParam) -> createDelegatedCommandSender(tenantIdParam, deviceIdParam));
 
@@ -396,7 +392,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                     final SpanContext spanContext = TracingHelper.extractSpanContext(connection.getTracer(), message);
                     final Span currentSpan = CommandConsumer.createSpan("delegate and send command", tenantId, deviceId, null, connection.getTracer(), spanContext);
                     CommandConsumer.logReceivedCommandToSpan(command, currentSpan);
-                    final CommandContext commandContext = CommandContext.from(command, originalMessageDelivery, receiverRefHolder.get(), currentSpan);
+                    final CommandContext commandContext = CommandContext.from(command, originalMessageDelivery, currentSpan);
                     if (command.isValid()) {
                         gatewayMappingCommandHandler.handle(commandContext);
                     } else {
@@ -427,8 +423,7 @@ public class CommandConsumerFactoryImpl extends AbstractHonoClientFactory implem
                 },
                 sourceAddress -> { // remote close hook
                     mappingAndDelegatingCommandConsumerFactory.removeClient(tenantId);
-                },
-                receiverRefHolder)
+                })
                 .map(c -> (MessageConsumer) c);
     }
 

@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
-import io.vertx.proton.ProtonReceiver;
 
 
 /**
@@ -50,18 +49,15 @@ public class CommandContext extends MapBasedExecutionContext {
 
     private final Command command;
     private final ProtonDelivery delivery;
-    private final ProtonReceiver receiver;
     private final Span currentSpan;
 
     private CommandContext(
             final Command command,
             final ProtonDelivery delivery,
-            final ProtonReceiver receiver,
             final Span currentSpan) {
 
         this.command = command;
         this.delivery = delivery;
-        this.receiver = receiver;
         this.currentSpan = currentSpan;
         setTracingContext(currentSpan.context());
     }
@@ -71,7 +67,6 @@ public class CommandContext extends MapBasedExecutionContext {
      * 
      * @param command The command to be processed.
      * @param delivery The delivery corresponding to the message.
-     * @param receiver The AMQP link over which the command has been received.
      * @param currentSpan The OpenTracing span to use for tracking the processing of the command.
      * @return The context.
      * @throws NullPointerException if any of the parameters are {@code null}.
@@ -79,14 +74,12 @@ public class CommandContext extends MapBasedExecutionContext {
     public static CommandContext from(
             final Command command,
             final ProtonDelivery delivery,
-            final ProtonReceiver receiver,
             final Span currentSpan) {
 
         Objects.requireNonNull(command);
         Objects.requireNonNull(delivery);
-        Objects.requireNonNull(receiver);
         Objects.requireNonNull(currentSpan);
-        return new CommandContext(command, delivery, receiver, currentSpan);
+        return new CommandContext(command, delivery, currentSpan);
     }
 
     /**
@@ -96,15 +89,6 @@ public class CommandContext extends MapBasedExecutionContext {
      */
     public Command getCommand() {
         return command;
-    }
-
-    /**
-     * Gets the AMQP link over which the command has been received.
-     *
-     * @return The receiver.
-     */
-    public ProtonReceiver getReceiver() {
-        return receiver;
     }
 
     /**
@@ -128,127 +112,54 @@ public class CommandContext extends MapBasedExecutionContext {
     /**
      * Settles the command message with the <em>accepted</em> outcome.
      * <p>
-     * This method simply invokes {@link CommandContext#accept(int)} with
-     * 0 credits.
-     */
-    public void accept() {
-
-        accept(0);
-    }
-
-    /**
-     * Settles the command message with the <em>accepted</em> outcome
-     * and flows credit to the peer.
-     * <p>
      * This method also finishes the OpenTracing span returned by
      * {@link #getCurrentSpan()}.
-     * 
-     * @param credit The number of credits to flow to the peer.
-     * @throws IllegalArgumentException if credit is negative.
      */
-    public void accept(final int credit) {
-
-        if (credit < 0) {
-            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
-        }
+    public void accept() {
         LOG.trace("accepting command message [{}]", getCommand());
         ProtonHelper.accepted(delivery, true);
         currentSpan.log("accepted command for device");
-        if (credit > 0) {
-            flow(credit);
-        }
         currentSpan.finish();
     }
 
     /**
      * Settles the command message with the <em>released</em> outcome.
      * <p>
-     * This method simply invokes {@link CommandContext#release(int)} with
-     * 0 credits.
-     */
-    public void release() {
-        release(0);
-    }
-
-    /**
-     * Settles the command message with the <em>released</em> outcome
-     * and flows credit to the peer.
-     * <p>
      * This method also finishes the OpenTracing span returned by
      * {@link #getCurrentSpan()}.
-     * 
-     * @param credit The number of credits to flow to the peer.
-     * @throws IllegalArgumentException if credit is negative.
      */
-    public void release(final int credit) {
-
-        if (credit < 0) {
-            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
-        }
+    public void release() {
         ProtonHelper.released(delivery, true);
         TracingHelper.logError(currentSpan, "released command for device");
-        if (credit > 0) {
-            flow(credit);
-        }
         currentSpan.finish();
     }
 
     /**
-     * Settles the command message with the <em>modified</em> outcome
-     * and flows credit to the peer.
+     * Settles the command message with the <em>modified</em> outcome.
      * <p>
      * This method also finishes the OpenTracing span returned by
      * {@link #getCurrentSpan()}.
      *
      * @param deliveryFailed Whether the delivery should be treated as failed.
      * @param undeliverableHere Whether the delivery is considered undeliverable.
-     * @param credit The number of credits to flow to the peer.
-     * @throws IllegalArgumentException if credit is negative.
      */
-    public void modify(final boolean deliveryFailed, final boolean undeliverableHere, final int credit) {
-
-        if (credit < 0) {
-            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
-        }
+    public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
         ProtonHelper.modified(delivery, true, deliveryFailed, undeliverableHere);
         TracingHelper.logError(currentSpan, "modified command for device"
                 + (deliveryFailed ? "; delivery failed" : "")
                 + (undeliverableHere ? "; undeliverable here" : ""));
-        if (credit > 0) {
-            flow(credit);
-        }
         currentSpan.finish();
     }
 
     /**
      * Settles the command message with the <em>rejected</em> outcome.
      * <p>
-     * This method simply invokes {@link CommandContext#reject(ErrorCondition, int)}
-     * with 0 credits.
-     * 
-     * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
-     */
-    public void reject(final ErrorCondition errorCondition) {
-
-        reject(errorCondition, 0);
-    }
-
-    /**
-     * Settles the command message with the <em>rejected</em> outcome
-     * and flows credit to the peer.
-     * <p>
      * This method also finishes the OpenTracing span returned by
      * {@link #getCurrentSpan()}.
      * 
      * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
-     * @param credit The number of credits to flow to the peer.
-     * @throws IllegalArgumentException if credit is negative.
      */
-    public void reject(final ErrorCondition errorCondition, final int credit) {
-
-        if (credit < 0) {
-            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
-        }
+    public void reject(final ErrorCondition errorCondition) {
         final Rejected rejected = new Rejected();
         if (errorCondition != null) {
             rejected.setError(errorCondition);
@@ -256,9 +167,6 @@ public class CommandContext extends MapBasedExecutionContext {
         delivery.disposition(rejected, true);
         TracingHelper.logError(currentSpan, "rejected command for device"
                 + ((errorCondition != null && errorCondition.getDescription() != null) ? "; error: " + errorCondition.getDescription() : ""));
-        if (credit > 0) {
-            flow(credit);
-        }
         currentSpan.finish();
     }
 
@@ -272,27 +180,8 @@ public class CommandContext extends MapBasedExecutionContext {
      * @throws NullPointerException if deliveryState is {@code null}.
      */
     public void disposition(final DeliveryState deliveryState) {
-        disposition(deliveryState, 0);
-    }
-
-    /**
-     * Settles the command message with the given {@code DeliveryState} outcome
-     * and flows credit to the peer.
-     * <p>
-     * This method also finishes the OpenTracing span returned by
-     * {@link #getCurrentSpan()}.
-     *
-     * @param deliveryState The deliveryState to set in the disposition frame.
-     * @param credit The number of credits to flow to the peer.
-     * @throws NullPointerException if deliveryState is {@code null}.
-     * @throws IllegalArgumentException if credit is negative.
-     */
-    public void disposition(final DeliveryState deliveryState, final int credit) {
 
         Objects.requireNonNull(deliveryState);
-        if (credit < 0) {
-            throw new IllegalArgumentException(ERROR_MSG_INVALID_CREDIT_VALUE);
-        }
         delivery.disposition(deliveryState, true);
         if (Accepted.class.isInstance(deliveryState)) {
             LOG.trace("accepted command message [{}]", getCommand());
@@ -318,28 +207,6 @@ public class CommandContext extends MapBasedExecutionContext {
             LOG.warn("unexpected delivery state [{}] when settling command message [{}]", deliveryState, getCommand());
             TracingHelper.logError(currentSpan, "unexpected delivery state: " + deliveryState);
         }
-        if (credit > 0) {
-            flow(credit);
-        }
         currentSpan.finish();
-    }
-
-    /**
-     * Issues credits to the peer that the command has been received from.
-     * <p>
-     * This will only be done if credit handling on the command receiver is manual (<em>prefetch</em> is <code>0</code>).
-     *
-     * @param credits The number of credits.
-     * @throws IllegalArgumentException if credits is &lt; 1
-     */
-    // TODO since both DestinationCommandConsumer and MappingAndDelegatingCommandConsumer use automatic credit handling now (i.e. prefetch > 0), this method can be removed
-    private void flow(final int credits) {
-        if (credits < 1) {
-            throw new IllegalArgumentException("credits must be positive");
-        }
-        if (receiver.getPrefetch() <= 0) {
-            currentSpan.log(String.format("flowing %d credits to sender", credits));
-            receiver.flow(credits);
-        }
     }
 }

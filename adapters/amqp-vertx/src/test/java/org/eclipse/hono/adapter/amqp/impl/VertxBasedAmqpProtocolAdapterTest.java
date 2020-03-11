@@ -752,7 +752,6 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonSender deviceLink = mock(ProtonSender.class);
         when(deviceLink.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
         // that has subscribed to commands
-        final ProtonReceiver commandReceiver = mock(ProtonReceiver.class);
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
         // WHEN an application sends a one-way command to the device
@@ -761,7 +760,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("payload");
         final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
-        final CommandContext context = CommandContext.from(command, commandDelivery, commandReceiver, mock(Span.class));
+        final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
         adapter.onCommandReceived(tenantObject, deviceLink, context);
         // and the device settles it
         final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
@@ -771,8 +770,6 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // THEN the command message is settled on the receiver link
         // with the same outcome
         verify(commandDelivery).disposition(any(expectedDeliveryState), eq(true));
-        // and a credit is issued
-        verify(commandReceiver).flow(1);
         // and the command has been reported according to the outcome
         verify(metrics).reportCommand(
                 eq(Direction.ONE_WAY),

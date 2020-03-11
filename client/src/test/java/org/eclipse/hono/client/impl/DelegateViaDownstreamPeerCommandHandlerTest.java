@@ -44,7 +44,6 @@ import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonReceiver;
 
 /**
  * Verifies behavior of {@link DelegateViaDownstreamPeerCommandHandler}.
@@ -73,9 +72,8 @@ public class DelegateViaDownstreamPeerCommandHandlerTest {
         when(commandMessage.getReplyTo()).thenReturn(replyTo);
         final Command command = Command.from(commandMessage, tenantId, deviceId);
         commandDelivery = mock(ProtonDelivery.class);
-        final ProtonReceiver receiver = mock(ProtonReceiver.class);
         final Span currentSpan = mock(Span.class);
-        commandContext = spy(CommandContext.from(command, commandDelivery, receiver, currentSpan));
+        commandContext = spy(CommandContext.from(command, commandDelivery, currentSpan));
 
         delegateViaDownstreamPeerCommandHandler = new DelegateViaDownstreamPeerCommandHandler(
                 (tenantIdParam, deviceIdParam) -> Future.succeededFuture(delegatedCommandSender));

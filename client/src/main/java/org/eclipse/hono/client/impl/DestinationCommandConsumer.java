@@ -172,7 +172,7 @@ public final class DestinationCommandConsumer extends CommandConsumer {
         // look for a handler with the original device id first
         final CommandHandlerWrapper commandHandler = getCommandHandlerOrDefault(originalDeviceId);
         if (commandHandler != null) {
-            commandHandler.handleCommand(CommandContext.from(command, delivery, this.receiver, currentSpan));
+            commandHandler.handleCommand(CommandContext.from(command, delivery, currentSpan));
         } else {
             // no command handler found
             if (gatewayId != null && !containsCommandHandler(gatewayOrDeviceId) && !commandHandlers.isEmpty()) {

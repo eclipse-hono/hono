@@ -81,7 +81,7 @@ public class GatewayMappingCommandHandler implements Handler<CommandContext> {
                     }
                     final Command command = Command.from(originalCommand.getCommandMessage(), tenantId, mappedGatewayId);
                     commandContext = CommandContext.from(command, originalCommandContext.getDelivery(),
-                            originalCommandContext.getReceiver(), originalCommandContext.getCurrentSpan());
+                            originalCommandContext.getCurrentSpan());
                 }
                 nextCommandHandler.handle(commandContext);
             } else {

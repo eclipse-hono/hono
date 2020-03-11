@@ -14,7 +14,6 @@
 package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.HonoConnection;
@@ -59,7 +58,6 @@ public class MappingAndDelegatingCommandConsumer extends CommandConsumer {
      * @param remoteCloseHandler A handler to be invoked after the link has been closed
      *                     at the remote peer's request. The handler will be invoked with the
      *                     link's source address.
-     * @param receiverRefHolder A reference object to set the created ProtonReceiver object in.
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
@@ -68,14 +66,12 @@ public class MappingAndDelegatingCommandConsumer extends CommandConsumer {
             final String tenantId,
             final ProtonMessageHandler messageHandler,
             final Handler<String> localCloseHandler,
-            final Handler<String> remoteCloseHandler,
-            final AtomicReference<ProtonReceiver> receiverRefHolder) {
+            final Handler<String> remoteCloseHandler) {
 
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageHandler);
         Objects.requireNonNull(remoteCloseHandler);
-        Objects.requireNonNull(receiverRefHolder);
 
         LOG.trace("creating new MappingAndDelegatingCommandConsumer [tenant-id: {}]", tenantId);
 
@@ -92,7 +88,6 @@ public class MappingAndDelegatingCommandConsumer extends CommandConsumer {
                     remoteCloseHandler.handle(sourceAddress);
                 }).map(receiver -> {
                     LOG.debug("successfully created MappingAndDelegatingCommandConsumer [{}]", address);
-                    receiverRefHolder.set(receiver);
                     final MappingAndDelegatingCommandConsumer consumer = new MappingAndDelegatingCommandConsumer(con, receiver);
                     consumer.setLocalCloseHandler(sourceAddress -> {
                         LOG.debug("MappingAndDelegatingCommandConsumer receiver link [tenant-id: {}] closed locally", tenantId);

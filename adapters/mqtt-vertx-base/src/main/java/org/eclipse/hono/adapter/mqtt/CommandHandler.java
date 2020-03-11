@@ -195,7 +195,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
                 items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());
                 items.put(TracingHelper.TAG_QOS.getKey(), subscription.getQos().toString());
                 value.commandContext.getCurrentSpan().log(items);
-                value.commandContext.release(1);
+                value.commandContext.release();
             });
         });
     }

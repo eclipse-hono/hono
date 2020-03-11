@@ -841,9 +841,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
                     // issue credit so that application(s) can send the next command
-                    commandContext.reject(getErrorCondition(failure), 1);
+                    commandContext.reject(getErrorCondition(failure));
                 } else {
-                    commandContext.release(1);
+                    commandContext.release();
                 }
                 metrics.reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -902,7 +902,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final DeliveryState remoteState = delivery.getRemoteState();
             ProcessingOutcome outcome = null;
             if (delivery.remotelySettled()) {
-                commandContext.disposition(remoteState, 1);
+                commandContext.disposition(remoteState);
                 if (Accepted.class.isInstance(remoteState)) {
                     outcome = ProcessingOutcome.FORWARDED;
                 } else if (Rejected.class.isInstance(remoteState)) {
@@ -920,7 +920,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 logItems.put(Fields.EVENT, "device did not settle command");
                 logItems.put("remote state", remoteState);
                 commandContext.getCurrentSpan().log(logItems);
-                commandContext.release(1);
+                commandContext.release();
                 outcome = ProcessingOutcome.UNDELIVERABLE;
             }
             metrics.reportCommand(

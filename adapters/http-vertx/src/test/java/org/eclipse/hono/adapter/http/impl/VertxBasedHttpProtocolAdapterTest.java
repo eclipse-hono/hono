@@ -80,7 +80,6 @@ import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonReceiver;
 
 /**
  * Verifies behavior of {@link VertxBasedHttpProtocolAdapter}.
@@ -484,7 +483,7 @@ public class VertxBasedHttpProtocolAdapterTest {
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         final Message msg = newMockMessage("DEFAULT_TENANT", "device_1", "doThis");
         final Command pendingCommand = Command.from(msg, "DEFAULT_TENANT", "device_1");
-        final CommandContext commandContext = CommandContext.from(pendingCommand, mock(ProtonDelivery.class), mock(ProtonReceiver.class), mock(Span.class));
+        final CommandContext commandContext = CommandContext.from(pendingCommand, mock(ProtonDelivery.class), mock(Span.class));
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
         when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(Handler.class))).
                 thenAnswer(invocation -> {

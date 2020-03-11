@@ -922,8 +922,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                     // put command context to routing context and notify
                                     context.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 } else {
-                                    // issue credit so that application(s) can send the next command
-                                    commandContext.reject(getErrorCondition(result.cause()), 1);
+                                    commandContext.reject(getErrorCondition(result.cause()));
                                     metrics.reportCommand(
                                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                             tenantObject.getTenantId(),

@@ -48,7 +48,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonReceiver;
 
 /**
  * Verifies behavior of {@link GatewayMappingCommandHandler}.
@@ -99,9 +98,8 @@ public class GatewayMappingCommandHandlerTest {
         when(commandMessage.getCorrelationId()).thenReturn("testCorrelationId");
         final Command command = Command.from(commandMessage, tenantId, deviceId);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        final ProtonReceiver receiver = mock(ProtonReceiver.class);
         final Span currentSpan = mock(Span.class);
-        commandContext = spy(CommandContext.from(command, delivery, receiver, currentSpan));
+        commandContext = spy(CommandContext.from(command, delivery, currentSpan));
     }
 
     /**
@@ -174,9 +172,8 @@ public class GatewayMappingCommandHandlerTest {
         when(commandMessage.getReplyTo()).thenReturn(replyTo);
         final Command command = Command.from(commandMessage, tenantId, deviceId);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
-        final ProtonReceiver receiver = mock(ProtonReceiver.class);
         final Span currentSpan = mock(Span.class);
-        commandContext = spy(CommandContext.from(command, delivery, receiver, currentSpan));
+        commandContext = spy(CommandContext.from(command, delivery, currentSpan));
 
         // WHEN handle() is invoked
         gatewayMappingCommandHandler.handle(commandContext);

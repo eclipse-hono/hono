@@ -772,10 +772,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 return Future.succeededFuture();
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
-                    // issue credit so that application(s) can send the next command
-                    commandContext.reject(getErrorCondition(failure), 1);
+                    commandContext.reject(getErrorCondition(failure));
                 } else {
-                    commandContext.release(1);
+                    commandContext.release();
                 }
                 metrics.reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -1433,7 +1432,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         ProcessingOutcome.from(sentHandler.cause()),
                         command.getPayloadSize(),
                         getMicrometerSample(commandContext));
-                commandContext.release(1);
+                commandContext.release();
             }
         });
     }
@@ -1483,7 +1482,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         items.put(TracingHelper.TAG_CLIENT_ID.getKey(), subscription.getClientId());
         items.put(TracingHelper.TAG_QOS.getKey(), subscription.getQos().toString());
         commandContext.getCurrentSpan().log(items);
-        commandContext.accept(1);
+        commandContext.accept();
     }
 
     private static void addRetainAnnotation(final MqttContext context, final Message downstreamMessage,

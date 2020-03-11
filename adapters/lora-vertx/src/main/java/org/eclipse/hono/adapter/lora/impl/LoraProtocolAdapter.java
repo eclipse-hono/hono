@@ -362,7 +362,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             // across all protocol adapters, i.e. accepting the message only means that the message contains
             // a valid command which we are willing to deliver see
             // org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter.createCommandConsumer
-            receivedCommandContext.accept(1);
+            receivedCommandContext.accept();
 
             if (isValidLoraCommand(command)) {
 
@@ -450,7 +450,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             LOG.error("Error trying to send command '{}'", command, validationException);
             TracingHelper.logError(receivedCommandContext.getCurrentSpan(), validationException);
             receivedCommandContext
-                    .reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, validationException.getMessage()), 1);
+                    .reject(new ErrorCondition(Constants.AMQP_BAD_REQUEST, validationException.getMessage()));
             return null;
         });
     }
