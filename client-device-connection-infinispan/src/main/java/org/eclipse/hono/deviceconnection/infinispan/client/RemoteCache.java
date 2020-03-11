@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
+import java.util.Map;
+import java.util.Set;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -44,6 +47,16 @@ public interface RemoteCache<K, V> {
     Future<V> put(K key, V value);
 
     /**
+     * Removes the cache entry for a key only if the currently mapped entry has the given version.
+     *
+     * @param key The key.
+     * @param version The version of the cache entry to match.
+     * @return A succeeded future containing {@code true} if the value was removed
+     *         and {@code false} otherwise.
+     */
+    Future<Boolean> removeWithVersion(K key, long version);
+
+    /**
      * Gets a value from the cache.
      * 
      * @param key The key.
@@ -52,4 +65,22 @@ public interface RemoteCache<K, V> {
      *         A failed future if the value could not be read from the cache.
      */
     Future<V> get(K key);
+
+    /**
+     * Gets a value from the cache.
+     *
+     * @param key The key.
+     * @return A succeeded future containing the value or {@code null} if the
+     *         cache didn't contain the key yet.
+     *         A failed future if the value could not be read from the cache.
+     */
+    Future<Versioned<V>> getWithVersion(K key);
+
+    /**
+     * Gets the values for the specified keys from the cache.
+     *
+     * @param keys The keys.
+     * @return A succeeded future containing a map with key/value pairs.
+     */
+    Future<Map<K, V>> getAll(Set<? extends K> keys);
 }

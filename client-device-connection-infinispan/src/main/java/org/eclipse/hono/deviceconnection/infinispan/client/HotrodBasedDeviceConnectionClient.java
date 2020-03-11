@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -118,24 +119,18 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
             final SpanContext context) {
-        // TODO use this:
-//        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
-        return Future.failedFuture("not implemented yet");
+        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
     }
 
     @Override
     public Future<Void> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
             final SpanContext context) {
-        // TODO use this:
-//        return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
-        return Future.failedFuture("not implemented yet");
+        return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
     }
 
     @Override
     public Future<JsonObject> getCommandHandlingAdapterInstances(final String deviceId, final List<String> viaGateways,
             final SpanContext context) {
-        // TODO use this:
-//        return cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), context);
-        return Future.failedFuture("not implemented yet");
+        return cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), context);
     }
 }
