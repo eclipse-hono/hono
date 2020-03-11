@@ -87,7 +87,6 @@ public class AmqpAdapterClientEventSenderImpl extends EventSenderImpl implements
             final Map<String, ?> properties, final SpanContext context) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
-        Objects.requireNonNull(contentType);
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(getTo(deviceId));

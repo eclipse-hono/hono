@@ -113,7 +113,6 @@ public class AmqpAdapterClientTelemetrySenderImpl extends TelemetrySenderImpl
             final Map<String, ?> properties) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
-        Objects.requireNonNull(contentType);
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(getTo(deviceId));

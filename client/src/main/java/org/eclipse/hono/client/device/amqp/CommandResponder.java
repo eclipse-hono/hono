@@ -34,7 +34,7 @@ public interface CommandResponder extends AmqpSenderLink {
      * @param correlationId The correlation-id property of the command message.
      * @param status The HTTP status code indicating the outcome of the command.
      * @param payload The payload of the response. May be {@code null} since it is not required.
-     * @param contentType The contentType of the response. May be {@code null} since it is not required.
+     * @param contentType The contentType of the response (may be {@code null}).
      * @param properties Optional application properties (may be {@code null}).
      *            <p>
      *            AMQP application properties that can be used for carrying data in the message other than the payload.

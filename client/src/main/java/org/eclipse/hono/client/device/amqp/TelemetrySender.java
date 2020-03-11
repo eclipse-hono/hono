@@ -33,7 +33,7 @@ public interface TelemetrySender extends AmqpSenderLink {
      * @param payload The data to send.
      *            <p>
      *            The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
-     * @param contentType The content type of the payload.
+     * @param contentType The content type of the payload (may be {@code null}).
      *            <p>
      *            This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param properties Optional application properties (may be {@code null}).
@@ -49,9 +49,8 @@ public interface TelemetrySender extends AmqpSenderLink {
      *         lack of credit. If an event is sent which cannot be processed by the peer the future will be failed with
      *         either a {@code ServerErrorException} or a {@link ClientErrorException} depending on the reason for the
      *         failure to process the message.
-     * @throws NullPointerException if any of device-id, payload or content-type is {@code null}.
-     * @throws IllegalArgumentException if the content type specifies an unsupported character set or if the properties
-     *             contain a value of type list, map or array.
+     * @throws NullPointerException if any of device-id or payload is {@code null}.
+     * @throws IllegalArgumentException if the properties contain a value of type list, map or array.
      */
     Future<ProtonDelivery> send(
             String deviceId,
@@ -67,7 +66,7 @@ public interface TelemetrySender extends AmqpSenderLink {
      * @param payload The data to send.
      *            <p>
      *            The payload will be contained in the message as an AMQP 1.0 <em>Data</em> section.
-     * @param contentType The content type of the payload.
+     * @param contentType The content type of the payload (may be {@code null}).
      *            <p>
      *            This parameter will be used as the value for the message's <em>content-type</em> property.
      * @param properties Optional application properties (may be {@code null}).
@@ -81,9 +80,8 @@ public interface TelemetrySender extends AmqpSenderLink {
      *         lack of credit. If an event is sent which cannot be processed by the peer the future will be failed with
      *         either a {@code ServerErrorException} or a {@link ClientErrorException} depending on the reason for the
      *         failure to process the message.
-     * @throws NullPointerException if any of device-id, payload or content-type is {@code null}.
-     * @throws IllegalArgumentException if the content type specifies an unsupported character set or if the properties
-     *             contain a value of type list, map or array.
+     * @throws NullPointerException if any of device-id or payload is {@code null}.
+     * @throws IllegalArgumentException if the properties contain a value of type list, map or array.
      */
     Future<ProtonDelivery> sendAndWaitForOutcome(
             String deviceId,
