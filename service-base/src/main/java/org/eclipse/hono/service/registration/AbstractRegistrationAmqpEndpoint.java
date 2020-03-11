@@ -26,9 +26,6 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
@@ -83,19 +80,27 @@ public abstract class AbstractRegistrationAmqpEndpoint extends AbstractRequestRe
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
         final String gatewayId = MessageHelper.getGatewayId(request);
-        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, request);
 
-        final Span span = newChildSpan(SPAN_NAME_ASSERT_DEVICE_REGISTRATION, spanContext, tenantId, deviceId, gatewayId);
+        final Span span = TracingHelper.buildServerChildSpan(tracer,
+                TracingHelper.extractSpanContext(tracer, request),
+                SPAN_NAME_ASSERT_DEVICE_REGISTRATION,
+                getClass().getSimpleName()
+        ).start();
+
         final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null) {
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
+
             final Future<RegistrationResult> result;
             if (gatewayId == null) {
                 log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
                 result = getService().assertRegistration(tenantId, deviceId, span);
             } else {
+                TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
                 log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
                         deviceId, tenantId, gatewayId);
                 result = getService().assertRegistration(tenantId, deviceId, gatewayId, span);
@@ -132,37 +137,4 @@ public abstract class AbstractRegistrationAmqpEndpoint extends AbstractRequestRe
         return RegistrationMessageFilter.verify(linkTarget, msg);
     }
 
-    /**
-     * Creates a new <em>OpenTracing</em> span for tracing the execution of a registration service operation.
-     * <p>
-     * The returned span will already contain tags for the given tenant, device and gateway ids (if either is not {@code null}).
-     *
-     * @param operationName The operation name that the span should be created for.
-     * @param spanContext Existing span context.
-     * @param tenantId The tenant id.
-     * @param deviceId The device id.
-     * @param gatewayId The gateway id.
-     * @return The new {@code Span}.
-     * @throws NullPointerException if operationName is {@code null}.
-     */
-    protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId,
-            final String deviceId, final String gatewayId) {
-        Objects.requireNonNull(operationName);
-        // we set the component tag to the class name because we have no access to
-        // the name of the enclosing component we are running in
-        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
-        if (tenantId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        if (deviceId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        }
-        if (gatewayId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
-        }
-        return spanBuilder.start();
-    }
 }

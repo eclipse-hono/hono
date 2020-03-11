@@ -162,9 +162,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     }
 
     private Span createSpan(final String name, final SpanContext parent, final TenantObject tenant) {
-        return TracingHelper.buildChildSpan(tracer, parent, name)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
+        return TracingHelper.buildChildSpan(tracer, parent, name, getClass().getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(Tags.PEER_HOSTNAME.getKey(), config.getHost())
                 .withTag(Tags.PEER_PORT.getKey(), config.getPort())

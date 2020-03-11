@@ -77,9 +77,7 @@ public class GatewayMapperImpl implements GatewayMapper {
     @Override
     public Future<String> getMappedGatewayDevice(final String tenantId, final String deviceId, final SpanContext context) {
 
-        final Span span = TracingHelper.buildChildSpan(tracer, context, "get mapped gateway")
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), GatewayMapper.class.getSimpleName())
+        final Span span = TracingHelper.buildChildSpan(tracer, context, "get mapped gateway", GatewayMapper.class.getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
                 .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)

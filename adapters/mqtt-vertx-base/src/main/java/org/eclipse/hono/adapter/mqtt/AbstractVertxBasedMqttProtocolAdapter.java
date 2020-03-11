@@ -803,12 +803,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .map(propertyBag -> TracingHelper.extractSpanContext(tracer, propertyBag::getPropertiesIterator))
                 .orElse(null);
         final MqttQoS qos = context.message().qosLevel();
-        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "PUBLISH")
-            .ignoreActiveSpan()
+        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "PUBLISH", getTypeName())
             .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
             .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), context.message().topicName())
             .withTag(TracingHelper.TAG_QOS.getKey(), qos.toString())
-            .withTag(Tags.COMPONENT.getKey(), getTypeName())
             .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), context.deviceEndpoint().clientIdentifier())
             .start();
         context.setTimer(getMetrics().startTimer());
@@ -1066,9 +1064,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         final Span currentSpan = TracingHelper
-                .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response")
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, targetAddress.getTenantId())
                 .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, targetAddress.getResourceId())
@@ -1134,9 +1130,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     String.format("Content-Type %s does not match payload", ctx.contentType())));
         }
 
-        final Span currentSpan = TracingHelper.buildChildSpan(tracer, ctx.getTracingContext(), "upload " + endpoint)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+        final Span currentSpan = TracingHelper.buildChildSpan(tracer, ctx.getTracingContext(),
+                "upload " + endpoint, getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantObject.getTenantId())
                 .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)

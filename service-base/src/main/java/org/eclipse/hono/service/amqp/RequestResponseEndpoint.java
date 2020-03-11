@@ -211,10 +211,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
         final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
         final String replyTo = requestMessage.getReplyTo();
         final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, requestMessage);
-        final Span currentSpan = TracingHelper.buildChildSpan(tracer, spanContext, "process request message")
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+        final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, spanContext, "process request message", getName())
                 .withTag(Tags.HTTP_METHOD.getKey(), requestMessage.getSubject())
                 .withTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), targetAddress.toString())
                 .start();

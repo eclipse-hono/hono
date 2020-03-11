@@ -150,7 +150,12 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void createTenant(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_CREATE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_CREATE_TENANT,
+                getClass().getSimpleName()
+        ).start();
 
         final String tenantId = getRequestParam(PARAM_TENANT_ID, ctx, span, true);
 
@@ -188,7 +193,13 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void getTenant(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_GET_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_GET_TENANT,
+                getClass().getSimpleName()
+        ).start();
+
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
 
         final HttpServerResponse response = ctx.response();
@@ -214,7 +225,12 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void updateTenant(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_UPDATE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_UPDATE_TENANT,
+                getClass().getSimpleName()
+        ).start();
 
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
         final JsonObject payload = getRequestPayload(ctx.get(KEY_REQUEST_BODY));
@@ -245,7 +261,12 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
 
     private void deleteTenant(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_REMOVE_TENANT, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_REMOVE_TENANT,
+                getClass().getSimpleName()
+        ).start();
 
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
 

@@ -52,6 +52,18 @@ public final class TracingHelper {
      */
     public static final BooleanTag TAG_AUTHENTICATED = new BooleanTag("authenticated");
     /**
+     * An OpenTracing tag that contains the tenant identifier.
+     */
+    public static final StringTag TAG_TENANT_ID = new StringTag("tenant_id");
+    /**
+     * An OpenTracing tag that contains the device identifier.
+     */
+    public static final StringTag TAG_DEVICE_ID = new StringTag("device_id");
+    /**
+     * An OpenTracing tag that contains the gateway identifier.
+     */
+    public static final StringTag TAG_GATEWAY_ID = new StringTag("gateway_id");
+    /**
      * An OpenTracing tag that contains the authentication identifier used by a device.
      */
     public static final StringTag TAG_AUTH_ID = new StringTag("auth_id");
@@ -382,18 +394,42 @@ public final class TracingHelper {
      * span context (if set).
      * <p>
      * If the given span context contains a "sampling.priority" baggage item, it is set as a tag in the returned span
-     * builder.
+     * builder. Additionally, it is configured to ignore the active span.
      *
      * @param tracer The Tracer to use.
      * @param spanContext The span context that shall be the parent of the Span being built and that is used to derive
      *            the sampling priority from (may be null).
-     * @param operationName The operation name to set for the span
+     * @param operationName The operation name to set for the span.
+     * @param component The component to set for the span.
      * @return The span builder.
      * @throws NullPointerException if tracer or operationName is {@code null}.
      */
     public static Tracer.SpanBuilder buildChildSpan(final Tracer tracer, final SpanContext spanContext,
-            final String operationName) {
-        return buildSpan(tracer, spanContext, operationName, References.CHILD_OF);
+            final String operationName, final String component) {
+        return buildSpan(tracer, spanContext, operationName, References.CHILD_OF)
+                .ignoreActiveSpan()
+                .withTag(Tags.COMPONENT.getKey(), component);
+    }
+
+    /**
+     * Creates a span builder that is initialized with the given operation name and a child-of reference to the given
+     * span context (if set).
+     * <p>
+     * If the given span context contains a "sampling.priority" baggage item, it is set as a tag in the returned span
+     * builder. Additionally, it is configured to ignore the active span and set kind tag to server.
+     *
+     * @param tracer The Tracer to use.
+     * @param spanContext The span context that shall be the parent of the Span being built and that is used to derive
+     *            the sampling priority from (may be null).
+     * @param operationName The operation name to set for the span.
+     * @param component The component to set for the span.
+     * @return The span builder.
+     * @throws NullPointerException if tracer or operationName is {@code null}.
+     */
+    public static Tracer.SpanBuilder buildServerChildSpan(final Tracer tracer, final SpanContext spanContext,
+            final String operationName, final String component) {
+        return buildChildSpan(tracer, spanContext, operationName, component)
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
     }
 
     /**
@@ -406,7 +442,7 @@ public final class TracingHelper {
      * @param tracer The Tracer to use.
      * @param spanContext The span context that the span being build shall have a follows-from reference to and that is
      *            used to derive the sampling priority from (may be null).
-     * @param operationName The operation name to set for the span
+     * @param operationName The operation name to set for the span.
      * @return The span builder.
      * @throws NullPointerException if tracer or operationName is {@code null}.
      */

@@ -654,9 +654,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
             final Span currentSpan = TracingHelper
                     .buildChildSpan(tracer, context.getTracingContext(),
-                            "upload " + endpoint.getCanonicalName())
-                    .ignoreActiveSpan()
-                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                            "upload " + endpoint.getCanonicalName(), getTypeName())
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                     .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, device.getTenantId())
                     .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId())
@@ -1140,9 +1138,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 device.getTenantId(), device.getDeviceId(), commandRequestId, responseStatus);
 
         final Span currentSpan = TracingHelper
-                .buildChildSpan(tracer, context.getTracingContext(), "upload Command response")
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                .buildChildSpan(tracer, context.getTracingContext(), "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, device.getTenantId())
                 .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId())

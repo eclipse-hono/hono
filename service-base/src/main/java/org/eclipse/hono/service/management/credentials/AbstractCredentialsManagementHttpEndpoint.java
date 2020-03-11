@@ -109,8 +109,12 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
 
     private void updateCredentials(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_UPDATE_CREDENTIALS, TracingHandler.serverSpanContext(ctx), tracer,
-                getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_UPDATE_CREDENTIALS,
+                getClass().getSimpleName()
+        ).start();
 
         final JsonArray credentials = ctx.get(KEY_REQUEST_BODY);
 
@@ -146,8 +150,12 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
 
     private void getCredentialsForDevice(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_GET_CREDENTIALS, TracingHandler.serverSpanContext(ctx), tracer,
-                getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_GET_CREDENTIALS,
+                getClass().getSimpleName()
+        ).start();
 
         // mandatory params
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);

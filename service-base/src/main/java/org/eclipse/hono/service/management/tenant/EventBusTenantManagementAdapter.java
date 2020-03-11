@@ -20,14 +20,12 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.EventBusService;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -96,9 +94,14 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
 
         final Optional<String> tenantId = Optional.ofNullable(request.getTenant());
         final JsonObject payload = getRequestPayload(request.getJsonPayload());
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_CREATE_TENANT, spanContext, tracer, tenantId.orElse("<auto>"), getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_CREATE_TENANT,
+                getClass().getSimpleName()
+        ).start();
+        TracingHelper.TAG_TENANT_ID.set(span, tenantId.orElse("<auto>"));
 
         final Future<EventBusMessage> resultFuture;
         if (isValidRequestPayload(payload)) {
@@ -125,9 +128,14 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
         final String tenantId = request.getTenant();
         final JsonObject payload = getRequestPayload(request.getJsonPayload());
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_UPDATE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_UPDATE_TENANT,
+                getClass().getSimpleName()
+        ).start();
+        TracingHelper.TAG_TENANT_ID.set(span, tenantId);
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
@@ -153,9 +161,14 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
 
         final String tenantId = request.getTenant();
         final Optional<String> resourceVersion = Optional.ofNullable(request.getResourceVersion());
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_REMOVE_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_REMOVE_TENANT,
+                getClass().getSimpleName()
+        ).start();
+        TracingHelper.TAG_TENANT_ID.set(span, tenantId);
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null) {
@@ -174,9 +187,14 @@ public abstract class EventBusTenantManagementAdapter extends EventBusService {
     private Future<EventBusMessage> processGetRequest(final EventBusMessage request) {
 
         final String tenantId = request.getTenant();
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = AbstractHttpEndpoint.newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tracer, tenantId, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_GET_TENANT,
+                getClass().getSimpleName()
+        ).start();
+        TracingHelper.TAG_TENANT_ID.set(span, tenantId);
 
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null ) {

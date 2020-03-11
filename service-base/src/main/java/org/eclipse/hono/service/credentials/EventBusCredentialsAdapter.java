@@ -25,9 +25,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantConstants;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
@@ -93,7 +90,13 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
         final String tenantId = request.getTenant();
         final JsonObject payload = request.getJsonPayload();
 
-        final Span span = newChildSpan(SPAN_NAME_GET_CREDENTIALS, request.getSpanContext(), tenantId);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_GET_CREDENTIALS,
+                getClass().getSimpleName()
+        ).start();
+
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || payload == null) {
             TracingHelper.logError(span, "missing tenant and/or payload");
@@ -104,6 +107,8 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
                     CredentialsConstants.FIELD_AUTH_ID);
             final String deviceId = removeTypesafeValueForField(String.class, payload,
                     CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
 
             if (type == null) {
                 TracingHelper.logError(span, "missing type");
@@ -157,31 +162,6 @@ public abstract class EventBusCredentialsAdapter extends EventBusService impleme
                             .setJsonPayload(res.getPayload())
                             .setCacheDirective(res.getCacheDirective());
                 });
-    }
-
-    /**
-     * Creates a new <em>OpenTracing</em> span for tracing the execution of a credentials service operation.
-     * <p>
-     * The returned span will already contain a tag for the given tenant (if it is not {@code null}).
-     *
-     * @param operationName The operation name that the span should be created for.
-     * @param spanContext Existing span context.
-     * @param tenantId The tenant id.
-     * @return The new {@code Span}.
-     * @throws NullPointerException if operationName is {@code null}.
-     */
-    protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId) {
-        Objects.requireNonNull(operationName);
-        // we set the component tag to the class name because we have no access to
-        // the name of the enclosing component we are running in
-        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
-        if (tenantId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        return spanBuilder.start();
     }
 
     /**

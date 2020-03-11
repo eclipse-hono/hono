@@ -120,7 +120,12 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doGetDevice(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_GET_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_GET_DEVICE,
+                getClass().getSimpleName()
+        ).start();
 
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
@@ -149,7 +154,12 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doCreateDevice(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_CREATE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_CREATE_DEVICE,
+                getClass().getSimpleName()
+        ).start();
 
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
         final String deviceId = getRequestParam(PARAM_DEVICE_ID, ctx, span, true);
@@ -188,7 +198,12 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doUpdateDevice(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_UPDATE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_UPDATE_DEVICE,
+                getClass().getSimpleName()
+        ).start();
 
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
@@ -210,7 +225,12 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
 
     private void doDeleteDevice(final RoutingContext ctx) {
 
-        final Span span = newChildSpan(SPAN_NAME_REMOVE_DEVICE, TracingHandler.serverSpanContext(ctx), tracer, getClass().getSimpleName());
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_REMOVE_DEVICE,
+                getClass().getSimpleName()
+        ).start();
 
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);

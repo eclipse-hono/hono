@@ -59,9 +59,7 @@ public abstract class CommandConsumer extends AbstractConsumer {
             final String gatewayId, final Tracer tracer, final SpanContext spanContext) {
         // we set the component tag to the class name because we have no access to
         // the name of the enclosing component we are running in
-        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), CommandConsumer.class.getSimpleName())
+        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName, CommandConsumer.class.getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
                 .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);

@@ -27,15 +27,12 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -293,73 +290,6 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
                 .allowedHeader(HttpHeaders.IF_MATCH.toString())
                 .exposedHeader(HttpHeaders.ETAG.toString());
-    }
-
-    /**
-     * Creates a new <em>OpenTracing</em> span for tracing the execution of a service operation.
-     *
-     * @param operationName The operation name that the span should be created for.
-     * @param spanContext Existing span context.
-     * @param tracer the Tracer instance.
-     * @param className The class name to insert in the Span.
-     * @return The new {@code Span}.
-     * @throws NullPointerException if operationName is {@code null}.
-     */
-    public static final Span newChildSpan(final String operationName, final SpanContext spanContext,
-            final Tracer tracer, final String className) {
-        return newChildSpan(operationName, spanContext, tracer, null, null, className);
-
-    }
-
-    /**
-     * Creates a new <em>OpenTracing</em> span for tracing the execution of a service operation.
-     * <p>
-     * The returned span will already contain tags for the given tenant and device ids (if either is not {@code null}).
-     *
-     * @param operationName The operation name that the span should be created for.
-     * @param spanContext Existing span context.
-     * @param tracer the Tracer instance.
-     * @param tenantId The tenant id.
-     * @param deviceId The device id.
-     * @param className The class name to insert in the Span.
-     * @return The new {@code Span}.
-     * @throws NullPointerException if operationName is {@code null}.
-     */
-    public static final Span newChildSpan(final String operationName, final SpanContext spanContext,
-            final Tracer tracer, final String tenantId, final String deviceId, final String className) {
-        Objects.requireNonNull(operationName);
-        // we set the component tag to the class name because we have no access to
-        // the name of the enclosing component we are running in
-        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), className)
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
-        if (tenantId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        if (deviceId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        }
-        return spanBuilder.start();
-    }
-
-    /**
-     * Creates a new <em>OpenTracing</em> span for tracing the execution of a tenant service operation.
-     * <p>
-     * The returned span will already contain tags for the given tenant id (if not {@code null}).
-     *
-     * @param operationName The operation name that the span should be created for.
-     * @param spanContext Existing span context.
-     * @param tracer the Tracer instance.
-     * @param tenantId The tenant id.
-     * @param className The class name to insert in the Span.
-     * @return The new {@code Span}.
-     * @throws NullPointerException if operationName is {@code null}.
-     */
-    public static final Span newChildSpan(final String operationName, final SpanContext spanContext,
-            final Tracer tracer,
-            final String tenantId, final String className) {
-        return newChildSpan(operationName, spanContext, tracer, tenantId, null, className);
     }
 
     /**

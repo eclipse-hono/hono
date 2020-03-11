@@ -28,7 +28,6 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
@@ -83,10 +82,13 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
 
     private Future<Message> processGetRequest(final Message request) {
 
-        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, request);
-
         final String tenantId = MessageHelper.getTenantId(request);
-        final Span span = newChildSpan(SPAN_NAME_GET_TENANT, spanContext, tenantId);
+
+        final Span span = TracingHelper.buildServerChildSpan(tracer,
+                TracingHelper.extractSpanContext(tracer, request),
+                SPAN_NAME_GET_TENANT,
+                getClass().getSimpleName())
+                .start();
 
         JsonObject payload = null;
         try {
@@ -109,6 +111,7 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
 
             // deprecated API
             log.debug("retrieving tenant [{}] using deprecated variant of get tenant request", tenantId);
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             span.log("using deprecated variant of get tenant request");
             // span will be finished in processGetByIdRequest
             resultFuture = processGetByIdRequest(request, tenantId, span);
@@ -126,7 +129,7 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
                 resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
             } else if (tenantIdFromPayload != null) {
                 log.debug("retrieving tenant [id: {}]", tenantIdFromPayload);
-                span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantIdFromPayload);
+                TracingHelper.TAG_TENANT_ID.set(span, tenantIdFromPayload);
                 resultFuture = processGetByIdRequest(request, tenantIdFromPayload, span);
             } else {
                 span.setTag(TAG_SUBJECT_DN_NAME, subjectDn);
@@ -155,7 +158,7 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
                 if (tr.isOk() && tr.getPayload() != null) {
                     tenantId = getTypesafeValueForField(String.class, tr.getPayload(),
                             TenantConstants.FIELD_PAYLOAD_TENANT_ID);
-                    span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+                    TracingHelper.TAG_TENANT_ID.set(span, tenantId);
                 }
                 return TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, tenantId, request, tr);
             });

@@ -26,7 +26,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
@@ -88,8 +87,13 @@ public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestRes
     protected Future<Message> processGetRequest(final Message request, final ResourceIdentifier targetAddress) {
 
         final String tenantId = targetAddress.getTenantId();
-        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, request);
-        final Span span = newChildSpan(SPAN_NAME_GET_CREDENTIALS, spanContext, tenantId);
+
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHelper.extractSpanContext(tracer, request),
+                SPAN_NAME_GET_CREDENTIALS,
+                getClass().getSimpleName()
+        ).start();
 
         JsonObject payload = null;
         try {
@@ -112,6 +116,8 @@ public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestRes
                     CredentialsConstants.FIELD_AUTH_ID);
             final String deviceId = removeTypesafeValueForField(String.class, payload,
                     CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
 
             if (type == null) {
                 TracingHelper.logError(span, "missing type");

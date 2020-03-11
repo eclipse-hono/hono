@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -112,9 +111,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
         Objects.requireNonNull(deviceCredentials);
         Objects.requireNonNull(resultHandler);
 
-        final Span currentSpan = TracingHelper.buildChildSpan(tracer, spanContext, "authenticate device")
-                .ignoreActiveSpan()
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+        final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, spanContext, "authenticate device", getClass().getSimpleName())
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceCredentials.getTenantId())
                 .withTag(TracingHelper.TAG_AUTH_ID.getKey(), deviceCredentials.getAuthId())
                 .start();
@@ -159,9 +156,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             final CredentialsObject credentialsOnRecord,
             final SpanContext spanContext) {
 
-        final Span currentSpan = TracingHelper.buildChildSpan(tracer, spanContext, "validate credentials")
-                .ignoreActiveSpan()
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+        final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, spanContext, "validate credentials", getClass().getSimpleName())
                 .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceCredentials.getTenantId())
                 .withTag(TracingHelper.TAG_AUTH_ID.getKey(), deviceCredentials.getAuthId())
                 .withTag(TracingHelper.TAG_CREDENTIALS_TYPE.getKey(), deviceCredentials.getType())

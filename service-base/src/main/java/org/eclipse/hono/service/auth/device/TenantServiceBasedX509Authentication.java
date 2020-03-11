@@ -142,10 +142,8 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
         Objects.requireNonNull(path);
 
-        final Span span = TracingHelper.buildChildSpan(tracer, currentSpan, "verify device certificate")
-                .ignoreActiveSpan()
+        final Span span = TracingHelper.buildChildSpan(tracer, currentSpan, "verify device certificate", getClass().getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
                 .start();
 
         return getX509CertificatePath(path).compose(x509chain -> {

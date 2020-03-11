@@ -25,9 +25,6 @@ import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonArray;
@@ -100,15 +97,22 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
     protected Future<EventBusMessage> processGetLastGatewayRequest(final EventBusMessage request) {
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
-        final SpanContext spanContext = request.getSpanContext();
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_GET_LAST_GATEWAY,
+                getClass().getSimpleName()
+        ).start();
 
-        final Span span = newChildSpan(SPAN_NAME_GET_LAST_GATEWAY, spanContext, tenantId, deviceId, null);
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null) {
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("getting last known gateway for tenant [{}], device [{}]", tenantId, deviceId);
+
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
 
             resultFuture = getService().getLastKnownGatewayForDevice(tenantId, deviceId, span)
                     .map(res -> request.getResponse(res.getStatus())
@@ -128,15 +132,24 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final String gatewayId = request.getGatewayId();
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_SET_LAST_GATEWAY, spanContext, tenantId, deviceId, gatewayId);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_SET_LAST_GATEWAY,
+                getClass().getSimpleName()
+        ).start();
+
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null || gatewayId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or gateway");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             log.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
+
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
+            TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
 
             resultFuture = getService().setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span)
                     .map(res -> request.getResponse(res.getStatus())
@@ -156,14 +169,22 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final JsonObject payload = request.getJsonPayload();
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES, spanContext, tenantId, deviceId, null);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES,
+                getClass().getSimpleName()
+        ).start();
+
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null || payload == null) {
             TracingHelper.logError(span, "missing tenant, device and/or payload");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
+
             final Object gatewaysValue = payload.getValue(DeviceConnectionConstants.FIELD_GATEWAY_IDS);
             if (!(gatewaysValue instanceof JsonArray)) {
                 TracingHelper.logError(span, "payload JSON is missing valid '" + DeviceConnectionConstants.FIELD_GATEWAY_IDS + "' field value");
@@ -193,14 +214,21 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final String adapterInstanceId = request.getProperty(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID);
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE, spanContext, tenantId, deviceId, null);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE,
+                getClass().getSimpleName()
+        ).start();
+
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null || adapterInstanceId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
             log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {}", tenantId, deviceId, adapterInstanceId);
 
@@ -223,14 +251,21 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
         final String tenantId = request.getTenant();
         final String deviceId = request.getDeviceId();
         final String adapterInstanceId = request.getProperty(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID);
-        final SpanContext spanContext = request.getSpanContext();
 
-        final Span span = newChildSpan(SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE, spanContext, tenantId, deviceId, null);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                request.getSpanContext(),
+                SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE,
+                getClass().getSimpleName()
+        ).start();
+
         final Future<EventBusMessage> resultFuture;
         if (tenantId == null || deviceId == null || adapterInstanceId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
+            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
             log.debug("removing command handling adapter instance for tenant [{}], device [{}] with value {}", tenantId, deviceId, adapterInstanceId);
 
@@ -241,40 +276,6 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             );
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
-    }
-
-    /**
-     * Creates a new <em>OpenTracing</em> span for tracing the execution of a device connection service operation.
-     * <p>
-     * The returned span will already contain tags for the given tenant, device and gateway ids (if either is not {@code null}).
-     *
-     * @param operationName The operation name that the span should be created for.
-     * @param spanContext Existing span context.
-     * @param tenantId The tenant id.
-     * @param deviceId The device id.
-     * @param gatewayId The gateway id.
-     * @return The new {@code Span}.
-     * @throws NullPointerException if operationName is {@code null}.
-     */
-    protected final Span newChildSpan(final String operationName, final SpanContext spanContext, final String tenantId,
-            final String deviceId, final String gatewayId) {
-        Objects.requireNonNull(operationName);
-        // we set the component tag to the class name because we have no access to
-        // the name of the enclosing component we are running in
-        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName)
-                .ignoreActiveSpan()
-                .withTag(Tags.COMPONENT.getKey(), getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER);
-        if (tenantId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        if (deviceId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        }
-        if (gatewayId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
-        }
-        return spanBuilder.start();
     }
 
     /**
