@@ -173,6 +173,31 @@ public final class TracingHelper {
     }
 
     /**
+     * Marks an <em>OpenTracing</em> span as erroneous, logs a message and an error.
+     * <p>
+     * This method does <em>not</em> finish the span.
+     *
+     * @param span The span to mark.
+     * @param message The message to log on the span.
+     * @param error The error to log on the span.
+     * @throws NullPointerException if message and error are {@code null}.
+     */
+    public static void logError(final Span span, final String message, final Throwable error) {
+        if (span != null) {
+            if (message == null && error == null) {
+                throw new NullPointerException("Atleast message or error must not be null");
+            }
+            final Map<String, Object> items = new HashMap<>(3);
+            items.put(Fields.EVENT, Tags.ERROR.getKey());
+            Optional.ofNullable(message)
+                    .ifPresent(ok -> items.put(Fields.MESSAGE, message));
+            Optional.ofNullable(error)
+                    .ifPresent(ok -> items.put(Fields.ERROR_OBJECT, error));
+            logError(span, items);
+        }
+    }
+
+    /**
      * Marks an <em>OpenTracing</em> span as erroneous and logs several items.
      * <p>
      * This method does <em>not</em> finish the span.
