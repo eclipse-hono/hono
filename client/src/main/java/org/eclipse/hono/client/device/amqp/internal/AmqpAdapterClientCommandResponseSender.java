@@ -107,12 +107,12 @@ public class AmqpAdapterClientCommandResponseSender extends CommandResponseSende
         message.setCorrelationId(correlationId);
 
         MessageHelper.setCreationTime(message);
+
+        setApplicationProperties(message, properties);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, status);
         MessageHelper.setPayload(message, contentType, payload);
-
-        setApplicationProperties(message, properties);
 
         return sendAndWaitForOutcome(message, context);
     }
