@@ -15,6 +15,7 @@
 package org.eclipse.hono.deviceconnection.infinispan;
 
 import java.net.HttpURLConnection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -79,34 +80,25 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
     @Override
     public Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
             final String adapterInstanceId, final Span span) {
-        // TODO use this:
-//        cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span.context())
-//                .map(v -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
-//                .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)))
-//                .setHandler(resultHandler);
-        return Future.failedFuture("not implemented yet");
+        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span.context())
+                .map(v -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
+                .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
     @Override
     public Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
             final String adapterInstanceId, final Span span) {
-        // TODO use this:
-//        cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span.context())
-//                .map(v -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
-//                .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)))
-//                .setHandler(resultHandler);
-        return Future.failedFuture("not implemented yet");
+        return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span.context())
+                .map(v -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
+                .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
     @Override
     public Future<DeviceConnectionResult> getCommandHandlingAdapterInstances(final String tenantId, final String deviceId,
             final List<String> viaGateways, final Span span) {
-        // TODO use this:
-//        cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span.context())
-//                .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
-//                .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)))
-//                .setHandler(resultHandler);
-        return Future.failedFuture("not implemented yet");
+        return cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span.context())
+                .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
+                .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
     /**

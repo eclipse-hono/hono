@@ -139,4 +139,29 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
             ctx.completeNow();
         }));
     }
+
+    /**
+     * Verifies that the <em>setCommandHandlingAdapterInstance</em> operation succeeds and invokes the
+     * corresponding method on the {@link DeviceConnectionInfo} instance.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testSetCommandHandlingAdapterInstance(final VertxTestContext ctx) {
+
+        final String deviceId = "testDevice";
+        final String adapterInstanceId = "adapterInstanceId";
+        when(cache.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture());
+
+        givenAStartedService()
+                .compose(ok -> svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
+                .setHandler(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
+                        verify(cache).setCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));
+                    });
+                    ctx.completeNow();
+                }));
+    }
 }
