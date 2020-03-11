@@ -8,7 +8,7 @@
                 | |                                        
                 |_|                                        
 
-Eclipse Hono Device Registry Server ${application.formatted-version}
+Eclipse Hono Mongo DB Based Device Registry Server ${application.formatted-version}
 using Spring Boot ${spring-boot.formatted-version}
 
 Go to https://www.eclipse.org/hono for more information.

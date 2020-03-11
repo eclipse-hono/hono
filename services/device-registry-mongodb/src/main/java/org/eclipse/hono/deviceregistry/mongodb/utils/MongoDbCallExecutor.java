@@ -31,28 +31,27 @@ import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
- * Utility for vertx mongodb client access.
+ * Utility class for Vert.x mongodb client access.
  */
 public final class MongoDbCallExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(MongoDbCallExecutor.class);
 
+    private final MongoDbConfigProperties config;
     private final MongoClient mongoClient;
-    private final MongoDbConfigProperties mongoDbConfig;
     private final Vertx vertx;
 
     /**
      * Creates an instance of the {@link MongoDbCallExecutor}.
      *
      * @param vertx         The Vert.x instance to use.
-     * @param mongoDbConfig The mongodb configuration properties to use.
+     * @param config The mongodb configuration properties to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public MongoDbCallExecutor(final Vertx vertx, final MongoDbConfigProperties mongoDbConfig) {
+    public MongoDbCallExecutor(final Vertx vertx, final MongoDbConfigProperties config) {
         this.vertx = Objects.requireNonNull(vertx);
-        this.mongoDbConfig = Objects.requireNonNull(mongoDbConfig);
-        final JsonObject mongoConfigJson = this.mongoDbConfig.asMongoClientConfigJson();
-        this.mongoClient = MongoClient.createShared(vertx, mongoConfigJson);
+        this.config = Objects.requireNonNull(config);
+        this.mongoClient = MongoClient.createShared(vertx, getMongoClientConfigAsJson());
     }
 
     /**
@@ -70,8 +69,7 @@ public final class MongoDbCallExecutor {
      * @param collectionName The name of the collection of documents.
      * @param keys           The keys to be indexed.
      * @param options        The options used to configure index, which is optional.
-     * @return A succeeded Future if the tenant creation is successful,
-     * else failed future with the error reason.
+     * @return  A future indicating the outcome of the indices creation operation.
      */
     public Future<Void> createCollectionIndex(final String collectionName, final JsonObject keys,
                                               final IndexOptions options) {
@@ -81,13 +79,13 @@ public final class MongoDbCallExecutor {
                 indexCreationPromise.complete();
             } else if (res.cause() instanceof MongoSocketException) {
                 log.info("Create indices failed, wait for retry, cause:", res.cause());
-                vertx.setTimer(this.mongoDbConfig.getCreateIndicesTimeout(),
+                vertx.setTimer(this.config.getCreateIndicesTimeout(),
                         timer -> createIndex(collectionName, keys, options, res2 -> {
                             if (res2.succeeded()) {
                                 indexCreationPromise.complete();
                             } else if (res2.cause() instanceof MongoSocketException) {
                                 log.info("Create indices failed, wait for second retry, cause:", res2.cause());
-                                vertx.setTimer(this.mongoDbConfig.getCreateIndicesTimeout(),
+                                vertx.setTimer(this.config.getCreateIndicesTimeout(),
                                         timer2 -> createIndex(collectionName, keys, options, res3 -> {
                                             if (res3.succeeded()) {
                                                 indexCreationPromise.complete();
@@ -121,5 +119,34 @@ public final class MongoDbCallExecutor {
                              final Handler<AsyncResult<Void>> indexCreationTracker) {
         log.info("Create indices");
         mongoClient.createIndexWithOptions(collectionName, keys, options, indexCreationTracker);
+    }
+
+    /**
+     * Returns the mongodb properties as a JsonObject suitable for initializing 
+     * a Vert.x MongoDbClient object. 
+     * <p>
+     * If the connectionString is set, it will override all the other connection settings.
+     *
+     * @return The mongodb client configuration as a json object.
+     */
+    private JsonObject getMongoClientConfigAsJson() {
+        final JsonObject configJson = new JsonObject();
+        if (config.getConnectionString() != null) {
+            configJson.put("connection_string", config.getConnectionString());
+            if (config.getHost() != null || config.getPort() != 0 || config.getDbName() != null
+                    || config.getUsername() != null || config.getPassword() != null
+                    || config.getServerSelectionTimeout() > 0 || config.getConnectTimeout() > 0) {
+                log.warn("Since connectionString is set, the other connection properties will be ignored");
+            }
+        } else {
+            configJson.put("host", config.getHost())
+                    .put("port", config.getPort())
+                    .put("db_name", config.getDbName())
+                    .put("username", config.getUsername())
+                    .put("password", config.getPassword())
+                    .put("serverSelectionTimeoutMS", config.getServerSelectionTimeout())
+                    .put("connectTimeoutMS", config.getConnectTimeout());
+        }
+        return configJson;
     }
 }

@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry.util;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -123,5 +124,14 @@ public final class DeviceRegistryUtils {
         } else {
             return CacheDirective.noCacheDirective();
         }
+    }
+
+    /**
+     * Gets a unique identifier generated using {@link UUID#randomUUID()}.
+     * 
+     * @return The generated unique identifier.
+     */
+    public static String getUniqueIdentifier() {
+        return UUID.randomUUID().toString();
     }
 }
