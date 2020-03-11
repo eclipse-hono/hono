@@ -11,6 +11,13 @@ title = "Release Notes"
   This has the advantage of saving the network hop to the Device Connection service.
   Refer to the protocol adapter Admin Guides for details.
 
+### Fixes & Enhancements
+
+* When a message arrived, the *message limit* checks failed to calculate the payload size 
+  of the incoming message based on the configured *minimum message size*. Instead, it used the
+  actual payload size to verify if the *message limit* has been exceeded or not. This has been
+  fixed now.
+
 ### API Changes
 
 * The device registry credentials endpoint will no longer handout sensitive details for hashed-password secrets.
