@@ -10,28 +10,36 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
 package org.eclipse.hono.deviceregistry.service.deviceconnection;
 
+import org.eclipse.hono.service.deviceconnection.AbstractDeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
-import org.eclipse.hono.service.deviceconnection.EventBusDeviceConnectionAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+
+import io.vertx.core.Vertx;
 
 /**
  * A default event bus based service implementation of the {@link DeviceConnectionService}.
  * <p>
  * This wires up the actual service instance with the mapping to the event bus implementation. It is intended to be used
  * in a Spring Boot environment.
- * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
- *             Please use {@link org.eclipse.hono.service.deviceconnection.AbstractDeviceConnectionAmqpEndpoint} based implementation in the future.
  */
 @Component
-@Deprecated(forRemoval = true)
-public final class AutowiredDeviceConnectionAdapter extends EventBusDeviceConnectionAdapter {
+public class AutowiredDeviceConnectionAmqpEndpoint extends AbstractDeviceConnectionAmqpEndpoint {
 
     private DeviceConnectionService service;
+
+    /**
+     * Creates a new registration endpoint for a vertx instance.
+     *
+     * @param vertx The vertx instance to use.
+     */
+    @Autowired
+    public AutowiredDeviceConnectionAmqpEndpoint(final Vertx vertx) {
+        super(vertx);
+    }
 
     @Autowired
     @Qualifier("backend")
@@ -41,7 +49,6 @@ public final class AutowiredDeviceConnectionAdapter extends EventBusDeviceConnec
 
     @Override
     protected DeviceConnectionService getService() {
-        return this.service;
+        return service;
     }
-
 }
