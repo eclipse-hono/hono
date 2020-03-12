@@ -90,15 +90,15 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
                 getClass().getSimpleName())
                 .start();
 
-        JsonObject payload = null;
+        final JsonObject payload;
         try {
             payload = MessageHelper.getJsonPayload(request);
-        } catch (DecodeException e) {
+        } catch (final DecodeException e) {
             logger.debug("failed to decode AMQP request message", e);
-            return Future.failedFuture(
+            return finishSpanOnFutureCompletion(span, Future.failedFuture(
                     new ClientErrorException(
                             HttpURLConnection.HTTP_BAD_REQUEST,
-                            "request message body contains malformed JSON"));
+                            "request message body contains malformed JSON")));
         }
 
         final Future<Message> resultFuture;
