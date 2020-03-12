@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.References;
 import io.opentracing.Span;
@@ -52,18 +53,6 @@ public final class TracingHelper {
      */
     public static final BooleanTag TAG_AUTHENTICATED = new BooleanTag("authenticated");
     /**
-     * An OpenTracing tag that contains the tenant identifier.
-     */
-    public static final StringTag TAG_TENANT_ID = new StringTag("tenant_id");
-    /**
-     * An OpenTracing tag that contains the device identifier.
-     */
-    public static final StringTag TAG_DEVICE_ID = new StringTag("device_id");
-    /**
-     * An OpenTracing tag that contains the gateway identifier.
-     */
-    public static final StringTag TAG_GATEWAY_ID = new StringTag("gateway_id");
-    /**
      * An OpenTracing tag that contains the authentication identifier used by a device.
      */
     public static final StringTag TAG_AUTH_ID = new StringTag("auth_id");
@@ -92,9 +81,21 @@ public final class TracingHelper {
      */
     public static final IntTag TAG_CREDIT = new IntTag("message_bus.credit");
     /**
+     * An OpenTracing tag that contains the device identifier.
+     */
+    public static final StringTag TAG_DEVICE_ID = new StringTag(MessageHelper.APP_PROPERTY_DEVICE_ID);
+    /**
+     * An OpenTracing tag that contains the gateway identifier.
+     */
+    public static final StringTag TAG_GATEWAY_ID = new StringTag(MessageHelper.APP_PROPERTY_GATEWAY_ID);
+    /**
      * An OpenTracing tag that contains the identifier of a (request) message.
      */
     public static final StringTag TAG_MESSAGE_ID = new StringTag("message_bus.message_id");
+    /**
+     * An OpenTracing tag that indicates the container id of a remote peer.
+     */
+    public static final StringTag TAG_PEER_CONTAINER = new StringTag("peer.container");
     /**
      * An OpenTracing tag that contains the QoS that a device has used for publishing
      * a message.
@@ -106,9 +107,9 @@ public final class TracingHelper {
      */
     public static final StringTag TAG_REMOTE_STATE = new StringTag("message_bus.remote_state");
     /**
-     * An OpenTracing tag that indicates the container id of a remote peer.
+     * An OpenTracing tag that contains the tenant identifier.
      */
-    public static final StringTag TAG_PEER_CONTAINER = new StringTag("peer.container");
+    public static final StringTag TAG_TENANT_ID = new StringTag(MessageHelper.APP_PROPERTY_TENANT_ID);
     /**
      * An OpenTracing tag indicating if a client's connection is secured using TLS.
      */
