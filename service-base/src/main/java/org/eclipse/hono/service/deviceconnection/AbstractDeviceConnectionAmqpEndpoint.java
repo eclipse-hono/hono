@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,43 +10,51 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-
 package org.eclipse.hono.service.deviceconnection;
 
 import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Objects;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.service.EventBusService;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.eclipse.hono.util.EventBusMessage;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
-import io.vertx.core.Verticle;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Adapter to bind {@link DeviceConnectionService} to the vertx event bus.
+ * An {@code AmqpEndpoint} for managing device connection information.
  * <p>
- * This base class provides support for receiving service invocation request messages
- * via vert.x' event bus and routing them to specific methods accepting the
- * query parameters contained in the request message.
- * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
- *             Please use {@link org.eclipse.hono.service.deviceconnection.AbstractDeviceConnectionAmqpEndpoint} based implementation in the future.
+ * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device
+ * Connection API</a>. It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
+ * event bus for processing. The outcome is then returned to the peer in a response message.
  */
-@Deprecated
-public abstract class EventBusDeviceConnectionAdapter extends EventBusService implements Verticle {
+public abstract class AbstractDeviceConnectionAmqpEndpoint extends AbstractRequestResponseEndpoint<ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_LAST_GATEWAY = "get last known gateway";
     private static final String SPAN_NAME_SET_LAST_GATEWAY = "set last known gateway";
     private static final String SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES = "get command handling adapter instances";
     private static final String SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE = "set command handling adapter instance";
     private static final String SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE = "remove command handling adapter instance";
+
+    /**
+     * Creates a new credentials endpoint for a vertx instance.
+     *
+     * @param vertx The vertx instance to use.
+     */
+    public AbstractDeviceConnectionAmqpEndpoint(final Vertx vertx) {
+        super(vertx);
+    }
 
     /**
      * The service to forward requests to.
@@ -56,38 +64,22 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
     protected abstract DeviceConnectionService getService();
 
     @Override
-    protected final String getEventBusAddress() {
-        return DeviceConnectionConstants.EVENT_BUS_ADDRESS_DEVICE_CONNECTION_IN;
-    }
+    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
+        Objects.requireNonNull(requestMessage);
 
-    /**
-     * Processes a Device Connection API request message received via the vert.x event bus.
-     * <p>
-     * This method validates the request payload against the Device Connection API specification
-     * before invoking the corresponding {@code DeviceConnectionService} methods.
-     * 
-     * @param request The request message.
-     * @return A future indicating the outcome of the service invocation.
-     * @throws NullPointerException If the request message is {@code null}.
-     */
-    @Override
-    public Future<EventBusMessage> processRequest(final EventBusMessage request) {
-
-        Objects.requireNonNull(request);
-
-        switch (DeviceConnectionConstants.DeviceConnectionAction.from(request.getOperation())) {
+        switch (DeviceConnectionConstants.DeviceConnectionAction.from(requestMessage.getSubject())) {
         case GET_LAST_GATEWAY:
-            return processGetLastGatewayRequest(request);
+            return processGetLastGatewayRequest(requestMessage, targetAddress);
         case SET_LAST_GATEWAY:
-            return processSetLastGatewayRequest(request);
+            return processSetLastGatewayRequest(requestMessage, targetAddress);
         case GET_CMD_HANDLING_ADAPTER_INSTANCES:
-            return processGetCmdHandlingAdapterInstances(request);
+            return processGetCmdHandlingAdapterInstances(requestMessage, targetAddress);
         case SET_CMD_HANDLING_ADAPTER_INSTANCE:
-            return processSetCmdHandlingAdapterInstance(request);
+            return processSetCmdHandlingAdapterInstance(requestMessage, targetAddress);
         case REMOVE_CMD_HANDLING_ADAPTER_INSTANCE:
-            return processRemoveCmdHandlingAdapterInstance(request);
+            return processRemoveCmdHandlingAdapterInstance(requestMessage, targetAddress);
         default:
-            return processCustomOperationMessage(request);
+            return processCustomOperationMessage(requestMessage);
         }
     }
 
@@ -95,19 +87,21 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
      * Processes a <em>get last known gateway</em> request message.
      *
      * @param request The request message.
+     * @param targetAddress The address the message is sent to.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<EventBusMessage> processGetLastGatewayRequest(final EventBusMessage request) {
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
+    protected Future<Message> processGetLastGatewayRequest(final Message request, final ResourceIdentifier targetAddress) {
+        final String tenantId = targetAddress.getTenantId();
+        final String deviceId = MessageHelper.getDeviceId(request);
+
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                request.getSpanContext(),
+                TracingHelper.extractSpanContext(tracer, request),
                 SPAN_NAME_GET_LAST_GATEWAY,
                 getClass().getSimpleName()
         ).start();
 
-        final Future<EventBusMessage> resultFuture;
+        final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null) {
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -118,9 +112,12 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
 
             resultFuture = getService().getLastKnownGatewayForDevice(tenantId, deviceId, span)
-                    .map(res -> request.getResponse(res.getStatus())
-                            .setJsonPayload(res.getPayload())
-                            .setCacheDirective(res.getCacheDirective()));
+                    .map(res -> DeviceConnectionConstants.getAmqpReply(
+                            DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
+                            tenantId,
+                            request,
+                            res)
+                    );
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -129,21 +126,22 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
      * Processes a <em>set last known gateway</em> request message.
      *
      * @param request The request message.
+     * @param targetAddress The address the message is sent to.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<EventBusMessage> processSetLastGatewayRequest(final EventBusMessage request) {
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-        final String gatewayId = request.getGatewayId();
+    protected Future<Message> processSetLastGatewayRequest(final Message request, final ResourceIdentifier targetAddress) {
+        final String tenantId = targetAddress.getTenantId();
+        final String deviceId = MessageHelper.getDeviceId(request);
+        final String gatewayId = MessageHelper.getGatewayId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                request.getSpanContext(),
+                TracingHelper.extractSpanContext(tracer, request),
                 SPAN_NAME_SET_LAST_GATEWAY,
                 getClass().getSimpleName()
         ).start();
 
-        final Future<EventBusMessage> resultFuture;
+        final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null || gatewayId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or gateway");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -155,9 +153,12 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
 
             resultFuture = getService().setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span)
-                    .map(res -> request.getResponse(res.getStatus())
-                            .setJsonPayload(res.getPayload())
-                            .setCacheDirective(res.getCacheDirective()));
+                    .map(res -> DeviceConnectionConstants.getAmqpReply(
+                            DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
+                            tenantId,
+                            request,
+                            res)
+                    );
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -166,21 +167,32 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
      * Processes a <em>get command handling protocol adapter instance</em> request message.
      *
      * @param request The request message.
+     * @param targetAddress The address the message is sent to.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<EventBusMessage> processGetCmdHandlingAdapterInstances(final EventBusMessage request) {
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-        final JsonObject payload = request.getJsonPayload();
+    protected Future<Message> processGetCmdHandlingAdapterInstances(final Message request, final ResourceIdentifier targetAddress) {
+        final String tenantId = targetAddress.getTenantId();
+        final String deviceId = MessageHelper.getDeviceId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                request.getSpanContext(),
+                TracingHelper.extractSpanContext(tracer, request),
                 SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES,
                 getClass().getSimpleName()
         ).start();
 
-        final Future<EventBusMessage> resultFuture;
+        final JsonObject payload;
+        try {
+            payload = MessageHelper.getJsonPayload(request);
+        } catch (DecodeException e) {
+            logger.debug("failed to decode AMQP request message", e);
+            return finishSpanOnFutureCompletion(span, Future.failedFuture(
+                    new ClientErrorException(
+                            HttpURLConnection.HTTP_BAD_REQUEST,
+                            "request message body contains malformed JSON")));
+        }
+
+        final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null || payload == null) {
             TracingHelper.logError(span, "missing tenant, device and/or payload");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -198,9 +210,11 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
                 @SuppressWarnings("unchecked")
                 final List<String> list = ((JsonArray) gatewaysValue).getList();
                 resultFuture = getService().getCommandHandlingAdapterInstances(tenantId, deviceId, list, span)
-                        .map(res -> request.getResponse(res.getStatus())
-                                    .setJsonPayload(res.getPayload())
-                                    .setCacheDirective(res.getCacheDirective())
+                        .map(res -> DeviceConnectionConstants.getAmqpReply(
+                                DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
+                                tenantId,
+                                request,
+                                res)
                         );
             }
         }
@@ -211,21 +225,22 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
      * Processes a <em>set protocol adapter instance for command handler</em> request message.
      *
      * @param request The request message.
+     * @param targetAddress The address the message is sent to.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<EventBusMessage> processSetCmdHandlingAdapterInstance(final EventBusMessage request) {
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-        final String adapterInstanceId = request.getProperty(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID);
+    protected Future<Message> processSetCmdHandlingAdapterInstance(final Message request, final ResourceIdentifier targetAddress) {
+        final String tenantId = targetAddress.getTenantId();
+        final String deviceId = MessageHelper.getDeviceId(request);
+        final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                request.getSpanContext(),
+                TracingHelper.extractSpanContext(tracer, request),
                 SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE,
                 getClass().getSimpleName()
         ).start();
 
-        final Future<EventBusMessage> resultFuture;
+        final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null || adapterInstanceId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -236,10 +251,12 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {}", tenantId, deviceId, adapterInstanceId);
 
             resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
-                    .map(res -> request.getResponse(res.getStatus())
-                        .setJsonPayload(res.getPayload())
-                        .setCacheDirective(res.getCacheDirective())
-            );
+                    .map(res -> DeviceConnectionConstants.getAmqpReply(
+                            DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
+                            tenantId,
+                            request,
+                            res)
+                    );
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -248,21 +265,22 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
      * Processes a <em>remove command handling protocol adapter instance</em> request message.
      *
      * @param request The request message.
+     * @param targetAddress The address the message is sent to.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<EventBusMessage> processRemoveCmdHandlingAdapterInstance(final EventBusMessage request) {
-        final String tenantId = request.getTenant();
-        final String deviceId = request.getDeviceId();
-        final String adapterInstanceId = request.getProperty(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID);
+    protected Future<Message> processRemoveCmdHandlingAdapterInstance(final Message request, final ResourceIdentifier targetAddress) {
+        final String tenantId = targetAddress.getTenantId();
+        final String deviceId = MessageHelper.getDeviceId(request);
+        final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                request.getSpanContext(),
+                TracingHelper.extractSpanContext(tracer, request),
                 SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE,
                 getClass().getSimpleName()
         ).start();
 
-        final Future<EventBusMessage> resultFuture;
+        final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null || adapterInstanceId == null) {
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -273,10 +291,12 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
             log.debug("removing command handling adapter instance for tenant [{}], device [{}] with value {}", tenantId, deviceId, adapterInstanceId);
 
             resultFuture = getService().removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
-                    .map(res -> request.getResponse(res.getStatus())
-                        .setJsonPayload(res.getPayload())
-                        .setCacheDirective(res.getCacheDirective())
-            );
+                    .map(res -> DeviceConnectionConstants.getAmqpReply(
+                            DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
+                            tenantId,
+                            request,
+                            res)
+                    );
         }
         return finishSpanOnFutureCompletion(span, resultFuture);
     }
@@ -293,9 +313,19 @@ public abstract class EventBusDeviceConnectionAdapter extends EventBusService im
      * @param request The request to process.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<EventBusMessage> processCustomOperationMessage(final EventBusMessage request) {
-        log.debug("invalid operation in request message [{}]", request.getOperation());
+    protected Future<Message> processCustomOperationMessage(final Message request) {
+        log.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
 
+
+    @Override
+    protected boolean passesFormalVerification(final ResourceIdentifier linkTarget, final Message msg) {
+        return DeviceConnectionMessageFilter.verify(linkTarget, msg);
+    }
+
+    @Override
+    public final String getName() {
+        return DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT;
+    }
 }

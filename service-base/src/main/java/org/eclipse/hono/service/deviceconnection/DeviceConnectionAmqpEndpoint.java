@@ -37,7 +37,10 @@ import io.vertx.core.json.DecodeException;
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device
  * Connection API</a>. It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
+ * @deprecated This class will be removed in future versions as AMQP endpoint does not use event bus anymore.
+ *             Please use {@link org.eclipse.hono.service.deviceconnection.AbstractDeviceConnectionAmqpEndpoint} based implementation in the future.
  */
+@Deprecated
 public class DeviceConnectionAmqpEndpoint extends RequestResponseEndpoint<ServiceConfigProperties> {
 
     /**
