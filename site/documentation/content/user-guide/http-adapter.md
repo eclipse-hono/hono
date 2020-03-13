@@ -177,7 +177,7 @@ content-length: 0
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
+curl -i -X PUT -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4711
 
 HTTP/1.1 200 OK
 hono-command: set
