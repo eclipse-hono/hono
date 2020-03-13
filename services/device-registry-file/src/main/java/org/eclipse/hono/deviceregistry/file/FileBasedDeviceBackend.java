@@ -57,15 +57,6 @@ import io.vertx.core.json.JsonObject;
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend {
 
-    /**
-     * The name of the JSON array containing device registration information for a tenant.
-     */
-    public static final String ARRAY_DEVICES = "devices";
-    /**
-     * The name of the JSON property containing the tenant ID.
-     */
-    public static final String FIELD_TENANT = "tenant";
-
     private final FileBasedRegistrationService registrationService;
     private final FileBasedCredentialsService credentialsService;
 
