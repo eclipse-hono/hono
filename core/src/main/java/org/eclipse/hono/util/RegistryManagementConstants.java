@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -214,6 +214,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
+     * The name of the JSON array containing device registration information for a tenant.
+     */
+    public static final String FIELD_DEVICES = "devices";
+    /**
      * The name of the property that contains the maximum <em>time til disconnect</em> that protocol
      * adapters should use for a tenant.
      */
@@ -244,6 +248,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the property that contains the configuration options for the resource limits.
      */
     public static final String FIELD_RESOURCE_LIMITS = "resource-limits";
+    /**
+     * The name of the JSON property containing the tenant ID.
+     */
+    public static final String FIELD_TENANT = "tenant";
     /**
      * The name of the property that defines tenant-specific tracing options.
      */

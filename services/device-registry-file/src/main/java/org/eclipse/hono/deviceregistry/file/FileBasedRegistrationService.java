@@ -66,15 +66,6 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
     //// VERTICLE
 
-    /**
-     * The name of the JSON array containing device registration information for a tenant.
-     */
-    public static final String ARRAY_DEVICES = "devices";
-    /**
-     * The name of the JSON property containing the tenant ID.
-     */
-    public static final String FIELD_TENANT = "tenant";
-
     private static final Logger log = LoggerFactory.getLogger(FileBasedRegistrationService.class);
 
     // <tenantId, <deviceId, registrationData>>
@@ -210,7 +201,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
     private int addDevicesForTenant(final JsonObject tenant) {
 
-        final String tenantId = tenant.getString(FIELD_TENANT);
+        final String tenantId = tenant.getString(RegistryManagementConstants.FIELD_TENANT);
         if (tenantId == null) {
             log.debug("Tenant field missing, skipping!");
             return 0;
@@ -219,7 +210,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
         int count = 0;
         log.debug("loading devices for tenant [{}]", tenantId);
         final ConcurrentMap<String, Versioned<Device>> deviceMap = new ConcurrentHashMap<>();
-        for (final Object deviceObj : tenant.getJsonArray(ARRAY_DEVICES)) {
+        for (final Object deviceObj : tenant.getJsonArray(RegistryManagementConstants.FIELD_DEVICES)) {
             if (deviceObj instanceof JsonObject) {
                 final JsonObject entry = (JsonObject) deviceObj;
                 final String deviceId = entry.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID);
@@ -294,8 +285,8 @@ public class FileBasedRegistrationService extends AbstractVerticle
                 }
                 tenants.add(
                         new JsonObject()
-                                .put(FIELD_TENANT, entry.getKey())
-                                .put(ARRAY_DEVICES, devices));
+                                .put(RegistryManagementConstants.FIELD_TENANT, entry.getKey())
+                                .put(RegistryManagementConstants.FIELD_DEVICES, devices));
             }
 
             final Promise<Void> writeHandler = Promise.promise();
