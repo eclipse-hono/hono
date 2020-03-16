@@ -892,6 +892,13 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         failedResult.fail(modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
                                 : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                         cancelRequest(correlationId, failedResult.future());
+                    } else if (remoteState == null) {
+                        // possible scenario here: sender link got closed while waiting on the delivery update
+                        final String furtherInfo = !sender.isOpen() ? ", sender link was closed in between" : "";
+                        LOG.warn("got undefined delivery state for service request{} [target address: {}, subject: {}, correlation ID: {}]",
+                                furtherInfo, requestTargetAddress, request.getSubject(), correlationId);
+                        failedResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                        cancelRequest(correlationId, failedResult.future());
                     }
                 });
                 if (requestTimeoutMillis > 0) {

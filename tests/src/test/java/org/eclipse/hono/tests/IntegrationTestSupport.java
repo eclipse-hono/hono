@@ -744,11 +744,9 @@ public final class IntegrationTestSupport {
                 commandClient.sendCommand(deviceId, command, contentType, payload, properties).map(responsePayload -> {
                     LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
                             command, payload, responsePayload);
-                    commandClient.close(v -> {});
                     return responsePayload;
                 }).recover(t -> {
                     LOGGER.debug("could not send command or did not receive a response: {}", t.getMessage());
-                    commandClient.close(v -> {});
                     return Future.failedFuture(t);
                 }).setHandler(result);
             };
@@ -820,11 +818,9 @@ public final class IntegrationTestSupport {
                 LOGGER.trace("sending one-way command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
                 commandClient.sendOneWayCommand(deviceId, command, contentType, payload, properties).map(ok -> {
                     LOGGER.debug("successfully sent one-way command [name: {}, payload: {}]", command, payload);
-                    commandClient.close(v -> {});
                     return (Void) null;
                 }).recover(t -> {
                     LOGGER.debug("could not send one-way command: {}", t.getMessage());
-                    commandClient.close(v -> {});
                     return Future.failedFuture(t);
                 }).setHandler(result);
             };
