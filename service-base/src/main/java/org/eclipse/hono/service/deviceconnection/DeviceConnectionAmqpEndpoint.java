@@ -23,6 +23,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.RequestResponseEndpoint;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.EventBusMessage;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,6 +83,7 @@ public class DeviceConnectionAmqpEndpoint extends RequestResponseEndpoint<Servic
                     .setTenant(targetAddress.getTenantId())
                     .setDeviceId(requestMessage)
                     .setGatewayId(requestMessage)
+                    .setStringProperty(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, requestMessage)
                     .setJsonPayload(requestMessage));
         } catch (DecodeException e) {
             logger.debug("failed to create EventBusMessage from AMQP request message", e);
