@@ -34,6 +34,7 @@ import org.eclipse.hono.util.ConnectionDuration;
 import org.eclipse.hono.util.DataVolume;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceLimitsPeriod;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
@@ -49,6 +50,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
@@ -68,13 +70,15 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD.replace(".", "_"));
     private static final String CONNECTIONS_DURATION_METRIC_NAME = String.format("%s_seconds_sum",
             MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED_DURATION.replace(".", "_"));
-    private static final Logger log = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
     private static final String QUERY_URI = "/api/v1/query";
     private static final String LIMITS_CACHE_NAME = "resource-limits";
+
     private final Tracer tracer;
     private final WebClient client;
     private final PrometheusBasedResourceLimitChecksConfig config;
     private final ExpiringValueCache<Object, Object> limitsCache;
+    private final String url;
 
     /**
      * The mode of the data volume calculation.
@@ -136,8 +140,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      *                      from the prometheus backend or {@code null} if they should not be cached.
      * @throws NullPointerException if any of the parameters except cacheProvider are {@code null}.
      */
-    public PrometheusBasedResourceLimitChecks(final WebClient webClient,
-            final PrometheusBasedResourceLimitChecksConfig config, final CacheProvider cacheProvider) {
+    public PrometheusBasedResourceLimitChecks(
+            final WebClient webClient,
+            final PrometheusBasedResourceLimitChecksConfig config,
+            final CacheProvider cacheProvider) {
+
         this(webClient, config, cacheProvider, NoopTracerFactory.create());
     }
 
@@ -151,14 +158,23 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters except cacheProvider are {@code null}.
      */
-    public PrometheusBasedResourceLimitChecks(final WebClient webClient,
-            final PrometheusBasedResourceLimitChecksConfig config, final CacheProvider cacheProvider, final Tracer tracer) {
+    public PrometheusBasedResourceLimitChecks(
+            final WebClient webClient,
+            final PrometheusBasedResourceLimitChecksConfig config,
+            final CacheProvider cacheProvider,
+            final Tracer tracer) {
+
         this.client = Objects.requireNonNull(webClient);
         this.config = Objects.requireNonNull(config);
         this.limitsCache = Optional.ofNullable(cacheProvider)
                 .map(provider -> provider.getCache(LIMITS_CACHE_NAME))
                 .orElse(null);
         this.tracer = Objects.requireNonNull(tracer);
+        this.url = String.format("%s://%s:%d%s",
+                config.isTlsEnabled() ? "https" : "http",
+                config.getHost(),
+                config.getPort(),
+                QUERY_URI);
     }
 
     private Span createSpan(final String name, final SpanContext parent, final TenantObject tenant) {
@@ -183,12 +199,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         if (tenant.getResourceLimits() == null) {
             items.put(Fields.EVENT, "no resource limits configured");
-            log.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
+            LOG.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else {
             final long maxConnections = tenant.getResourceLimits().getMaxConnections();
             items.put(TenantConstants.FIELD_MAX_CONNECTIONS, maxConnections);
-            log.trace("connection limit for tenant [{}] is [{}]", tenant.getTenantId(), maxConnections);
+            LOG.trace("connection limit for tenant [{}] is [{}]", tenant.getTenantId(), maxConnections);
 
             if (maxConnections == -1) {
                 items.put(Fields.EVENT, "no connection limit configured");
@@ -200,7 +216,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                     .map(currentConnections -> {
                         items.put("current-connections", currentConnections);
                         final boolean isExceeded = currentConnections >= maxConnections;
-                        log.trace("connection limit {}exceeded [tenant: {}, current connections: {}, max-connections: {}]",
+                        LOG.trace("connection limit {}exceeded [tenant: {}, current connections: {}, max-connections: {}]",
                                 isExceeded ? "" : "not ", tenant.getTenantId(), currentConnections, maxConnections);
                         return isExceeded;
                     })
@@ -264,11 +280,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         if (tenant.getResourceLimits() == null) {
             items.put(Fields.EVENT, "no resource limits configured");
-            log.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
+            LOG.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else if (tenant.getResourceLimits().getDataVolume() == null) {
             items.put(Fields.EVENT, "no message limits configured");
-            log.trace("no message limits configured for tenant [{}]", tenant.getTenantId());
+            LOG.trace("no message limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else {
             checkMessageLimit(tenant, payloadSize, items, span, result);
@@ -296,11 +312,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
 
         if (tenant.getResourceLimits() == null) {
             items.put(Fields.EVENT, "no resource limits configured");
-            log.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
+            LOG.trace("no resource limits configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else if (tenant.getResourceLimits().getConnectionDuration() == null) {
             items.put(Fields.EVENT, "no connection duration limit configured");
-            log.trace("no connection duration limit configured for tenant [{}]", tenant.getTenantId());
+            LOG.trace("no connection duration limit configured for tenant [{}]", tenant.getTenantId());
             result.complete(Boolean.FALSE);
         } else {
             checkConnectionDurationLimit(tenant, items, span, result);
@@ -328,7 +344,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 .map(ResourceLimitsPeriod::getNoOfDays)
                 .orElse(0);
 
-        log.trace("connection duration config for the tenant [{}] is [{}:{}, {}:{}, {}:{}, {}:{}]",
+        LOG.trace("connection duration config for the tenant [{}] is [{}:{}, {}:{}, {}:{}, {}:{}]",
                 tenant.getTenantId(),
                 TenantConstants.FIELD_MAX_MINUTES, maxConnectionDurationInMinutes,
                 TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
@@ -372,7 +388,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         .map(minutesConnected -> {
                             items.put("current period's connection duration in minutes", minutesConnected);
                             final boolean isExceeded = minutesConnected >= allowedMaxMinutes;
-                            log.trace(
+                            LOG.trace(
                                     "connection duration limit {} exceeded [tenant: {}, connection duration consumed: {}, allowed max-duration: {}, {}: {}, {}: {}, {}: {}]",
                                     isExceeded ? "" : "not ",
                                     tenant.getTenantId(), minutesConnected, allowedMaxMinutes,
@@ -405,7 +421,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 .map(ResourceLimitsPeriod::getNoOfDays)
                 .orElse(0);
 
-        log.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
+        LOG.trace("message limit config for tenant [{}] are [{}:{}, {}:{}, {}:{}, {}:{}]", tenant.getTenantId(),
                 TenantConstants.FIELD_MAX_BYTES, maxBytes,
                 TenantConstants.FIELD_EFFECTIVE_SINCE, effectiveSince,
                 TenantConstants.FIELD_PERIOD_MODE, periodMode,
@@ -453,7 +469,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         .map(bytesConsumed -> {
                             items.put("current period bytes consumed", bytesConsumed);
                             final boolean isExceeded = (bytesConsumed + payloadSize) > allowedMaxBytes;
-                            log.trace(
+                            LOG.trace(
                                     "data limit {}exceeded [tenant: {}, bytes consumed: {}, allowed max-bytes: {}, {}: {}, {}: {}, {}: {}]",
                                     isExceeded ? "" : "not ",
                                     tenant.getTenantId(), bytesConsumed, allowedMaxBytes,
@@ -471,13 +487,8 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
     private Future<Long> executeQuery(final String query, final Span span) {
 
         final Promise<Long> result = Promise.promise();
-        log.trace("running Prometheus query [URL: http://{}:{}{}, query: {}]",
-                config.getHost(), config.getPort(), QUERY_URI, query);
-        client.get(config.getPort(), config.getHost(), QUERY_URI)
-        .addQueryParam("query", query)
-        .expect(ResponsePredicate.SC_OK)
-        .as(BodyCodec.jsonObject())
-        .send(sendAttempt -> {
+        LOG.trace("running Prometheus query [URL: {}, query: {}]", url, query);
+        newQueryRequest(query).send(sendAttempt -> {
             if (sendAttempt.succeeded()) {
                 final HttpResponse<JsonObject> response = sendAttempt.result();
                 result.complete(extractLongValue(response.body(), span));
@@ -485,17 +496,29 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 final Map<String, Object> items = Map.of(
                         Fields.EVENT, Tags.ERROR.getKey(),
                         Fields.MESSAGE, "failed to run Prometheus query",
-                        "URL", String.format("http://%s:%d%s", config.getHost(), config.getPort(), QUERY_URI),
+                        "URL", url,
                         "query", query,
                         Fields.ERROR_KIND, "Exception",
                         Fields.ERROR_OBJECT, sendAttempt.cause());
                 TracingHelper.logError(span, items);
-                log.warn("failed to run Prometheus query [URL: http://{}:{}{}, query: {}]: {}",
-                        config.getHost(), config.getPort(), QUERY_URI, query, sendAttempt.cause().getMessage());
+                LOG.warn("failed to run Prometheus query [URL: {}, query: {}]: {}",
+                        url, query, sendAttempt.cause().getMessage());
                 result.fail(sendAttempt.cause());
             }
         });
         return result.future();
+    }
+
+    private HttpRequest<JsonObject> newQueryRequest(final String query) {
+        final HttpRequest<JsonObject> request = client.get(config.getPort(), config.getHost(), QUERY_URI)
+                .addQueryParam("query", query)
+                .expect(ResponsePredicate.SC_OK)
+                .as(BodyCodec.jsonObject());
+
+        if (!Strings.isNullOrEmpty(config.getUsername()) && !Strings.isNullOrEmpty(config.getPassword())) {
+            request.basicAuthentication(config.getUsername(), config.getPassword());
+        }
+        return request;
     }
 
     /**
@@ -531,7 +554,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         "status", status,
                         "error-type", response.getString("errorType"),
                         "error", response.getString("error")));
-                log.debug("error executing query [status: {}, error type: {}, error: {}]",
+                LOG.debug("error executing query [status: {}, error type: {}, error: {}]",
                         status, response.getString("errorType"), response.getString("error"));
                 return 0L;
             } else {
@@ -556,13 +579,13 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 final String jsonResponse = response.encodePrettily();
                 TracingHelper.logError(span, Map.of(Fields.MESSAGE, "server returned malformed response",
                         "response", jsonResponse));
-                log.debug("server returned malformed response: {}", jsonResponse);
+                LOG.debug("server returned malformed response: {}", jsonResponse);
             }
         } catch (Exception e) {
             final String jsonResponse = response.encodePrettily();
             TracingHelper.logError(span, Map.of(Fields.MESSAGE, "server returned malformed response",
                     "response", jsonResponse));
-            log.debug("server returned malformed response: {}", jsonResponse);
+            LOG.debug("server returned malformed response: {}", jsonResponse);
         }
         return 0L;
     }

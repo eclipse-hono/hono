@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,14 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.resourcelimits;
 
-import java.util.Objects;
-
-import org.eclipse.hono.util.PortConfigurationHelper;
+import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
 
 /**
- * The configuration properties required for the PrometheusBasedResourceLimitChecks.
+ * Properties for configuring the Prometheus based resource limit checks.
  */
-public final class PrometheusBasedResourceLimitChecksConfig {
+public final class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClientConfigProperties {
 
     /**
      * The default minimum size of caches.
@@ -34,55 +32,20 @@ public final class PrometheusBasedResourceLimitChecksConfig {
      */
     public static final long DEFAULT_CACHE_TIMEOUT = 600L;
 
-    private String host;
-    private int port = 9090;
     private int cacheMinSize = DEFAULT_CACHE_MIN_SIZE;
     private long cacheMaxSize = DEFAULT_CACHE_MAX_SIZE;
     private long cacheTimeout = DEFAULT_CACHE_TIMEOUT;
 
     /**
-     * Gets the host of the Prometheus server to retrieve metrics from.
-     *
-     * @return host The host name or IP address.
-     */
-    public String getHost() {
-        return host;
-    }
-
-    /**
-     * Sets the host of the Prometheus server to retrieve metrics from.
+     * Creates new properties with default values.
      * <p>
-     * The default value of this property is {@code null}.
-     *
-     * @param host The host name or IP address.
+     * The default host is <em> localhost</em> and the default
+     * port is <em>9090</em>.
+     * 
      */
-    public void setHost(final String host) {
-        this.host = Objects.requireNonNull(host);
-    }
-
-    /**
-     * Gets the port of the Prometheus server to retrieve metrics from.
-     *
-     * @return port The port number.
-     */
-    public int getPort() {
-        return port;
-    }
-
-    /**
-     * Sets the port of the Prometheus server to retrieve metrics from.
-     * <p>
-     * The default value of this property is 9090.
-     *
-     * @param port The port number.
-     * @throws IllegalArgumentException if the port number is &lt; 0 or &gt; 2^16 - 1
-     */
-    public void setPort(final int port) {
-        if (PortConfigurationHelper.isValidPort(port)) {
-            this.port = port;
-        } else {
-            throw new IllegalArgumentException("invalid port number");
-        }
+    public PrometheusBasedResourceLimitChecksConfig() {
+        super();
+        setPort(9090);
     }
 
     /**

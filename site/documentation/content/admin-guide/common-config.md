@@ -131,8 +131,24 @@ The following table provides an overview of the configuration variables and corr
 
 | Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
 | :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_RESOURCELIMITS_PROMETHEUSBASED_HOST`<br>`--hono.resourceLimits.prometheusBased.host` | no | none | The host name or IP address of the Prometheus server to retrieve the metrics data from. This property needs to be set in order to enable the Prometheus based checks. |
+| `HONO_RESOURCELIMITS_PROMETHEUSBASED_HOST`<br>`--hono.resourceLimits.prometheusBased.host` | no | `localhost` | The host name or IP address of the Prometheus server to retrieve the metrics data from. This property needs to be set in order to enable the Prometheus based checks. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_PORT`<br>`--hono.resourceLimits.prometheusBased.port` | no | `9090` | The port of the Prometheus server to retrieve metrics data from. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHE_MIN_SIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMinSize` | no | `20` | The minimum size of the cache to store the metrics data retrieved from the Prometheus server. The cache is used for storing the current amount of data exchanged with devices of tenants. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHE_MAX_SIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMaxSize` | no | `1000` | The maximum size of the cache to store the metrics data retrieved from the Prometheus server. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHE_TIMEOUT`<br>`--hono.resourceLimits.prometheusBased.cacheTimeout` | no | `600` | The number of seconds after which the cached metrics data should be considered invalid. |
+
+In addition to the properties listed above, the resource limit checker also supports the properties listed below as documented in the
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}). These properties might be useful if a reverse proxy in front of
+the Prometheus server requires the client to use TLS and/or provide credentials for authentication.
+
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_CREDENTIALSPATH`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_HOSTNAMEVERIFICATIONREQUIRED`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_KEYPATH`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_KEYSTOREPASSWORD`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_KEYSTOREPATH`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_PASSWORD`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_SECUREPROTOCOLS`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_TLSENABLED`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_TRUSTSTOREPATH`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_TRUSTSTOREPASSWORD`
+* `HONO_RESOURCELIMITS_PROMETHEUSBASED_USERNAME`
