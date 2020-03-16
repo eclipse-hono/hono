@@ -32,7 +32,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
+import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -457,6 +459,34 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         final JsonObject extensions = target.getJsonObject(RegistryManagementConstants.FIELD_EXT);
         assertThat(extensions).isNotNull();
         assertThat(extensions.getString("custom")).isEqualTo("value");
+    }
+
+    /**
+     * Verifies that autowired {@link org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService} works correctly.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testTenantInformationService(final VertxTestContext ctx) {
+        final AutowiredTenantInformationService informationService = new AutowiredTenantInformationService();
+        informationService.setService(svc);
+
+        informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
+                .setHandler(ctx.failing(t -> {
+                                ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
+                            }));
+
+        addTenant(Constants.DEFAULT_TENANT)
+                .map(ok -> {
+                    informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
+                            .setHandler(ctx.succeeding(s -> {
+                                ctx.verify(() -> {
+                                    assertThat(s.getName()).isEqualTo(Constants.DEFAULT_TENANT);
+                                    ctx.completeNow();
+                                });
+                            }));
+                    return null;
+                });
     }
 
 }
