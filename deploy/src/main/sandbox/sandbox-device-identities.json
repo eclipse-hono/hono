@@ -1,0 +1,21 @@
+[
+  {
+    "tenant": "DEFAULT_TENANT",
+    "devices": [
+      {
+        "device-id": "4711",
+        "data": {
+          "enabled": true,
+          "comment": [
+            "messages published without a content type will get the default type defined below",
+            "non-standard properties ('importance') will be added to the message's application-properties"
+          ],
+          "defaults": {
+            "content-type": "application/vnd.bumlux",
+            "importance": "high"
+          }
+        }
+      }
+    ]
+  }
+]
