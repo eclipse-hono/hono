@@ -469,8 +469,14 @@ public final class Command {
     @Override
     public String toString() {
         if (isValid()) {
-            return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
-                    getName(), getTenant(), getDeviceId(), getRequestId());
+            final String originalDeviceId = getOriginalDeviceId();
+            if (!getDeviceId().equals(originalDeviceId)) {
+                return String.format("Command [name: %s, tenant-id: %s, device-id %s, original device-id %s, request-id: %s]",
+                        getName(), getTenant(), getDeviceId(), originalDeviceId, getRequestId());
+            } else {
+                return String.format("Command [name: %s, tenant-id: %s, device-id %s, request-id: %s]",
+                        getName(), getTenant(), getDeviceId(), getRequestId());
+            }
         } else {
             return String.format("Invalid Command [tenant-id: %s, device-id: %s. error: %s]", tenantId, deviceId, validationError.get());
         }
