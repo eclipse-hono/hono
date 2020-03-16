@@ -56,6 +56,7 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 
 /**
  * Minimum Spring Boot configuration class defining beans required by protocol adapters.
@@ -563,7 +564,16 @@ public abstract class AbstractAdapterConfig {
     @ConditionalOnProperty(name = "hono.resource-limits.prometheus-based.host")
     public ResourceLimitChecks resourceLimitChecks() {
         final PrometheusBasedResourceLimitChecksConfig config = resourceLimitChecksConfig();
-        return new PrometheusBasedResourceLimitChecks(WebClient.create(vertx()), config,
-                newCaffeineCache(config.getCacheMinSize(), config.getCacheMaxSize()), getTracer());
+        final WebClientOptions webClientOptions = new WebClientOptions();
+        webClientOptions.setDefaultHost(config.getHost());
+        webClientOptions.setDefaultPort(config.getPort());
+        webClientOptions.setTrustOptions(config.getTrustOptions());
+        webClientOptions.setKeyCertOptions(config.getKeyCertOptions());
+        webClientOptions.setSsl(config.isTlsEnabled());
+        return new PrometheusBasedResourceLimitChecks(
+                WebClient.create(vertx(), webClientOptions),
+                config,
+                newCaffeineCache(config.getCacheMinSize(), config.getCacheMaxSize()),
+                getTracer());
     }
 }

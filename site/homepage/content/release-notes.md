@@ -10,6 +10,9 @@ title = "Release Notes"
   for storing device connection information.
   This has the advantage of saving the network hop to the Device Connection service.
   Refer to the protocol adapter Admin Guides for details.
+* The Prometheus based resource limits check can now be configured with a trust store, key material
+  and/or a username and password in order to be able to connect to a Prometheus server
+  that requires TLS and/or client authentication.
 
 ### Fixes & Enhancements
 
