@@ -52,7 +52,6 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -717,19 +716,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             responseReady.future())
                             .mapEmpty();
                 }
-
-            }).recover(t -> {
-
-                if (t instanceof ResourceConflictException) {
-                    // simply return an empty response
-                    log.debug(
-                            "ignoring empty notification [tenant: {}, device-id: {}], command consumer is already in use",
-                            device.getTenantId(), device.getDeviceId());
-                    return Future.succeededFuture();
-                } else {
-                    return Future.failedFuture(t);
-                }
-
             }).compose(ok -> {
 
                 final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
@@ -880,9 +866,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      *         sent back to the device without waiting for a command.
      *         <p>
      *         The future will be failed with a {@code ServiceInvocationException} if the message consumer could not be
-     *         created. The future will be failed with a {@code ResourceConflictException} if the message consumer for
-     *         the device is already in use and the request contains an empty notification (which does not need to be
-     *         forwarded downstream).
+     *         created.
      * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
      */
     protected final Future<MessageConsumer> createCommandConsumer(
@@ -968,12 +952,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             // only per HTTP request
         };
 
-        final Handler<Void> remoteCloseHandler = remoteDetach -> {
-            log.debug("peer closed command receiver link [tenant-id: {}, device-id: {}, gateway-id: {}]",
-                    tenantObject.getTenantId(), deviceId, gatewayId);
-            // command consumer is closed by closeHandler, no explicit close necessary here
-        };
-
         // First check whether the tenant has been configured to support concurrent ttd-param requests from the same
         // gateway for different devices. In that case a device-specific (instead of a gateway-specific) consumer link
         // will be created below
@@ -987,8 +965,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                         tenantObject.getTenantId(),
                                         deviceId,
                                         gatewayId,
-                                        commandHandler,
-                                        remoteCloseHandler);
+                                        commandHandler);
                             } else {
                                 if (gatewayId != null) {
                                     log.trace(
@@ -998,8 +975,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                 return getCommandConsumerFactory().createCommandConsumer(
                                         tenantObject.getTenantId(),
                                         deviceId,
-                                        commandHandler,
-                                        remoteCloseHandler);
+                                        commandHandler);
                             }
                         });
         return commandConsumerFuture
@@ -1010,25 +986,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         context.getExchange().accept();
                     }
                     return consumer;
-                })
-                .recover(t -> {
-                    if (t instanceof ResourceConflictException) {
-                        // another request from the same device that contains
-                        // a TTD value is already being processed
-                        if (context.isEmptyNotification()) {
-                            // no need to forward message downstream
-                            return Future.failedFuture(t);
-                        } else {
-                            // let the other request handle the command (if any)
-                            if (requestProcessed.compareAndSet(false, true)) {
-                                log.info("request, while previous request is pending!");
-                                responseReady.handle(Future.succeededFuture());
-                            }
-                            return Future.succeededFuture();
-                        }
-                    } else {
-                        return Future.failedFuture(t);
-                    }
                 });
     }
 

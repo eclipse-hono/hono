@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -748,10 +748,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub, final CommandHandler<T> cmdHandler) {
 
-        // if a device does not specify a keep alive in its CONNECT packet then
-        // the default value of the CommandConnection will be used
-        final long livenessCheckInterval = (long) mqttEndpoint.keepAliveTimeSeconds() * 1000 / 2;
-
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
@@ -786,14 +782,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 return null;
             });
         };
-        final Handler<Void> remoteCloseHandler = remoteClose -> {};
         if (sub.isGatewaySubscriptionForSpecificDevice()) {
             // gateway scenario
             return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(),
-                    sub.getAuthenticatedDeviceId(), commandHandler, remoteCloseHandler, livenessCheckInterval);
+                    sub.getAuthenticatedDeviceId(), commandHandler);
         } else {
-            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(), commandHandler,
-                    remoteCloseHandler, livenessCheckInterval);
+            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(), commandHandler);
         }
     }
 

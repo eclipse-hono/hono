@@ -48,16 +48,17 @@ import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
-import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
@@ -120,8 +121,10 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private CredentialsClientFactory credentialsClientFactory;
     private DownstreamSenderFactory downstreamSenderFactory;
     private RegistrationClientFactory registrationClientFactory;
-    private CommandConsumerFactory commandConsumerFactory;
+    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
+
+    private CommandTargetMapper commandTargetMapper;
 
     private RegistrationClient registrationClient;
     private TenantClient tenantClient;
@@ -163,11 +166,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(registrationClient));
 
-        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+
+        commandTargetMapper = mock(CommandTargetMapper.class);
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
@@ -443,7 +448,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class), anyLong()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class)))
             .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
@@ -476,7 +481,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // and a device that wants to receive commands
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class), anyLong()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", getCommandEndpoint());
         final ProtonSender sender = getSender(sourceAddress);
@@ -576,7 +581,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // that wants to receive commands
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(Handler.class), anyLong()))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);
@@ -1155,6 +1160,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         return adapter;

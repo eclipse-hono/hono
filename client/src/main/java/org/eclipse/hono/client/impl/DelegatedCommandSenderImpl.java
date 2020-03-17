@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -184,33 +184,30 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         Objects.requireNonNull(command);
         final String replyToAddress = command.isOneWay() ? null
                 : String.format("%s/%s/%s", command.getReplyToEndpoint(), command.getTenant(), command.getReplyToId());
-
-        final Message rawMessage = createDelegatedCommandMessage(command.getCommandMessage(), replyToAddress);
-
-        final Span span = startSpan(spanContext, rawMessage);
+        final Message delegatedCommandMessage = createDelegatedCommandMessage(command.getCommandMessage(), replyToAddress);
+        final Span span = startSpan(spanContext, delegatedCommandMessage);
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant());
         if (command.isTargetedAtGateway()) {
+            MessageHelper.addProperty(delegatedCommandMessage, MessageHelper.APP_PROPERTY_CMD_VIA, command.getDeviceId());
             span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getOriginalDeviceId());
             span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, command.getDeviceId());
         } else {
             span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getDeviceId());
         }
-        TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
+        TracingHelper.injectSpanContext(connection.getTracer(), span.context(), delegatedCommandMessage);
 
-        return runSendAndWaitForOutcomeOnContext(rawMessage, span);
+        return runSendAndWaitForOutcomeOnContext(delegatedCommandMessage, span);
     }
 
     /**
      * Gets the AMQP <em>target</em> address to use for sending the delegated command messages to.
      *
-     * @param tenantId The tenant identifier.
-     * @param deviceId The device identifier.
+     * @param adapterInstanceId The protocol adapter instance id.
      * @return The target address.
-     * @throws NullPointerException if tenant or device id is {@code null}.
+     * @throws NullPointerException if adapterInstanceId is {@code null}.
      */
-    static String getTargetAddress(final String tenantId, final String deviceId) {
-        return String.format("%s/%s/%s", CommandConstants.INTERNAL_COMMAND_ENDPOINT, Objects.requireNonNull(tenantId),
-                Objects.requireNonNull(deviceId));
+    static String getTargetAddress(final String adapterInstanceId) {
+        return CommandConstants.INTERNAL_COMMAND_ENDPOINT + "/" + Objects.requireNonNull(adapterInstanceId);
     }
 
     private static Message createDelegatedCommandMessage(final Message originalMessage, final String replyToAddress) {
@@ -225,21 +222,20 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
      * Creates a new sender for sending the delegated command messages to the AMQP network.
      *
      * @param con The connection to the AMQP network.
-     * @param tenantId The tenant identifier.
-     * @param deviceId The device identifier.
+     * @param adapterInstanceId The protocol adapter instance id.
      * @param closeHook A handler to invoke if the peer closes the link unexpectedly (may be {@code null}).
      * @return A future indicating the result of the creation attempt.
-     * @throws NullPointerException if con is {@code null}.
+     * @throws NullPointerException if con or adapterInstanceId is {@code null}.
      */
     public static Future<DelegatedCommandSender> create(
             final HonoConnection con,
-            final String tenantId,
-            final String deviceId,
+            final String adapterInstanceId,
             final Handler<String> closeHook) {
 
         Objects.requireNonNull(con);
+        Objects.requireNonNull(adapterInstanceId);
 
-        final String targetAddress = getTargetAddress(tenantId, deviceId);
+        final String targetAddress = getTargetAddress(adapterInstanceId);
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
                 .map(sender -> new DelegatedCommandSenderImpl(con, sender));
     }

@@ -26,10 +26,10 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClient;
@@ -39,6 +39,7 @@ import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -111,7 +112,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private TenantClientFactory tenantClientFactory;
     private BasicDeviceConnectionClientFactory deviceConnectionClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
-    private CommandConsumerFactory commandConsumerFactory;
+    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
+    private CommandTargetMapper commandTargetMapper;
     private ConnectionLimitManager connectionLimitManager;
 
     private ConnectionEventProducer connectionEventProducer;
@@ -364,7 +366,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if factory is {@code null}.
      */
     @Autowired
-    public final void setCommandConsumerFactory(final CommandConsumerFactory factory) {
+    public final void setCommandConsumerFactory(final ProtocolAdapterCommandConsumerFactory factory) {
         this.commandConsumerFactory = Objects.requireNonNull(factory);
     }
 
@@ -373,8 +375,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @return The factory.
      */
-    public final CommandConsumerFactory getCommandConsumerFactory() {
+    public final ProtocolAdapterCommandConsumerFactory getCommandConsumerFactory() {
         return this.commandConsumerFactory;
+    }
+
+    /**
+     * Sets the component for mapping an incoming command to the gateway (if applicable)
+     * and protocol adapter instance that can handle it.
+     *
+     * @param commandTargetMapper The mapper component.
+     * @throws NullPointerException if commandTargetMapper is {@code null}.
+     */
+    @Autowired
+    public final void setCommandTargetMapper(final CommandTargetMapper commandTargetMapper) {
+        this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
     }
 
     /**
@@ -449,6 +463,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     onCommandConnectionEstablished(c.result());
                 }
             });
+            // initialize components dependent on the above clientFactories
+            commandTargetMapper.initialize(registrationClientFactory, deviceConnectionClientFactory);
+            commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
+
             doStart(result);
         }
         return result.future();
@@ -900,14 +918,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenantId The tenant of the command receiver.
      * @param deviceId The device of the command receiver.
      * @param commandConsumer The handler to invoke for each command destined to the device.
-     * @param closeHandler Called when the peer detaches the link.
      * @return Result of the receiver creation.
      */
     protected final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Handler<CommandContext> commandConsumer,
-            final Handler<Void> closeHandler) {
+            final Handler<CommandContext> commandConsumer) {
 
         return commandConsumerFactory.createCommandConsumer(
                 tenantId,
@@ -915,8 +931,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 commandContext -> {
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     commandConsumer.handle(commandContext);
-                },
-                closeHandler);
+                });
     }
 
     /**

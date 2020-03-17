@@ -111,8 +111,8 @@
           "remoteHosts": "*",
           "allowUserIdProxy": true,
           "allowAnonymousSender": true,
-          "sources": "control/*, command/*",
-          "targets": "telemetry/*, event/*, control/*, command_response/*"
+          "sources": "command_internal/*, command/*",
+          "targets": "telemetry/*, event/*, command_internal/*, command_response/*"
         }
       }
   }],

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -109,6 +109,10 @@ public final class MessageHelper {
      * The name of the AMQP 1.0 message application property containing the resource version expected by the client.
      */
     public static final String APP_PROPERTY_RESOURCE_VERSION = "resource_version";
+    /**
+     * The name of the AMQP 1.0 message application property containing the gateway through which a command is sent.
+     */
+    public static final String APP_PROPERTY_CMD_VIA = "via";
 
     /**
      * The AMQP 1.0 <em>delivery-count</em> message header property.

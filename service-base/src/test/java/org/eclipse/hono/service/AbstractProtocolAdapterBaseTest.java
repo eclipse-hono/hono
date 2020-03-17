@@ -34,12 +34,13 @@ import java.net.HttpURLConnection;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -93,8 +94,9 @@ public class AbstractProtocolAdapterBaseTest {
     private RegistrationClientFactory registrationClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
     private DownstreamSenderFactory downstreamSenderFactory;
-    private CommandConsumerFactory commandConsumerFactory;
+    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
+    private CommandTargetMapper commandTargetMapper;
 
     /**
      * Sets up the fixture.
@@ -118,11 +120,13 @@ public class AbstractProtocolAdapterBaseTest {
         downstreamSenderFactory = mock(DownstreamSenderFactory.class);
         when(downstreamSenderFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
-        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+
+        commandTargetMapper = mock(CommandTargetMapper.class);
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
@@ -132,6 +136,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setCommandTargetMapper(commandTargetMapper);
 
         vertx = mock(Vertx.class);
         // run timers immediately
@@ -161,6 +166,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setCommandTargetMapper(commandTargetMapper);
 
         // WHEN starting the adapter
         adapter.startInternal().setHandler(ctx.failing(t -> ctx.verify(() -> {
@@ -253,6 +259,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setTenantClientFactory(tenantService);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setCommandTargetMapper(commandTargetMapper);
     }
 
     /**

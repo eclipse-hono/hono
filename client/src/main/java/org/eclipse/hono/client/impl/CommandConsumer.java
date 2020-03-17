@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,7 @@ import io.vertx.proton.ProtonReceiver;
 /**
  * A wrapper around an AMQP receiver link for consuming commands.
  */
-public abstract class CommandConsumer extends AbstractConsumer {
+public class CommandConsumer extends AbstractConsumer {
 
     /**
      * Creates a consumer for a connection and a receiver link.

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -93,8 +93,6 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapterBase<AmqpAdapterProperties> {
 
     // These values should be made configurable.
-    private static final long DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS = 10000; // 10 seconds
-
     /**
      * The minimum amount of memory that the adapter requires to run.
      */
@@ -855,16 +853,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return null;
             });
         };
-        final Handler<Void> remoteCloseHandler = closeHandler -> {};
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
             return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler,
-                    remoteCloseHandler, DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
+                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler);
         } else {
             return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), commandHandler, remoteCloseHandler,
-                    DEFAULT_COMMAND_CONSUMER_CHECK_INTERVAL_MILLIS);
+                    sourceAddress.getResourceId(), commandHandler);
         }
     }
 
