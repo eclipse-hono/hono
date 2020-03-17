@@ -32,10 +32,10 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.CommandConsumerFactory;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.CommandResponseSender;
+import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
@@ -43,9 +43,9 @@ import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
-import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -61,7 +61,6 @@ import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
@@ -114,8 +113,9 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private RegistrationClient            regClient;
     private TenantClient                  tenantClient;
     private HttpProtocolAdapterProperties config;
-    private CommandConsumerFactory        commandConsumerFactory;
+    private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
+    private CommandTargetMapper           commandTargetMapper;
     private MessageConsumer               commandConsumer;
     private Vertx                         vertx;
     private Context                       context;
@@ -177,10 +177,13 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
             }
             return null;
         }).when(commandConsumer).close(any(Handler.class));
-        commandConsumerFactory = mock(CommandConsumerFactory.class);
+        commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class)))
             .thenReturn(Future.succeededFuture(commandConsumer));
+
+        commandTargetMapper = mock(CommandTargetMapper.class);
+
         resourceLimitChecks = mock(ResourceLimitChecks.class);
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
@@ -286,7 +289,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class));
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
         // and has not been reported as processed
@@ -339,7 +342,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class), any(SpanContext.class));
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class));
         // and has not been reported as processed
         verify(metrics, never())
             .reportTelemetry(
@@ -716,55 +719,6 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     }
 
     /**
-     * Verifies that the adapter does not include a TTD value provided by a device
-     * in the downstream message if the Command consumer for the device is already
-     * in use.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testUploadTelemetryRemovesTtdIfCommandConsumerIsInUse() {
-
-        // GIVEN an adapter with a downstream telemetry consumer attached
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        final DownstreamSender sender = givenATelemetrySenderForOutcome(Future.succeededFuture());
-
-        // WHEN a device publishes a telemetry message with a TTD
-        final Buffer payload = Buffer.buffer("some payload");
-        final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
-        final RoutingContext ctx = newRoutingContext(payload, "text/plain", request, response);
-        when(ctx.addBodyEndHandler(any(Handler.class))).thenAnswer(invocation -> {
-            final Handler<Void> handler = invocation.getArgument(0);
-            handler.handle(null);
-            return 0;
-        });
-        // and the Command consumer for the device is already in use
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any()))
-            .thenReturn(Future.failedFuture(new ResourceConflictException("consumer in use")));
-        adapter.uploadTelemetryMessage(ctx, "tenant", "device");
-
-        // THEN the device receives a 202 response immediately
-        verify(response).setStatusCode(202);
-        verify(response).end();
-        // the message has been reported
-        verify(metrics).reportTelemetry(
-                eq(EndpointType.TELEMETRY),
-                eq("tenant"),
-                any(),
-                eq(ProcessingOutcome.FORWARDED),
-                eq(QoS.AT_MOST_ONCE),
-                eq(payload.length()),
-                eq(TtdStatus.NONE),
-                any());
-        // and the downstream message does not contain any TTD value
-        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageCaptor.capture(), (SpanContext) any());
-        assertThat(MessageHelper.getTimeUntilDisconnect(messageCaptor.getValue())).isNull();
-    }
-
-    /**
      * Verifies that the adapter closes the command consumer created as part of
      * handling a request with a TTD parameter if creation of the telemetry
      * message sender failed.
@@ -793,7 +747,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
         // and the creation of the command consumer completes at a later point
         final Promise<MessageConsumer> commandConsumerPromise = Promise.promise();
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class)))
                 .thenReturn(commandConsumerPromise.future());
 
         adapter.uploadTelemetryMessage(ctx, "tenant", "device");
@@ -859,7 +813,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         final String gatewayId = "gw-1";
         final DeviceUser deviceUser = new DeviceUser(tenantId, gatewayId);
 
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(gatewayId), any(Handler.class), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), eq(gatewayId), any(Handler.class)))
                 .thenReturn(Future.succeededFuture(commandConsumer));
 
         // and a device with a 'via' property
@@ -889,8 +843,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(devConClient).setLastKnownGatewayForDevice(eq(deviceId), eq(gatewayId), any());
 
         // and the command consumer has been created with the gateway id, not using the method variant without the gateway id
-        verify(commandConsumerFactory).createCommandConsumer(eq(tenantId), eq(deviceId), eq(gatewayId), any(Handler.class), any(Handler.class));
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class));
+        verify(commandConsumerFactory).createCommandConsumer(eq(tenantId), eq(deviceId), eq(gatewayId), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class));
 
         Mockito.clearInvocations(devConClient, commandConsumerFactory);
         // --------------------
@@ -921,47 +875,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         verify(devConClient).setLastKnownGatewayForDevice(eq(deviceId), eq(deviceId), any());
 
         // and the command consumer has been created without a gateway id, not using the method variant with the gateway id
-        verify(commandConsumerFactory).createCommandConsumer(eq(tenantId), eq(deviceId), any(Handler.class), any(Handler.class));
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class), any(Handler.class));
-    }
-
-    /**
-     * Verifies that the adapter does not forward an empty notification if the Command consumer
-     * for the device is already in use.
-     */
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testUploadEmptyNotificationSucceedsIfCommandConsumerIsInUse() {
-
-        // GIVEN an adapter with a downstream event consumer attached
-        final HttpServer server = getHttpServer(false);
-        final AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> adapter = getAdapter(server, null);
-        final DownstreamSender sender = givenAnEventSenderForOutcome(Future.succeededFuture());
-
-        // WHEN a device publishes an empty notification event with a TTD
-        final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.getHeader(eq(Constants.HEADER_TIME_TILL_DISCONNECT))).thenReturn("10");
-        final RoutingContext ctx = newRoutingContext(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, request, response);
-        // and the Command consumer for the device is already in use
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(Handler.class), any()))
-            .thenReturn(Future.failedFuture(new ResourceConflictException("consumer in use")));
-        adapter.uploadEventMessage(ctx, "tenant", "device");
-
-        // THEN the device receives a 202 response immediately
-        verify(response).setStatusCode(202);
-        verify(response).end();
-        // and no event is being sent downstream
-        verify(sender, never()).sendAndWaitForOutcome(any(Message.class), (SpanContext) any());
-        verify(metrics, never()).reportTelemetry(
-                eq(EndpointType.EVENT),
-                anyString(),
-                any(),
-                any(ProcessingOutcome.class),
-                eq(QoS.AT_LEAST_ONCE),
-                anyInt(),
-                any(TtdStatus.class),
-                any());
+        verify(commandConsumerFactory).createCommandConsumer(eq(tenantId), eq(deviceId), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class));
     }
 
     /**
@@ -1221,6 +1136,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
+        adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setResourceLimitChecks(resourceLimitChecks);
         return adapter;
     }

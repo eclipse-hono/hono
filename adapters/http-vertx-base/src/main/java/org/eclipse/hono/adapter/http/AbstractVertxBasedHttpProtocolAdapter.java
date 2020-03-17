@@ -31,7 +31,6 @@ import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.ResourceConflictException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
@@ -726,16 +725,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         .map(s -> (Void) null);
             }
         })
-        .recover(t -> {
-            if (t instanceof ResourceConflictException) {
-                // simply return an empty response
-                log.debug("ignoring empty notification [tenant: {}, device-id: {}], command consumer is already in use",
-                        tenant, deviceId);
-                return Future.succeededFuture();
-            } else {
-                return Future.failedFuture(t);
-            }
-        })
         .map(proceed -> {
 
             if (ctx.response().closed()) {
@@ -981,9 +970,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *         <p>
      *         The future will be failed with a {@code ServiceInvocationException} if the
      *         message consumer could not be created.
-     *         The future will be failed with a {@code ResourceConflictException} if the
-     *         message consumer for the device is already in use and the request contains
-     *         an empty notification (which does not need to be forwarded downstream).
      * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
      */
     protected final Future<MessageConsumer> createCommandConsumer(
@@ -1070,12 +1056,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             // only per HTTP request
         };
 
-        final Handler<Void> remoteCloseHandler = remoteDetach -> {
-            log.debug("peer closed command receiver link [tenant-id: {}, device-id: {}, gateway-id: {}]",
-                    tenantObject.getTenantId(), deviceId, gatewayId);
-            // command consumer is closed by closeHandler, no explicit close necessary here
-        };
-
         // First check whether the tenant has been configured to support concurrent ttd-param requests from the same
         // gateway for different devices. In that case a device-specific (instead of a gateway-specific) consumer link will be created below
         // (preventing multiple consumer links on the same gateway address from multiple HTTP adapter instances).
@@ -1087,8 +1067,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                 tenantObject.getTenantId(),
                                 deviceId,
                                 gatewayId,
-                                commandHandler,
-                                remoteCloseHandler);
+                                commandHandler);
                     } else {
                         if (gatewayId != null) {
                             log.trace("gateway mapping disabled for tenant [{}], will create device-specific consumer", tenantObject.getTenantId());
@@ -1096,8 +1075,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         return getCommandConsumerFactory().createCommandConsumer(
                                 tenantObject.getTenantId(),
                                 deviceId,
-                                commandHandler,
-                                remoteCloseHandler);
+                                commandHandler);
                     }
                 });
         return commandConsumerFuture
@@ -1107,24 +1085,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         addCommandReceptionTimer(ctx, requestProcessed, responseReady, ttdSecs);
                     }
                     return consumer;
-                })
-                .recover(t -> {
-                    if (t instanceof ResourceConflictException) {
-                        // another request from the same device that contains
-                        // a TTD value is already being processed
-                        if (HttpUtils.isEmptyNotification(ctx)) {
-                            // no need to forward message downstream
-                            return Future.failedFuture(t);
-                        } else {
-                            // let the other request handle the command (if any)
-                            if (requestProcessed.compareAndSet(false, true)) {
-                                responseReady.handle(Future.succeededFuture());
-                            }
-                            return Future.succeededFuture();
-                        }
-                    } else {
-                        return Future.failedFuture(t);
-                    }
                 });
     }
 

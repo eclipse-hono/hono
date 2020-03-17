@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,10 +35,10 @@ public class CommandConstants {
     public static final String COMMAND_RESPONSE_ENDPOINT = "command_response";
 
     /**
-     * The name of the internal Command and Control API endpoint used to forward commands to the right protocol
-     * adapter.
+     * The name of the internal Command and Control API endpoint provided by protocol adapters for delegating
+     * commands from one adapter to another.
      */
-    public static final String INTERNAL_COMMAND_ENDPOINT = "control";
+    public static final String INTERNAL_COMMAND_ENDPOINT = "command_internal";
 
     /**
      * The name of the northbound Command and Control API request endpoint used by northbound applications.

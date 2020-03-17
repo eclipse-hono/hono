@@ -14,7 +14,6 @@
 package org.eclipse.hono.connection.impl;
 
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -203,7 +202,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                     config.getServerRole());
             final ProtonConnection downstreamConnection = conAttempt.result();
             downstreamConnection
-                    .setContainer(String.format("%s-%s", config.getName(), UUID.randomUUID()))
+                    .setContainer(config.getContainerId())
                     .setHostname(config.getAmqpHostname())
                     .openHandler(openCon -> {
                         if (connectionTimeoutTimerId != null) {

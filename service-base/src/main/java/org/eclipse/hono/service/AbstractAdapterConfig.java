@@ -17,12 +17,12 @@ import java.util.Optional;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
-import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSenderFactory;
-import org.eclipse.hono.client.GatewayMapper;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.TenantClientFactory;
@@ -448,20 +448,34 @@ public abstract class AbstractAdapterConfig {
      */
     @Bean
     @Scope("prototype")
-    public CommandConsumerFactory commandConsumerFactory() {
-        return CommandConsumerFactory.create(commandConsumerConnection(), gatewayMapper());
+    public ProtocolAdapterCommandConsumerFactory commandConsumerFactory() {
+        return ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection(), getAdapterInstanceId());
     }
 
     /**
-     * Exposes the component for mapping a device id to a corresponding gateway id.
+     * Exposes the protocol adapter instance identifier.
+     * <p>
+     * It is equivalent to the <em>container-id</em> advertised on the connection to
+     * the AMQP Messaging Network used for receiving commands.
+     *
+     * @return The identifier.
+     */
+    @Qualifier("adapterInstanceId")
+    @Bean
+    public String getAdapterInstanceId() {
+        return commandConsumerFactoryConfig().getContainerId();
+    }
+
+    /**
+     * Exposes the component for mapping an incoming command to the gateway (if applicable)
+     * and protocol adapter instance that can handle it.
      *
      * @return The newly created mapper instance.
      */
     @Bean
     @Scope("prototype")
-    public GatewayMapper gatewayMapper() {
-
-        return GatewayMapper.create(registrationClientFactory(), deviceConnectionClientFactory(), getTracer());
+    public CommandTargetMapper commandTargetMapper() {
+        return CommandTargetMapper.create(getTracer());
     }
 
     /**

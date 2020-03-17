@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,32 +24,43 @@ import io.vertx.core.Handler;
  */
 public final class CommandHandlerWrapper {
 
+    private final String tenantId;
     private final String deviceId;
     private final String gatewayId;
     private final Handler<CommandContext> commandHandler;
-    private final Handler<Void> remoteCloseHandler;
 
     /**
      * Creates a new CommandHandlerWrapper.
-     * 
-     * @param deviceId The identifier of the device that is the target of the commands being handled.
-     * @param gatewayId The identifier of the gateway that is acting on behalf of the device that is
-     *                  the target of the commands being handled, or {@code null} otherwise.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceId The identifier of the device or gateway that is the target of the commands being handled.
+     * @param gatewayId The identifier of the gateway in case the handler is used as part of the gateway
+     *                  subscribing specifically for commands for the given device, or {@code null} otherwise.
+     *                  (A gateway subscribing for commands for all devices, that it may act on behalf of, would mean
+     *                  using a {@code null} value here and providing the gateway id in the <em>deviceId</em>
+     *                  parameter.)
      * @param commandHandler The command handler.
-     * @param remoteCloseHandler The handler to be invoked when the command consumer is closed remotely. May be
-     *            {@code null}.
-     * @throws NullPointerException If deviceId or commandHandler is {@code null}.
+     * @throws NullPointerException If tenantId, deviceId or commandHandler is {@code null}.
      */
-    public CommandHandlerWrapper(final String deviceId, final String gatewayId,
-            final Handler<CommandContext> commandHandler, final Handler<Void> remoteCloseHandler) {
+    public CommandHandlerWrapper(final String tenantId, final String deviceId, final String gatewayId,
+                                 final Handler<CommandContext> commandHandler) {
+        this.tenantId = Objects.requireNonNull(tenantId);
         this.deviceId = Objects.requireNonNull(deviceId);
         this.gatewayId = gatewayId;
         this.commandHandler = Objects.requireNonNull(commandHandler);
-        this.remoteCloseHandler = remoteCloseHandler;
     }
 
     /**
-     * Gets the identifier of the device to handle commands for.
+     * Gets the tenant identifier.
+     *
+     * @return The identifier.
+     */
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    /**
+     * Gets the identifier of the device or gateway to handle commands for.
      *
      * @return The identifier.
      */
@@ -58,7 +69,8 @@ public final class CommandHandlerWrapper {
     }
 
     /**
-     * Gets the identifier of the gateway that the command target device is connected to.
+     * Gets the identifier of the gateway in case the handler is used by a gateway having specifically subscribed for
+     * commands for the device returned by {@link #getDeviceId()}.
      *
      * @return The identifier or {@code null}.
      */
@@ -73,15 +85,6 @@ public final class CommandHandlerWrapper {
      */
     public void handleCommand(final CommandContext commandContext) {
         commandHandler.handle(commandContext);
-    }
-
-    /**
-     * Invokes the handler for the case that the command consumer is closed remotely.
-     */
-    public void handleRemoteClose() {
-        if (remoteCloseHandler != null) {
-            remoteCloseHandler.handle(null);
-        }
     }
 
     @Override

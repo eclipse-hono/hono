@@ -334,11 +334,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         return getCommandConsumerFactory().createCommandConsumer(
                 tenantId,
                 LORA_COMMAND_CONSUMER_DEVICE_ID,
-                receivedCommandContext -> commandConsumer(tenantId, receivedCommandContext),
-                remoteClose -> {
-                    LOG.info("Closing command consumer");
-                },
-                LORA_COMMAND_CONSUMER_RETRY_INTERVAL);
+                receivedCommandContext -> commandConsumer(tenantId, receivedCommandContext));
     }
 
     private void commandConsumer(final String tenantId, final CommandContext receivedCommandContext) {

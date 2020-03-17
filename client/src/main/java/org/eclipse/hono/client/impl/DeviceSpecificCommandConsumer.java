@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,10 @@
 package org.eclipse.hono.client.impl;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.MessageConsumer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -27,91 +26,43 @@ import io.vertx.core.Handler;
 /**
  * Represents the device specific command consumer used in protocol adapters.
  * <p>
- * Delegates method invocations to the supplied command consumer that wraps the actual Proton receiver.
+ * Delegates an invocation of the {@link #close(Handler)} to the action supplied in the constructor.
  */
+// TODO rename; implement a different interface instead, only providing the close(Handler) method
 public final class DeviceSpecificCommandConsumer implements MessageConsumer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceSpecificCommandConsumer.class);
-
-    private final Supplier<DestinationCommandConsumer> delegateSupplier;
-    private final String deviceId;
+    private final Supplier<Future<Void>> onCloseAction;
+    private final AtomicBoolean closeCalled = new AtomicBoolean(false);
 
     /**
      * Creates a new DeviceSpecificCommandConsumer.
      *
-     * @param delegateSupplier Supplies the command consumer that wraps the actual Proton receiver.
-     * @param deviceId The device identifier.
-     * @throws NullPointerException If delegateSupplier or deviceId is {@code null}.
+     * @param onCloseAction The action to invoke when {@link #close(Handler)} is called.
+     * @throws NullPointerException If onCloseAction is {@code null}.
      */
-    public DeviceSpecificCommandConsumer(
-            final Supplier<DestinationCommandConsumer> delegateSupplier, final String deviceId) {
-        this.delegateSupplier = Objects.requireNonNull(delegateSupplier);
-        this.deviceId = Objects.requireNonNull(deviceId);
+    public DeviceSpecificCommandConsumer(final Supplier<Future<Void>> onCloseAction) {
+        this.onCloseAction = Objects.requireNonNull(onCloseAction);
     }
 
-    /**
-     * Gets the current consumer delegate.
-     * <p>
-     * {@code null} may be returned here if {@link #close(Handler)} has already been invoked on this
-     * consumer (and the delegate consumer got closed as a consequence) or if the delegate consumer
-     * was remotely closed and no re-creation of the consumer (e.g. as part of a liveness check) has
-     * happened (yet).
-     *
-     * @return The consumer instance or {@code null}.
-     */
-    private DestinationCommandConsumer getDelegate() {
-        return delegateSupplier.get();
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Calls the appropriate close handler and closes the outer consumer instance if that contains
-     * no further handlers.
-     */
     @Override
     public void close(final Handler<AsyncResult<Void>> closeHandler) {
-        final DestinationCommandConsumer delegate = getDelegate();
-        if (delegate != null) {
-            delegate.removeHandlerAndCloseConsumerIfEmpty(deviceId, closeHandler);
-        } else {
-            LOG.debug("cannot delegate close() invocation; actual consumer not available [consumer device-id {}]",
-                    deviceId);
+        if (closeCalled.compareAndSet(false, true)) {
+            final Future<Void> onCloseActionFuture = onCloseAction.get();
             if (closeHandler != null) {
-                closeHandler.handle(Future.failedFuture("actual consumer not available"));
+                onCloseActionFuture.setHandler(closeHandler);
             }
+        } else if (closeHandler != null) {
+            closeHandler.handle(Future.succeededFuture());
         }
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Calls the corresponding method on the outer consumer instance.
-     */
     @Override
     public void flow(final int credits) throws IllegalStateException {
-        final DestinationCommandConsumer delegate = getDelegate();
-        if (delegate != null) {
-            delegate.flow(credits);
-        } else {
-            LOG.debug("cannot delegate flow() invocation; actual consumer not available [consumer device-id {}]",
-                    deviceId);
-        }
+        // no-op
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @return The remaining credit of the outer consumer instance.
-     */
     @Override
     public int getRemainingCredit() {
-        final DestinationCommandConsumer delegate = getDelegate();
-        if (delegate == null) {
-            LOG.debug("cannot delegate getRemainingCredit() invocation; actual consumer not available [consumer device-id {}]",
-                    deviceId);
-            return 0;
-        }
-        return delegate.getRemainingCredit();
+        return -1;
     }
 }

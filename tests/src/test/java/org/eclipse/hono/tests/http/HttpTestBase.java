@@ -806,9 +806,9 @@ public abstract class HttpTestBase {
     }
 
     /**
-     * Verifies that the HTTP adapter returns a command in response to an initial upload request containing a TTD
-     * and immediately returns a 202 in response to consecutive upload requests which include a TTD value
-     * and which are sent before the command response to the initial request has been received.
+     * Verifies that for two consecutive upload requests containing a TTD, sent in close succession so that the command
+     * triggered by the first request isn't sent before the adapter has received the second upload request, the HTTP
+     * adapter returns the command as response to the second upload request.
      * 
      * @param ctx The test context.
      * @throws InterruptedException if the test is interrupted before having completed.
@@ -848,10 +848,10 @@ public abstract class HttpTestBase {
                 // nothing to do
             }
         })).compose(c -> {
-            // we need to send an initial request with QoS 1 to trigger establishment
-            // of links required for processing requests in the HTTP adapter
-            // otherwise, the second of the two consecutive upload requests
-            // might fail immediately because the links have not been established yet
+            // We need to send an initial request with QoS 1 to trigger establishment
+            // of the link required for processing requests in the HTTP adapter.
+            // Otherwise, the second of the two consecutive upload requests
+            // might fail immediately because the link has not been established yet.
             return httpClient.create(
                 getEndpointUri(),
                 Buffer.buffer("trigger msg"),
@@ -917,11 +917,11 @@ public abstract class HttpTestBase {
         CompositeFuture.all(commandSent, firstRequest, secondRequest)
         .setHandler(ctx.succeeding(ok -> {
             ctx.verify(() -> {
-                // and the response to the first request contains a command
-                assertThat(firstRequest.result().get(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
+                // and the response to the second request contains a command
+                assertThat(secondRequest.result().get(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
 
-                // while the response to the second request is empty
-                assertThat(secondRequest.result().get(Constants.HEADER_COMMAND)).isNull();
+                // while the response to the first request is empty
+                assertThat(firstRequest.result().get(Constants.HEADER_COMMAND)).isNull();
             });
             ctx.completeNow();
         }));
