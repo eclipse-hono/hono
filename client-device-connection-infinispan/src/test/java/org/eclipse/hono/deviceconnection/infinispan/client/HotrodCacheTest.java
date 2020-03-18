@@ -28,8 +28,10 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.MetadataValue;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.client.hotrod.configuration.Configuration;
@@ -80,18 +82,18 @@ class HotrodCacheTest {
     /**
      * Verifies that a request to retrieve a value from the cache
      * results in the value being retrieved from the data grid.
-     * 
+     *
      * @param ctx The vert.x text context.
      */
     @Test
     void testGetSucceeds(final VertxTestContext ctx) {
         final BasicCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.get(anyString())).thenReturn("value");
+        when(grid.getAsync(anyString())).thenReturn(CompletableFuture.completedFuture("value"));
         cache.connect()
             .compose(c -> c.get("key"))
             .setHandler(ctx.succeeding(v -> {
                 ctx.verify(() -> {
-                    verify(grid).get("key");
+                    verify(grid).getAsync("key");
                     assertThat(v).isEqualTo("value");
                 });
                 ctx.completeNow();
@@ -101,18 +103,18 @@ class HotrodCacheTest {
     /**
      * Verifies that a request to retrieve a value from the cache fails with the
      * root cause for the failure to access the data grid.
-     * 
+     *
      * @param ctx The vert.x text context.
      */
     @Test
     void testGetFails(final VertxTestContext ctx) {
         final BasicCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.get(anyString())).thenThrow(new IllegalStateException());
+        when(grid.getAsync(anyString())).thenThrow(new IllegalStateException());
         cache.connect()
             .compose(c -> c.get("key"))
             .setHandler(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    verify(grid).get("key");
+                    verify(grid).getAsync("key");
                     assertThat(t).isInstanceOf(IllegalStateException.class);
                 });
                 ctx.completeNow();
@@ -122,18 +124,18 @@ class HotrodCacheTest {
     /**
      * Verifies that a request to put a value to the cache
      * results in the value being written to the data grid.
-     * 
+     *
      * @param ctx The vert.x text context.
      */
     @Test
     void testPutSucceeds(final VertxTestContext ctx) {
         final BasicCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.put(anyString(), anyString())).thenReturn("oldValue");
+        when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
         cache.connect()
             .compose(c -> c.put("key", "value"))
             .setHandler(ctx.succeeding(v -> {
                 ctx.verify(() -> {
-                    verify(grid).put("key", "value");
+                    verify(grid).putAsync("key", "value");
                     assertThat(v).isEqualTo("oldValue");
                 });
                 ctx.completeNow();
@@ -143,18 +145,18 @@ class HotrodCacheTest {
     /**
      * Verifies that a request to put a value to the cache fails with the
      * root cause for the failure to access the data grid.
-     * 
+     *
      * @param ctx The vert.x text context.
      */
     @Test
     void testPutFails(final VertxTestContext ctx) {
         final BasicCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.put(anyString(), anyString())).thenThrow(new IllegalStateException());
+        when(grid.putAsync(anyString(), anyString())).thenThrow(new IllegalStateException());
         cache.connect()
             .compose(c -> c.put("key", "value"))
             .setHandler(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    verify(grid).put("key", "value");
+                    verify(grid).putAsync("key", "value");
                     assertThat(t).isInstanceOf(IllegalStateException.class);
                 });
                 ctx.completeNow();
@@ -170,12 +172,12 @@ class HotrodCacheTest {
     @Test
     void testRemoveWithVersionSucceeds(final VertxTestContext ctx) {
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.removeWithVersion(anyString(), anyLong())).thenReturn(true);
+        when(grid.removeWithVersionAsync(anyString(), anyLong())).thenReturn(CompletableFuture.completedFuture(true));
         cache.connect()
                 .compose(c -> c.removeWithVersion("key", 1L))
                 .setHandler(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        verify(grid).removeWithVersion("key", 1L);
+                        verify(grid).removeWithVersionAsync("key", 1L);
                         assertThat(v).isTrue();
                     });
                     ctx.completeNow();
@@ -191,12 +193,12 @@ class HotrodCacheTest {
     @Test
     void testRemoveWithVersionFails(final VertxTestContext ctx) {
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.removeWithVersion(anyString(), anyLong())).thenThrow(new IllegalStateException());
+        when(grid.removeWithVersionAsync(anyString(), anyLong())).thenThrow(new IllegalStateException());
         cache.connect()
                 .compose(c -> c.removeWithVersion("key", 1L))
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        verify(grid).removeWithVersion("key", 1L);
+                        verify(grid).removeWithVersionAsync("key", 1L);
                         assertThat(t).isInstanceOf(IllegalStateException.class);
                     });
                     ctx.completeNow();
@@ -218,12 +220,12 @@ class HotrodCacheTest {
         when(metadataValue.getValue()).thenReturn(value);
         final long version = 1L;
         when(metadataValue.getVersion()).thenReturn(version);
-        when(grid.getWithMetadata(anyString())).thenReturn(metadataValue);
+        when(grid.getWithMetadataAsync(anyString())).thenReturn(CompletableFuture.completedFuture(metadataValue));
         cache.connect()
                 .compose(c -> c.getWithVersion("key"))
                 .setHandler(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        verify(grid).getWithMetadata("key");
+                        verify(grid).getWithMetadataAsync("key");
                         assertThat(v.getVersion()).isEqualTo(version);
                         assertThat(v.getValue()).isEqualTo(value);
                     });
@@ -240,12 +242,12 @@ class HotrodCacheTest {
     @Test
     void testGetWithVersionFails(final VertxTestContext ctx) {
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.getWithMetadata(anyString())).thenThrow(new IllegalStateException());
+        when(grid.getWithMetadataAsync(anyString())).thenThrow(new IllegalStateException());
         cache.connect()
                 .compose(c -> c.getWithVersion("key"))
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        verify(grid).getWithMetadata("key");
+                        verify(grid).getWithMetadataAsync("key");
                         assertThat(t).isInstanceOf(IllegalStateException.class);
                     });
                     ctx.completeNow();
@@ -262,13 +264,13 @@ class HotrodCacheTest {
     void testGetAllSucceeds(final VertxTestContext ctx) {
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> grid = givenAConnectedCache();
         final Map<Object, Object> mapValue = new HashMap<>();
-        when(grid.getAll(anySet())).thenReturn(mapValue);
+        when(grid.getAllAsync(anySet())).thenReturn(CompletableFuture.completedFuture(mapValue));
         final Set<String> keys = Set.of("key");
         cache.connect()
                 .compose(c -> c.getAll(keys))
                 .setHandler(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        verify(grid).getAll(keys);
+                        verify(grid).getAllAsync(keys);
                         assertThat(v).isEqualTo(mapValue);
                     });
                     ctx.completeNow();
@@ -284,13 +286,13 @@ class HotrodCacheTest {
     @Test
     void testGetAllFails(final VertxTestContext ctx) {
         final org.infinispan.client.hotrod.RemoteCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.getAll(anySet())).thenThrow(new IllegalStateException());
+        when(grid.getAllAsync(anySet())).thenThrow(new IllegalStateException());
         final Set<String> keys = Set.of("key");
         cache.connect()
                 .compose(c -> c.getAll(keys))
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        verify(grid).getAll(keys);
+                        verify(grid).getAllAsync(keys);
                         assertThat(t).isInstanceOf(IllegalStateException.class);
                     });
                     ctx.completeNow();
@@ -304,6 +306,7 @@ class HotrodCacheTest {
         when(remoteCacheManager.getCache(anyString(), anyBoolean())).thenReturn(result);
         when(remoteCacheManager.getConfiguration()).thenReturn(configuration);
         when(configuration.forceReturnValues()).thenReturn(false);
+        when(result.withFlags(Flag.FORCE_RETURN_VALUE)).thenReturn(result);
         return result;
     }
 }
