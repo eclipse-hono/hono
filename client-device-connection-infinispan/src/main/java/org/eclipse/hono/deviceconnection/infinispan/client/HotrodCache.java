@@ -26,7 +26,7 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
-import org.infinispan.client.hotrod.MetadataValue;
+import org.infinispan.client.hotrod.Flag;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.commons.api.BasicCache;
 import org.slf4j.Logger;
@@ -152,7 +152,7 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
 
     /**
      * Puts a value to the cache.
-     * 
+     *
      * @param key The key.
      * @param value The value.
      * @return A succeeded future containing the previous value or {@code null} if the
@@ -162,44 +162,44 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
     @Override
     public Future<V> put(final K key, final V value) {
 
-        final Promise<V> result = Promise.promise();
         if (cache == null) {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
+
+            return noConnectionFailure();
+
         } else {
-            vertx.executeBlocking(outcome -> {
-                try {
-                    final V replacedValue = cache.put(key, value);
-                    outcome.complete(replacedValue);
-                } catch (final Throwable e) {
-                    outcome.fail(e);
-                }
-            }, result);
+
+            return Futures.create(() -> {
+                return cache
+                    .withFlags(Flag.FORCE_RETURN_VALUE)
+                    .putAsync(key, value);
+            });
+
         }
-        return result.future();
+
     }
 
     @Override
     public Future<Boolean> removeWithVersion(final K key, final long version) {
 
-        final Promise<Boolean> result = Promise.promise();
         if (cache == null) {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
+
+            return noConnectionFailure();
+
         } else {
-            vertx.executeBlocking(outcome -> {
-                try {
-                    final boolean removed = cache.removeWithVersion(key, version);
-                    outcome.complete(removed);
-                } catch (final Throwable e) {
-                    outcome.fail(e);
-                }
-            }, result);
+
+            return Futures.create(() -> {
+                return cache
+                    .withFlags(Flag.FORCE_RETURN_VALUE)
+                    .removeWithVersionAsync(key, version);
+            });
+
         }
-        return result.future();
+
     }
 
     /**
      * Gets a value from the cache.
-     * 
+     *
      * @param key The key.
      * @return A succeeded future containing the value or {@code null} if the
      *         cache didn't contain the key yet.
@@ -208,20 +208,19 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
     @Override
     public Future<V> get(final K key) {
 
-        final Promise<V> result = Promise.promise();
         if (cache == null) {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
+
+            return noConnectionFailure();
+
         } else {
-            vertx.executeBlocking(outcome -> {
-                try {
-                    final V value = cache.get(key);
-                    outcome.complete(value);
-                } catch (final Throwable e) {
-                    outcome.fail(e);
-                }
-            }, result);
+
+            return Futures.create(() -> {
+                return cache
+                    .getAsync(key);
+            });
+
         }
-        return result.future();
+
     }
 
     /**
@@ -235,38 +234,44 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
     @Override
     public Future<Versioned<V>> getWithVersion(final K key) {
 
-        final Promise<Versioned<V>> result = Promise.promise();
         if (cache == null) {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
+
+            return noConnectionFailure();
+
         } else {
-            vertx.executeBlocking(outcome -> {
-                try {
-                    final MetadataValue<V> value = cache.getWithMetadata(key);
-                    outcome.complete(value != null ? new Versioned<>(value.getVersion(), value.getValue()) : null);
-                } catch (final Throwable e) {
-                    outcome.fail(e);
-                }
-            }, result);
+
+            return Futures.create(() -> {
+                return cache
+                    .getWithMetadataAsync(key)
+                    .thenApply(value -> {
+                        if (value != null ) {
+                            return new Versioned<>(value.getVersion(), value.getValue());
+                        } else {
+                            return null;
+                        }
+                    });
+            });
+
         }
-        return result.future();
+
     }
 
     @Override
     public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
-        final Promise<Map<K, V>> result = Promise.promise();
+
         if (cache == null) {
-            result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
+
+            return noConnectionFailure();
+
         } else {
-            vertx.executeBlocking(outcome -> {
-                try {
-                    final Map<K, V> map = cache.getAll(keys);
-                    outcome.complete(map);
-                } catch (final Throwable e) {
-                    outcome.fail(e);
-                }
-            }, result);
+
+            return Futures.create(() -> {
+                return cache
+                    .getAllAsync(keys);
+            });
+
         }
-        return result.future();
+
     }
 
     private Future<Void> connectToGrid() {
@@ -340,4 +345,16 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
         }
         return result.future();
     }
+
+    /**
+     * Returns a failed future, reporting a missing connection to the data grid.
+     *
+     * @param <V> The value type of the returned future.
+     * @return A failed future. Never returns {@code null}.
+     */
+    private static <V> Future<V> noConnectionFailure() {
+        return Future.failedFuture(new ServerErrorException(
+                HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
+    }
+
 }
