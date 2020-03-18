@@ -75,6 +75,7 @@ public class AmqpAdapterClientCommandConsumer extends CommandConsumer {
             final String deviceId,
             final BiConsumer<ProtonDelivery, Message> messageHandler) {
 
+        Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(messageHandler);
@@ -99,6 +100,7 @@ public class AmqpAdapterClientCommandConsumer extends CommandConsumer {
             final HonoConnection con,
             final BiConsumer<ProtonDelivery, Message> messageHandler) {
 
+        Objects.requireNonNull(con);
         Objects.requireNonNull(messageHandler);
 
         final ResourceIdentifier address = ResourceIdentifier
@@ -162,6 +164,11 @@ public class AmqpAdapterClientCommandConsumer extends CommandConsumer {
 
     private void setReceiver(final ProtonReceiver protonReceiver) {
         receiver = protonReceiver;
+    }
+
+    // visible for testing
+    ProtonReceiver getReceiver() {
+        return receiver;
     }
 
 }
