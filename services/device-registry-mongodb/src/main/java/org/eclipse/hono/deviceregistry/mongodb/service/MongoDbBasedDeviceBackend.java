@@ -12,17 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import java.io.ByteArrayInputStream;
 import java.net.HttpURLConnection;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import javax.security.auth.x500.X500Principal;
-
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -157,48 +152,32 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
     }
 
     @Override
-    public  Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final JsonObject clientContext,
+    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
+            final JsonObject clientContext,
             final Span span) {
         return credentialsService.get(tenantId, type, authId, clientContext, span)
                 .compose(result -> {
                     if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND
                             && isAutoProvisioningEnabled(type, clientContext)) {
-                        return provisionDevice(tenantId, authId, clientContext, span);
+                        return DeviceRegistryUtils
+                                .getCertificateFromClientContext(tenantId, authId, clientContext, span)
+                                .compose(optionalCert -> optionalCert
+                                        .map(ok -> provisionDevice(tenantId, optionalCert.get(), span)
+                                                .compose(r -> {
+                                                    if (r.isError()) {
+                                                        TracingHelper.logError(span, r.getPayload());
+                                                        return Future.succeededFuture(
+                                                                createErrorCredentialsResult(r.getStatus(),
+                                                                        r.getPayload()));
+                                                    } else {
+                                                        return getNewCredentials(tenantId, authId, span);
+                                                    }
+                                                }))
+                                        .orElse(Future.succeededFuture(
+                                                createErrorCredentialsResult(HttpURLConnection.HTTP_BAD_REQUEST,
+                                                        "Not able to get the certificate from the client context"))));
                     }
                     return Future.succeededFuture(result);
-                });
-    }
-
-    /**
-     * Parses certificate, provisions device and returns the new credentials.
-     */
-    private Future<CredentialsResult<JsonObject>> provisionDevice(final String tenantId, final String authId,
-            final JsonObject clientContext,
-            final Span span) {
-
-        final X509Certificate cert;
-        try {
-            final byte[] bytes = clientContext.getBinary(CredentialsConstants.FIELD_CLIENT_CERT);
-            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
-            cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes));
-
-            if (!cert.getSubjectX500Principal().getName(X500Principal.RFC2253).equals(authId)) {
-                throw new IllegalArgumentException("Subject DN of the client certificate does not match authId");
-            }
-        } catch (final CertificateException | ClassCastException | IllegalArgumentException e) {
-            TracingHelper.logError(span, e);
-            final int status = HttpURLConnection.HTTP_BAD_REQUEST;
-            return Future.succeededFuture(createErrorCredentialsResult(status, e.getMessage()));
-        }
-
-        return provisionDevice(tenantId, cert, span)
-                .compose(r -> {
-                    if (r.isError()) {
-                        TracingHelper.logError(span, r.getPayload());
-                        return Future.succeededFuture(createErrorCredentialsResult(r.getStatus(), r.getPayload()));
-                    } else {
-                        return getNewCredentials(tenantId, authId, span);
-                    }
                 });
     }
 

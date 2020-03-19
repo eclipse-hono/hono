@@ -12,18 +12,30 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.util;
 
+import java.io.ByteArrayInputStream;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -32,6 +44,8 @@ import io.vertx.core.json.JsonObject;
  *
  */
 public final class DeviceRegistryUtils {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryUtils.class);
 
     private DeviceRegistryUtils() {
         // prevent instantiation
@@ -133,5 +147,53 @@ public final class DeviceRegistryUtils {
      */
     public static String getUniqueIdentifier() {
         return UUID.randomUUID().toString();
+    }
+
+    /**
+     * Gets the certificate of the device to be provisioned from the client context.
+     *
+     * @param tenantId The tenant to which the device belongs.
+     * @param authId The authentication identifier.
+     * @param clientContext The client context that can be used to get the X.509 certificate 
+     *                      of the device to be provisioned.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *             implementation should log (error) events on this span and it may set tags and use this span 
+     *             as the parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation. If the operation succeeds, the
+     *         retrieved certificate is returned. Else {@link Optional#empty()} is returned.
+     * @throws NullPointerException if any of the parameters except span is {@code null}.
+     */
+    public static Future<Optional<X509Certificate>> getCertificateFromClientContext(
+            final String tenantId,
+            final String authId,
+            final JsonObject clientContext,
+            final Span span) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(authId);
+        Objects.requireNonNull(clientContext);
+
+        try {
+            final byte[] bytes = clientContext.getBinary(CredentialsConstants.FIELD_CLIENT_CERT);
+            if (bytes == null) {
+                throw new IllegalArgumentException(
+                        String.format("The client context doesn't contain a certificate for tenant [%s]", tenantId));
+            }
+            final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            final X509Certificate cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes));
+
+            if (!cert.getSubjectX500Principal().getName(X500Principal.RFC2253).equals(authId)) {
+                throw new IllegalArgumentException(
+                        String.format("Subject DN of the client certificate does not match authId [%s] for tenant [%s]",
+                                authId, tenantId));
+            }
+            return Future.succeededFuture(Optional.of(cert));
+        } catch (final CertificateException | ClassCastException | IllegalArgumentException error) {
+            final String errorMessage = String.format(
+                    "Error getting certificate from client context with authId [%s] for tenant [%s]", authId, tenantId);
+            LOG.error(errorMessage, error);
+            TracingHelper.logError(span, errorMessage, error);
+            return Future.succeededFuture(Optional.empty());
+        }
     }
 }

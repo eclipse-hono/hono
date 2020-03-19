@@ -95,17 +95,6 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         this.config = Objects.requireNonNull(config);
     }
 
-    /**
-     * Sets the Vert.x instance to deploy the service to.
-     *
-     * @param vertx The vertx instance.
-     * @throws NullPointerException if vertx is {@code null}.
-     */
-    @Autowired
-    public void setVertx(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
-    }
-
     @Override
     public Vertx getVertx() {
         return vertx;
@@ -113,6 +102,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
     @Override
     public void init(final Vertx vertx, final Context context) {
+        this.vertx = Objects.requireNonNull(vertx);
     }
 
     @Override

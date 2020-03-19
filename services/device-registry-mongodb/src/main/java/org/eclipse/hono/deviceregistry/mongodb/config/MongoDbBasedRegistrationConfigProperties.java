@@ -13,7 +13,7 @@
 package org.eclipse.hono.deviceregistry.mongodb.config;
 
 /**
- * Configuration properties for Hono's device registry tenant API.
+ * Configuration properties for Hono's device registration and management APIs.
  */
 public final class MongoDbBasedRegistrationConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
 

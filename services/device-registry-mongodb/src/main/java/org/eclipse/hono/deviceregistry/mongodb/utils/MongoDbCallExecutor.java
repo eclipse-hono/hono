@@ -143,9 +143,14 @@ public final class MongoDbCallExecutor {
                     .put("port", config.getPort())
                     .put("db_name", config.getDbName())
                     .put("username", config.getUsername())
-                    .put("password", config.getPassword())
-                    .put("serverSelectionTimeoutMS", config.getServerSelectionTimeout())
-                    .put("connectTimeoutMS", config.getConnectTimeout());
+                    .put("password", config.getPassword());
+
+            if (config.getServerSelectionTimeout() > 0) {
+                configJson.put("serverSelectionTimeoutMS", config.getServerSelectionTimeout());
+            }
+            if (config.getConnectTimeout() > 0) {
+                configJson.put("connectTimeoutMS", config.getConnectTimeout());
+            }
         }
         return configJson;
     }

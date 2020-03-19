@@ -166,6 +166,7 @@ public final class MongoDbConfigProperties {
      * @param connectionString The connection string.
      * @return A reference to this for fluent use.
      * @throws NullPointerException if the connectionString is {@code null}.
+     * @see "https://docs.mongodb.com/manual/reference/connection-string/"
      */
     public MongoDbConfigProperties setConnectionString(final String connectionString) {
         this.connectionString = Objects.requireNonNull(connectionString);
@@ -175,6 +176,8 @@ public final class MongoDbConfigProperties {
     /**
      * Gets the time in milliseconds that the mongo driver will wait to select a
      * server for an operation before raising an error.
+     * <p>
+     * When this property is set to 0, the default value by Vert.x mongodb client is used.
      *
      * @return The server selection timeout in milliseconds.
      */
@@ -186,7 +189,7 @@ public final class MongoDbConfigProperties {
      * Sets the timeout in milliseconds that the mongo driver will wait to select a server 
      * for an operation before raising an error.
      * <p>
-     * When this property is set to 0, the default value of Vert.x should be used.
+     * When this property is set to 0, the default value by Vert.x mongodb client is used.
      * 
      * @param serverSelectionTimeoutInMs The server selection timeout in milliseconds.
      * @return A reference to this for fluent use.
@@ -202,6 +205,8 @@ public final class MongoDbConfigProperties {
 
     /**
      * Gets the timeout in milliseconds to attempt a connection before timing out.
+     * <p>
+     * When this property is set to 0, the default value by Vert.x mongodb client is used.
      *
      * @return The connection timeout in milliseconds.
      */
@@ -212,7 +217,7 @@ public final class MongoDbConfigProperties {
     /**
      * Sets the timeout in milliseconds to attempt a connection before timing out.
      * <p>
-     * When this property is set to 0, the default value of Vert.x should be used.
+     * When this property is set to 0, the default value by Vert.x mongodb client is used.
      *
      * @param connectionTimeoutInMs The connection timeout in milliseconds.
      * @return A reference to this for fluent use.
@@ -228,6 +233,8 @@ public final class MongoDbConfigProperties {
 
     /**
      * Gets the timeout in milliseconds to create indices during startup.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_CREATE_INDICES_TIMEOUT_IN_MS}.
      *
      * @return The create indices timeout in milliseconds
      */

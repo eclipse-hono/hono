@@ -33,7 +33,7 @@ import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantManagementH
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
+import org.eclipse.hono.service.deviceconnection.AutowiredDeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
@@ -174,7 +174,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint deviceConnectionAmqpEndpoint() {
-        return new DeviceConnectionAmqpEndpoint(vertx());
+        return new AutowiredDeviceConnectionAmqpEndpoint(vertx());
     }
 
     /**
