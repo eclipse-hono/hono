@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,18 +11,21 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.registration;
+package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
@@ -35,13 +38,11 @@ import io.vertx.core.json.JsonObject;
  * An abstract base class implementation for {@link RegistrationService}.
  * <p>
  * The default implementation of <em>assertRegistration</em> relies on
- * {@link AbstractRegistrationService#getDevice(String, String, Span)} to retrieve a device's registration
+ * {@link AbstractRegistrationService#processAssertRegistration(DeviceKey, Span)} to retrieve a device's registration
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
  *
- * @deprecated This class has been moved to "services/device-registry-base" module.
  */
-@Deprecated
 public abstract class AbstractRegistrationService implements RegistrationService {
 
     /**
@@ -51,11 +52,21 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
     private static final Logger log = LoggerFactory.getLogger(AbstractRegistrationService.class);
 
+    protected TenantInformationService tenantInformationService;
+
+    /**
+     * Set tenant information service.
+     * @param tenantInformationService The tenant information service.
+     */
+    @Autowired
+    public void setTenantInformationService(final TenantInformationService tenantInformationService) {
+        this.tenantInformationService = tenantInformationService;
+    }
+
     /**
      * Gets device registration data by device ID.
      *
-     * @param tenantId The tenant the device belongs to.
-     * @param deviceId The ID of the device to get registration data for.
+     * @param deviceKey The ID of the device to get registration data for.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
@@ -69,10 +80,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/#get-registration-information"> Device
      *      Registration API - Get Registration Information</a>
      */
-    protected abstract Future<RegistrationResult> getDevice(
-            String tenantId,
-            String deviceId,
-            Span span);
+    protected abstract Future<RegistrationResult> processAssertRegistration(DeviceKey deviceKey, Span span);
 
     /**
      * Takes the 'viaGroups' list of a device and resolves all group ids with the ids of the devices that are
@@ -87,15 +95,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
      *           a {@link ServiceInvocationException} is returned, if there was an error resolving the groups.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected abstract Future<JsonArray> resolveGroupMembers(
-            String tenantId,
-            JsonArray viaGroups,
-            Span span);
+    protected abstract Future<JsonArray> resolveGroupMembers(String tenantId, JsonArray viaGroups, Span span);
 
     @Override
-    public final Future<RegistrationResult> assertRegistration(
-            final String tenantId,
-            final String deviceId) {
+    public final Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId) {
         return assertRegistration(tenantId, deviceId, NoopSpan.INSTANCE);
     }
 
@@ -104,36 +107,33 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
      * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #getDevice(String, String, Span) getDevice} method to work.
+     * {@link #processAssertRegistration(DeviceKey, Span) processAssertRegistration} method to work.
      */
     @Override
-    public Future<RegistrationResult>  assertRegistration(
-            final String tenantId,
-            final String deviceId,
-            final Span span) {
+    public Future<RegistrationResult>  assertRegistration(final String tenantId, final String deviceId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        return getDevice(tenantId, deviceId, span)
-                .compose(result -> {
-                    if (isDeviceEnabled(result)) {
-                        final JsonObject deviceData = result.getPayload()
-                                .getJsonObject(RegistrationConstants.FIELD_DATA);
-                        return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
-                    } else {
-                        TracingHelper.logError(span, "device not enabled");
-                        return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-                    }
-                });
+        return this.tenantInformationService
+                .tenantExists(tenantId, span)
+                .flatMap(tenantKey -> processAssertRegistration(DeviceKey.from(tenantKey, deviceId), span)
+                        .compose(result -> {
+                            if (isDeviceEnabled(result)) {
+                                final JsonObject deviceData = result.getPayload()
+                                        .getJsonObject(RegistrationConstants.FIELD_DATA);
+                                return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
+                            } else {
+                                TracingHelper.logError(span, "device not enabled");
+                                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+                            }
+                        })
+                );
     }
 
     @Override
-    public final Future<RegistrationResult> assertRegistration(
-            final String tenantId,
-            final String deviceId,
-            final String gatewayId) {
+    public final Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final String gatewayId) {
         return assertRegistration(tenantId, deviceId, gatewayId, NoopSpan.INSTANCE);
     }
 
@@ -142,58 +142,59 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
      * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #getDevice(String, String, Span) getDevice} method to work.
+     * {@link #processAssertRegistration(DeviceKey, Span) processAssertRegistration} method to work.
      */
     @Override
-    public Future<RegistrationResult> assertRegistration(
-            final String tenantId,
-            final String deviceId,
-            final String gatewayId,
-            final Span span) {
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final String gatewayId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(span);
 
-        final Future<RegistrationResult> deviceInfoTracker = getDevice(tenantId, deviceId, span);
-        final Future<RegistrationResult> gatewayInfoTracker = getDevice(tenantId, gatewayId, span);
+        return this.tenantInformationService
+                .tenantExists(tenantId, span)
+                .flatMap(tenantKey -> {
 
-        return CompositeFuture
-                .all(deviceInfoTracker, gatewayInfoTracker)
-                .compose(ok -> {
+                    final Future<RegistrationResult> deviceInfoTracker = processAssertRegistration(DeviceKey.from(tenantKey, deviceId), span);
+                    final Future<RegistrationResult> gatewayInfoTracker = processAssertRegistration(DeviceKey.from(tenantKey, gatewayId), span);
 
-                    final RegistrationResult deviceResult = deviceInfoTracker.result();
-                    final RegistrationResult gatewayResult = gatewayInfoTracker.result();
+                    return CompositeFuture
+                            .all(deviceInfoTracker, gatewayInfoTracker)
+                            .compose(ok -> {
 
-                    if (!isDeviceEnabled(deviceResult)) {
-                        log.debug("device not enabled");
-                        TracingHelper.logError(span, "device not enabled");
-                        return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-                    } else if (!isDeviceEnabled(gatewayResult)) {
-                        log.debug("gateway not enabled");
-                        TracingHelper.logError(span, "gateway not enabled");
-                        return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
-                    } else {
+                                final RegistrationResult deviceResult = deviceInfoTracker.result();
+                                final RegistrationResult gatewayResult = gatewayInfoTracker.result();
 
-                        final JsonObject deviceData = deviceResult.getPayload()
-                                .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
-                        final JsonObject gatewayData = gatewayResult.getPayload()
-                                .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
+                                if (!isDeviceEnabled(deviceResult)) {
+                                    log.debug("device not enabled");
+                                    TracingHelper.logError(span, "device not enabled");
+                                    return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+                                } else if (!isDeviceEnabled(gatewayResult)) {
+                                    log.debug("gateway not enabled");
+                                    TracingHelper.logError(span, "gateway not enabled");
+                                    return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
+                                } else {
 
-                        if (log.isDebugEnabled()) {
-                            log.debug("Device data: {}", deviceData.encodePrettily());
-                            log.debug("Gateway data: {}", gatewayData.encodePrettily());
-                        }
+                                    final JsonObject deviceData = deviceResult.getPayload()
+                                            .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
+                                    final JsonObject gatewayData = gatewayResult.getPayload()
+                                            .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
 
-                        if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
-                            return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
-                        } else {
-                            log.debug("gateway not authorized");
-                            TracingHelper.logError(span, "gateway not authorized");
-                            return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
-                        }
-                    }
+                                    if (log.isDebugEnabled()) {
+                                        log.debug("Device data: {}", deviceData.encodePrettily());
+                                        log.debug("Gateway data: {}", gatewayData.encodePrettily());
+                                    }
+
+                                    if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
+                                        return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
+                                    } else {
+                                        log.debug("gateway not authorized");
+                                        TracingHelper.logError(span, "gateway not authorized");
+                                        return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
+                                    }
+                                }
+                            });
                 });
     }
 
@@ -215,8 +216,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @return {@code true} if the gateway is authorized.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected boolean isGatewayAuthorized(final String gatewayId, final JsonObject gatewayData,
-            final String deviceId, final JsonObject deviceData) {
+    protected boolean isGatewayAuthorized(final String gatewayId, final JsonObject gatewayData, final String deviceId, final JsonObject deviceData) {
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(gatewayData);
         Objects.requireNonNull(deviceId);
@@ -363,7 +363,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * Subclasses should override this method in order to return a specific directive other than the default.
      * <p>
      * This default implementation returns a directive to cache values for {@link #DEFAULT_MAX_AGE_SECONDS} seconds.
-     * 
+     *
      * @param deviceId The identifier of the device that is the subject of the assertion.
      * @param tenantId The tenant that the device belongs to.
      * @return The cache directive.
