@@ -23,10 +23,10 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
-import org.eclipse.hono.service.deviceconnection.EventBusDeviceConnectionAdapter;
 import org.eclipse.hono.util.DeviceConnectionResult;
 
 import io.opentracing.Span;
+import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
@@ -35,7 +35,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * An implementation of Hono's <em>Device Connection</em> API that uses an Infinispan cache
  * for storing the device connection data.
  */
-public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConnectionAdapter implements DeviceConnectionService, HealthCheckProvider {
+public class RemoteCacheBasedDeviceConnectionService extends AbstractVerticle implements DeviceConnectionService, HealthCheckProvider {
 
     private final DeviceConnectionInfo cache;
 
@@ -99,14 +99,6 @@ public class RemoteCacheBasedDeviceConnectionService extends EventBusDeviceConne
         return cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span.context())
                 .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
                 .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected final DeviceConnectionService getService() {
-        return this;
     }
 
     /**

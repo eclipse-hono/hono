@@ -24,7 +24,8 @@ import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
-import org.eclipse.hono.service.deviceconnection.DeviceConnectionAmqpEndpoint;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
+import org.eclipse.hono.service.deviceconnection.AutowiredDeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -124,8 +125,8 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public DeviceConnectionAmqpEndpoint deviceConnectionAmqpEndpoint() {
-        return new DeviceConnectionAmqpEndpoint(vertx());
+    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
+        return new AutowiredDeviceConnectionAmqpEndpoint(vertx());
     }
 
     /**

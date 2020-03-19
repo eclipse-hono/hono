@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry.service.deviceconnection;
+package org.eclipse.hono.service.deviceconnection;
 
 import org.eclipse.hono.service.deviceconnection.AbstractDeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;

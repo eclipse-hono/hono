@@ -88,7 +88,11 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
         final Promise<Void> startPromise = Promise.promise();
         svc.init(vertx, ctx);
-        svc.start(startPromise);
+        try {
+            svc.start(startPromise);
+        } catch (Exception e) {
+            return Future.failedFuture(e);
+        }
         return startPromise.future();
     }
 
