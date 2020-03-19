@@ -79,7 +79,7 @@ public interface CredentialsService {
      * @param tenantId The tenant the device belongs to.
      * @param type The type of credentials to get.
      * @param authId The authentication identifier of the device to get credentials for (may be {@code null}.
-     * @param clientContext Optional bag of properties that can be used to identify the device
+     * @param clientContext Optional bag of properties that can be used to identify the device.
      * @return A future indicating the outcome of the operation.
      *         The <em>status</em> will be
      *         <ul>
