@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -84,16 +84,6 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
         }
     }
 
-    /**
-     * Checks if the CoAP response should be sent waiting for the outcome of sending the message to downstream.
-     * 
-     * @param exchange The CoAP exchange.
-     * @return {@code true} if the CoAP request message requires confirmation (CON).
-     */
-    private boolean useWaitForOutcome(final CoapExchange exchange) {
-        return exchange.advanced().getRequest().isConfirmable();
-    }
-
     private CoapContext newContext(final CoapExchange exchange) {
         return CoapContext.fromRequest(exchange, getMetrics().startTimer());
     }
@@ -123,8 +113,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                 return uploadTelemetryMessage(
                         ctx,
                         device.authenticatedDevice,
-                        device.originDevice,
-                        useWaitForOutcome(exchange));
+                        device.originDevice);
             }
         });
 

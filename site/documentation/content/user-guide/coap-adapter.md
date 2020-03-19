@@ -46,7 +46,7 @@ The device is authenticated using PSK.
 * Request Options:
   * (optional) `content-format`: The type of payload contained in the request body. Required, if request contains payload.
   * (optional) `URI-query: hono-ttd`: The number of seconds the device will wait for the response.
-  * (optional) `URI-query: empty`: If the request doesn't contain payload.
+  * (optional) `URI-query: empty`: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
 * Response Options:
@@ -72,13 +72,12 @@ The device is authenticated using PSK.
     Note that if the message type is `NON` (*at most once* semantics), this status code does **not** mean that the message has been
     delivered to any potential consumer. However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
+  * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
+         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 4.06 (Not Acceptable): The request cannot be processed because
-         * the *content-format* option contains an unknown code, or
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -137,7 +136,7 @@ send any commands to the device.
 * Request Options:
   * (optional) `content-format`: The type of payload contained in the request body. Required, if request contains payload.
   * (optional) `URI-query: hono-ttd`: The number of seconds the device will wait for the response.
-  * (optional) `URI-query: empty`: If the request doesn't contain payload.
+  * (optional) `URI-query: empty`: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
 * Response Options:
@@ -163,14 +162,13 @@ send any commands to the device.
     Note that if the message type is `NON` (*at most once* semantics), this status code does **not** mean that the message has been
     delivered to any potential consumer. However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
+  * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
+         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 4.06 (Not Acceptable): The request cannot be processed because
-         * the *content-format* option contains an unknown code, or
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -212,7 +210,7 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
 * Request Options:
   * (optional) `content-format`: The type of payload contained in the request body. Required, if request contains payload.
   * (optional) `URI-query: hono-ttd`: The number of seconds the device will wait for the response.
-  * (optional) `URI-query: empty`: If the request doesn't contain payload.
+  * (optional) `URI-query: empty`: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
   * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
 * Response Options:
@@ -239,6 +237,8 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
     Note that if the message type is `NON` (*at most once* semantics), this status code does **not** mean that the message has been
     delivered to any potential consumer. However, if the message type is `CON` (*at least once* semantics), then the adapter waits
     for the message to be delivered and accepted by a downstream consumer before responding with this status code.
+  * 4.00 (Bad Request): The request cannot be processed. Possible reasons include:
+         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
   * 4.03 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted.
     Possible reasons for this include:
         * The tenant that the gateway belongs to is not allowed to use this protocol adapter.
@@ -246,9 +246,6 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
-  * 4.06 (Not Acceptable): The request cannot be processed because
-         * the *content-format* option contains an unknown code, or
-         * the request body is empty and the *URI-query* option doesn't contain the `empty` parameter
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -562,20 +562,20 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param originDevice message's origin device
-     * @param waitForOutcome {@code true} to send the message waiting for the outcome, {@code false}, to wait just for
-     *            the sent.
      * @return A future containing the response code that has been returned to
      *         the device.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public final Future<ResponseCode> uploadTelemetryMessage(final CoapContext context, final Device authenticatedDevice,
-            final Device originDevice, final boolean waitForOutcome) {
+    public final Future<ResponseCode> uploadTelemetryMessage(
+            final CoapContext context,
+            final Device authenticatedDevice,
+            final Device originDevice) {
 
         return doUploadMessage(
                 Objects.requireNonNull(context),
                 Objects.requireNonNull(authenticatedDevice),
                 Objects.requireNonNull(originDevice),
-                waitForOutcome,
+                context.isConfirmable(),
                 getTelemetrySender(authenticatedDevice.getTenantId()),
                 MetricsTags.EndpointType.TELEMETRY);
     }
@@ -641,11 +641,11 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Buffer payload = context.getPayload();
 
         if (contentType == null) {
-            context.respondWithCode(ResponseCode.NOT_ACCEPTABLE);
-            return Future.succeededFuture(ResponseCode.NOT_ACCEPTABLE);
+            context.respondWithCode(ResponseCode.BAD_REQUEST);
+            return Future.succeededFuture(ResponseCode.BAD_REQUEST);
         } else if (payload.length() == 0 && !context.isEmptyNotification()) {
-            context.respondWithCode(ResponseCode.NOT_ACCEPTABLE);
-            return Future.succeededFuture(ResponseCode.NOT_ACCEPTABLE);
+            context.respondWithCode(ResponseCode.BAD_REQUEST);
+            return Future.succeededFuture(ResponseCode.BAD_REQUEST);
         } else {
             final String gatewayId = authenticatedDevice != null
                     && !device.getDeviceId().equals(authenticatedDevice.getDeviceId())
@@ -710,18 +710,20 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         tokenTracker.result(),
                         ttd);
                 customizeDownstreamMessage(downstreamMessage, context);
+
                 if (waitForOutcome) {
                     // wait for outcome, ensure message order, if CoAP NSTART-1 is used.
                     return CompositeFuture.all(
                             sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
                             responseReady.future())
-                            .map(s -> (Void) null);
+                            .mapEmpty();
                 } else {
                     return CompositeFuture.all(
                             sender.send(downstreamMessage, currentSpan.context()),
                             responseReady.future())
-                            .map(s -> (Void) null);
+                            .mapEmpty();
                 }
+
             }).recover(t -> {
                 if (t instanceof ResourceConflictException) {
                     // simply return an empty response
@@ -732,7 +734,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 } else {
                     return Future.failedFuture(t);
                 }
-            }).compose(delivery -> {
+            }).compose(ok -> {
                 final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                 if (commandContext == null && ttdTracker.result() != null) {
                     if (responseReady.future().isComplete()) {
@@ -770,15 +772,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         context.getTimer());
                 currentSpan.finish();
                 final Promise<ResponseCode> result = Promise.promise();
-                final Handler<AsyncResult<Void>> closed = new Handler<AsyncResult<Void>>() {
-                    @Override
-                    public void handle(final AsyncResult<Void> event) {
-                        context.getExchange().respond(response);
-                        result.complete(response.getCode());
-                    }
-                };
-                Optional.ofNullable(commandConsumerTracker.result())
-                        .ifPresentOrElse(consumer -> consumer.close(closed), () -> closed.handle(Future.succeededFuture()));
+                final Handler<AsyncResult<Void>> closed = res -> {
+                    context.getExchange().respond(response);
+                    result.complete(response.getCode());
+                    };
+                Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
+                        consumer -> consumer.close(closed),
+                        () -> closed.handle(Future.succeededFuture()));
                 return result.future();
             }).otherwise(t -> {
                 log.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",

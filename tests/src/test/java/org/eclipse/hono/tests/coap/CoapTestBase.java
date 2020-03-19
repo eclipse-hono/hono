@@ -678,10 +678,10 @@ public abstract class CoapTestBase {
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-                    logger.info("north-bound-cmd received {}, ttd: {}", msg, ttd);
+                    logger.debug("north-bound-cmd received {}, ttd: {}", msg, ttd);
                     final Optional<TimeUntilDisconnectNotification> notification = TimeUntilDisconnectNotification.fromMessage(msg);
                     if (notification.isPresent()) {
-                        logger.info("send one-way-command!");
+                        logger.debug("send one-way-command");
                         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
                         helper.sendOneWayCommand(
                                 tenantId,
@@ -695,11 +695,10 @@ public abstract class CoapTestBase {
                     }
                 },
                 count -> {
-                    logger.info("south-bound send");
                     final Promise<OptionSet> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
                     request.getOptions().setUriQuery("hono-ttd=4");
-                    logger.info("south-bound send {}", request);
+                    logger.debug("south-bound send {}", request);
                     client.advanced(getHandler(result, ResponseCode.CONTENT), request);
                     return result.future();
                 });

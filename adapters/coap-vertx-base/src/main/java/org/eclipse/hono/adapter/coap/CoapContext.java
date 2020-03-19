@@ -34,8 +34,13 @@ import io.vertx.core.buffer.Buffer;
  */
 public final class CoapContext extends MapBasedExecutionContext {
 
-    private static final String PARAM_EMPTY_CONTENT = "empty";
+    /**
+     * The query parameter which is used to indicate an empty notification.
+     */
+    public static final String PARAM_EMPTY_CONTENT = "empty";
+
     private final CoapExchange exchange;
+
     private Sample timer;
 
     private CoapContext(final CoapExchange exchange) {
@@ -95,18 +100,29 @@ public final class CoapContext extends MapBasedExecutionContext {
     }
 
     /**
-     * Get content type.
+     * Gets the media type that corresponds to the <em>content-format</em> option of the CoAP request.
+     * <p>
+     * The media type is determined as follows:
+     * <ol>
+     * <li>If the request's <em>URI-query</em> option contains the {@link #PARAM_EMPTY_CONTENT} parameter,
+     * the media type is {@link EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION}.</li>
+     * <li>Otherwise, if the request doesn't contain a <em>content-format</em> option, the media type
+     * is {@code null}</li>
+     * <li>Otherwise, if the content-format code is registered with IANA, the media type is the one
+     * that has been registered for the code</li>
+     * <li>Otherwise, the media type is <em>unknown/code</em> where code is the value of the content-format
+     * option</li>
+     * </ol>
      * 
-     * If {@link #isEmptyNotification()}, return {@link EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION}. Otherwise map
-     * the CoAP content type into the textual form.
-     * 
-     * @return content type of request.
+     * @return The media type or {@code null} if the request does not contain a content-format option.
      */
     public String getContentType() {
         if (isEmptyNotification()) {
             return EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
-        } else {
+        } else if (exchange.getRequestOptions().hasContentFormat()) {
             return MediaTypeRegistry.toString(exchange.getRequestOptions().getContentFormat());
+        } else {
+            return null;
         }
     }
 
@@ -173,6 +189,15 @@ public final class CoapContext extends MapBasedExecutionContext {
      */
     public boolean isEmptyNotification() {
         return exchange.getQueryParameter(PARAM_EMPTY_CONTENT) != null;
+    }
+
+    /**
+     * Checks if the exchange's request has been sent using a CONfirmable message.
+     * 
+     * @return {@code true} if the request message is CONfirmable.
+     */
+    public boolean isConfirmable() {
+        return exchange.advanced().getRequest().isConfirmable();
     }
 
     /**
