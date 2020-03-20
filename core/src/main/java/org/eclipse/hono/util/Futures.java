@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.deviceconnection.infinispan.client;
+package org.eclipse.hono.util;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
@@ -22,7 +22,7 @@ import io.vertx.core.Promise;
 /**
  * Helper class working with Java and vert.x futures.
  */
-final class Futures {
+public final class Futures {
 
     private Futures() {
     }
