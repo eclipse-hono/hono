@@ -387,7 +387,7 @@ public final class IntegrationTestSupport {
     /**
      * Pattern used for the <em>name</em> field of the {@code @ParameterizedTest} annotation.
      */
-    public static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {arguments}";
+    public static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);

@@ -60,7 +60,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class HotrodBasedDeviceConnectionInfoTest {
 
-    private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {arguments}";
+    private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
 
     private DeviceConnectionInfo info;
     private RemoteCache<String, String> cache;
