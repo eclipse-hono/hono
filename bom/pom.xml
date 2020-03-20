@@ -48,7 +48,7 @@
     <jmeter.version>5.1.1</jmeter.version>
     <junit.jupiter.version>5.5.1</junit.jupiter.version>
     <logback.version>1.2.3</logback.version>
-    <micrometer.version>1.1.9</micrometer.version>
+    <micrometer.version>1.1.11</micrometer.version>
     <mockito.version>2.28.2</mockito.version>
     <netty.version>4.1.48.Final</netty.version>
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
