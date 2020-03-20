@@ -18,7 +18,7 @@ In this guide, we will give examples for publishing telemetry and events for *au
 
 The AMQP adapter supports authenticating clients using a *username* and *password*. This means that clients need to provide a *username* and a *password* when connecting to the AMQP adapter. If the adapter is configured for multi-tenancy (i.e `HONO_AMQP_SINGLE_TENANT` is set to `false`), then the *username* must match the pattern [*auth-id@tenant*], e.g. `sensor1@DEFAULT_TENANT`. Otherwise the `DEFAULT_TENANT` is assumed and the tenant-id can be omitted from the username.
 
-The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< relref "/admin-guide/amqp-adapter-config#credentials-service-connection-configuration" >}}) has on record for the client. If the credentials match, then authentication is successful and the client device can proceed to publish messages to Hono.
+The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}}) has on record for the client. If the credentials match, then authentication is successful and the client device can proceed to publish messages to Hono.
 
 The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
 

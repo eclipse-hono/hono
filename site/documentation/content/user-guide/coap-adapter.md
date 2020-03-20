@@ -16,10 +16,16 @@ The adapter tries to authenticate the device using these mechanisms in the follo
 
 ### PSK
 
-The *identity* provided in the ClientKeyExchange must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter performs the handshake using the credentials the `configured Credentials service - (documentation pending)` has one record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record with the *tenant* and *auth-id* provided by the device in the *identity* and `psk` as the *type* of secret as query parameters.
+The *identity* provided in the ClientKeyExchange must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
+The adapter performs the handshake using the credentials the [configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}})
+has on record for the client. The adapter uses the Credentials API's *get* operation to retrieve the credentials on record
+with the *tenant* and *auth-id* provided by the device in the *identity* and `psk` as the *type* of secret as query parameters.
 
-The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
-Please refer to the [Credentials API]({{< relref "/api/credentials#standard-credential-types" >}}) for details regarding the different types of secrets.
+The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and
+corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured
+with the corresponding entities in its device registry component.
+Please refer to the [Credentials API]({{< relref "/api/credentials#standard-credential-types" >}}) for details regarding the different
+types of secrets.
 
 **NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 
@@ -257,7 +263,7 @@ protocol adapter are used to authenticate the gateway whereas the parameters fro
 publishes data for.
 
 The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion*
-for the device from the [configured Device Registration service]({{< relref "/admin-guide/http-adapter-config#device-registration-service-connection-configuration" >}}).
+for the device from the [configured Device Registration service]({{< relref "/admin-guide/common-config#device-registration-service-connection-configuration" >}}).
 
 {{% note %}}
 When sending requests with the *hono-ttd* query parameter in order to receive a command for a specific device connected to the authenticated gateway,
