@@ -210,6 +210,22 @@ public final class CoapContext extends MapBasedExecutionContext {
     }
 
     /**
+     * Sends a response with the response code to the device.
+     * 
+     * @param responseCode The code to set in the response.
+     * @param description The message to include in the response body or {@code null} if
+     *                    the response body should not include a description.
+     */
+    public void respondWithCode(final ResponseCode responseCode, final String description) {
+        final Response response = new Response(responseCode);
+        Optional.ofNullable(description).ifPresent(desc -> {
+            response.getOptions().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
+            response.setPayload(description);
+        });
+        respond(response);
+    }
+
+    /**
      * Sends a response to the device.
      * 
      * @param response The response to sent.
@@ -221,26 +237,24 @@ public final class CoapContext extends MapBasedExecutionContext {
     /**
      * Gets the integer value of the provided query parameter.
      *
-     * @param parameterName name of the query parameter
-     * @return integer value or {@code null} if
+     * @param parameterName The name of the query parameter.
+     * @return The integer value or {@code null} if
      *         <ul>
-     *         <li>the request doesn't contain the provided query parameter.</li>
-     *         <li>the contained value cannot be parsed as an Integer</li>
+     *         <li>the request doesn't contain the provided query parameter or</li>
+     *         <li>the contained value cannot be parsed as an Integer.</li>
      *         </ul>
      */
     private Integer getIntegerQueryParameter(final String parameterName) {
 
-        try {
-            final Optional<String> value = Optional
-                    .ofNullable(exchange.getQueryParameter(parameterName));
-
-            if (value.isPresent()) {
-                return Integer.parseInt(value.get());
-            }
-        } catch (final NumberFormatException e) {
-        }
-
-        return null;
+        return Optional.ofNullable(exchange.getQueryParameter(parameterName))
+                .map(value -> {
+                    try {
+                        return Integer.parseInt(value);
+                    } catch (final NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .orElse(null);
     }
 
 }

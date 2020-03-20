@@ -49,20 +49,28 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandConsumerFactory;
+import org.eclipse.hono.client.CommandResponse;
+import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MetricsTags.Direction;
+import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
@@ -104,6 +112,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     private TenantClient tenantClient;
     private CoapAdapterProperties config;
     private CommandConsumerFactory commandConsumerFactory;
+    private MessageConsumer commandConsumer;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private ResourceLimitChecks resourceLimitChecks;
     private CoapAdapterMetrics metrics;
@@ -111,6 +120,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     /**
      * Sets up common fixture.
      */
+    @SuppressWarnings("unchecked")
     @BeforeEach
     public void setup() {
 
@@ -121,8 +131,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         metrics = mock(CoapAdapterMetrics.class);
 
         regClient = mock(RegistrationClient.class);
-        final JsonObject result = new JsonObject();
-        when(regClient.assertRegistration(anyString(), any(), any(SpanContext.class))).thenReturn(Future.succeededFuture(result));
+        when(regClient.assertRegistration(anyString(), any(), any(SpanContext.class))).thenReturn(Future.succeededFuture(new JsonObject()));
 
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), any(SpanContext.class))).thenAnswer(invocation -> {
@@ -144,8 +153,13 @@ public class AbstractVertxBasedCoapAdapterTest {
         when(registrationClientFactory.getOrCreateRegistrationClient(anyString()))
                 .thenReturn(Future.succeededFuture(regClient));
 
+        commandConsumer = mock(MessageConsumer.class);
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(Handler.class)))
+            .thenReturn(Future.succeededFuture(commandConsumer));
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class), any(Handler.class)))
+            .thenReturn(Future.succeededFuture(commandConsumer));
 
         deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
@@ -618,6 +632,145 @@ public class AbstractVertxBasedCoapAdapterTest {
     }
 
     /**
+     * Verifies that the adapter waits for a command response being settled and accepted
+     * by a downstream peer before responding with a 2.04 status to the device.
+     */
+    @Test
+    public void testUploadCommandResponseWaitsForAcceptedOutcome() {
+
+        // GIVEN an adapter with a downstream application attached
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final CommandResponseSender sender = givenACommandResponseSender(outcome);
+        final CoapServer server = getCoapServer(false);
+
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+
+        // WHEN a device publishes an command response
+        final String reqId = Command.getRequestId("correlation", "replyToId", "device");
+        final Buffer payload = Buffer.buffer("some payload");
+        final OptionSet options = new OptionSet();
+        options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
+        options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
+        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
+        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
+        final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext context = CoapContext.fromRequest(coapExchange);
+
+        adapter.uploadCommandResponseMessage(context, authenticatedDevice, authenticatedDevice);
+
+        // THEN the command response is being forwarded downstream
+        verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
+        // but the device does not get a response
+        verify(coapExchange, never()).respond(any(Response.class));
+        // and the response has not been reported as forwarded
+        verify(metrics, never()).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                any(),
+                eq(ProcessingOutcome.FORWARDED),
+                anyInt(),
+                any());
+
+        // until the message has been accepted
+        outcome.complete(mock(ProtonDelivery.class));
+
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
+        verify(metrics).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                any(),
+                eq(ProcessingOutcome.FORWARDED),
+                eq(payload.length()),
+                any());
+    }
+
+    /**
+     * Verifies that the adapter fails the upload of a command response with a 4.00
+     * response code if it is rejected by the downstream peer.
+     */
+    @Test
+    public void testUploadCommandResponseFailsForRejectedOutcome() {
+
+        // GIVEN an adapter with a downstream application attached
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final CommandResponseSender sender = givenACommandResponseSender(outcome);
+        final CoapServer server = getCoapServer(false);
+
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+
+        // WHEN a device publishes an command response
+        final String reqId = Command.getRequestId("correlation", "replyToId", "device");
+        final Buffer payload = Buffer.buffer("some payload");
+        final OptionSet options = new OptionSet();
+        options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
+        options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
+        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
+        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
+        final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext context = CoapContext.fromRequest(coapExchange);
+
+        adapter.uploadCommandResponseMessage(context, authenticatedDevice, authenticatedDevice);
+        outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
+
+        // THEN the command response is being forwarded downstream
+        verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
+        // and the device gets a 4.00 response
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.BAD_REQUEST.equals(res.getCode())));
+        // and the response has not been reported as forwarded
+        verify(metrics, never()).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                any(),
+                eq(ProcessingOutcome.FORWARDED),
+                anyInt(),
+                any());
+    }
+
+    /**
+     * Verifies that the adapter fails the upload of a command response with a 4.03
+     * if the adapter is disabled for the device's tenant.
+     */
+    @Test
+    public void testUploadCommandResponseFailsForDisabledTenant() {
+
+        // GIVEN an adapter that is not enabled for a device's tenant
+        final TenantObject to = TenantObject.from("tenant", true);
+        to.addAdapter(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP).setEnabled(Boolean.FALSE));
+        when(tenantClient.get(eq("tenant"), (SpanContext) any())).thenReturn(Future.succeededFuture(to));
+
+        final Promise<ProtonDelivery> outcome = Promise.promise();
+        final CommandResponseSender sender = givenACommandResponseSender(outcome);
+        final CoapServer server = getCoapServer(false);
+        final AbstractVertxBasedCoapAdapter<CoapAdapterProperties> adapter = getAdapter(server, true, null);
+
+        // WHEN a device publishes an command response
+        final String reqId = Command.getRequestId("correlation", "replyToId", "device");
+        final Buffer payload = Buffer.buffer("some payload");
+        final OptionSet options = new OptionSet();
+        options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
+        options.addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
+        options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
+        final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
+        final Device authenticatedDevice = new Device("tenant", "device");
+        final CoapContext context = CoapContext.fromRequest(coapExchange);
+
+        adapter.uploadCommandResponseMessage(context, authenticatedDevice, authenticatedDevice);
+
+        // THEN the command response not been forwarded downstream
+        verify(sender, never()).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
+        // and the device gets a 4.03 response
+        verify(coapExchange).respond(argThat((Response res) -> ResponseCode.FORBIDDEN.equals(res.getCode())));
+        // and the response has not been reported as forwarded
+        verify(metrics, never()).reportCommand(
+                eq(Direction.RESPONSE),
+                eq("tenant"),
+                any(),
+                eq(ProcessingOutcome.FORWARDED),
+                anyInt(),
+                any());
+    }
+
+    /**
      * Verifies that a telemetry message is rejected due to the limit exceeded.
      *
      */
@@ -784,6 +937,15 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.init(vertx, mock(Context.class));
 
         return adapter;
+    }
+
+    private CommandResponseSender givenACommandResponseSender(final Promise<ProtonDelivery> outcome) {
+
+        final CommandResponseSender sender = mock(CommandResponseSender.class);
+        when(sender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(outcome.future());
+
+        when(commandConsumerFactory.getCommandResponseSender(anyString(), anyString())).thenReturn(Future.succeededFuture(sender));
+        return sender;
     }
 
     private DownstreamSender givenAnEventSender(final Promise<ProtonDelivery> outcome) {

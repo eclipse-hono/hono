@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,31 +12,32 @@
  */
 
 
-package org.eclipse.hono.tests.http;
+package org.eclipse.hono.tests.coap;
 
 import org.eclipse.hono.tests.CommandEndpointConfiguration;
+import org.eclipse.hono.util.CommandConstants;
 
 
 /**
- * HTTP adapter specific configuration properties for defining variants of Command &amp; Control
+ * CoAP adapter specific configuration properties for defining variants of Command &amp; Control
  * related test scenarios.
  *
  */
-public final class HttpCommandEndpointConfiguration extends CommandEndpointConfiguration {
+public final class CoapCommandEndpointConfiguration extends CommandEndpointConfiguration {
 
     /**
      * Creates a new configuration.
      * 
      * @param subscriberRole The way in which to subscribe for commands.
      */
-    public HttpCommandEndpointConfiguration(final SubscriberRole subscriberRole) {
+    public CoapCommandEndpointConfiguration(final SubscriberRole subscriberRole) {
         super(subscriberRole);
     }
 
     String getCommandResponseUri(final String tenantId, final String deviceId, final String reqId) {
         if (isSubscribeAsGateway()) {
-            return String.format("/%s/res/%s/%s/%s", getSouthboundEndpoint(), tenantId, deviceId, reqId);
+            return String.format("/%s/%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId, deviceId, reqId);
         }
-        return String.format("/%s/res/%s", getSouthboundEndpoint(), reqId);
+        return String.format("/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, reqId);
     }
 }

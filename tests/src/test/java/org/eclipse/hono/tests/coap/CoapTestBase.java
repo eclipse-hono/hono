@@ -32,8 +32,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.apache.qpid.proton.message.Message;
+import org.assertj.core.data.Index;
 import org.eclipse.californium.core.CoapClient;
 import org.eclipse.californium.core.CoapHandler;
 import org.eclipse.californium.core.CoapResponse;
@@ -53,8 +55,10 @@ import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -64,6 +68,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -132,6 +138,19 @@ public abstract class CoapTestBase {
 
         helper = new IntegrationTestSupport(VERTX);
         helper.init().setHandler(ctx.completing());
+    }
+
+    /**
+     * Creates the endpoint configuration variants for Command &amp; Control scenarios.
+     * 
+     * @return The configurations.
+     */
+    static Stream<CoapCommandEndpointConfiguration> commandAndControlVariants() {
+        return Stream.of(
+                new CoapCommandEndpointConfiguration(SubscriberRole.DEVICE),
+                new CoapCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES),
+                new CoapCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE)
+                );
     }
 
     /**
@@ -655,53 +674,95 @@ public abstract class CoapTestBase {
     }
 
     /**
-     * Verifies that the CoAP adapter handles hono-ttd.
+     * Verifies that the CoAP adapter delivers a one-way command to a device.
      *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The test context
      * @throws InterruptedException if the test fails.
      */
-    @Test
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("commandAndControlVariants")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(final VertxTestContext ctx) throws InterruptedException {
+    public void testUploadMessagesWithTtdThatReplyWithOneWayCommand(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();
+        final String expectedCommand = String.format("%s=%s", Constants.HEADER_COMMAND, COMMAND_TO_SEND);
 
         final VertxTestContext setup = new VertxTestContext();
-        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .setHandler(setup.completing());
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).setHandler(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
         final AtomicInteger counter = new AtomicInteger();
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+        final String subscribingDeviceId = endpointConfig.isSubscribeAsGatewayForSingleDevice() ? commandTargetDeviceId
+                : deviceId;
 
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 msg -> {
                     final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
                     logger.debug("north-bound-cmd received {}, ttd: {}", msg, ttd);
-                    final Optional<TimeUntilDisconnectNotification> notification = TimeUntilDisconnectNotification.fromMessage(msg);
-                    if (notification.isPresent()) {
+                    TimeUntilDisconnectNotification.fromMessage(msg).ifPresent(notification -> {
+                        ctx.verify(() -> {
+                            assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                            assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
+                        });
                         logger.debug("send one-way-command");
                         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
                         helper.sendOneWayCommand(
                                 tenantId,
-                                deviceId,
+                                commandTargetDeviceId,
                                 COMMAND_TO_SEND,
                                 "application/json",
                                 inputData.toBuffer(),
                                 // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                                 IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
-                                notification.get().getMillisecondsUntilExpiry() / 2);
-                    }
+                                notification.getMillisecondsUntilExpiry() / 2);
+                    });
                 },
                 count -> {
                     final Promise<OptionSet> result = Promise.promise();
-                    final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
-                    request.getOptions().setUriQuery("hono-ttd=4");
+                    final Request request = createCoapsRequest(endpointConfig, commandTargetDeviceId, count);
+                    request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 4));
                     logger.debug("south-bound send {}", request);
-                    client.advanced(getHandler(result, ResponseCode.CONTENT), request);
-                    return result.future();
+                    client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                    return result.future()
+                            .map(responseOptions -> {
+                                ctx.verify(() -> {
+                                    assertResponseContainsOneWayCommand(
+                                            endpointConfig,
+                                            responseOptions,
+                                            expectedCommand,
+                                            tenantId,
+                                            commandTargetDeviceId);
+                                });
+                                return responseOptions;
+                            });
                 });
+    }
+
+    private void assertResponseContainsOneWayCommand(
+            final CoapCommandEndpointConfiguration endpointConfiguration,
+            final OptionSet responseOptions,
+            final String expectedCommand,
+            final String tenantId,
+            final String commandTargetDeviceId) {
+
+        assertThat(responseOptions.getLocationQuery())
+            .as("response doesn't contain command")
+            .contains(expectedCommand);
+        assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
+        assertThat(responseOptions.getLocationPath()).contains(CommandConstants.COMMAND_ENDPOINT, Index.atIndex(0));
+        if (endpointConfiguration.isSubscribeAsGateway()) {
+            assertThat(responseOptions.getLocationPath()).contains(tenantId, Index.atIndex(1));
+            assertThat(responseOptions.getLocationPath()).contains(commandTargetDeviceId, Index.atIndex(2));
+        }
     }
 
     private void assertMessageProperties(final VertxTestContext ctx, final Message msg) {
@@ -898,6 +959,25 @@ public abstract class CoapTestBase {
             final int msgNo) {
 
         return createCoapsRequest(code, getMessageType(), resource, msgNo);
+    }
+
+    /**
+     * Creates a CoAP request using the <em>coaps</em> scheme.
+     * 
+     * @param endpointConfig The endpoint configuration.
+     * @param requestDeviceId The identifier of the device to publish data for.
+     * @param msgNo The message number.
+     * @return The request to send.
+     */
+    protected Request createCoapsRequest(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final String requestDeviceId,
+            final int msgNo) {
+
+        if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
+            return createCoapsRequest(Code.PUT, getMessageType(), getPutResource(tenantId, requestDeviceId), msgNo);
+        }
+        return createCoapsRequest(Code.POST, getMessageType(), getPostResource(), msgNo);
     }
 
     /**
