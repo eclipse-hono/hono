@@ -25,6 +25,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +54,7 @@ import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
 import org.eclipse.californium.scandium.dtls.pskstore.StaticPskStore;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
@@ -78,6 +80,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
@@ -671,6 +674,148 @@ public abstract class CoapTestBase {
             return result.future();
         })
         .setHandler(ctx.completing());
+    }
+
+    /**
+     * Verifies that the CoAP adapter delivers a command to a device and accepts
+     * the corresponding response from the device.
+     * 
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("commandAndControlVariants")
+    public void testUploadMessagesWithTtdThatReplyWithCommand(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+        testUploadMessagesWithTtdThatReplyWithCommand(endpointConfig, tenant, ctx);
+    }
+
+    private void testUploadMessagesWithTtdThatReplyWithCommand(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final Tenant tenant, final VertxTestContext ctx) throws InterruptedException {
+
+        final String expectedCommand = String.format("%s=%s", Constants.HEADER_COMMAND, COMMAND_TO_SEND);
+
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).setHandler(setup.completing());
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+        final String subscribingDeviceId = endpointConfig.isSubscribeAsGatewayForSingleDevice() ? commandTargetDeviceId
+                : deviceId;
+
+        final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+        final AtomicInteger counter = new AtomicInteger();
+
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                msg -> {
+
+                    TimeUntilDisconnectNotification.fromMessage(msg)
+                        .map(notification -> {
+                            logger.trace("received piggy backed message [ttd: {}]: {}", notification.getTtd(), msg);
+                            ctx.verify(() -> {
+                                assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                                assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
+                            });
+                            // now ready to send a command
+                            final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                            return helper.sendCommand(
+                                    tenantId,
+                                    commandTargetDeviceId,
+                                    COMMAND_TO_SEND,
+                                    "application/json",
+                                    inputData.toBuffer(),
+                                    // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
+                                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
+                                    notification.getMillisecondsUntilExpiry())
+                                    .map(response -> {
+                                        ctx.verify(() -> {
+                                            assertThat(response.getContentType()).isEqualTo("text/plain");
+                                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)).isEqualTo(commandTargetDeviceId);
+                                            assertThat(response.getApplicationProperty(MessageHelper.APP_PROPERTY_TENANT_ID, String.class)).isEqualTo(tenantId);
+                                        });
+                                        return response;
+                                    });
+                        });
+                },
+                count -> {
+                    final Promise<OptionSet> result = Promise.promise();
+                    final Request request = createCoapsRequest(endpointConfig, commandTargetDeviceId, count);
+                    request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 5));
+                    client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                    return result.future()
+                            .map(responseOptions -> {
+                                ctx.verify(() -> {
+                                    assertResponseContainsCommand(
+                                            endpointConfig,
+                                            responseOptions,
+                                            expectedCommand,
+                                            tenantId,
+                                            commandTargetDeviceId);
+                                });
+                                final List<String> locationPath = responseOptions.getLocationPath();
+                                return locationPath.get(locationPath.size() - 1);
+                            })
+                            .compose(receivedCommandRequestId -> {
+                                // send a response to the command now
+                                final String responseUri = endpointConfig.getCommandResponseUri(tenantId, commandTargetDeviceId, receivedCommandRequestId);
+                                logger.debug("sending response to command [uri: {}]", responseUri);
+
+                                final Buffer body = Buffer.buffer("ok");
+                                final Promise<OptionSet> commandResponseResult = Promise.promise();
+                                final Request commandResponseRequest;
+                                if (endpointConfig.isSubscribeAsGateway()) {
+                                    // GW uses PUT when acting on behalf of a device
+                                    commandResponseRequest = createCoapsRequest(Code.PUT, Type.CON, responseUri, body.getBytes());
+                                } else {
+                                    commandResponseRequest = createCoapsRequest(Code.POST, Type.CON, responseUri, body.getBytes());
+                                }
+                                commandResponseRequest.getOptions()
+                                    .setContentFormat(MediaTypeRegistry.TEXT_PLAIN)
+                                    .addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
+                                client.advanced(getHandler(commandResponseResult, ResponseCode.CHANGED), commandResponseRequest);
+                                return commandResponseResult.future()
+                                        .recover(thr -> {
+                                            // wrap exception, making clear it occurred when sending the command response,
+                                            // not the preceding telemetry/event message
+                                            final String msg = "Error sending command response: " + thr.getMessage();
+                                            return Future.failedFuture(thr instanceof ServiceInvocationException
+                                                    ? new ServiceInvocationException(((ServiceInvocationException) thr).getErrorCode(), msg, thr)
+                                                    : new RuntimeException(msg, thr));
+                                        });
+                            });
+                });
+    }
+
+    private void assertResponseContainsCommand(
+            final CoapCommandEndpointConfiguration endpointConfiguration,
+            final OptionSet responseOptions,
+            final String expectedCommand,
+            final String tenantId,
+            final String commandTargetDeviceId) {
+
+        assertThat(responseOptions.getLocationQuery())
+            .as("location query must contain parameter [%s]", expectedCommand)
+            .contains(expectedCommand);
+        assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
+        int idx = 0;
+        assertThat(responseOptions.getLocationPath()).contains(CommandConstants.COMMAND_RESPONSE_ENDPOINT, Index.atIndex(idx++));
+        if (endpointConfiguration.isSubscribeAsGateway()) {
+            assertThat(responseOptions.getLocationPath()).contains(tenantId, Index.atIndex(idx++));
+            assertThat(responseOptions.getLocationPath()).contains(commandTargetDeviceId, Index.atIndex(idx++));
+        }
+        // request ID
+        assertThat(responseOptions.getLocationPath().get(idx))
+            .as("location path must contain command request ID")
+            .isNotNull();
     }
 
     /**
