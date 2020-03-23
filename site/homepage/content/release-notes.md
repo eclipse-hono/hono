@@ -20,6 +20,11 @@ title = "Release Notes"
   of the incoming message based on the configured *minimum message size*. Instead, it used the
   actual payload size to verify if the *message limit* has been exceeded or not. This has been
   fixed now.
+* The Command & Control implementation in the protocol adapters has been optimized to use
+  far fewer consumer links to the AMQP Messaging Network, saving up on resources. Before, for 
+  every command subscription, a consumer link specific to the corresponding device was created, 
+  whereas now, only a single consumer link per protocol adapter instance gets created for the
+  same purpose.
 
 ### API Changes
 
@@ -31,6 +36,11 @@ title = "Release Notes"
 * The methods of the service base classes `CredentialsManagementService`, `CredentialsService`,
   `DeviceConnectionService`, `DeviceManagementService`, `RegistrationService`, `TenantManagementService` and 
   `TenantService` have been refactored to now return a Vert.x Future instead of taking a Handler as an argument.
+* The `CommandConsumerFactory` interface has been renamed to `ProtocolAdapterCommandConsumerFactory` and method
+  signatures have been changed slightly. Also, a new `initialize` method has been added to be called on protocol
+  adapter startup.
+* The AMQP Messaging Network now has to be configured in such a way that protocol adapters can send and
+  receive messages on the `command_internal/*` instead of the `control/*` address pattern.
 
 ## 1.1.1
 
