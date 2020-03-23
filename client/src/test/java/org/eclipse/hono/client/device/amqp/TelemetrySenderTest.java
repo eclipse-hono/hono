@@ -139,11 +139,9 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
      * Verifies that sending the message waits for the disposition update from the peer.
      *
      * @param ctx The test context to use for running asynchronous tests.
-     * @throws InterruptedException if test is interrupted while waiting.
      */
     @Test
-    public void testSendAndWaitForOutcomeWaitsForDispositionUpdate(final VertxTestContext ctx)
-            throws InterruptedException {
+    public void testSendAndWaitForOutcomeWaitsForDispositionUpdate(final VertxTestContext ctx) {
 
         // GIVEN a TelemetrySender instance
         final TelemetrySender telemetrySender = createTelemetrySender();
@@ -155,7 +153,6 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
         deliveryFuture.setHandler(ctx.completing());
 
         // THEN the future waits for the disposition to be updated by the peer
-        Thread.sleep(100L);
         assertThat(deliveryFuture.isComplete()).isFalse();
         updateDisposition();
     }
