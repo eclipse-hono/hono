@@ -74,7 +74,9 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> processUpdateCredentials(DeviceKey.from(tenantKey, deviceId), resourceVersion, credentials, span));
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
+                        : processUpdateCredentials(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, credentials, span));
     }
 
     @Override
@@ -84,7 +86,9 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantHandle -> processReadCredentials(DeviceKey.from(tenantHandle, deviceId), span));
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
+                        : processReadCredentials(DeviceKey.from(result.getPayload(), deviceId), span));
     }
 
 }

@@ -56,6 +56,8 @@ public abstract class AbstractCredentialsService implements CredentialsService {
     public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Span span) {
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> processGet(tenantKey, CredentialKey.from(tenantKey, authId, type), clientContext, span));
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(CredentialsResult.from(result.getStatus()))
+                        : processGet(result.getPayload(), CredentialKey.from(result.getPayload(), authId, type), clientContext, span));
     }
 }
