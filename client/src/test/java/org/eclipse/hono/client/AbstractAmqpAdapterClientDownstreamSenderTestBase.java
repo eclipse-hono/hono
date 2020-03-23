@@ -15,6 +15,7 @@ package org.eclipse.hono.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,14 +23,21 @@ import static org.mockito.Mockito.when;
 import java.util.Collections;
 import java.util.Map;
 
+import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
+import org.eclipse.hono.client.impl.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -38,17 +46,19 @@ import io.vertx.proton.ProtonSender;
  */
 public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
 
-    protected final String tenantId = "test-tenant";
-    protected final String deviceId = "test-device";
-    protected final String contentType = "text/plain";
-    protected final byte[] payload = "test-value".getBytes();
-    protected final String testPropertyKey = "test-key";
-    protected final String testPropertyValue = "test-value";
-    protected final Map<String, ?> applicationProperties = Collections.singletonMap(testPropertyKey, testPropertyValue);
+    protected static final String TENANT_ID = "test-tenant";
+    protected static final String DEVICE_ID = "test-device";
+    protected static final String CONTENT_TYPE = "text/plain";
+    protected static final byte[] PAYLOAD = "test-value".getBytes();
+    protected static final String TEST_PROPERTY_KEY = "test-key";
+    protected static final String TEST_PROPERTY_VALUE = "test-value";
+    protected static final Map<String, String> APPLICATION_PROPERTIES = Collections.singletonMap(TEST_PROPERTY_KEY,
+            TEST_PROPERTY_VALUE);
 
     protected ProtonSender sender;
     protected HonoConnection connection;
-    protected ArgumentCaptor<Message> messageArgumentCaptor;
+    protected ProtonDelivery protonDelivery;
+    protected Tracer.SpanBuilder spanBuilder;
 
     /**
      * Sets up fixture.
@@ -56,32 +66,62 @@ public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
     @BeforeEach
     public void setUp() {
         sender = HonoClientUnitTestHelper.mockProtonSender();
-        final Vertx vertx = mock(Vertx.class);
-        connection = HonoClientUnitTestHelper.mockHonoConnection(vertx);
+
+        protonDelivery = mock(ProtonDelivery.class);
+        when(protonDelivery.remotelySettled()).thenReturn(true);
+        final Accepted deliveryState = new Accepted();
+        when(protonDelivery.getRemoteState()).thenReturn(deliveryState);
+
+        when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(protonDelivery);
+
+        final Span span = mock(Span.class);
+        when(span.context()).thenReturn(mock(SpanContext.class));
+        spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
+
+        final Tracer tracer = mock(Tracer.class);
+        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+
+        connection = HonoClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
+
+        when(connection.getTracer()).thenReturn(tracer);
         when(connection.createSender(any(), any(), any())).thenReturn(Future.succeededFuture(sender));
-        messageArgumentCaptor = ArgumentCaptor.forClass(Message.class);
+
     }
 
     /**
-     * Executes the assertions that checkthat the message produced conforms to the expectations of the AMQP adapter.
-     * 
-     * @param expectedAddress The expected target address.
+     * Updates the disposition for the {@link ProtonSender#send(Message, Handler)} operation.
      */
-    protected void assertMessageConformsAmqpAdapterSpec(final String expectedAddress) {
+    @SuppressWarnings("unchecked")
+    protected void updateDisposition() {
+        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
+        dispositionHandlerCaptor.getValue().handle(protonDelivery);
+    }
 
+    /**
+     * Executes the assertions that check that the message created by the client conforms to the expectations of the
+     * AMQP adapter.
+     *
+     * @param expectedAddress The expected target address.
+     * @return The captured message.
+     */
+    protected Message assertMessageConformsAmqpAdapterSpec(final String expectedAddress) {
+
+        final ArgumentCaptor<Message> messageArgumentCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageArgumentCaptor.capture(), any());
 
         final Message message = messageArgumentCaptor.getValue();
 
         assertThat(message.getAddress()).isEqualTo(expectedAddress);
 
-        assertThat(MessageHelper.getPayloadAsString(message)).isEqualTo(new String(payload));
-        assertThat(message.getContentType()).isEqualTo(contentType);
+        assertThat(MessageHelper.getPayloadAsString(message)).isEqualTo(new String(PAYLOAD));
+        assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE);
 
-        final Map<String, Object> applicationProperties = message.getApplicationProperties().getValue();
-        assertThat(applicationProperties.get(testPropertyKey)).isEqualTo(testPropertyValue);
+        assertThat(message.getApplicationProperties().getValue().get(TEST_PROPERTY_KEY)).isEqualTo(TEST_PROPERTY_VALUE);
 
-        assertThat(applicationProperties.get("device_id")).isEqualTo(deviceId);
+        assertThat(message.getApplicationProperties().getValue().get("device_id")).isEqualTo(DEVICE_ID);
+
+        return message;
     }
 
 }

@@ -3,111 +3,47 @@ title = "AMQP Adapter Client for Java"
 weight = 390
 +++
 
-Eclipse Hono&trade; comes with a Java client for the AMQP adapter. It is intended to be used to implement (prototypical)
-devices, (protocol) gateways or to be used for (end-to-end) testing. It is based on Eclipse Vert.x.
+Eclipse Hono&trade; comes with a Java client for the AMQP adapter. It is intended for the implementation of 
+(prototype) devices, (protocol) gateways or (end-to-end) tests. The client is based on Eclipse Vert.x.
 
 The starting point is the class `AmqpAdapterClientFactory`.
 
-It provides methods to get sender or receivers for the communication with the AMQP adapter. A sender is available for 
-each of the following actions:
+The factory provides methods to get a receiver for receiving commands and a sender for each of the following actions:
 
- * send telemetry message
- * send event message
- * send a response to a previously  received command
+ * send a telemetry message
+ * send an event message
+ * send a response to a previously received command
  
 
 {{% note title="Do not re-use sender instances" %}}
-The senders manage the underlying AMQP sender links, which are restored after a temporary interruption of the connection. 
-('HonoConnection' handles automatic reconnection). To achieve this, a caching mechanism is used, so that 
- defective links are replaced by new ones. It is important that the sender is always retrieved from the factory before sending.
- Do not keep links to sender objects and reuse them for subsequent send operations!
+The senders manage the underlying AMQP sender links, which are restored after temporary interruption of the connection 
+(`HonoConnection` manages the automatic reconnection). To achieve this, a caching mechanism is used, so that 
+defective links are replaced by new ones. The sender must be always retrieved from the factory when sending
+because otherwise the link might no longer exist. 
+So, do not hold references to sender objects and re-use them for subsequent send operations!
 {{% /note %}}
 
 
-## Create a Client Instance 
+For examples of how to use the client, see the example implementation in the `AmqpExampleDevice` class.
 
-```
-String tenantId = ...;
-HonoConnection connection = ...;
-connection.connect();
+## Usage in a Gateway
 
-AmqpAdapterClientFactory factory = AmqpAdapterClientFactory.create(connection, tenantId);
-```
+There are two ways to subscribe to commands for use in a gateway:
 
+1. Gateway subscribing for commands for a specific device: 
+The gateway subscribes individually for each connected device by creating a command consumer for the specific device.
+1. Gateway subscribing for commands for all its devices: 
+The gateway subscribes for commands sent to all the different devices that the gateway acts on behalf of by 
+creating a command consumer that is not scoped on a specific device. 
 
-## Send Event
+Subscribing for all devices does not work if multiple instances of the gateway are running at the same time, 
+because a command is only sent to one receiver, and this may be an instance that has no connection to the device. 
+On the other hand, subscribing for a specific device once it connects to the gateway instance 
+(and closing the subscription once it disconnects) may not work for device-oriented protocols that are not connection-based.
 
-```
-final String deviceId = ...;
-final byte[] payload = ...;
-final String contentType = ...;
-final Map<String, ?> customApplicationProperties = ...;
+## Tracing 
 
-factory.getOrCreateEventSender()
-        .compose(eventSender -> eventSender.send(deviceId, payload, contentType, customApplicationProperties))
-        .setHandler(asyncResult -> {
-            if (asyncResult.succeeded()){
-                System.out.println("Message has been successfully send. Remote state is: " + asyncResult.result().getRemoteState());
-            } else {
-                System.out.println("Message send failed" + asyncResult.cause());
-            }
-        });
-```
-
-## Send Telemetry message
-
-Send a telemetry message with QoS *AT_MOST_ONCE*: 
-```
-final String deviceId = ...;
-final byte[] payload = ...;
-final String contentType = ...;
-final Map<String, ?> customApplicationProperties = ...;
-
-factory.getOrCreateTelemetrySender()
-            .compose(telemetrySender -> telemetrySender.send(deviceId, payload, contentType, customApplicationProperties))
-            .setHandler(asyncResult -> {
-                if (asyncResult.succeeded()){
-                    System.out.println("Message has been successfully send. Remote state is: " + asyncResult.result().getRemoteState());
-                } else {
-                    System.out.println("Message send failed" + asyncResult.cause());
-                }
-            });
-```
-
-
-Send a telemetry message with QoS *AT_LEAST_ONCE*: 
-```
-final String deviceId = ...;
-final byte[] payload = ...;
-final String contentType = ...;
-final Map<String, ?> customApplicationProperties = ...;
-
-factory.getOrCreateTelemetrySender()
-            .compose(telemetrySender -> telemetrySender.sendAndWaitForOutcome(deviceId, payload, contentType, customApplicationProperties))
-            .setHandler(asyncResult -> {
-                if (asyncResult.succeeded()){
-                    System.out.println("Message has been successfully send. Remote state is: " + asyncResult.result().getRemoteState());
-                } else {
-                    System.out.println("Message send failed" + asyncResult.cause());
-                }
-            });
-```
-
-## Receive a command
-
-```
-factory.createCommandConsumer( msg -> {
-        System.out.println("Received message: " + MessageHelper.getPayloadAsString(msg);
-    });
-```
-
-*NB:* The returned `MessageConsumer` should be closed when no commands should be received anymore.
-
-
-Gateways can subscribe to commands for devices individually with the following code:
-  
-```
-factory.createDeviceSpecificCommandConsumer(deviceIdOfTheDevice, msg -> {
-            System.out.println("Received message: " + MessageHelper.getPayloadAsString(msg);
-        });
-```
+The AMQP Adapter Client supports tracing of the messages with [OpenTracing](https://opentracing.io/). To use tracing, each of the
+senders returned by the factory can be cast to an interface with the same name and the prefix "Traceable" 
+(e.g. cast `TelemetrySender` to `TraceableTelemetrySender`).
+The traceable interfaces provide *send* methods with an additional `SpanContext` parameter. 
