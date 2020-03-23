@@ -51,7 +51,19 @@ public class TenantKey {
     }
 
     /**
-     * Creates a credential key from tenant identifier and and tenant name in external system.
+     * Creates a credential key from tenant identifier.
+     *
+     * @param tenantId The tenant identifier.
+     * @throws NullPointerException if provided tenant identifier is {@code null}.
+     * @return The tenant key.
+     */
+    public static TenantKey from(final String tenantId) {
+        Objects.requireNonNull(tenantId);
+        return new TenantKey(tenantId, null);
+    }
+
+    /**
+     * Creates a credential key from tenant identifier and ad tenant name in external system.
      *
      * @param tenantId The tenant identifier.
      * @param name The tenant name.

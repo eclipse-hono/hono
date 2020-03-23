@@ -13,8 +13,10 @@
 package org.eclipse.hono.deviceregistry.service.tenant;
 
 import java.net.HttpURLConnection;
+import java.util.Optional;
 
-import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -32,13 +34,20 @@ public class AutowiredTenantInformationService implements TenantInformationServi
     TenantService service;
 
     @Override
-    public Future<TenantKey> tenantExists(final String tenantId, final Span span) {
+    public Future<Result<TenantKey>> tenantExists(final String tenantId, final Span span) {
         return service.get(tenantId, span)
                 .compose(result -> {
                     if (result.isOk()) {
-                        return Future.succeededFuture(TenantKey.from(tenantId, tenantId));
+                        return Future.succeededFuture(
+                                OperationResult.ok(
+                                        HttpURLConnection.HTTP_OK,
+                                        TenantKey.from(tenantId),
+                                        Optional.empty(),
+                                        Optional.empty()
+                                )
+                        );
                     } else {
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "Tenant does not exist"));
+                        return Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NOT_FOUND));
                     }
                 });
     }

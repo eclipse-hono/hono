@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -110,7 +111,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * {@link #processAssertRegistration(DeviceKey, Span) processAssertRegistration} method to work.
      */
     @Override
-    public Future<RegistrationResult>  assertRegistration(final String tenantId, final String deviceId, final Span span) {
+    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -118,7 +119,9 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> processAssertRegistration(DeviceKey.from(tenantKey, deviceId), span)
+                .compose(tenantKeyResult -> tenantKeyResult.isError()
+                        ? Future.succeededFuture(RegistrationResult.from(tenantKeyResult.getStatus()))
+                        : processAssertRegistration(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
                         .compose(result -> {
                             if (isDeviceEnabled(result)) {
                                 final JsonObject deviceData = result.getPayload()
@@ -154,7 +157,13 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> {
+                .compose(result ->  {
+
+                    if (result.isError()) {
+                        return Future.succeededFuture(RegistrationResult.from(result.getStatus()));
+                    }
+
+                    final TenantKey tenantKey = result.getPayload();
 
                     final Future<RegistrationResult> deviceInfoTracker = processAssertRegistration(DeviceKey.from(tenantKey, deviceId), span);
                     final Future<RegistrationResult> gatewayInfoTracker = processAssertRegistration(DeviceKey.from(tenantKey, gatewayId), span);

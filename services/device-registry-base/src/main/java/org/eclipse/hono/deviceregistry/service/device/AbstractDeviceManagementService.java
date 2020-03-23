@@ -101,7 +101,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> processCreateDevice(DeviceKey.from(tenantKey, deviceIdValue), device, span));
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
+                        : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span));
 
     }
 
@@ -113,7 +115,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> processReadDevice(DeviceKey.from(tenantKey, deviceId), span));
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
+                        : processReadDevice(DeviceKey.from(result.getPayload(), deviceId), span));
 
     }
 
@@ -126,7 +130,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> processUpdateDevice(DeviceKey.from(tenantKey, deviceId), device, resourceVersion, span));
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
+                        : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span));
 
     }
 
@@ -139,7 +145,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .flatMap(tenantKey -> processDeleteDevice(DeviceKey.from(tenantKey, deviceId), resourceVersion, span));
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(Result.from(result.getStatus()))
+                        : processDeleteDevice(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, span));
 
     }
 }

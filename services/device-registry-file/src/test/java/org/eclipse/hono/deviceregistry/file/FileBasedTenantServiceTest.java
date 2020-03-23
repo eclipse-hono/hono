@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -472,8 +471,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         informationService.setService(svc);
 
         informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
-                .setHandler(ctx.failing(t -> {
-                                ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
+                .setHandler(ctx.succeeding(t -> {
+                                ctx.verify(() -> assertThat(t.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                             }));
 
         addTenant(Constants.DEFAULT_TENANT)
@@ -481,7 +480,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                     informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
                             .setHandler(ctx.succeeding(s -> {
                                 ctx.verify(() -> {
-                                    assertThat(s.getName()).isEqualTo(Constants.DEFAULT_TENANT);
+                                    assertThat(s.getPayload().getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
                                     ctx.completeNow();
                                 });
                             }));
