@@ -83,13 +83,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
-    /**
-     * The name of the boolean field in the tenant configuration (inside the 'ext' field of an 'hono-http' type
-     * 'adapters' entry) that defines whether concurrent requests from gateway to get commands for specific devices
-     * shall be supported.
-     */
-    static final String FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS = "support-concurrent-gateway-device-command-requests";
-
     private static final String KEY_TIMER_ID = "timerId";
 
     private HttpServer server;
@@ -1056,28 +1049,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             // only per HTTP request
         };
 
-        // First check whether the tenant has been configured to support concurrent ttd-param requests from the same
-        // gateway for different devices. In that case a device-specific (instead of a gateway-specific) consumer link will be created below
-        // (preventing multiple consumer links on the same gateway address from multiple HTTP adapter instances).
-        final Future<MessageConsumer> commandConsumerFuture = isSupportConcurrentGatewayDeviceCommandRequests(tenantObject)
-                .compose(supportConcurrentGatewayDeviceCommandRequests -> {
-                    if (gatewayId != null && !supportConcurrentGatewayDeviceCommandRequests) {
-                        // gateway scenario
-                        return getCommandConsumerFactory().createCommandConsumer(
-                                tenantObject.getTenantId(),
-                                deviceId,
-                                gatewayId,
-                                commandHandler);
-                    } else {
-                        if (gatewayId != null) {
-                            log.trace("gateway mapping disabled for tenant [{}], will create device-specific consumer", tenantObject.getTenantId());
-                        }
-                        return getCommandConsumerFactory().createCommandConsumer(
-                                tenantObject.getTenantId(),
-                                deviceId,
-                                commandHandler);
-                    }
-                });
+        final Future<MessageConsumer> commandConsumerFuture;
+        if (gatewayId != null) {
+            // gateway scenario
+            commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
+                    tenantObject.getTenantId(),
+                    deviceId,
+                    gatewayId,
+                    commandHandler);
+        } else {
+            commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
+                    tenantObject.getTenantId(),
+                    deviceId,
+                    commandHandler);
+        }
         return commandConsumerFuture
                 .map(consumer -> {
                     if (!requestProcessed.get()) {
@@ -1086,45 +1071,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     }
                     return consumer;
                 });
-    }
-
-    @Override
-    protected final Future<Boolean> isGatewayMappingEnabled(final String tenantId, final String deviceId,
-            final Device authenticatedDevice) {
-        // If we want to support concurrent ttd requests from one gateway for multiple devices,
-        // we have to disable the gateway mapping.
-        return isSupportConcurrentGatewayDeviceCommandRequests(tenantId)
-                .map(supportConcurrentRequests -> {
-                    if (supportConcurrentRequests) {
-                        log.trace("gateway mapping disabled for tenant [{}]", tenantId);
-                    }
-                    return !supportConcurrentRequests;
-                })
-                .recover(t -> {
-                    log.debug("error determining whether gateway mapping is enabled, assuming true", t);
-                    return Future.succeededFuture(true);
-                });
-    }
-
-    private Future<Boolean> isSupportConcurrentGatewayDeviceCommandRequests(final String tenantId) {
-        return getTenantConfiguration(tenantId, null)
-                .compose(this::isSupportConcurrentGatewayDeviceCommandRequests);
-    }
-
-    private Future<Boolean> isSupportConcurrentGatewayDeviceCommandRequests(final TenantObject tenantObject) {
-
-        final Boolean result = Optional.ofNullable(tenantObject.getAdapter(getTypeName()))
-                .map(conf -> conf.getExtensions().get(FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS))
-                .map(obj -> {
-                    if (obj instanceof Boolean) {
-                        return (Boolean) obj;
-                    } else {
-                        return Boolean.FALSE;
-                    }
-                })
-                .orElse(false);
-
-        return Future.succeededFuture(result);
     }
 
     /**
