@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verify;
 
 import org.eclipse.hono.client.AbstractAmqpAdapterClientDownstreamSenderTestBase;
 import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientEventSenderImpl;
+import org.eclipse.hono.util.EventConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -37,7 +38,7 @@ import io.vertx.proton.ProtonDelivery;
 @ExtendWith(VertxExtension.class)
 public class EventSenderTest extends AbstractAmqpAdapterClientDownstreamSenderTestBase {
 
-    private static final String ADDRESS = "event/" + TENANT_ID + "/" + DEVICE_ID;
+    private static final String ADDRESS = EventConstants.EVENT_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID;
 
     /**
      * Verifies that the message created by the client conforms to the expectations of the AMQP adapter.

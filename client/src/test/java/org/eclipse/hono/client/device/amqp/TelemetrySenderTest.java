@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.eclipse.hono.client.AbstractAmqpAdapterClientDownstreamSenderTestBase;
 import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientTelemetrySenderImpl;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -39,7 +40,7 @@ import io.vertx.proton.ProtonDelivery;
 @ExtendWith(VertxExtension.class)
 public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSenderTestBase {
 
-    private static final String ADDRESS = "telemetry/" + TENANT_ID + "/" + DEVICE_ID;
+    private static final String ADDRESS = TelemetryConstants.TELEMETRY_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID;
 
     /**
      * Verifies that the message created by {@link TelemetrySender#send(String, byte[], String, Map)} conforms to the

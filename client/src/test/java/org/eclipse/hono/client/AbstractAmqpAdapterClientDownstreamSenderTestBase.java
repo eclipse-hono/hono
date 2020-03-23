@@ -117,9 +117,10 @@ public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
         assertThat(MessageHelper.getPayloadAsString(message)).isEqualTo(new String(PAYLOAD));
         assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE);
 
-        assertThat(message.getApplicationProperties().getValue().get(TEST_PROPERTY_KEY)).isEqualTo(TEST_PROPERTY_VALUE);
+        assertThat(MessageHelper.getApplicationProperty(message.getApplicationProperties(), TEST_PROPERTY_KEY,
+                String.class)).isEqualTo(TEST_PROPERTY_VALUE);
 
-        assertThat(message.getApplicationProperties().getValue().get("device_id")).isEqualTo(DEVICE_ID);
+        assertThat(MessageHelper.getDeviceId(message)).isEqualTo(DEVICE_ID);
 
         return message;
     }

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.AbstractAmqpAdapterClientDownstreamSenderTestBase;
 import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientCommandResponseSender;
+import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -38,7 +39,8 @@ import io.vertx.proton.ProtonDelivery;
 @ExtendWith(VertxExtension.class)
 public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSenderTestBase {
 
-    private static final String ADDRESS = "command_response/" + TENANT_ID + "/" + DEVICE_ID + "/123";
+    private static final String ADDRESS = CommandConstants.COMMAND_RESPONSE_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID
+            + "/123";
     private static final String CORRELATION_ID = "0";
     private static final int STATUS = 200;
 
@@ -100,10 +102,9 @@ public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSen
      * Verifies that sending the command response waits for the disposition update from the peer.
      *
      * @param ctx The test context to use for running asynchronous tests.
-     * @throws InterruptedException if test is interrupted while waiting.
      */
     @Test
-    public void testSendingWaitsForDispositionUpdate(final VertxTestContext ctx) throws InterruptedException {
+    public void testSendingWaitsForDispositionUpdate(final VertxTestContext ctx) {
 
         // GIVEN a CommandResponder instance
         final CommandResponder commandResponder = createCommandResponder();
@@ -115,7 +116,6 @@ public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSen
         deliveryFuture.setHandler(ctx.completing());
 
         // THEN the future waits for the disposition to be updated by the peer
-        Thread.sleep(100L);
         assertThat(deliveryFuture.isComplete()).isFalse();
         updateDisposition();
     }
