@@ -24,13 +24,18 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -201,9 +206,12 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
     public Future<JsonObject> getCommandHandlingAdapterInstances(final String tenantId, final String deviceId,
             final Set<String> viaGateways, final SpanContext context) {
 
+        final Span span = createSpan("get command handling adapter instances", tenantId, deviceId, null, context);
+
+        final Future<JsonObject> resultFuture;
         if (viaGateways.isEmpty()) {
              // get the command handling adapter instance for the device (no gateway involved)
-            return cache.get(getAdapterInstanceEntryKey(tenantId, deviceId))
+            resultFuture = cache.get(getAdapterInstanceEntryKey(tenantId, deviceId))
                     .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
                     .compose(adapterInstanceId -> {
                         if (adapterInstanceId == null) {
@@ -213,19 +221,32 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
                         } else {
                             LOG.debug("found command handling adapter instance '{}' [tenant: {}, device-id: {}]",
                                     adapterInstanceId, tenantId, deviceId);
+                            span.log("returning command handling adapter instance for device itself");
+                            setTagsForSingleResult(span, adapterInstanceId);
                             return Future.succeededFuture(getAdapterInstancesResultJson(deviceId, adapterInstanceId));
                         }
                     });
         } else if (viaGateways.size() <= VIA_GATEWAYS_OPTIMIZATION_THRESHOLD) {
-            return getInstancesQueryingAllGatewaysFirst(tenantId, deviceId, viaGateways);
+            resultFuture = getInstancesQueryingAllGatewaysFirst(tenantId, deviceId, viaGateways, span);
         } else {
             // number of viaGateways is more than threshold value - reduce cache accesses by not checking *all* viaGateways,
             // instead trying the last known gateway first
-            return getInstancesGettingLastKnownGatewayFirst(tenantId, deviceId, viaGateways);
+            resultFuture = getInstancesGettingLastKnownGatewayFirst(tenantId, deviceId, viaGateways, span);
         }
+        return resultFuture.compose(jsonObject -> {
+            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_OK);
+            span.finish();
+            return Future.succeededFuture(jsonObject);
+        }).recover(t -> {
+            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
+            TracingHelper.logError(span, t);
+            span.finish();
+            return Future.failedFuture(t);
+        });
     }
 
-    private Future<JsonObject> getInstancesQueryingAllGatewaysFirst(final String tenantId, final String deviceId, final Set<String> viaGateways) {
+    private Future<JsonObject> getInstancesQueryingAllGatewaysFirst(final String tenantId, final String deviceId,
+            final Set<String> viaGateways, final Span span) {
         // get the command handling adapter instances for the device and *all* via-gateways in one call first
         // (this saves the extra lastKnownGateway check if only one adapter instance is returned)
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
@@ -236,10 +257,12 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
                     if (deviceToInstanceMap.isEmpty()) {
                         LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
                                 tenantId, deviceId);
+                        span.log("no command handling adapter instances found");
                         resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
                     } else if (deviceToInstanceMap.containsKey(deviceId)) {
                         // there is a adapter instance set for the device itself - that gets precedence
-                        resultFuture = getAdapterInstanceFoundForDeviceItselfResult(tenantId, deviceId, deviceToInstanceMap.get(deviceId));
+                        resultFuture = getAdapterInstanceFoundForDeviceItselfResult(tenantId, deviceId,
+                                deviceToInstanceMap.get(deviceId), span);
                     } else if (deviceToInstanceMap.size() > 1) {
                         // multiple gateways found - check last known gateway
                         resultFuture = cache.get(getGatewayEntryKey(tenantId, deviceId))
@@ -249,20 +272,25 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
                                         // no last known gateway found - just return all found mapping entries
                                         LOG.debug("returning {} command handling adapter instances for device gateways (no last known gateway found) [tenant: {}, device-id: {}]",
                                                 deviceToInstanceMap.size(), tenantId, deviceId);
+                                        span.log("no last known gateway found, returning all matching adapter instances");
                                         return Future.succeededFuture(getAdapterInstancesResultJson(deviceToInstanceMap));
                                     } else if (!viaGateways.contains(lastKnownGateway)) {
                                         // found gateway is not valid anymore - just return all found mapping entries
                                         LOG.debug("returning {} command handling adapter instances for device gateways (last known gateway not valid anymore) [tenant: {}, device-id: {}, lastKnownGateway: {}]",
                                                 deviceToInstanceMap.size(), tenantId, deviceId, lastKnownGateway);
+                                        span.log("last known gateway '" + lastKnownGateway + "' is not valid anymore, returning all matching adapter instances");
                                         return Future.succeededFuture(getAdapterInstancesResultJson(deviceToInstanceMap));
                                     } else if (!deviceToInstanceMap.containsKey(lastKnownGateway)) {
                                         // found gateway has no command handling instance assigned - just return all found mapping entries
                                         LOG.debug("returning {} command handling adapter instances for device gateways (last known gateway not in that list) [tenant: {}, device-id: {}, lastKnownGateway: {}]",
                                                 deviceToInstanceMap.size(), tenantId, deviceId, lastKnownGateway);
+                                        span.log("last known gateway '" + lastKnownGateway + "' has no adapter instance assigned, returning all matching adapter instances");
                                         return Future.succeededFuture(getAdapterInstancesResultJson(deviceToInstanceMap));
                                     } else {
-                                        LOG.debug("returning command handling adapter instance {} for last known gateway [tenant: {}, device-id: {}, lastKnownGateway: {}]",
+                                        LOG.debug("returning command handling adapter instance '{}' for last known gateway [tenant: {}, device-id: {}, lastKnownGateway: {}]",
                                                 deviceToInstanceMap.get(lastKnownGateway), tenantId, deviceId, lastKnownGateway);
+                                        span.log("returning adapter instance for last known gateway '" + lastKnownGateway + "'");
+                                        setTagsForSingleResultWithGateway(span, deviceToInstanceMap.get(lastKnownGateway), lastKnownGateway);
                                         return Future.succeededFuture(getAdapterInstancesResultJson(lastKnownGateway,
                                                 deviceToInstanceMap.get(lastKnownGateway)));
                                     }
@@ -270,8 +298,10 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
                     } else {
                         // one command handling instance found
                         final Map.Entry<String, String> foundEntry = deviceToInstanceMap.entrySet().iterator().next();
-                        LOG.debug("returning command handling adapter instance {} associated with gateway {} [tenant: {}, device-id: {}]",
+                        LOG.debug("returning command handling adapter instance '{}' associated with gateway {} [tenant: {}, device-id: {}]",
                                 foundEntry.getValue(), foundEntry.getKey(), tenantId, deviceId);
+                        span.log("returning adapter instance associated with gateway '" + foundEntry.getKey() + "'");
+                        setTagsForSingleResultWithGateway(span, foundEntry.getValue(), foundEntry.getKey());
                         resultFuture = Future.succeededFuture(getAdapterInstancesResultJson(foundEntry.getKey(),
                                 foundEntry.getValue()));
                     }
@@ -279,14 +309,26 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
                 });
     }
 
-    private Future<JsonObject> getInstancesGettingLastKnownGatewayFirst(final String tenantId, final String deviceId, final Set<String> viaGateways) {
+    private void setTagsForSingleResultWithGateway(final Span span, final String adapterInstanceId, final String gatewayId) {
+        span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+    }
+
+    private void setTagsForSingleResult(final Span span, final String adapterInstanceId) {
+        span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+    }
+
+    private Future<JsonObject> getInstancesGettingLastKnownGatewayFirst(final String tenantId, final String deviceId,
+            final Set<String> viaGateways, final Span span) {
         return cache.get(getGatewayEntryKey(tenantId, deviceId))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
                 .compose(lastKnownGateway -> {
                     if (lastKnownGateway == null) {
                         LOG.trace("no last known gateway found [tenant: {}, device-id: {}]", tenantId, deviceId);
+                        span.log("no last known gateway found");
                     } else if (!viaGateways.contains(lastKnownGateway)) {
                         LOG.trace("found gateway is not valid for the device anymore [tenant: {}, device-id: {}]", tenantId, deviceId);
+                        span.log("found gateway '" + lastKnownGateway + "' is not valid anymore");
                     }
                     if (lastKnownGateway != null && viaGateways.contains(lastKnownGateway)) {
                         // fetch command handling instances for lastKnownGateway and device
@@ -296,26 +338,29 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
                                     final Map<String, String> deviceToInstanceMap = convertAdapterInstanceEntryKeys(getAllMap);
                                     if (deviceToInstanceMap.isEmpty()) {
                                         // no adapter instances found for last-known-gateway and device - check all via gateways
-                                        return getAdapterInstancesWithoutLastKnownGatewayCheck(tenantId, deviceId, viaGateways);
+                                        span.log("last known gateway '" + lastKnownGateway + "' has no adapter instance assigned, returning all matching adapter instances");
+                                        return getAdapterInstancesWithoutLastKnownGatewayCheck(tenantId, deviceId, viaGateways, span);
                                     } else if (deviceToInstanceMap.containsKey(deviceId)) {
                                         // there is a adapter instance set for the device itself - that gets precedence
-                                        return getAdapterInstanceFoundForDeviceItselfResult(tenantId, deviceId, deviceToInstanceMap.get(deviceId));
+                                        return getAdapterInstanceFoundForDeviceItselfResult(tenantId, deviceId, deviceToInstanceMap.get(deviceId), span);
                                     } else {
                                         // adapter instance found for last known gateway
-                                        LOG.debug("returning command handling adapter instance {} for last known gateway [tenant: {}, device-id: {}, lastKnownGateway: {}]",
+                                        LOG.debug("returning command handling adapter instance '{}' for last known gateway [tenant: {}, device-id: {}, lastKnownGateway: {}]",
                                                 deviceToInstanceMap.get(lastKnownGateway), tenantId, deviceId, lastKnownGateway);
+                                        span.log("returning adapter instance for last known gateway '" + lastKnownGateway + "'");
+                                        setTagsForSingleResultWithGateway(span, deviceToInstanceMap.get(lastKnownGateway), lastKnownGateway);
                                         return Future.succeededFuture(getAdapterInstancesResultJson(deviceToInstanceMap));
                                     }
                                 });
                     } else {
                         // last-known-gateway not found or invalid - look for all adapter instances for device and viaGateways
-                        return getAdapterInstancesWithoutLastKnownGatewayCheck(tenantId, deviceId, viaGateways);
+                        return getAdapterInstancesWithoutLastKnownGatewayCheck(tenantId, deviceId, viaGateways, span);
                     }
                 });
     }
 
     private Future<JsonObject> getAdapterInstancesWithoutLastKnownGatewayCheck(final String tenantId,
-            final String deviceId, final Set<String> viaGateways) {
+            final String deviceId, final Set<String> viaGateways, final Span span) {
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t))
                 .compose(getAllMap -> {
@@ -327,7 +372,7 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
                         resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
                     } else if (deviceToInstanceMap.containsKey(deviceId)) {
                         // there is a command handling instance set for the device itself - that gets precedence
-                        resultFuture = getAdapterInstanceFoundForDeviceItselfResult(tenantId, deviceId, deviceToInstanceMap.get(deviceId));
+                        resultFuture = getAdapterInstanceFoundForDeviceItselfResult(tenantId, deviceId, deviceToInstanceMap.get(deviceId), span);
                     } else {
                         LOG.debug("returning {} command handling adapter instance(s) (no last known gateway found) [tenant: {}, device-id: {}]",
                                 deviceToInstanceMap.size(), tenantId, deviceId);
@@ -338,9 +383,11 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
     }
 
     private Future<JsonObject> getAdapterInstanceFoundForDeviceItselfResult(final String tenantId,
-            final String deviceId, final String adapterInstanceId) {
-        LOG.debug("returning command handling adapter instance {} for device itself [tenant: {}, device-id: {}]",
+            final String deviceId, final String adapterInstanceId, final Span span) {
+        LOG.debug("returning command handling adapter instance '{}' for device itself [tenant: {}, device-id: {}]",
                 adapterInstanceId, tenantId, deviceId);
+        span.log("returning command handling adapter instance for device itself");
+        setTagsForSingleResult(span, adapterInstanceId);
         return Future.succeededFuture(getAdapterInstancesResultJson(deviceId, adapterInstanceId));
     }
 
@@ -437,4 +484,17 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
     }
+
+    private Span createSpan(final String operationName, final String tenantId, final String deviceId,
+            final String adapterInstanceId, final SpanContext spanContext) {
+        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName, getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
+                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        if (adapterInstanceId != null) {
+            spanBuilder.withTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        }
+        return spanBuilder.start();
+    }
+
 }

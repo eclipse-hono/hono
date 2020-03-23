@@ -18,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -41,7 +43,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -89,8 +93,20 @@ class HotrodBasedDeviceConnectionInfoTest {
     @BeforeEach
     void setUp() {
         cache = new SimpleTestRemoteCache();
-        tracer = mock(Tracer.class);
+
         spanContext = mock(SpanContext.class);
+        final Span span = mock(Span.class);
+        when(span.context()).thenReturn(spanContext);
+        final Tracer.SpanBuilder spanBuilder = mock(Tracer.SpanBuilder.class, Mockito.RETURNS_SMART_NULLS);
+        when(spanBuilder.addReference(anyString(), any())).thenReturn(spanBuilder);
+        when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
+        when(spanBuilder.withTag(anyString(), (String) any())).thenReturn(spanBuilder);
+        when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
+        when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
+        when(spanBuilder.start()).thenReturn(span);
+        tracer = mock(Tracer.class);
+        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+
         info = new HotrodBasedDeviceConnectionInfo(cache, tracer);
     }
 
