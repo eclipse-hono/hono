@@ -174,7 +174,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         }).when(commandConsumer).close(any(Handler.class));
         commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
 
         commandTargetMapper = mock(CommandTargetMapper.class);
@@ -284,7 +284,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any());
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class));
         // and has not been reported as processed
@@ -337,7 +337,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         // and the message has not been forwarded downstream
         verify(sender, never()).send(any(Message.class), any(SpanContext.class));
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class));
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(Handler.class), any());
         // and has not been reported as processed
         verify(metrics, never())
             .reportTelemetry(
@@ -742,7 +742,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
         // and the creation of the command consumer completes at a later point
         final Promise<MessageConsumer> commandConsumerPromise = Promise.promise();
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any()))
                 .thenReturn(commandConsumerPromise.future());
 
         adapter.uploadTelemetryMessage(ctx, "tenant", "device");

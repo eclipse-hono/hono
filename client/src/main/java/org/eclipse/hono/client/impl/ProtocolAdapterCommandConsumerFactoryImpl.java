@@ -32,6 +32,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -46,7 +47,7 @@ import io.vertx.proton.ProtonReceiver;
  * <ul>
  * <li>A single consumer link on an address containing the protocol adapter instance id.</li>
  * <li>A tenant-scoped link, created (if not already existing for that tenant) when
- * {@link #createCommandConsumer(String, String, Handler)} is invoked.</li>
+ * {@link #createCommandConsumer(String, String, Handler, SpanContext)} is invoked.</li>
  * </ul>
  * <p>
  * Command messages are first received on the tenant-scoped consumer address. It is then determined whether there is
@@ -118,11 +119,11 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      */
     @Override
     public final Future<MessageConsumer> createCommandConsumer(final String tenantId, final String deviceId,
-            final Handler<CommandContext> commandHandler) {
+            final Handler<CommandContext> commandHandler, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
-        return doCreateCommandConsumer(tenantId, deviceId, null, commandHandler);
+        return doCreateCommandConsumer(tenantId, deviceId, null, commandHandler, context);
     }
 
     /**
@@ -130,16 +131,16 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      */
     @Override
     public final Future<MessageConsumer> createCommandConsumer(final String tenantId, final String deviceId,
-            final String gatewayId, final Handler<CommandContext> commandHandler) {
+            final String gatewayId, final Handler<CommandContext> commandHandler, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(commandHandler);
-        return doCreateCommandConsumer(tenantId, deviceId, gatewayId, commandHandler);
+        return doCreateCommandConsumer(tenantId, deviceId, gatewayId, commandHandler, context);
     }
 
     private Future<MessageConsumer> doCreateCommandConsumer(final String tenantId, final String deviceId,
-            final String gatewayId, final Handler<CommandContext> commandHandler) {
+            final String gatewayId, final Handler<CommandContext> commandHandler, final SpanContext context) {
         if (!initialized.get()) {
             log.error("not initialized");
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
@@ -156,20 +157,20 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                             // TODO find a way to provide a notification here so that potential resources associated with the replaced consumer can be freed (maybe add a commandHandlerOverwritten Handler param to createCommandConsumer())
                         }
                         // associate handler with this adapter instance
-                        return setCommandHandlingAdapterInstance(tenantId, deviceId);
+                        return setCommandHandlingAdapterInstance(tenantId, deviceId, context);
                     })
                     .map(res -> {
-                        final Supplier<Future<Void>> onCloseAction = () -> removeCommandConsumer(tenantId, deviceId);
+                        final Supplier<Future<Void>> onCloseAction = () -> removeCommandConsumer(tenantId, deviceId, context);
                         return (MessageConsumer) new DeviceSpecificCommandConsumer(onCloseAction);
                     })
                     .setHandler(result);
         });
     }
 
-    private Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId) {
+    private Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId, final SpanContext context) {
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> {
-                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, null);
+                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context);
                 }).recover(thr -> {
                     log.info("error setting command handling adapter instance [tenant: {}, device: {}]", tenantId,
                             deviceId, thr);
@@ -179,12 +180,12 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                 });
     }
 
-    private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId) {
+    private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId, final SpanContext context) {
         log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
         adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(tenantId, deviceId);
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> {
-                    return client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, null);
+                    return client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context);
                 }).recover(thr -> {
                     log.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
                             deviceId, thr);

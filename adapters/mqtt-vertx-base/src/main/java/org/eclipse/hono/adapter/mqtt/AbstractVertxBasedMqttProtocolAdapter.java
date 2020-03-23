@@ -596,7 +596,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     // we do not support subscribing to commands using QoS 2
                     result = Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
                 } else {
-                    result = createCommandConsumer(endpoint, cmdSub, cmdHandler).map(consumer -> {
+                    result = createCommandConsumer(endpoint, cmdSub, cmdHandler, span).map(consumer -> {
                         final Map<String, Object> items = new HashMap<>(4);
                         items.put(Fields.EVENT, "accepting subscription");
                         items.put(KEY_TOPIC_FILTER, subscription.topicName());
@@ -734,7 +734,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         span.finish();
     }
 
-    private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint, final CommandSubscription sub, final CommandHandler<T> cmdHandler) {
+    private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint,
+            final CommandSubscription sub, final CommandHandler<T> cmdHandler, final Span span) {
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
@@ -773,9 +774,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         if (sub.isGatewaySubscriptionForSpecificDevice()) {
             // gateway scenario
             return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(),
-                    sub.getAuthenticatedDeviceId(), commandHandler);
+                    sub.getAuthenticatedDeviceId(), commandHandler, span.context());
         } else {
-            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(), commandHandler);
+            return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(), commandHandler,
+                    span.context());
         }
     }
 

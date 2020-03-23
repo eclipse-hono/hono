@@ -157,7 +157,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                 VertxMockSupport.anyHandler()))
         .thenReturn(Future.failedFuture(ex));
 
-        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler)
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null)
             .setHandler(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
                 ctx.completeNow();
@@ -175,7 +175,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
 
-        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler)
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null)
             .setHandler(ctx.completing());
     }
 

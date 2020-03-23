@@ -778,7 +778,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Span span,
             final OptionalInt traceSamplingPriority) {
 
-        return createCommandConsumer(sender, address, authenticatedDevice).map(consumer -> {
+        return createCommandConsumer(sender, address, authenticatedDevice, span).map(consumer -> {
 
             final String tenantId = address.getTenantId();
             final String deviceId = address.getResourceId();
@@ -812,7 +812,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private Future<MessageConsumer> createCommandConsumer(
             final ProtonSender sender,
             final ResourceIdentifier sourceAddress,
-            final Device authenticatedDevice) {
+            final Device authenticatedDevice,
+            final Span span) {
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
@@ -856,10 +857,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
             return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler);
+                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler, span.context());
         } else {
             return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), commandHandler);
+                    sourceAddress.getResourceId(), commandHandler, span.context());
         }
     }
 

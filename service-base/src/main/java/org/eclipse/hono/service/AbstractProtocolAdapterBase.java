@@ -918,12 +918,14 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param tenantId The tenant of the command receiver.
      * @param deviceId The device of the command receiver.
      * @param commandConsumer The handler to invoke for each command destined to the device.
+     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      * @return Result of the receiver creation.
      */
     protected final Future<MessageConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Handler<CommandContext> commandConsumer) {
+            final Handler<CommandContext> commandConsumer,
+            final SpanContext context) {
 
         return commandConsumerFactory.createCommandConsumer(
                 tenantId,
@@ -931,7 +933,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 commandContext -> {
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     commandConsumer.handle(commandContext);
-                });
+                },
+                context);
     }
 
     /**
