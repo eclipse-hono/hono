@@ -305,10 +305,6 @@ If a device is configured in such a way that there can be *one* gateway, acting 
 
 If a device is configured to be used with *multiple* gateways, the particular gateway that last acted on behalf of the device will be the target that commands for that device will be routed to. The mapping of device and gateway last used by the device is updated whenever a device sends a telemetry, event or command response message via the gateway. This means that for a device configured to be used via multiple gateways to receive commands, the device first has to send at least one telemetry or event message to establish which gateway to use for receiving commands for that device.
 
-{{% note title="Authenticated gateway receiving commands for a specific device" %}}
-An authenticated gateway opening multiple `command/${tenant}/${device-id}` links for different devices should do so using the same AMQP connection. Otherwise some commands might not get routed properly if multiple protocol adapter instances are involved. 
-{{% /note %}}
-
 ### Sending a Response to a Command
 
 A device only needs to respond to commands that contain a *reply-to* address and a *correlation-id*. However, if the application expects a response, then devices must publish a response back to the application. Devices may use the same anonymous sender link for this purpose that they also use for sending telemetry data and events.

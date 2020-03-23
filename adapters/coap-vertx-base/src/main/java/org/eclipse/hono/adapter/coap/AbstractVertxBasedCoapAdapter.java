@@ -90,7 +90,6 @@ import io.vertx.core.json.JsonObject;
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
         extends AbstractProtocolAdapterBase<T> {
 
-    static final String FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS = "support-concurrent-gateway-device-command-requests";
     private static final String KEY_TIMER_ID = "timerId";
 
     /**
@@ -787,18 +786,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * Marked as final since overriding this method doesn't make sense here (command &amp; control is not
-     * supported for now).
-     */
-    @Override
-    protected final Future<Boolean> isGatewayMappingEnabled(final String tenantId, final String deviceId,
-            final Device authenticatedDevice) {
-        return Future.succeededFuture(true);
-    }
-
-    /**
      * Adds a command to a CoAP response.
      * <p>
      * This default implementation adds the command name, content format and response URI to the
@@ -952,32 +939,20 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             // only per HTTP request
         };
 
-        // First check whether the tenant has been configured to support concurrent ttd-param requests from the same
-        // gateway for different devices. In that case a device-specific (instead of a gateway-specific) consumer link
-        // will be created below
-        // (preventing multiple consumer links on the same gateway address from multiple HTTP adapter instances).
-        final Future<MessageConsumer> commandConsumerFuture = isSupportConcurrentGatewayDeviceCommandRequests(
-                tenantObject)
-                        .compose(supportConcurrentGatewayDeviceCommandRequests -> {
-                            if (gatewayId != null && !supportConcurrentGatewayDeviceCommandRequests) {
-                                // gateway scenario
-                                return getCommandConsumerFactory().createCommandConsumer(
-                                        tenantObject.getTenantId(),
-                                        deviceId,
-                                        gatewayId,
-                                        commandHandler);
-                            } else {
-                                if (gatewayId != null) {
-                                    log.trace(
-                                            "gateway mapping disabled for tenant [{}], will create device-specific consumer",
-                                            tenantObject.getTenantId());
-                                }
-                                return getCommandConsumerFactory().createCommandConsumer(
-                                        tenantObject.getTenantId(),
-                                        deviceId,
-                                        commandHandler);
-                            }
-                        });
+        final Future<MessageConsumer> commandConsumerFuture;
+        if (gatewayId != null) {
+            // gateway scenario
+            commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
+                    tenantObject.getTenantId(),
+                    deviceId,
+                    gatewayId,
+                    commandHandler);
+        } else {
+            commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
+                    tenantObject.getTenantId(),
+                    deviceId,
+                    commandHandler);
+        }
         return commandConsumerFuture
                 .map(consumer -> {
                     if (!requestProcessed.get()) {
@@ -1059,21 +1034,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private TtdStatus getTtdStatus(final CoapContext context) {
         return Optional.ofNullable((TtdStatus) context.get(TtdStatus.class.getName()))
                 .orElse(TtdStatus.NONE);
-    }
-
-    private Future<Boolean> isSupportConcurrentGatewayDeviceCommandRequests(final TenantObject tenantObject) {
-        final Boolean result = Optional.ofNullable(tenantObject.getAdapter(getTypeName()))
-                .map(conf -> conf.getExtensions().get(FIELD_SUPPORT_CONCURRENT_GATEWAY_DEVICE_COMMAND_REQUESTS))
-                .map(obj -> {
-                    if (obj instanceof Boolean) {
-                        return (Boolean) obj;
-                    } else {
-                        return Boolean.FALSE;
-                    }
-                })
-                .orElse(false);
-
-        return Future.succeededFuture(result);
     }
 
     /**

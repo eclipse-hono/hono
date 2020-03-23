@@ -321,10 +321,6 @@ An authenticated gateway MUST use the topic filter `command//+/req/#` to subscri
 
 To subscribe only to commands for a specific device, an authenticated gateway MUST use the topic filter `command//${device-id}/req/#`.
 
-{{% note %}}
-An authenticated gateway opening multiple `command//${device-id}/req/#` subscriptions for different devices should do so using the same MQTT connection. Otherwise some commands might not get routed properly if multiple protocol adapter instances are involved. 
-{{% /note %}}
-
 {{% note title="Deprecation" %}}
 Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
 This old topic filter is deprecated. Gateways MAY still use it until support for it will be removed in a future Hono version.

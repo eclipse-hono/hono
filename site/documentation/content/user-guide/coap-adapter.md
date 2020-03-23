@@ -264,16 +264,6 @@ publishes data for.
 The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion*
 for the device from the [configured Device Registration service]({{< relref "/admin-guide/common-config#device-registration-service-connection-configuration" >}}).
 
-{{% note %}}
-When sending requests with the *hono-ttd* query parameter in order to receive a command for a specific device connected to the authenticated gateway,
-it has to be noted that multiple concurrent such requests for the same gateway but different devices may lead to some commands not getting
-forwarded to the gateway.
-To resolve such potential issues, the corresponding tenant can be configured with the *support-concurrent-gateway-device-command-requests*
-option set to `true` in the *ext* field of an *adapters* entry of type `hono-coap`. Note that with this option set, it is not supported for
-the authenticated gateway to send a single request with a *hono-ttd* query parameter but no device id in order to receive commands for
-*any* device that has last sent a telemetry or event message via the authenticated gateway.
-{{% /note %}}
-
 **Examples**
 
 Publish some JSON data for device `4712` using default message type `CON` (*at least once*):
@@ -501,16 +491,6 @@ publishes data for.
 
 The protocol adapter checks the gateway's authority to publish data on behalf of the device implicitly by means of retrieving a *registration assertion*
 for the device from the [configured Device Registration service]({{< relref "/admin-guide/common-config#device-registration-service-connection-configuration" >}}).
-
-{{% note %}}
-When sending requests with the *hono-ttd* query parameter in order to receive a command for a specific device connected to the authenticated gateway,
-it has to be noted that multiple concurrent such requests for the same gateway but different devices may lead to some commands not getting
-forwarded to the gateway.
-To resolve such potential issues, the corresponding tenant can be configured with the *support-concurrent-gateway-device-command-requests*
-option set to `true` in the *ext* field of an *adapters* entry of type `hono-coap`. Note that with this option set, it is not supported for
-the authenticated gateway to send a single request with a *hono-ttd* query parameter but no device id in order to receive commands for
-*any* device that has last sent a telemetry or event message via the authenticated gateway.
-{{% /note %}}
 
 **Examples**
 
