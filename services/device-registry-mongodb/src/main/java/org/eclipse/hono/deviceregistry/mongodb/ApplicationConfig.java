@@ -20,10 +20,14 @@ import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
+import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantBackend;
+import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
+import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -38,9 +42,13 @@ import org.eclipse.hono.service.management.credentials.CredentialsManagementServ
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
+import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
@@ -177,6 +185,17 @@ public class ApplicationConfig {
         return MongoClient.createShared(vertx(), mongoDbConfigProperties().getMongoClientConfig());
     }
 
+    /**
+     * Gets a {@link MongoDbCallExecutor} instance containing helper methods for mongodb interaction.
+     *
+     * @return An instance of the helper class {@link MongoDbCallExecutor}.
+     */
+    @Bean
+    @Scope("prototype")
+    public MongoDbCallExecutor mongoDBCallExecutor() {
+        return new MongoDbCallExecutor(vertx(), mongoClient());
+    }
+
     //
     //
     // Service properties
@@ -194,6 +213,19 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.registry.svc")
     public MongoDbBasedRegistrationConfigProperties registrationServiceProperties() {
         return new MongoDbBasedRegistrationConfigProperties();
+    }
+
+    /**
+     * Gets properties for configuring
+     * {@link org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService} which
+     * implements the <em>Tenants Service</em> API.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.tenant.svc")
+    public MongoDbBasedTenantsConfigProperties tenantsServiceProperties() {
+        return new MongoDbBasedTenantsConfigProperties();
     }
 
     //
@@ -264,6 +296,21 @@ public class ApplicationConfig {
     }
 
     /**
+     * Exposes the MongoDB tenant service as a Spring bean.
+     *
+     * @return The MongoDB tenant service.
+     */
+    @Bean
+    @Scope("prototype")
+    public MongoDbBasedTenantService tenantService() {
+        return new MongoDbBasedTenantService(
+                vertx(),
+                mongoClient(),
+                registrationServiceProperties()
+        );
+    }
+
+    /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
      * @return The handler.
@@ -287,6 +334,17 @@ public class ApplicationConfig {
         final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
                 credentialsService());
         return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> API.
+     *
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public AmqpEndpoint tenantAmqpEndpoint() {
+        return new DelegatingTenantAmqpEndpoint<TenantService>(vertx(), tenantService());
     }
 
     //
@@ -384,5 +442,18 @@ public class ApplicationConfig {
     public HttpEndpoint credentialsHttpEndpoint() {
         return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx(),
                 credentialsService());
+    }
+
+    /**
+     * Creates a new instance of an HTTP protocol handler for the <em>tenants</em> resources
+     * of Hono's Device Registry Management API's.
+     *
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public HttpEndpoint tenantHttpEndpoint() {
+        final MongoDbBasedTenantBackend service = new MongoDbBasedTenantBackend(tenantService());
+        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx(), service);
     }
 }

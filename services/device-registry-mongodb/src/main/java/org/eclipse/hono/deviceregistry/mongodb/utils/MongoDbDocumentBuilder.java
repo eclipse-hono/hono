@@ -16,7 +16,9 @@ package org.eclipse.hono.deviceregistry.mongodb.utils;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.vertx.core.json.JsonObject;
 
@@ -77,6 +79,22 @@ public final class MongoDbDocumentBuilder {
      */
     public MongoDbDocumentBuilder withDeviceId(final String deviceId) {
         document.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+        return this;
+    }
+
+    /**
+     * Sets the json object with the given subject DN.
+     *
+     * @param SubjectDn The subject DN.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withCa(final String SubjectDn) {
+        document.put(
+                String.format("%s.%s.%s",
+                        RegistryManagementConstants.FIELD_TENANT,
+                        RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                        AuthenticationConstants.FIELD_SUBJECT_DN),
+                new JsonObject().put("$eq", SubjectDn));
         return this;
     }
 
