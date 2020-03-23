@@ -946,12 +946,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     tenantObject.getTenantId(),
                     deviceId,
                     gatewayId,
-                    commandHandler);
+                    commandHandler,
+                    currentSpan.context());
         } else {
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
-                    commandHandler);
+                    commandHandler,
+                    currentSpan.context());
         }
         return commandConsumerFuture
                 .map(consumer -> {

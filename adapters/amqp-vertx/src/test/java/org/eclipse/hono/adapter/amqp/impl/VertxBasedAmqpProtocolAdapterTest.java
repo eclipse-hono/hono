@@ -448,7 +448,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         // WHEN an unauthenticated device opens a receiver link with a valid source address
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any()))
             .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
@@ -481,7 +481,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // and a device that wants to receive commands
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", getCommandEndpoint());
         final ProtonSender sender = getSender(sourceAddress);
@@ -581,7 +581,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         // that wants to receive commands
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
         final ProtonSender sender = getSender(sourceAddress);

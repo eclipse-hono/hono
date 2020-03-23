@@ -16,6 +16,7 @@ package org.eclipse.hono.client;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.impl.ProtocolAdapterCommandConsumerFactoryImpl;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
@@ -67,6 +68,9 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
+     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
+     *                An implementation should use this as the parent for any span it creates for tracing
+     *                the execution of this operation.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be completed with the newly created consumer once the link
@@ -74,12 +78,13 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException} with an error code indicating
      *         the cause of the failure.
-     * @throws NullPointerException if any of tenant, device ID or command handler are {@code null}.
+     * @throws NullPointerException if any of tenant, device ID or command handler is {@code null}.
      */
     Future<MessageConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
-            Handler<CommandContext> commandHandler);
+            Handler<CommandContext> commandHandler,
+            SpanContext context);
 
     /**
      * Creates a command consumer for a device that is connected via a gateway.
@@ -100,6 +105,9 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
+     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
+     *                An implementation should use this as the parent for any span it creates for tracing
+     *                the execution of this operation.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be completed with the newly created consumer once the link
@@ -107,13 +115,14 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      *         <p>
      *         The future will be failed with a {@link ServiceInvocationException} with an error code indicating
      *         the cause of the failure.
-     * @throws NullPointerException if any of tenant, device ID, gateway ID or command handler are {@code null}.
+     * @throws NullPointerException if any of tenant, device ID, gateway ID or command handler is {@code null}.
      */
     Future<MessageConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
             String gatewayId,
-            Handler<CommandContext> commandHandler);
+            Handler<CommandContext> commandHandler,
+            SpanContext context);
 
     /**
      * Gets a sender for sending command responses to a business application.

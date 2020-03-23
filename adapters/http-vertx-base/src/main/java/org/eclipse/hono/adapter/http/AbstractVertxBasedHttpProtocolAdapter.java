@@ -1056,12 +1056,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     tenantObject.getTenantId(),
                     deviceId,
                     gatewayId,
-                    commandHandler);
+                    commandHandler,
+                    currentSpan.context());
         } else {
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
-                    commandHandler);
+                    commandHandler,
+                    currentSpan.context());
         }
         return commandConsumerFuture
                 .map(consumer -> {

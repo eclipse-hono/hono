@@ -915,7 +915,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         // WHEN a device subscribes to commands
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), qos));
@@ -929,7 +929,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.onSubscribe(endpoint, null, msg, cmdHandler, OptionalInt.empty());
 
         // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class));
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any());
         // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = ArgumentCaptor.forClass(Handler.class);
         verify(endpoint).closeHandler(closeHookCaptor.capture());
@@ -965,7 +965,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class)))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any()))
                         .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
         subscriptions.add(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-A"), MqttQoS.AT_MOST_ONCE));
