@@ -192,6 +192,7 @@ As part of the request message, the client is supposed to provide the list of ga
 This API doesn't mandate checks on the validity of the given device and the gateway list in order not to introduce a dependency on the *Device Registration API*.
 
 The command implementation MUST determine the adapter instances by applying the following rules (in the given order):
+
 1. If an adapter instance is associated with the given device, this adapter instance is returned as the *single* returned list entry.
 1. Otherwise, if there is an adapter instance registered for the last known gateway associated with the given device, this adapter instance is returned as the *single* returned list entry. The last known gateway has to be contained in the given list of gateways for this case.
 1. Otherwise, *all* adapter instances associated with any of the given gateway identifiers are returned.

@@ -110,7 +110,7 @@ with the `jaeger` Maven profile. Please refer to [Monitoring & Tracing]
 ({{< relref "/admin-guide/monitoring-tracing-config.md#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}}) for details.
 The newly built images also need to be made available to the target Kubernetes cluster as described in the two previous sections.
 
-The chart can be configured to deploy and use an example Jaeger back end by means of setting the *jaegerBackendDeployExample* property
+The chart can be configured to deploy and use an example Jaeger back end by means of setting the *jaegerBackendExample.enabled* property
 to `true` when running Helm:
 
 ~~~sh
