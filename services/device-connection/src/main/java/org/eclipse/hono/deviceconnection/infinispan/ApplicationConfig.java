@@ -199,6 +199,7 @@ public class ApplicationConfig {
      * @return The service implementation.
      */
     @Bean
+    @Qualifier("backend")
     public RemoteCacheBasedDeviceConnectionService deviceConnectionService(final HotrodCache<String, String> cache,
             final Tracer tracer) {
         return new RemoteCacheBasedDeviceConnectionService(new HotrodBasedDeviceConnectionInfo(cache, tracer));
