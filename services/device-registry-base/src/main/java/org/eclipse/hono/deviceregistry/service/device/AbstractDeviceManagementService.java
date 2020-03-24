@@ -42,7 +42,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      */
     @Autowired
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
-        this.tenantInformationService = tenantInformationService;
+        this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }
 
     /**

@@ -58,10 +58,11 @@ public abstract class AbstractRegistrationService implements RegistrationService
     /**
      * Set tenant information service.
      * @param tenantInformationService The tenant information service.
+     * @throws NullPointerException if service is {@code null};
      */
     @Autowired
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
-        this.tenantInformationService = tenantInformationService;
+        this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }
 
     /**

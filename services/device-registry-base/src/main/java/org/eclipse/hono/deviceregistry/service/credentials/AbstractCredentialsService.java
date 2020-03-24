@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.credentials;
 
+import java.util.Objects;
+
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.credentials.CredentialsService;
@@ -31,9 +33,14 @@ public abstract class AbstractCredentialsService implements CredentialsService {
 
     protected TenantInformationService tenantInformationService;
 
+    /**
+     * Set tenant information service.
+     * @param tenantInformationService The tenant information service.
+     * @throws NullPointerException if service is {@code null};
+     */
     @Autowired
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
-        this.tenantInformationService = tenantInformationService;
+        this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }
 
     /**
