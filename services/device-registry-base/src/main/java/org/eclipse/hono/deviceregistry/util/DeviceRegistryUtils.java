@@ -13,6 +13,7 @@
 package org.eclipse.hono.deviceregistry.util;
 
 import java.io.ByteArrayInputStream;
+import java.net.HttpURLConnection;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -176,8 +178,7 @@ public final class DeviceRegistryUtils {
         try {
             final byte[] bytes = clientContext.getBinary(CredentialsConstants.FIELD_CLIENT_CERT);
             if (bytes == null) {
-                throw new IllegalArgumentException(
-                        String.format("The client context doesn't contain a certificate for tenant [%s]", tenantId));
+                return Future.succeededFuture(Optional.empty());
             }
             final CertificateFactory factory = CertificateFactory.getInstance("X.509");
             final X509Certificate cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes));
@@ -193,7 +194,8 @@ public final class DeviceRegistryUtils {
                     "Error getting certificate from client context with authId [%s] for tenant [%s]", authId, tenantId);
             LOG.error(errorMessage, error);
             TracingHelper.logError(span, errorMessage, error);
-            return Future.succeededFuture(Optional.empty());
+            return Future
+                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, errorMessage, error));
         }
     }
 }

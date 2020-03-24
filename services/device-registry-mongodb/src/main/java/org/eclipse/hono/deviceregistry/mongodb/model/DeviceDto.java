@@ -15,13 +15,14 @@ package org.eclipse.hono.deviceregistry.mongodb.model;
 import java.time.Instant;
 import java.util.Objects;
 
+import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * TODO.
+ * A DTO (Data Transfer Object) class to store device information in mongodb.
  */
 public final class DeviceDto extends BaseDto {
 
@@ -31,7 +32,7 @@ public final class DeviceDto extends BaseDto {
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, required = true)
     private String deviceId;
 
-    @JsonProperty(RegistryManagementConstants.FIELD_DEVICE)
+    @JsonProperty(MongoDbDeviceRegistryUtils.FIELD_DEVICE)
     private Device device;
 
     /**
@@ -44,18 +45,16 @@ public final class DeviceDto extends BaseDto {
     /**
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
-     * @param device The device.
+     * @param device The device information.
      * @param version The version of tenant to be sent as request header.
-     * @param updatedOn The date and time of last update.
      * @throws NullPointerException if any of the parameters except the device are {@code null}
      */
-    public DeviceDto(final String tenantId, final String deviceId, final Device device, final String version,
-            final Instant updatedOn) {
-        this.tenantId = Objects.requireNonNull(tenantId);
-        this.deviceId = Objects.requireNonNull(deviceId);
-        this.device = device;
-        this.version = Objects.requireNonNull(version);
-        this.updatedOn = Objects.requireNonNull(updatedOn);
+    public DeviceDto(final String tenantId, final String deviceId, final Device device, final String version) {
+        setTenantId(tenantId);
+        setDeviceId(deviceId);
+        setDevice(device);
+        setVersion(version);
+        setUpdatedOn(Instant.now());
     }
 
     /**
@@ -84,11 +83,11 @@ public final class DeviceDto extends BaseDto {
     /**
      * Sets the identifier of the device.
      *
-     * @param deviceId The device's identifier.
+     * @param deviceId The identifier of the device.
      * @throws NullPointerException if the deviceId is {@code null}.
      */
     public void setDeviceId(final String deviceId) {
-        this.deviceId = deviceId;
+        this.deviceId = Objects.requireNonNull(deviceId);
     }
 
     /**

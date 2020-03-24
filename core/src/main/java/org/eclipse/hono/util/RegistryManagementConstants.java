@@ -214,10 +214,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
-     * The name of the JSON property containing the device identifier.
-     */
-    public static final String FIELD_DEVICE = "device";
-    /**
      * The name of the JSON array containing device registration information for a tenant.
      */
     public static final String FIELD_DEVICES = "devices";
@@ -274,16 +270,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * a {@link TracingSamplingMode} value.
      */
     public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
-
-    /**
-     * The name of the JSON property containing the last modification date and time.
-     */
-    public static final String FIELD_UPDATED_ON = "updatedOn";
-
-    /**
-     * The name of the JSON property containing the version of the tenant or device or credentials information.
-     */
-    public static final String FIELD_VERSION = "version";
 
     private static final Set<String> ACTIONS = new HashSet<>(
             Arrays.asList(ACTION_CREATE, ACTION_GET, ACTION_DELETE, ACTION_UPDATE));

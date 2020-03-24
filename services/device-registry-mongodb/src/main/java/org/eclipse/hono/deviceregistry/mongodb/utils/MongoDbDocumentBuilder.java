@@ -47,6 +47,17 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
+     * Sets the json object with the given version.
+     *
+     * @param version The version of the document.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withVersion(final String version) {
+        document.put(MongoDbDeviceRegistryUtils.FIELD_VERSION, version);
+        return this;
+    }
+
+    /**
      * Returns the json document.
      * 
      * @return the json document.

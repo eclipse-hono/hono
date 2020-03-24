@@ -173,9 +173,7 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
                                                         return getNewCredentials(tenantId, authId, span);
                                                     }
                                                 }))
-                                        .orElse(Future.succeededFuture(
-                                                createErrorCredentialsResult(HttpURLConnection.HTTP_BAD_REQUEST,
-                                                        "Not able to get the certificate from the client context"))));
+                                        .orElse(Future.succeededFuture(result)));
                     }
                     return Future.succeededFuture(result);
                 });

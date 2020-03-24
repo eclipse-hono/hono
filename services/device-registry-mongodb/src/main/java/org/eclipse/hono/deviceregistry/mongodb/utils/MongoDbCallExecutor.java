@@ -14,16 +14,13 @@
 package org.eclipse.hono.deviceregistry.mongodb.utils;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.MongoSocketException;
-
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -36,6 +33,7 @@ import io.vertx.ext.mongo.MongoClient;
 public final class MongoDbCallExecutor {
 
     private static final Logger log = LoggerFactory.getLogger(MongoDbCallExecutor.class);
+    private static final int INDEX_CREATION_RETRY_INTERVAL_IN_MS = 3000;
 
     private final MongoDbConfigProperties config;
     private final MongoClient mongoClient;
@@ -44,7 +42,7 @@ public final class MongoDbCallExecutor {
     /**
      * Creates an instance of the {@link MongoDbCallExecutor}.
      *
-     * @param vertx         The Vert.x instance to use.
+     * @param vertx The Vert.x instance to use.
      * @param config The mongodb configuration properties to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -64,66 +62,40 @@ public final class MongoDbCallExecutor {
     }
 
     /**
-     * Creates mongodb collection index. Wrapper of {@link #createIndex(String, JsonObject, IndexOptions, Handler)}
+     * Creates an index for the given mongodb collection.
      *
-     * @param collectionName The name of the collection of documents.
-     * @param keys           The keys to be indexed.
-     * @param options        The options used to configure index, which is optional.
-     * @return  A future indicating the outcome of the indices creation operation.
+     * @param collectionName The name of the mongodb collection.
+     * @param keys The keys to be indexed.
+     * @param options The options used to configure index, which is optional.
+     * @param noOfRetries Then number of retries in case the index creation fails.
+     * @return A future indicating the outcome of the index creation operation.
      */
     public Future<Void> createCollectionIndex(final String collectionName, final JsonObject keys,
-                                              final IndexOptions options) {
+            final IndexOptions options, final int noOfRetries) {
         final Promise<Void> indexCreationPromise = Promise.promise();
-        createIndex(collectionName, keys, options, res -> {
+        log.debug("Creating an index for the collection [{}]", collectionName);
+
+        mongoClient.createIndexWithOptions(collectionName, keys, options, res -> {
             if (res.succeeded()) {
+                log.debug("Successfully created an index for the collection[{}]", collectionName);
                 indexCreationPromise.complete();
-            } else if (res.cause() instanceof MongoSocketException) {
-                log.info("Create indices failed, wait for retry, cause:", res.cause());
-                vertx.setTimer(this.config.getCreateIndicesTimeout(),
-                        timer -> createIndex(collectionName, keys, options, res2 -> {
-                            if (res2.succeeded()) {
-                                indexCreationPromise.complete();
-                            } else if (res2.cause() instanceof MongoSocketException) {
-                                log.info("Create indices failed, wait for second retry, cause:", res2.cause());
-                                vertx.setTimer(this.config.getCreateIndicesTimeout(),
-                                        timer2 -> createIndex(collectionName, keys, options, res3 -> {
-                                            if (res3.succeeded()) {
-                                                indexCreationPromise.complete();
-                                            } else {
-                                                log.error("Error creating index", res3.cause());
-                                                indexCreationPromise.fail(res3.cause());
-                                            }
-                                        }));
-                            } else {
-                                log.error("Error creating index", res2.cause());
-                                indexCreationPromise.fail(res2.cause());
-                            }
-                        }));
             } else {
-                log.error("Error creating index", res.cause());
-                indexCreationPromise.fail(res.cause());
+                if (noOfRetries > 0) {
+                    log.error("Failed creating an index for the collection [{}], retry creating index.", collectionName,
+                            res.cause());
+                    vertx.setTimer(INDEX_CREATION_RETRY_INTERVAL_IN_MS,
+                            id -> createCollectionIndex(collectionName, keys, options, noOfRetries - 1));
+                } else {
+                    log.error("Failed creating an index for the collection [{}]", collectionName, res.cause());
+                    indexCreationPromise.fail(res.cause());
+                }
             }
         });
         return indexCreationPromise.future();
     }
 
     /**
-     * Creates mongodb indexes.
-     *
-     * @param collectionName       The name of the collection of documents.
-     * @param keys                 The keys to be indexed.
-     * @param options              The options used to configure index, which is optional.
-     * @param indexCreationTracker The callback handler.
-     */
-    private void createIndex(final String collectionName, final JsonObject keys, final IndexOptions options,
-                             final Handler<AsyncResult<Void>> indexCreationTracker) {
-        log.info("Create indices");
-        mongoClient.createIndexWithOptions(collectionName, keys, options, indexCreationTracker);
-    }
-
-    /**
-     * Returns the mongodb properties as a JsonObject suitable for initializing 
-     * a Vert.x MongoDbClient object. 
+     * Returns the mongodb properties as a json object suited to instantiate a #{@link MongoClient}. 
      * <p>
      * If the connectionString is set, it will override all the other connection settings.
      *
@@ -133,11 +105,7 @@ public final class MongoDbCallExecutor {
         final JsonObject configJson = new JsonObject();
         if (config.getConnectionString() != null) {
             configJson.put("connection_string", config.getConnectionString());
-            if (config.getHost() != null || config.getPort() != 0 || config.getDbName() != null
-                    || config.getUsername() != null || config.getPassword() != null
-                    || config.getServerSelectionTimeout() > 0 || config.getConnectTimeout() > 0) {
-                log.warn("Since connectionString is set, the other connection properties will be ignored");
-            }
+            log.warn("Since connection string is set, the other connection properties if any set, will be ignored");
         } else {
             configJson.put("host", config.getHost())
                     .put("port", config.getPort())
@@ -145,12 +113,10 @@ public final class MongoDbCallExecutor {
                     .put("username", config.getUsername())
                     .put("password", config.getPassword());
 
-            if (config.getServerSelectionTimeout() > 0) {
-                configJson.put("serverSelectionTimeoutMS", config.getServerSelectionTimeout());
-            }
-            if (config.getConnectTimeout() > 0) {
-                configJson.put("connectTimeoutMS", config.getConnectTimeout());
-            }
+            Optional.ofNullable(config.getServerSelectionTimeout())
+                    .ifPresent(timeout -> configJson.put("serverSelectionTimeoutMS", timeout));
+            Optional.ofNullable(config.getConnectTimeout())
+                    .ifPresent(timeout -> configJson.put("connectTimeoutMS", timeout));
         }
         return configJson;
     }

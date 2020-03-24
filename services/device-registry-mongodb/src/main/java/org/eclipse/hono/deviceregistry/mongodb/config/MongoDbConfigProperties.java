@@ -23,7 +23,6 @@ import org.eclipse.hono.util.PortConfigurationHelper;
  */
 public final class MongoDbConfigProperties {
 
-    private static final int DEFAULT_CREATE_INDICES_TIMEOUT_IN_MS = 3000;
     private static final int DEFAULT_PORT = 27017;
 
     private String host = "localhost";
@@ -32,9 +31,8 @@ public final class MongoDbConfigProperties {
     private String username;
     private String password;
     private String connectionString;
-    private int serverSelectionTimeoutInMs = 0;
-    private int connectionTimeoutInMs = 0;
-    private int createIndicesTimeoutInMs = DEFAULT_CREATE_INDICES_TIMEOUT_IN_MS;
+    private Integer serverSelectionTimeoutInMs;
+    private Integer connectionTimeoutInMs;
 
     /**
      * Gets the name or literal IP address of the host the mongodb instance is
@@ -177,11 +175,11 @@ public final class MongoDbConfigProperties {
      * Gets the time in milliseconds that the mongo driver will wait to select a
      * server for an operation before raising an error.
      * <p>
-     * When this property is set to 0, the default value by Vert.x mongodb client is used.
+     * When this property is not set, the Vert.x mongodb client uses a default value of 300000 ms.
      *
      * @return The server selection timeout in milliseconds.
      */
-    public int getServerSelectionTimeout() {
+    public Integer getServerSelectionTimeout() {
         return serverSelectionTimeoutInMs;
     }
 
@@ -189,15 +187,15 @@ public final class MongoDbConfigProperties {
      * Sets the timeout in milliseconds that the mongo driver will wait to select a server 
      * for an operation before raising an error.
      * <p>
-     * When this property is set to 0, the default value by Vert.x mongodb client is used.
+     * When this property is not set, the Vert.x mongodb client uses a default value of 300000 ms.
      * 
      * @param serverSelectionTimeoutInMs The server selection timeout in milliseconds.
      * @return A reference to this for fluent use.
-     * @throws IllegalArgumentException if the timeout is set to &lt;= 0.
+     * @throws IllegalArgumentException if the timeout is set to &lt; 0.
      */
     public MongoDbConfigProperties setServerSelectionTimeout(final int serverSelectionTimeoutInMs) {
-        if (serverSelectionTimeoutInMs <= 0) {
-            throw new IllegalArgumentException("server selection timeout must be greater than zero");
+        if (serverSelectionTimeoutInMs < 0) {
+            throw new IllegalArgumentException("server selection timeout must not be negative");
         }
         this.serverSelectionTimeoutInMs = serverSelectionTimeoutInMs;
         return this;
@@ -206,58 +204,28 @@ public final class MongoDbConfigProperties {
     /**
      * Gets the timeout in milliseconds to attempt a connection before timing out.
      * <p>
-     * When this property is set to 0, the default value by Vert.x mongodb client is used.
+     * When this property is not set, the Vert.x mongodb client uses a default value of 10000 ms.
      *
      * @return The connection timeout in milliseconds.
      */
-    public int getConnectTimeout() {
+    public Integer getConnectTimeout() {
         return connectionTimeoutInMs;
     }
 
     /**
      * Sets the timeout in milliseconds to attempt a connection before timing out.
      * <p>
-     * When this property is set to 0, the default value by Vert.x mongodb client is used.
+     * When this property is not set, the Vert.x mongodb client uses a default value of 10000 ms.
      *
      * @param connectionTimeoutInMs The connection timeout in milliseconds.
      * @return A reference to this for fluent use.
-     * @throws IllegalArgumentException if the timeout is set to &lt;= 0.
+     * @throws IllegalArgumentException if the timeout is set to &lt; 0.
      */
     public MongoDbConfigProperties setConnectTimeout(final int connectionTimeoutInMs) {
-        if (connectionTimeoutInMs <= 0) {
-            throw new IllegalArgumentException("connection timeout must be greater than zero");
+        if (connectionTimeoutInMs < 0) {
+            throw new IllegalArgumentException("connection timeout must not be negative");
         }
         this.connectionTimeoutInMs = connectionTimeoutInMs;
         return this;
     }
-
-    /**
-     * Gets the timeout in milliseconds to create indices during startup.
-     * <p>
-     * The default value of this property is {@link #DEFAULT_CREATE_INDICES_TIMEOUT_IN_MS}.
-     *
-     * @return The create indices timeout in milliseconds
-     */
-    public int getCreateIndicesTimeout() {
-        return createIndicesTimeoutInMs;
-    }
-
-    /**
-     * Sets the time in milliseconds that the startup will try to create indices 
-     * during startup.
-     * <p>
-     * The default value of this property is {@link #DEFAULT_CREATE_INDICES_TIMEOUT_IN_MS}.
-     *
-     * @param createIndicesTimeoutInMs The create indices timeout in milliseconds.
-     * @return A reference to this for fluent use.
-     * @throws IllegalArgumentException if the timeout is set to &lt;= 0.
-     */
-    public MongoDbConfigProperties setCreateIndicesTimeout(final int createIndicesTimeoutInMs) {
-        if (connectionTimeoutInMs <= 0) {
-            throw new IllegalArgumentException("create indices timeout must be greater than zero");
-        }
-        this.createIndicesTimeoutInMs = createIndicesTimeoutInMs;
-        return this;
-    }
-
 }
