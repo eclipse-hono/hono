@@ -40,9 +40,17 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for uploading telemetry data to a Hono server.
  */
-public final class TelemetrySenderImpl extends AbstractDownstreamSender {
+public class TelemetrySenderImpl extends AbstractDownstreamSender {
 
-    TelemetrySenderImpl(
+    /**
+     * Creates a telemetry sender instance for a given connection and proton sender.
+     *
+     * @param con The open connection to the Hono server.
+     * @param sender The sender link to send telemetry messages over.
+     * @param tenantId The tenant that the messages will be published for.
+     * @param targetAddress The target address to send the messages to.
+     */
+    protected TelemetrySenderImpl(
             final HonoConnection con,
             final ProtonSender sender,
             final String tenantId,
@@ -53,7 +61,7 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
 
     /**
      * Gets the AMQP <em>target</em> address to use for uploading data to Hono's telemetry endpoint.
-     * 
+     *
      * @param tenantId The tenant to upload data for.
      * @param deviceId The device to upload data for. If {@code null}, the target address can be used
      *                 to upload data for arbitrary devices belonging to the tenant.
@@ -81,13 +89,13 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
 
     /**
      * Creates a new sender for publishing telemetry data to a Hono server.
-     * 
+     *
      * @param con The connection to the Hono server.
-     * @param tenantId The tenant that the telemetry data will be uploaded for.
-     * @param remoteCloseHook The handler to invoke when the Hono server closes the sender. The sender's
-     *                        target address is provided as an argument to the handler.
+     * @param tenantId The tenant that the telemetry data will be published for.
+     * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}). The
+     *            sender's target address is provided as an argument to the handler.
      * @return A future indicating the outcome.
-     * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
+     * @throws NullPointerException if con or tenantId is {@code null}.
      */
     public static Future<DownstreamSender> create(
             final HonoConnection con,
@@ -99,7 +107,8 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
 
         final String targetAddress = getTargetAddress(tenantId, null);
         return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
-        .compose(sender -> Future.succeededFuture(new TelemetrySenderImpl(con, sender, tenantId, targetAddress)));
+                .compose(sender -> Future
+                        .succeededFuture(new TelemetrySenderImpl(con, sender, tenantId, targetAddress)));
     }
 
     /**
@@ -143,7 +152,7 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
 
     /**
      * Sends an AMQP 1.0 message to the peer this client is configured for.
-     * 
+     *
      * @param message The message to send.
      * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
      *              The span will be finished by this method and will contain an error log if
@@ -177,7 +186,8 @@ public final class TelemetrySenderImpl extends AbstractDownstreamSender {
                         final ServerErrorException exception = new ServerErrorException(
                                 HttpURLConnection.HTTP_UNAVAILABLE,
                                 "waiting for delivery update timed out after " + config.getSendMessageTimeout() + "ms");
-                        logMessageSendingError("waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
+                        logMessageSendingError(
+                                "waiting for delivery update timed out for message [ID: {}, address: {}] after {}ms",
                                 messageId, getMessageAddress(message), connection.getConfig().getSendMessageTimeout());
                         TracingHelper.logError(currentSpan, exception.getMessage());
                         Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);

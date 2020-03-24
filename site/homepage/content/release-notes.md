@@ -13,6 +13,9 @@ title = "Release Notes"
 * The Prometheus based resource limits check can now be configured with a trust store, key material
   and/or a username and password in order to be able to connect to a Prometheus server
   that requires TLS and/or client authentication.
+* A java client for the communication with the AMQP protocol adapter has been added.
+  It can be used to implement devices, (protocol) gateways and for testing puposes.
+  For more information refer to [AMQP Adapter Client for Java]({{% doclink "/dev-guide/amqp_adapter_client/" %}}).
 
 ### Fixes & Enhancements
 

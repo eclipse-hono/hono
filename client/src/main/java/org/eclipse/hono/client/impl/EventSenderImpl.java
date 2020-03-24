@@ -34,9 +34,17 @@ import io.vertx.proton.ProtonSender;
 /**
  * A Vertx-Proton based client for publishing event messages to a Hono server.
  */
-public final class EventSenderImpl extends AbstractDownstreamSender {
+public class EventSenderImpl extends AbstractDownstreamSender {
 
-    EventSenderImpl(
+    /**
+     * Creates a event sender instance for a given connection and proton sender.
+     * 
+     * @param con The open connection to the Hono server.
+     * @param sender The sender link to send events over.
+     * @param tenantId The tenant that the events will be published for.
+     * @param targetAddress The target address to send the events to.
+     */
+    protected EventSenderImpl(
             final HonoConnection con,
             final ProtonSender sender,
             final String tenantId,
@@ -47,7 +55,7 @@ public final class EventSenderImpl extends AbstractDownstreamSender {
 
     /**
      * Gets the AMQP <em>target</em> address to use for sending messages to Hono's event endpoint.
-     * 
+     *
      * @param tenantId The tenant to send events for.
      * @param deviceId The device to send events for. If {@code null}, the target address can be used
      *                 to send events for arbitrary devices belonging to the tenant.
@@ -74,25 +82,25 @@ public final class EventSenderImpl extends AbstractDownstreamSender {
 
     /**
      * Creates a new sender for publishing events to a Hono server.
-     * 
+     *
      * @param con The connection to the Hono server.
      * @param tenantId The tenant that the events will be published for.
-     * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
-     *                  target address is provided as an argument to the handler.
+     * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}). The
+     *            sender's target address is provided as an argument to the handler.
      * @return A future indicating the outcome.
-     * @throws NullPointerException if any of context, connection, tenant or handler is {@code null}.
+     * @throws NullPointerException if con or tenantId is {@code null}.
      */
     public static Future<DownstreamSender> create(
             final HonoConnection con,
             final String tenantId,
-            final Handler<String> closeHook) {
+            final Handler<String> remoteCloseHook) {
 
         Objects.requireNonNull(con);
         Objects.requireNonNull(tenantId);
 
         final String targetAddress = getTargetAddress(tenantId, null);
-        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
-        .compose(sender -> Future.succeededFuture(new EventSenderImpl(con, sender, tenantId, targetAddress)));
+        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
+                .compose(sender -> Future.succeededFuture(new EventSenderImpl(con, sender, tenantId, targetAddress)));
     }
 
     /**
@@ -125,7 +133,7 @@ public final class EventSenderImpl extends AbstractDownstreamSender {
      * <p>
      * This method sets the message's <em>durable</em> property to {@code true} and
      * then invokes {@link #sendMessageAndWaitForOutcome(Message, Span)}.
-     * 
+     *
      * @param message The message to send.
      * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
      *              The span will be finished by this method and will contain an error log if

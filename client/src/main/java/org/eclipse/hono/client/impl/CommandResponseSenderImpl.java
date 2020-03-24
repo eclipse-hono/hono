@@ -42,7 +42,15 @@ public class CommandResponseSenderImpl extends AbstractSender implements Command
      */
     public static final long DEFAULT_COMMAND_FLOW_LATENCY = 200L; // ms
 
-    CommandResponseSenderImpl(
+    /**
+     * Creates a command response sender instance for a given connection and proton sender.
+     *
+     * @param connection The open connection to the Hono server.
+     * @param sender The sender link to send command response messages over.
+     * @param tenantId The tenant that the messages will be published for.
+     * @param targetAddress The target address to send the messages to.
+     */
+    protected CommandResponseSenderImpl(
             final HonoConnection connection,
             final ProtonSender sender,
             final String tenantId,
