@@ -41,8 +41,8 @@
     <hono.adapter-lora.service>ono-adapter-lora</hono.adapter-lora.service>
     <hono.adapter-mqtt.service>hono-adapter-mqtt-vertx</hono.adapter-mqtt.service>
     <hono.amqp-network.service>hono-dispatch-router</hono.amqp-network.service>
-    <hono.auth.service>hono-service-auth</hono.auth.service>
     <hono.artemis.service>hono-artemis</hono.artemis.service>
+    <hono.auth.service>hono-service-auth</hono.auth.service>
     <hono.registration.service>hono-service-device-registry</hono.registration.service>
 
   </properties>

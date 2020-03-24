@@ -15,6 +15,21 @@
             "importance": "high"
           }
         }
+      },
+      {
+        "device-id": "4712",
+        "data": {
+          "enabled": true,
+          "comment": ["this device connects only via the gateway indicated by the 'via' property","therefore, no credentials are registered for the device"],
+          "via":"gw-1"
+        }
+      },
+      {
+        "device-id": "gw-1",
+        "comment": "this device is authorized to publish data on behalf of device 4712",
+        "data": {
+          "enabled": true
+        }
       }
     ]
   }
