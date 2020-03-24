@@ -163,7 +163,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
      *
      * @param credentials The credentials to check.
      * @return Verified and encoded credentials.
-     * @trhows IllegalStateException if the secret is not valid.
+     * @throws IllegalStateException if the secret is not valid.
      */
     protected List<CommonCredential> checkCredentials(final List<CommonCredential> credentials) {
         for (final CommonCredential credential : credentials) {
