@@ -2,20 +2,23 @@
 title = "Release Notes"
 +++
 
-## 1.2.0 (Not Released yet)
+## 1.2.0
 
 ### New Features
 
 * The protocol adapters can now be configured with a direct connection to a data grid
   for storing device connection information.
   This has the advantage of saving the network hop to the Device Connection service.
-  Refer to the protocol adapter Admin Guides for details.
+  Please refer to the protocol adapter Admin Guides for details.
 * The Prometheus based resource limits check can now be configured with a trust store, key material
   and/or a username and password in order to be able to connect to a Prometheus server
   that requires TLS and/or client authentication.
-* A java client for the communication with the AMQP protocol adapter has been added.
+* A Java client for the communication with the AMQP protocol adapter has been added.
   It can be used to implement devices, (protocol) gateways and for testing puposes.
   For more information refer to [AMQP Adapter Client for Java]({{% doclink "/dev-guide/amqp_adapter_client/" %}}).
+* Devices can now be configured with *groups* of gateways that are allowed to act on behalf of the
+  device. This makes it easier to support scenarios in which a device may *roam* between multiple
+  gateways. The HTTP based management API has been adapted accordingly.
 
 ### Fixes & Enhancements
 
@@ -24,14 +27,23 @@ title = "Release Notes"
   actual payload size to verify if the *message limit* has been exceeded or not. This has been
   fixed now.
 * The Command & Control implementation in the protocol adapters has been optimized to use
-  far fewer consumer links to the AMQP Messaging Network, saving up on resources. Before, for 
-  every command subscription, a consumer link specific to the corresponding device was created, 
-  whereas now, only a single consumer link per protocol adapter instance gets created for the
-  same purpose.
+  far fewer consumer links to the AMQP Messaging Network, saving up on resources.
+  Before this change, the protocol adapters created a separate receiver link for each device that wanted
+  to receive commands. Now each protocol adapter instance creates onyl a single receiver link over
+  which all commands for all devices connected to the adapter instance are transmitted.
+* The base classes for implementing a device registry have been moved into their own `device-registry-based`
+  module.
+* The example device registry's AMQP and HTTP endpoints do no longer exchange incoming request messages and outgoing
+  response messages with the service implementation verticles over the Vert.x EventBus. This reduces complexity
+  and should improve throughput as messages no longer need to be serialized anymore.
+* A first version of the CoAP User Guide has been added.
+* A concept page explaining the different ways devices can be connected to Hono's protocol adapters has been
+  added. There is also example code illustrating how a protocol gateway which connects to the AMQP adapter can
+  be implemented.
 
 ### API Changes
 
-* The device registry credentials endpoint will no longer handout sensitive details for hashed-password secrets.
+* The device registry credentials endpoint will no longer hand out sensitive details for hashed-password secrets.
   `pwd-hash`, `salt` and `hash-function` are stored by the device registry but not returned to the user.
   Each secret is given an ID which is now returned, along with the other metadata (time validity and optional fields).
 * The `tenant` and `devices` endpoints of the management HTTP API now accept creation requests without a body.
@@ -44,6 +56,9 @@ title = "Release Notes"
   adapter startup.
 * The AMQP Messaging Network now has to be configured in such a way that protocol adapters can send and
   receive messages on the `command_internal/*` instead of the `control/*` address pattern.
+* The Device Registry Management API has been extended to support the definition of *Gateway Groups* which
+  can be referenced in a device's *viaGroups* property in order to authorize all gateways that are a member
+  of any of the groups to act on behalf of the device.
 
 ## 1.1.1
 

@@ -441,7 +441,6 @@ content-length: 0
 
 ## Sending a Response to a Command (authenticated Device)
 
-* Since: 0.7
 * URI: `/command/res/${commandRequestId}` or `/command/res/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `POST`
 * Request Headers:
@@ -478,7 +477,6 @@ content-length: 0
 
 ## Sending a Response to a Command (unauthenticated Device)
 
-* Since: 0.7
 * URI: `/command/res/${tenantId}/${deviceId}/${commandRequestId}` or `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
@@ -514,7 +512,6 @@ content-length: 0
 
 ## Sending a Response to a Command (authenticated Gateway)
 
-* Since: 0.7
 * URI: `/command/res/${tenantId}/${deviceId}/${commandRequestId}` or `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
