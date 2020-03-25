@@ -12,6 +12,7 @@ hono:
     nativeTlsRequired: true
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
+    maxPayloadSize: 2048
   messaging:
     name: 'Hono HTTP Adapter'
     host: ${hono.amqp-network.host}

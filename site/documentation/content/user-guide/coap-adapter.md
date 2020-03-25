@@ -87,6 +87,7 @@ The device is authenticated using PSK.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -176,6 +177,7 @@ send any commands to the device.
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -251,6 +253,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711?
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -331,6 +334,7 @@ The device is authenticated using PSK.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -412,6 +416,7 @@ send any commands to the device.
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -479,6 +484,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711?hono
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant
     connected to Hono.
@@ -535,6 +541,7 @@ The device is authenticated using PSK.
     Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
@@ -572,6 +579,7 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseproject
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
@@ -611,6 +619,7 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseproject
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 4.04 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 4.13 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 4.29 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 5.03 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
