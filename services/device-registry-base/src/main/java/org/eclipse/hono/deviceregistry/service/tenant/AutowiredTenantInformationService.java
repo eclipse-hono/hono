@@ -13,6 +13,7 @@
 package org.eclipse.hono.deviceregistry.service.tenant;
 
 import java.net.HttpURLConnection;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.service.management.OperationResult;
@@ -31,10 +32,10 @@ import io.vertx.core.Future;
 @Component
 public class AutowiredTenantInformationService implements TenantInformationService {
 
-    TenantService service;
+    private TenantService service;
 
     @Override
-    public Future<Result<TenantKey>> tenantExists(final String tenantId, final Span span) {
+    public final Future<Result<TenantKey>> tenantExists(final String tenantId, final Span span) {
         return service.get(tenantId, span)
                 .compose(result -> {
                     if (result.isOk()) {
@@ -47,15 +48,21 @@ public class AutowiredTenantInformationService implements TenantInformationServi
                                 )
                         );
                     } else {
-                        return Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NOT_FOUND));
+                        final Result<TenantKey> res = Result.from(HttpURLConnection.HTTP_NOT_FOUND);
+                        return Future.succeededFuture(res);
                     }
                 });
     }
 
+    /**
+     * Sets the backend service to delegate to.
+     * 
+     * @param service The service.
+     * @throws NullPointerException if service is {@code null}.
+     */
     @Autowired
     @Qualifier("backend")
-    public void setService(final TenantService service) {
-        this.service = service;
+    public final void setService(final TenantService service) {
+        this.service = Objects.requireNonNull(service);
     }
-
 }

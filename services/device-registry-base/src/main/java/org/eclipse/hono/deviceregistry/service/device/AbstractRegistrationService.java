@@ -120,20 +120,26 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .compose(tenantKeyResult -> tenantKeyResult.isError()
-                        ? Future.succeededFuture(RegistrationResult.from(tenantKeyResult.getStatus()))
-                        : processAssertRegistration(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
-                        .compose(result -> {
-                            if (isDeviceEnabled(result)) {
-                                final JsonObject deviceData = result.getPayload()
-                                        .getJsonObject(RegistrationConstants.FIELD_DATA);
-                                return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
-                            } else {
-                                TracingHelper.logError(span, "device not enabled");
-                                return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-                            }
-                        })
-                );
+                .compose(tenantKeyResult -> {
+                    if (tenantKeyResult.isError()) {
+                        return Future.succeededFuture(RegistrationResult.from(tenantKeyResult.getStatus()));
+                    } else {
+                        return processAssertRegistration(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
+                                .compose(result -> {
+                                    if (result.isNotFound()) {
+                                        TracingHelper.logError(span, "no such device");
+                                        return Future.succeededFuture(RegistrationResult.from(result.getStatus()));
+                                    } else if (isDeviceEnabled(result)) {
+                                        final JsonObject deviceData = result.getPayload()
+                                                .getJsonObject(RegistrationConstants.FIELD_DATA);
+                                        return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
+                                    } else {
+                                        TracingHelper.logError(span, "device not enabled");
+                                        return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+                                    }
+                                });
+                    }
+                });
     }
 
     @Override
@@ -177,12 +183,22 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                 final RegistrationResult gatewayResult = gatewayInfoTracker.result();
 
                                 if (!isDeviceEnabled(deviceResult)) {
-                                    log.debug("device not enabled");
-                                    TracingHelper.logError(span, "device not enabled");
+                                    if (deviceResult.isNotFound()) {
+                                        log.debug("no such device");
+                                        TracingHelper.logError(span, "no such device");
+                                    } else {
+                                        log.debug("device not enabled");
+                                        TracingHelper.logError(span, "device not enabled");
+                                    }
                                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
                                 } else if (!isDeviceEnabled(gatewayResult)) {
-                                    log.debug("gateway not enabled");
-                                    TracingHelper.logError(span, "gateway not enabled");
+                                    if (gatewayResult.isNotFound()) {
+                                        log.debug("no such gateway");
+                                        TracingHelper.logError(span, "no such gateway");
+                                    } else {
+                                        log.debug("gateway not enabled");
+                                        TracingHelper.logError(span, "gateway not enabled");
+                                    }
                                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
                                 } else {
 
