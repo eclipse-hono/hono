@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
@@ -89,5 +90,44 @@ public class TelemetryHttpIT extends HttpTestBase {
                     requestHeaders,
                     response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
         });
+    }
+
+    /**
+     * Verifies that the upload of a telemetry message containing a payload that
+     * exceeds the HTTP adapter's configured max payload size fails with a 413
+     * status code.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testUploadMessageFailsForLargePayload(final VertxTestContext ctx) {
+
+        // GIVEN a device
+        final Tenant tenant = new Tenant();
+
+        helper.registry
+            .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
+            .compose(ok -> {
+
+                // WHEN the device tries to upload a message that exceeds the max
+                // payload size
+                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                        .add(HttpHeaders.AUTHORIZATION, authorization);
+
+                return httpClient.create(
+                        getEndpointUri(),
+                        Buffer.buffer(IntegrationTestSupport.getPayload(4096)),
+                        requestHeaders,
+                        response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED)
+                        .recover(HttpProtocolException::transformInto);
+
+            })
+            .setHandler(ctx.failing(t -> {
+
+                // THEN the message gets rejected by the HTTP adapter with a 413
+                ctx.verify(() ->  HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_ENTITY_TOO_LARGE, t));
+                ctx.completeNow();
+            }));
     }
 }

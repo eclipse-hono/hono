@@ -64,6 +64,7 @@ Before accepting any telemetry or event or command messages, the HTTP adapter ve
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
@@ -149,6 +150,7 @@ content-length: 0
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
@@ -225,6 +227,7 @@ content-length: 23
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of telemetry data for the given tenant connected to Hono.
 
@@ -298,6 +301,7 @@ content-length: 23
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
@@ -343,6 +347,7 @@ content-length: 0
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
@@ -391,6 +396,7 @@ content-length: 0
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given tenant connected to Hono.
 
@@ -457,6 +463,7 @@ content-length: 0
   * 403 (Forbidden): The request cannot be processed because the device's registration status cannot be asserted. Possible reasons for this include:
         * The given tenant is not allowed to use this protocol adapter.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
@@ -492,6 +499,7 @@ content-length: 0
         * The given tenant is not allowed to use this protocol adapter.
         * The given device does not belong to the given tenant.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
@@ -530,6 +538,7 @@ content-length: 0
         * The gateway is not authorized to act *on behalf of* the device.
         * The gateway associated with the device is not registered or disabled.
   * 404 (Not Found): The request cannot be processed because the device is disabled or does not exist.
+  * 413 (Request Entity Too Large): The request cannot be processed because the request body exceeds the maximum supported size.
   * 429 (Too Many Requests): The request cannot be processed because the tenant's message limit for the current period is exceeded.
   * 503 (Service Unavailable): The request cannot be processed. Possible reasons for this include:
          * There is no application listening for a reply to the given *commandRequestId*.
