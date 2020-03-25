@@ -2,6 +2,14 @@
 title = "Release Notes"
 +++
 
+## 1.2.1
+
+### Fixes & Enhancements
+
+* The AMQP adapter didn't report any metrics anymore. This has been fixed.
+* The CoAP and HTTP adapters' user guide now correctly documents the 413 status code returned
+  in response to a request that contains a payload exceeding the configured maximum size.
+
 ## 1.2.0
 
 ### New Features
