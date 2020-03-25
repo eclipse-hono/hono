@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-bom</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.1-SNAPSHOT</version>
     <relativePath>../bom</relativePath>
   </parent>
   <artifactId>hono-legal</artifactId>
