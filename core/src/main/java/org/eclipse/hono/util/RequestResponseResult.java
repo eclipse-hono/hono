@@ -122,6 +122,15 @@ public class RequestResponseResult<T> {
     }
 
     /**
+     * Checks if this result's status is <em>Not Found</em>.
+     * 
+     * @return {@code true} if status == 404.
+     */
+    public final boolean isNotFound() {
+        return HttpURLConnection.HTTP_NOT_FOUND == status;
+    }
+
+    /**
      * Checks if this result's status code represents
      * an error.
      * 
