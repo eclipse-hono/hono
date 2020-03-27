@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,6 +38,16 @@ public final class EventConstants {
     public static final String CONTENT_TYPE_EMPTY_NOTIFICATION = "application/vnd.eclipse-hono-empty-notification";
 
     private EventConstants() {
+    }
+
+    /**
+     * Checks if a given endpoint name is the Event endpoint.
+     * 
+     * @param ep The name to check.
+     * @return {@code true} if the name is either {@link #EVENT_ENDPOINT} or {@link #EVENT_ENDPOINT_SHORT}.
+     */
+    public static boolean isEventEndpoint(final String ep) {
+        return EVENT_ENDPOINT.equals(ep) || EVENT_ENDPOINT_SHORT.equals(ep);
     }
 
     /**

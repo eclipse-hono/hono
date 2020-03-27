@@ -24,7 +24,7 @@
 
   <artifactId>hono-example-client</artifactId>
 
-  <name>Hono Examples</name>
+  <name>Hono Client Examples</name>
   <description>A collection of example code for sending and receiving telemetry data using HonoClient.</description>
   <url>https://www.eclipse.org/hono</url>
 

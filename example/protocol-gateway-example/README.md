@@ -1,67 +1,90 @@
 # Example *Protocol gateway* to connect to the AMQP adapter
 
-> Disclaimer: This example is considered a POC and not intended to be run in a productive environment.
+> Disclaimer: This example is considered a POC and not intended to be run in a production environment.
 
-This example show how a external protocol could be connected to a running *Hono AMQP adapter* re-using classes from the [Hono CLI module](https://github.com/eclipse/hono/blob/master/cli/src/main/java/org/eclipse/hono/cli/).
-For this example a simple TCP socket is opened and listen to commands that initiate communication with the *Hono AMQP adapter*.
+This example illustrates how devices using a custom TCP based protocol can be connected to Hono's standard AMQP adapter by means of implementing
+a *protocol gateway*. The gateway listens on a TCP socket for commands to be executed on behalf of a device and maps them to interactions with the AMQP adapter
+using the AMQP device client classes from Hono's [Client module](https://github.com/eclipse/hono/blob/master/client/src/main/java/org/eclipse/hono/client/device).
 
-## Prerequisites 
-> optional if tenantId, deviceId and device credentials present
+## Prerequisites
 
-From your Hono instance get:
-    - AMQP hono adapter ip, referred to as `AMQP_ADAPTER_IP`
-    - AMQP hono adapter port, referred to as `AMQP_ADAPTER_PORT` (default: 5672)
-    - A device `d` username, a combination of hono deviceId and tenantId, concatenated with `'@'`, , referred to as `USERNAME`
-    E.g.: `7c7c9777-2acd-450e-aa61-ab73d37ad0ef@6d12841d-0458-4271-b060-44a46f3417a9`
-    - A password for device `d`, referred to as `PASSWORD`
+The protocol gateway requires a Hono instance running the standard AMQP adapter to connect to.
+By default, the gateway will connect to the AMQP adapter of the [Hono Sandbox](https://www.eclipse.org/hono/sandbox/).
+However, it can also be configured to connect to a local instance.
 
-How to get these values, can be found in [Getting started guide](https://www.eclipse.org/hono/getting-started/).
+## Gateway Configuration
 
-Alternatively, these values can be fetched and created using the script `scripts/create_hono_device.sh`.
+By default, the gateway listens on port `6666` on the loopback device (`127.0.0.1`). This can be changed in the `application.yml` file or by means of
+corresponding command line arguments. In the same way the connection to the AMQP adapter can be configured. By default, the gateway connects
+to the Hono Sandbox' AMQP adapter using `gw@DEFAULT_TENANT` as the username.
 
-## Application properties
-
-As default the TCP server port is `6666`, set in the `application.yml`.
-
-## Dependency
-
-Import Hono Cli dependency to inherit [`org.eclipse.hono.cli.adapter.AmqpCliClient`](https://github.com/eclipse/hono/blob/master/cli/src/main/java/org/eclipse/hono/cli/adapter/AmqpCliClient.java) that provides a connection to interact with the Hono AMQP adapter.
-
-```xml
-<dependency>
-    <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-cli</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
-</dependency>
-```
-
-## Start demo
-
-- Install maven dependencies
-- Run `mvn spring-boot:run`
-- Connect to TCP-server-port `6666`
-    e.g.: `netcat localhost 6666`
-
-### Example execution
-
-Using variables from [Prerequisites](#Prerequisites)
-
-- AMQP_ADAPTER_IP
-- AMQP_ADAPTER_PORT
-- MY_TENANT
-- MY_DEVICE
-- MY_PWD
+## Starting the Gateway
 
 ```bash
-echo "initConnection\n${AMQP_ADAPTER_IP}\n${AMQP_ADAPTER_PORT}\n${MY_DEVICE}@${MY_TENANT}\n${MY_PWD}\n" | netcat -c localhost 6666
-
-MESSAGE_ADDRESS="telemetry"
-PAYLOAD="{\"data\": \"example message\"}"
-echo "sendAMQPMessage\n${MESSAGE_ADDRESS}\n${PAYLOAD}" | netcat localhost 6666
-
-MESSAGE_ADDRESS="event"
-PAYLOAD="example message"
-echo "sendAMQPMessage\n${MESSAGE_ADDRESS}\n${PAYLOAD}" | netcat localhost 6666
-
-echo "listenCommands" | netcat localhost 6666
+mvn spring-boot:run
 ```
+
+## Connecting to the Gateway
+
+The following example illustrates how a device can connect and interact with the protocol gateway.
+The *netcat* command line tool is used to redirect the console's *stdin* and *stdout* to the protocol gateway.
+
+```bash
+nc 127.0.0.1
+Welcome to the Example Protocol Gateway, please enter a command
+```
+
+The device identifier can be set using the `login` command which requires the device identifier as a parameter:
+
+```bash
+login 4712
+device [4712] logged in
+OK
+```
+
+Once logged in, the device can send events
+
+```bash
+event Hello there ...
+OK
+```
+
+and telemetry messages using QoS 0 (at-most-once)
+
+```bash
+telemetry 0 Unimportant data ...
+OK
+```
+or using QoS 1 (at-least-once)
+
+```bash
+telemetry 1 Unimportant data ...
+OK
+```
+
+Note that this only works if a downstream consumer is connected for the device's tenant.
+
+The device can also subscribe for commands
+
+```bash
+subscribe
+OK
+```
+
+and if an application sends a one-way command then the command is logged to the console
+
+```bash
+ONE-WAY COMMAND [name: setBrightness]: {"brightness": 25}
+```
+
+## Commands
+
+The gateway supports the following commands
+
+* **login** *deviceId* - Authenticates the given device. All subsequent commands are executed in the context of the logged in device.
+  This command can be used to *switch* the device context by logging in using a different device identifier.
+* **event** *payload* - Sends the *payload* as an event.
+* **telemetry** *qos* *payload* - Sends the *payload* as a telemetry message using the delivery semantics indicated by the qos.
+  Supported values are `0` (at most once) and `1` (at least once).
+* **subscribe** - Starts receiving commands. Only one-way commands sent by applications will be forwarded to the console.
+* **unsubscribe** - Stops receiving commands

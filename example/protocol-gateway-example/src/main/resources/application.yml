@@ -2,5 +2,13 @@ spring:
   profiles:
     active: dev
 
-app:
-  serverPort: 6666
+gateway:
+  tcp:
+   insecurePort: 6666
+   insecurePortBindAddress: "127.0.0.1"
+  amqp:
+    host: hono.eclipseprojects.io
+    port: 5672
+    username: gw@DEFAULT_TENANT
+    password: gw-secret
+    serverRole: AMQP adapter

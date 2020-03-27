@@ -24,17 +24,10 @@
 
     <artifactId>protocol-gateway</artifactId>
 
-    <name>protocol gateway</name>
+    <name>Hono Protocol Gateway example</name>
     <description>A simple example to illustrate how a protocol gateway could be implemented using classes from the Hono CLI module</description>
     <url>https://www.eclipse.org/hono</url>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.eclipse.hono</groupId>
-            <artifactId>hono-cli</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
 
     <build>
         <plugins>
@@ -45,4 +38,30 @@
         </plugins>
     </build>
 
+    <dependencies>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-logging</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-autoconfigure</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>javax.annotation</groupId>
+        <artifactId>javax.annotation-api</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+      </dependency>
+    </dependencies>
 </project>
