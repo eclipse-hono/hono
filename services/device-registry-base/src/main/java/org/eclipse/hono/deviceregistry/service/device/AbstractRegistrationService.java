@@ -355,6 +355,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
                     if (!via.isEmpty()) {
                         result.put(RegistrationConstants.FIELD_VIA, via);
                     }
+                    final String mapper = registrationInfo.getString(RegistrationConstants.FIELD_MAPPER);
+                    if (mapper != null) {
+                        result.put(RegistrationConstants.FIELD_MAPPER, mapper);
+                    }
                     final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
                     if (defaults != null) {
                         result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);

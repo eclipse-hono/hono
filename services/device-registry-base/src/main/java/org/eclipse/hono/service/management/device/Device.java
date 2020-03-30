@@ -54,6 +54,9 @@ public class Device {
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> memberOf = new LinkedList<>();
 
+    @JsonInclude(value = Include.NON_NULL)
+    private String mapper;
+
     /**
      * Creates a new Device instance.
      */
@@ -83,6 +86,7 @@ public class Device {
         if (other.memberOf != null) {
             this.memberOf = new ArrayList<>(other.memberOf);
         }
+        this.mapper = other.mapper;
     }
 
     /**
@@ -233,6 +237,26 @@ public class Device {
         }
         this.memberOf = memberOf;
         return this;
+    }
+
+    /**
+     * Sets the mapper property for this device.
+     *
+     * @param mapper The mapper property to set.
+     * @return        a reference to this for fluent use.
+     */
+    public Device setMapper(final String mapper) {
+        this.mapper = mapper;
+        return this;
+    }
+
+    /**
+     * Gets the mapper for this devices.
+     *
+     * @return mapper for this device.
+     */
+    public String getMapper() {
+        return mapper;
     }
 
 }

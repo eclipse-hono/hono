@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.vertx.ext.web.client.WebClient;
 
 /**
  * Spring Boot configuration for the MQTT protocol adapter.
@@ -121,5 +122,16 @@ public class Config extends AbstractAdapterConfig {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER);
         return factory;
+    }
+
+    /**
+     * Constructs messageMapping.
+     *
+     * @return Returns MessageMapping containing a webclient to perform mapper requests.
+     */
+    @Bean
+    public MessageMapping messageMapping() {
+        final WebClient webClient = WebClient.create(vertx());
+        return new HttpBasedMessageMapping(webClient, adapterProperties());
     }
 }

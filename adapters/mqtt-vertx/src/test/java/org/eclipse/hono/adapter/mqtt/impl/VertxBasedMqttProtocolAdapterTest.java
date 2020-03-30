@@ -40,12 +40,10 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 
 /**
  * Verifies behavior of {@link VertxBasedMqttProtocolAdapter}.
- * 
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class VertxBasedMqttProtocolAdapterTest {
-
     private MqttProtocolAdapterProperties config;
     private VertxBasedMqttProtocolAdapter adapter;
 
@@ -56,10 +54,37 @@ public class VertxBasedMqttProtocolAdapterTest {
         });
     }
 
+    private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {
+        return newMessage(qosLevel, topic, Buffer.buffer("test"));
+    }
+
+    private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic, final Buffer payload) {
+
+        final MqttPublishMessage message = mock(MqttPublishMessage.class);
+        when(message.qosLevel()).thenReturn(qosLevel);
+        when(message.topicName()).thenReturn(topic);
+        when(message.payload()).thenReturn(payload);
+        return message;
+    }
+
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic) {
+        return newContext(qosLevel, topic, null);
+    }
+
+    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Device authenticatedDevice) {
+
+        final MqttPublishMessage message = newMessage(qosLevel, topic);
+        return newContext(message, authenticatedDevice);
+    }
+
+    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
+        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
+    }
+
     /**
      * Verifies that the adapter rejects messages published to topics containing an endpoint
      * other than <em>telemetry</em> or <em>event</em>.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -78,7 +103,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that the adapter rejects QoS 2 messages published to the <em>telemetry</em> endpoint.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -97,7 +122,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that the adapter rejects QoS 0 messages published to the <em>event</em> endpoint.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -116,7 +141,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that the adapter rejects QoS 2 messages published to the <em>event</em> endpoint.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -135,7 +160,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that the adapter fails to map a topic without a tenant ID received from an anonymous device.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -154,7 +179,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that the adapter fails to map a topic without a device ID received from an anonymous device.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -173,7 +198,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that the adapter fails to map a topic without a device ID received from an authenticated device.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -196,7 +221,7 @@ public class VertxBasedMqttProtocolAdapterTest {
     /**
      * Verifies that the adapter rejects a message published by a gateway whose tenant
      * does not match the tenant specified in the topic.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -258,36 +283,8 @@ public class VertxBasedMqttProtocolAdapterTest {
     }
 
     private void givenAnAdapter() {
-
         config = new MqttProtocolAdapterProperties();
         adapter = new VertxBasedMqttProtocolAdapter();
         adapter.setConfig(config);
-    }
-
-    private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic) {
-        return newMessage(qosLevel, topic, Buffer.buffer("test"));
-    }
-
-    private static MqttPublishMessage newMessage(final MqttQoS qosLevel, final String topic, final Buffer payload) {
-
-        final MqttPublishMessage message = mock(MqttPublishMessage.class);
-        when(message.qosLevel()).thenReturn(qosLevel);
-        when(message.topicName()).thenReturn(topic);
-        when(message.payload()).thenReturn(payload);
-        return message;
-    }
-
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic) {
-        return newContext(qosLevel, topic, null);
-    }
-
-    private static MqttContext newContext(final MqttQoS qosLevel, final String topic, final Device authenticatedDevice) {
-
-        final MqttPublishMessage message = newMessage(qosLevel, topic);
-        return newContext(message, authenticatedDevice);
-    }
-
-    private static MqttContext newContext(final MqttPublishMessage message, final Device authenticatedDevice) {
-        return MqttContext.fromPublishPacket(message, mock(MqttEndpoint.class), authenticatedDevice);
     }
 }

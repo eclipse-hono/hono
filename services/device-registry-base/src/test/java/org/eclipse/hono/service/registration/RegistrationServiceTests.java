@@ -403,7 +403,8 @@ public abstract class RegistrationServiceTests {
         final String deviceId = randomDeviceId();
         final Device device = new Device()
                 .setVia(List.of("a", "b", "c"))
-                .setViaGroups(List.of("group1", "group2"));
+                .setViaGroups(List.of("group1", "group2"))
+                .setMapper("mapper");
 
         createDevices(Map.of(deviceId, device))
             .compose(ok -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
@@ -413,6 +414,7 @@ public abstract class RegistrationServiceTests {
                     assertThat(s.getPayload()).isNotNull();
                     assertThat(s.getPayload().getVia()).contains("a", "b", "c");
                     assertThat(s.getPayload().getViaGroups()).contains("group1", "group2");
+                    assertThat(s.getPayload().getMapper()).isEqualTo("mapper");
                 });
                 ctx.completeNow();
             }));

@@ -163,4 +163,16 @@ public class DeviceTest {
                 "Property 'viaGroups' and 'memberOf' must not be set at the same time");
     }
 
+    /**
+     * Encode device with "mapper=test".
+     */
+    @Test
+    public void testEncodeMapper() {
+        final var device = new Device();
+        device.setMapper("test");
+        final var json = JsonObject.mapFrom(device);
+        assertThat(json).isNotNull();
+        assertThat(json.getString("mapper")).isEqualTo("test");
+        assertThat(json.getJsonObject("ext")).isNull();
+    }
 }

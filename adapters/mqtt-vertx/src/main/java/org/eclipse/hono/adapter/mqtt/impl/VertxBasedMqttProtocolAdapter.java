@@ -14,32 +14,55 @@
 package org.eclipse.hono.adapter.mqtt.impl;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
+import java.util.Objects;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
+import org.eclipse.hono.adapter.mqtt.MqttConstants;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.mqtt.messages.MqttPublishMessage;
+
 
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using MQTT.
  */
 public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> {
+    private MessageMapping messageMapping;
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_MQTT}
      */
     @Override
     protected String getTypeName() {
         return Constants.PROTOCOL_ADAPTER_TYPE_MQTT;
+    }
+
+    /**
+     * Sets the messageMapping for this adapter.
+     *
+     * @param messageMapping the messageMapping
+     * @throws NullPointerException if messageMapping is {@code null}.
+     */
+    @Autowired
+    public void setMessageMapping(final MessageMapping messageMapping) {
+        Objects.requireNonNull(messageMapping);
+        this.messageMapping = messageMapping;
     }
 
     /**
@@ -49,13 +72,38 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
     protected Future<Void> onPublishedMessage(final MqttContext ctx) {
 
         return mapTopic(ctx)
-        .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
-        .compose(targetAddress -> uploadMessage(ctx, targetAddress, ctx.message()))
-        .recover(t -> {
-            log.debug("discarding message [topic: {}] from device: {}",
-                    ctx.message().topicName(), ctx.authenticatedDevice(), t);
-            return Future.failedFuture(t);
-        });
+                .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
+                .compose(targetAddress -> mapMessage(ctx, targetAddress, ctx.message()))
+                .compose(mappedMessage -> uploadMessage(mappedMessage.getCtx(), mappedMessage.getResource(),
+                        mappedMessage.getMessage()))
+                .recover(t -> {
+                    log.debug("discarding message [topic: {}] from device: {}",
+                            ctx.message().topicName(), ctx.authenticatedDevice(), t);
+                    return Future.failedFuture(t);
+                });
+    }
+
+    private Future<MappedMessage> mapMessage(final MqttContext ctx, final ResourceIdentifier targetAddress,
+                                 final MqttPublishMessage message) {
+        return getRegistrationAssertion(targetAddress.getTenantId(), targetAddress.getResourceId(),
+                ctx.authenticatedDevice(), ctx.getTracingContext()).compose(registratonInfo -> messageMapping.mapMessage(ctx, targetAddress, message, registratonInfo));
+    }
+
+    @Override
+    protected void customizeDownstreamMessage(final Message downstreamMessage, final MqttContext ctx) {
+        super.customizeDownstreamMessage(downstreamMessage, ctx);
+        final Object mapperData = ctx.get(MqttConstants.MAPPER_DATA);
+        if (mapperData instanceof MultiMap) {
+            for (final Map.Entry<String, String> entry:
+                    ((MultiMap) mapperData).entries()) {
+                final Object value = entry.getValue();
+                if (value instanceof String) {
+                    MessageHelper.addProperty(downstreamMessage, entry.getKey(), value);
+                } else {
+                    MessageHelper.addProperty(downstreamMessage, entry.getKey(), Json.encode(value));
+                }
+            }
+        }
     }
 
     Future<ResourceIdentifier> mapTopic(final MqttContext context) {
