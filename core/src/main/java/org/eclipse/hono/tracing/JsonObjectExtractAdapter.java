@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,14 +18,14 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-import io.opentracing.propagation.TextMap;
+import io.opentracing.propagation.TextMapExtract;
 import io.vertx.core.json.JsonObject;
 
 /**
  * An adapter for extracting properties from a JSON object.
  *
  */
-public class JsonObjectExtractAdapter implements TextMap {
+public class JsonObjectExtractAdapter implements TextMapExtract {
 
     private final JsonObject jsonObject;
 
@@ -57,10 +57,4 @@ public class JsonObjectExtractAdapter implements TextMap {
             }
         };
     }
-
-    @Override
-    public void put(final String key, final String value) {
-        throw new UnsupportedOperationException();
-    }
-
 }

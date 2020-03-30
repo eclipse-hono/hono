@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,12 +17,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.eclipse.hono.tracing.MultiMapExtractAdapter;
+import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
 import io.vertx.core.logging.Logger;
@@ -99,9 +98,7 @@ public class TracingHandler implements Handler<RoutingContext> {
             return;
         }
 
-        final SpanContext extractedContext = tracer.extract(Format.Builtin.HTTP_HEADERS,
-                new MultiMapExtractAdapter(routingContext.request().headers()));
-
+        final SpanContext extractedContext = TracingHelper.extractSpanContext(tracer, routingContext.request().headers());
         final Span span = tracer.buildSpan(routingContext.request().method().toString())
                 .asChildOf(extractedContext)
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)

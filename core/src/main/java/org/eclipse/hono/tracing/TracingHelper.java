@@ -246,7 +246,7 @@ public final class TracingHelper {
 
         final JsonObject spanContextJson = new JsonObject();
         jsonObject.put(JSON_KEY_SPAN_CONTEXT, spanContextJson);
-        tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new JsonObjectInjectAdapter(spanContextJson));
+        tracer.inject(spanContext, Format.Builtin.TEXT_MAP_INJECT, new JsonObjectInjectAdapter(spanContextJson));
     }
 
     /**
@@ -266,7 +266,7 @@ public final class TracingHelper {
 
         final Object spanContextContainer = jsonObject.getValue(JSON_KEY_SPAN_CONTEXT);
         return spanContextContainer instanceof JsonObject
-                ? tracer.extract(Format.Builtin.TEXT_MAP, new JsonObjectExtractAdapter((JsonObject) spanContextContainer))
+                ? tracer.extract(Format.Builtin.TEXT_MAP_EXTRACT, new JsonObjectExtractAdapter((JsonObject) spanContextContainer))
                 : null;
     }
 
@@ -286,7 +286,7 @@ public final class TracingHelper {
         Objects.requireNonNull(spanContext);
         Objects.requireNonNull(message);
 
-        tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
+        tracer.inject(spanContext, Format.Builtin.TEXT_MAP_INJECT,
                 new MessageAnnotationsInjectAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
     }
 
@@ -305,7 +305,7 @@ public final class TracingHelper {
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(message);
 
-        return tracer.extract(Format.Builtin.TEXT_MAP,
+        return tracer.extract(Format.Builtin.TEXT_MAP_EXTRACT,
                 new MessageAnnotationsExtractAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
     }
 
@@ -330,7 +330,7 @@ public final class TracingHelper {
                         deliveryOptions.setHeaders(newHeaders);
                         return newHeaders;
                     });
-            tracer.inject(spanContext, Format.Builtin.TEXT_MAP, new MultiMapInjectAdapter(headers));
+            tracer.inject(spanContext, Format.Builtin.TEXT_MAP_INJECT, new MultiMapInjectExtractAdapter(headers));
         }
     }
 
@@ -347,7 +347,7 @@ public final class TracingHelper {
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(headers);
 
-        return tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(headers));
+        return tracer.extract(Format.Builtin.TEXT_MAP_EXTRACT, new MultiMapInjectExtractAdapter(headers));
     }
 
     /**

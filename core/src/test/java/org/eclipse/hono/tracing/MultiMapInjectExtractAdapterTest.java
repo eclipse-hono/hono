@@ -24,7 +24,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.http.CaseInsensitiveHeaders;
 
 /**
- * Tests verifying the behavior of {@link MultiMapInjectAdapter} and {@link MultiMapExtractAdapter}.
+ * Tests verifying the behavior of {@link MultiMapInjectExtractAdapter}.
  *
  */
 public class MultiMapInjectExtractAdapterTest {
@@ -40,13 +40,12 @@ public class MultiMapInjectExtractAdapterTest {
         testEntries.put("key2", "value2");
 
         final MultiMap multiMap = new CaseInsensitiveHeaders();
-        final MultiMapInjectAdapter injectAdapter = new MultiMapInjectAdapter(multiMap);
+        final MultiMapInjectExtractAdapter adapter = new MultiMapInjectExtractAdapter(multiMap);
         testEntries.forEach((key, value) -> {
-            injectAdapter.put(key, value);
+            adapter.put(key, value);
         });
 
-        final MultiMapExtractAdapter extractAdapter = new MultiMapExtractAdapter(multiMap);
-        extractAdapter.iterator().forEachRemaining(extractedEntry -> {
+        adapter.iterator().forEachRemaining(extractedEntry -> {
             assertThat(extractedEntry.getValue()).isEqualTo(testEntries.get(extractedEntry.getKey()));
         });
     }

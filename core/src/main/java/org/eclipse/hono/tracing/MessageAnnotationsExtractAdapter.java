@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,13 +26,13 @@ import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.propagation.TextMap;
+import io.opentracing.propagation.TextMapExtract;
 
 /**
  * An adapter for extracting properties from an AMQP 1.0 message's message annotations.
  *
  */
-public class MessageAnnotationsExtractAdapter implements TextMap {
+public class MessageAnnotationsExtractAdapter implements TextMapExtract {
 
     private static final Logger LOG = LoggerFactory.getLogger(MessageAnnotationsExtractAdapter.class);
 
@@ -73,11 +73,6 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
                         nextEntry.getValue().toString());
             }
         };
-    }
-
-    @Override
-    public void put(final String key, final String value) {
-        throw new UnsupportedOperationException();
     }
 
     private Map<?, ?> getPropertiesMap() {

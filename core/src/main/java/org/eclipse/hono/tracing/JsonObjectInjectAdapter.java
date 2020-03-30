@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,18 +13,16 @@
 
 package org.eclipse.hono.tracing;
 
-import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.Objects;
 
-import io.opentracing.propagation.TextMap;
+import io.opentracing.propagation.TextMapInject;
 import io.vertx.core.json.JsonObject;
 
 /**
  * An adapter for injecting properties into a JSON object.
  *
  */
-public class JsonObjectInjectAdapter implements TextMap {
+public class JsonObjectInjectAdapter implements TextMapInject {
 
     private final JsonObject jsonObject;
 
@@ -35,11 +33,6 @@ public class JsonObjectInjectAdapter implements TextMap {
      */
     public JsonObjectInjectAdapter(final JsonObject jsonObject) {
         this.jsonObject = Objects.requireNonNull(jsonObject);
-    }
-
-    @Override
-    public Iterator<Entry<String, String>> iterator() {
-        throw new UnsupportedOperationException();
     }
 
     @Override
