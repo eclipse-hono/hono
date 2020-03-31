@@ -249,7 +249,7 @@ The table below describes the hash functions supported by Hono and how they map 
 
 ### Pre-Shared Key
 
-A credential type for storing a *Pre-shared Key* as used in TLS handshakes.
+A credential type for storing a *Pre-shared Key* as used in (D)TLS handshakes.
 
 Example:
 
@@ -274,7 +274,7 @@ Example:
 
 ### X.509 Certificate
 
-A credential type for storing the [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt) formatted *subject DN* of a client certificate that is used to authenticate the device as part of a TLS handshake.
+A credential type for storing the [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt) formatted *subject DN* of a client certificate that is used to authenticate the device as part of a (D)TLS handshake.
 
 Example:
 

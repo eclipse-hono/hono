@@ -1,6 +1,6 @@
 +++
 title = "AMQP Adapter Configuration"
-weight = 325
+weight = 327
 +++
 
 The AMQP protocol adapter allows clients (devices and gateway components) that speaks AMQP 1.0 to publish telemetry messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints.
