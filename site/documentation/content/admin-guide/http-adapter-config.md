@@ -3,10 +3,11 @@ title = "HTTP Adapter Configuration"
 weight = 320
 +++
 
-The HTTP protocol adapter exposes a HTTP based API for Eclipse Hono&trade;'s Telemetry and Event endpoints.
+The HTTP protocol adapter exposes HTTP based endpoints for Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
-The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http-vertx/) created from it.
+The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the
+corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http-vertx/) created from it.
 
 The adapter supports the following standard configuration options:
 

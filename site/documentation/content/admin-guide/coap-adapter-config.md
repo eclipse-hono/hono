@@ -6,8 +6,8 @@ weight = 329
 The CoAP protocol adapter exposes CoAP based endpoints for Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
-The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding
-[Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap-vertx/) created from it.
+The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the
+corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap-vertx/) created from it.
 
 The adapter supports the following standard configuration options:
 

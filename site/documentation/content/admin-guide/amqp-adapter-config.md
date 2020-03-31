@@ -3,10 +3,11 @@ title = "AMQP Adapter Configuration"
 weight = 327
 +++
 
-The AMQP protocol adapter allows clients (devices and gateway components) that speaks AMQP 1.0 to publish telemetry messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints.
+The AMQP protocol adapter exposes AMQP based endpoints for Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
-The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-amqp-vertx/) created from it.
+The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the
+corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-amqp-vertx/) created from it.
 
 The adapter supports the following standard configuration options:
 

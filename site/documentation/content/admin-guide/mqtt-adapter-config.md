@@ -3,10 +3,11 @@ title = "MQTT Adapter Configuration"
 weight = 325
 +++
 
-The MQTT protocol adapter exposes an MQTT topic hierarchy for publishing messages and events to Eclipse Hono&trade;'s Telemetry and Event endpoints.
+The MQTT protocol adapter exposes an MQTT topic hierarchy for Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
-The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-mqtt-vertx/) created from it.
+The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the
+corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-mqtt-vertx/) created from it.
 
 The adapter supports the following standard configuration options:
 
