@@ -34,8 +34,19 @@ import io.micrometer.core.instrument.MeterRegistry;
 @Configuration
 public class Config extends AbstractAdapterConfig {
 
-    private static final String CONTAINER_ID_HONO_COAP_ADAPTER = "Hono COAP Adapter";
+    private static final String CONTAINER_ID_HONO_COAP_ADAPTER = "Hono CoAP Adapter";
     private static final String BEAN_NAME_VERTX_BASED_COAP_ADAPTER = "vertxBasedCoapAdapter";
+
+    /**
+     * Exposes the CoAP adapter's configuration properties as a Spring bean.
+     *
+     * @return The configuration properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.coap")
+    public CoapAdapterProperties adapterProperties() {
+        return new CoapAdapterProperties();
+    }
 
     /**
      * Creates a new COAP adapter instance.
@@ -84,17 +95,6 @@ public class Config extends AbstractAdapterConfig {
         if (props.getName() == null) {
             props.setName(CONTAINER_ID_HONO_COAP_ADAPTER);
         }
-    }
-
-    /**
-     * Exposes the COAP adapter's configuration properties as a Spring bean.
-     *
-     * @return The configuration properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.coap")
-    public CoapAdapterProperties adapterProperties() {
-        return new CoapAdapterProperties();
     }
 
     /**

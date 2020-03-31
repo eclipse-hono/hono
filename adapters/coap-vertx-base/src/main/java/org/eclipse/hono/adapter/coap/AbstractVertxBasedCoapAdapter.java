@@ -61,6 +61,7 @@ import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -99,9 +100,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     private final Set<Resource> resourcesToAdd = new HashSet<>();
 
-    /**
-     * COAP server. Created from blocking execution, therefore use volatile.
-     */
     private CoapServer server;
     private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
     private ApplicationLevelInfoSupplier honoDeviceResolver;
@@ -214,50 +212,89 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     @Override
     public final void doStart(final Promise<Void> startPromise) {
 
-        checkCoapPortConfiguration()
-        .compose(s -> preStartup())
-        .compose(s -> {
-            final Future<NetworkConfig> secureConfig = getSecureNetworkConfig();
-            final Future<NetworkConfig> insecureConfig = getInsecureNetworkConfig();
+        Optional.ofNullable(server)
+                .map(s -> Future.succeededFuture(s))
+                .orElseGet(this::createServer)
+                .compose(serverToStart -> preStartup().map(serverToStart))
+                .map(serverToStart -> {
+                    addResources(serverToStart);
+                    return serverToStart;
+                })
+                .compose(serverToStart -> Futures.executeBlocking(vertx, () -> {
+                    serverToStart.start();
+                    return Future.succeededFuture(serverToStart);
+                }))
+                .compose(serverToStart -> {
+                    try {
+                        onStartupSuccess();
+                        return Future.succeededFuture((Void) null);
+                    } catch (final Exception e) {
+                        log.error("error executing onStartupSuccess", e);
+                        return Future.failedFuture(e);
+                    }
+                })
+                .setHandler(startPromise);
+    }
 
-            return CompositeFuture.all(secureConfig, insecureConfig)
-                    .map(ok -> {
-                        final CoapServer startingServer = server == null ? new CoapServer(insecureConfig.result()) : server;
-                        addResources(startingServer);
-                        return startingServer;
-                    })
-                    .compose(server -> bindSecureEndpoint(server, secureConfig.result()))
-                    .compose(server -> bindInsecureEndpoint(server, insecureConfig.result()))
-                    .map(server -> {
-                        server.start();
-                        if (secureEndpoint != null) {
-                            log.info("coaps/udp endpoint running on {}", secureEndpoint.getAddress());
+    private Future<CoapServer> createServer() {
+
+        return checkCoapPortConfiguration()
+                .compose(portConfigOk -> {
+                    log.info("creating new CoAP server");
+                    final CoapServer newServer = new CoapServer(NetworkConfig.createStandardWithoutFile());
+                    final Future<Endpoint> secureEndpoint;
+                    final Future<Endpoint> insecureEndpoint;
+
+                    if (isSecurePortEnabled()) {
+                        secureEndpoint = createSecureEndpoint()
+                                .map(ep -> {
+                                    newServer.addEndpoint(ep);
+                                    this.secureEndpoint = ep;
+                                    return ep;
+                                });
+                    } else {
+                        log.info("neither key/cert nor secure port are configured, won't start secure endpoint");
+                        secureEndpoint = Future.succeededFuture();
+                    }
+
+                    if (isInsecurePortEnabled()) {
+                        if (getConfig().isAuthenticationRequired()) {
+                            log.warn("skipping start up of insecure endpoint, configuration requires authentication of devices");
+                            insecureEndpoint = Future.succeededFuture();
+                        } else {
+                            insecureEndpoint = createInsecureEndpoint()
+                                    .map(ep -> {
+                                        newServer.addEndpoint(ep);
+                                        this.insecureEndpoint = ep;
+                                        return ep;
+                                    });
                         }
-                        if (insecureEndpoint != null) {
-                            log.info("coap/udp endpoint running on {}", insecureEndpoint.getAddress());
-                        }
-                        return server;
-                    });
-        })
-        .compose(ok -> {
-            final Promise<Void> result = Promise.promise();
-            try {
-                onStartupSuccess();
-                result.complete();
-            } catch (final Exception e) {
-                log.error("error in onStartupSuccess", e);
-                result.fail(e);
-            }
-            return result.future();
-        })
-        .setHandler(startPromise);
+                    } else {
+                        log.info("insecure port is not configured, won't start insecure endpoint");
+                        insecureEndpoint = Future.succeededFuture();
+                    }
+
+                    return CompositeFuture.all(insecureEndpoint, secureEndpoint)
+                            .map(ok -> {
+                                this.server = newServer;
+                                return newServer;
+                            });
+                });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean isSecurePortEnabled() {
+        return getConfig().isSecurePortEnabled() || getConfig().getPort() > Constants.PORT_UNCONFIGURED;
     }
 
     private Future<Void> checkCoapPortConfiguration() {
 
         final Promise<Void> result = Promise.promise();
 
-        final boolean securePortEnabled = getConfig().isSecurePortEnabled() || getConfig().getPort() > Constants.PORT_UNCONFIGURED;
+        final boolean securePortEnabled = isSecurePortEnabled();
         final int securePort = securePortEnabled ? getConfig().getPort(getPortDefaultValue()) : Constants.PORT_UNCONFIGURED;
 
         if (!securePortEnabled) {
@@ -281,7 +318,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     }
 
     private void addResources(final CoapServer startingServer) {
-        resourcesToAdd.forEach(resource -> startingServer.add(new VertxCoapResource(resource, context)));
+        resourcesToAdd.forEach(resource -> {
+            log.info("adding resource to CoAP server [name: {}]", resource.getName());
+            startingServer.add(new VertxCoapResource(resource, context));
+        });
         resourcesToAdd.clear();
     }
 
@@ -302,7 +342,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         }
     }
 
-    private Future<CoapServer> bindSecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
+    private Future<Endpoint> createSecureEndpoint() {
+
+        return getSecureNetworkConfig().compose(config -> createSecureEndpoint(config));
+    }
+
+    private Future<Endpoint> createSecureEndpoint(final NetworkConfig config) {
 
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
                 .orElse(new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(), getCredentialsClientFactory()));
@@ -335,39 +380,33 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         .stream()
                         .map(cipher -> cipher.name())
                         .collect(Collectors.joining(", "));
-                log.info("adding secure endpoint supporting ciphers: {}", ciphers);
+                log.info("creating secure endpoint supporting ciphers: {}", ciphers);
             }
             final DTLSConnector dtlsConnector = new DTLSConnector(dtlsConnectorConfig);
             final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
             builder.setNetworkConfig(config);
             builder.setConnector(dtlsConnector);
-            this.secureEndpoint = builder.build();
-            startingServer.addEndpoint(this.secureEndpoint);
-            return Future.succeededFuture(startingServer);
+            return Future.succeededFuture(builder.build());
 
         } catch (final IllegalStateException ex) {
             log.warn("failed to create secure endpoint", ex);
             return Future.failedFuture(ex);
         }
-
     }
 
-    private Future<CoapServer> bindInsecureEndpoint(final CoapServer startingServer, final NetworkConfig config) {
+    private Future<Endpoint> createInsecureEndpoint() {
 
-        if (getConfig().isInsecurePortEnabled()) {
-            if (getConfig().isAuthenticationRequired()) {
-                log.warn("skipping start up of insecure endpoint, configuration requires authentication of devices");
-            } else {
-                final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
-                builder.setNetworkConfig(config);
-                builder.setInetSocketAddress(new InetSocketAddress(
-                        getConfig().getInsecurePortBindAddress(),
-                        getConfig().getInsecurePort(getInsecurePortDefaultValue())));
-                this.insecureEndpoint = builder.build();
-                startingServer.addEndpoint(this.insecureEndpoint);
-            }
-        }
-        return Future.succeededFuture(startingServer);
+        log.info("creating insecure endpoint");
+
+        return getInsecureNetworkConfig()
+                .map(config -> {
+                    final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
+                    builder.setNetworkConfig(config);
+                    builder.setInetSocketAddress(new InetSocketAddress(
+                            getConfig().getInsecurePortBindAddress(),
+                            getConfig().getInsecurePort(getInsecurePortDefaultValue())));
+                    return builder.build();
+                });
     }
 
     /**
@@ -483,19 +522,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             log.error("error in preShutdown", e);
         }
 
-        final Promise<Void> serverStopTracker = Promise.promise();
-        if (server != null) {
-            getVertx().executeBlocking(future -> {
-                // Call some blocking API
+        Futures.executeBlocking(vertx, () -> {
+            if (server != null) {
                 server.stop();
-                future.complete();
-            }, serverStopTracker);
-        } else {
-            serverStopTracker.complete();
-        }
-
-        serverStopTracker.future()
-        .compose(v -> postShutdown())
+            }
+            return Future.succeededFuture();
+        })
+        .compose(ok -> postShutdown())
         .setHandler(stopPromise);
     }
 
