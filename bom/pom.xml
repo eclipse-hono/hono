@@ -54,7 +54,7 @@
     <netty.tcnative.version>2.0.30.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
-    <proton.version>0.33.2</proton.version>
+    <proton.version>0.33.3</proton.version>
     <qpid-jms.version>0.47.0</qpid-jms.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.25</snakeyaml.version>
