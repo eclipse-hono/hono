@@ -116,7 +116,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
                     return verifyAndEncodePasswords(credentials)
                             .compose(encodedCredentials -> processUpdateCredentials(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, encodedCredentials, span))
                             .recover(t -> Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST)));
-                });
+                })
+                .recover(t -> Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST)));
     }
 
     @Override

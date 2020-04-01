@@ -32,7 +32,15 @@ public final class CredentialKey implements Serializable {
     private final String authId;
     private final String type;
 
-    private CredentialKey(final String tenantId, final String authId, final String type) {
+
+    /**
+     * Creates a credential key.
+     *
+     * @param tenantId The tenant identifier.
+     * @param authId The authentication identifier.
+     * @param type The credential type.
+     */
+    public CredentialKey(final String tenantId, final String authId, final String type) {
         this.tenantId = tenantId;
         this.authId = authId;
         this.type = type;

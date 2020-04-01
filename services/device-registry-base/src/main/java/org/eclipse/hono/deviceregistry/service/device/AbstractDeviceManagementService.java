@@ -14,6 +14,7 @@ package org.eclipse.hono.deviceregistry.service.device;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Id;
@@ -86,12 +87,14 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     protected abstract Future<Result<Void>> processDeleteDevice(DeviceKey key, Optional<String> resourceVersion, Span span);
 
     /**
-     * Generates a unique device identifier for a given tenant.
+     * Generates a unique device identifier for a given tenant. A default implementation generates a random UUID value.
      *
      * @param tenantId The tenant identifier.
      * @return The device identifier.
      */
-    protected abstract String generateDeviceId(String tenantId);
+    protected String generateDeviceId(final String tenantId) {
+        return UUID.randomUUID().toString();
+    }
 
     @Override
     public Future<OperationResult<Id>> createDevice(final String tenantId, final Optional<String> deviceId, final Device device, final Span span) {

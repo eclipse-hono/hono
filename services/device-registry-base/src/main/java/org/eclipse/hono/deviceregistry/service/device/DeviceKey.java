@@ -30,7 +30,13 @@ public final class DeviceKey {
     private final String tenantId;
     private final String deviceId;
 
-    private DeviceKey(final String tenantId, final String deviceId) {
+    /**
+     * Creates a device key.
+     *
+     * @param tenantId The id of the tenant.
+     * @param deviceId The id of the device.
+     */
+    public DeviceKey(final String tenantId, final String deviceId) {
         this.tenantId = tenantId;
         this.deviceId = deviceId;
     }

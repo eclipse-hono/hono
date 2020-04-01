@@ -26,7 +26,14 @@ public class TenantKey {
     private final String tenantId;
     private final String name;
 
-    private TenantKey(final String tenantId, final String name) {
+
+    /**
+     * Creates a tenant key.
+     *
+     * @param tenantId The tenant identifier.
+     * @param name The tenant name in an external system.
+     */
+    public TenantKey(final String tenantId, final String name) {
         this.tenantId = tenantId;
         this.name = name;
     }
@@ -51,7 +58,7 @@ public class TenantKey {
     }
 
     /**
-     * Creates a credential key from tenant identifier.
+     * Creates a tenant key from tenant identifier.
      *
      * @param tenantId The tenant identifier.
      * @throws NullPointerException if provided tenant identifier is {@code null}.
@@ -63,10 +70,10 @@ public class TenantKey {
     }
 
     /**
-     * Creates a credential key from tenant identifier and ad tenant name in external system.
+     * Creates a tenant key from tenant identifier and ad tenant name in external system.
      *
      * @param tenantId The tenant identifier.
-     * @param name The tenant name.
+     * @param name The tenant name in an external system.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @return The tenant key.
      */
