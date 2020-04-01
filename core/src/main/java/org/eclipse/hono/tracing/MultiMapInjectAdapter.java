@@ -18,23 +18,23 @@ import java.util.Map.Entry;
 import java.util.Objects;
 
 import io.opentracing.propagation.TextMap;
-import io.vertx.core.json.JsonObject;
+import io.vertx.core.MultiMap;
 
 /**
- * An adapter for injecting properties into a JSON object.
+ * An adapter for injecting properties into a {@code MultiMap} object.
  *
  */
-public class JsonObjectInjectAdapter implements TextMap {
+public class MultiMapInjectAdapter implements TextMap {
 
-    private final JsonObject jsonObject;
+    private final MultiMap multiMap;
 
     /**
-     * Creates an adapter for a JSON object.
-     * 
-     * @param jsonObject The JSON object.
+     * Creates an adapter for a {@code MultiMap} object.
+     *
+     * @param multiMap The {@code MultiMap} object.
      */
-    public JsonObjectInjectAdapter(final JsonObject jsonObject) {
-        this.jsonObject = Objects.requireNonNull(jsonObject);
+    public MultiMapInjectAdapter(final MultiMap multiMap) {
+        this.multiMap = Objects.requireNonNull(multiMap);
     }
 
     @Override
@@ -44,6 +44,8 @@ public class JsonObjectInjectAdapter implements TextMap {
 
     @Override
     public void put(final String key, final String value) {
-        jsonObject.put(key, value);
+        Objects.requireNonNull(key, "key must not be null");
+        Objects.requireNonNull(value, "value must not be null");
+        multiMap.add(key, value);
     }
 }

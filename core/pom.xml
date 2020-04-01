@@ -118,6 +118,11 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-client</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

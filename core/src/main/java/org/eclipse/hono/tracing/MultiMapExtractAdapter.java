@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,31 +21,30 @@ import io.opentracing.propagation.TextMap;
 import io.vertx.core.MultiMap;
 
 /**
- * An adapter for injecting/extracting properties to/from a {@code MultiMap} object.
+ * An adapter for extracting properties from a {@code MultiMap} object.
  *
  */
-public class MultiMapInjectExtractAdapter implements TextMap {
+public class MultiMapExtractAdapter implements TextMap {
 
     private final MultiMap multiMap;
 
     /**
-     * Creates an adapter for a map.
-     *
-     * @param multiMap The map to inject/extract the properties to/from.
+     * Creates an adapter for a {@code MultiMap} object.
+     * 
+     * @param multiMap The {@code MultiMap} object.
      */
-    public MultiMapInjectExtractAdapter(final MultiMap multiMap) {
+    public MultiMapExtractAdapter(final MultiMap multiMap) {
         this.multiMap = Objects.requireNonNull(multiMap);
-    }
-
-    @Override
-    public void put(final String key, final String value) {
-        Objects.requireNonNull(key, "key must not be null");
-        Objects.requireNonNull(value, "value must not be null");
-        multiMap.add(key, value);
     }
 
     @Override
     public Iterator<Entry<String, String>> iterator() {
         return multiMap.iterator();
     }
+
+    @Override
+    public void put(final String key, final String value) {
+        throw new UnsupportedOperationException();
+    }
+
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -99,6 +99,7 @@ public class TracingHandler implements Handler<RoutingContext> {
         }
 
         final SpanContext extractedContext = TracingHelper.extractSpanContext(tracer, routingContext.request().headers());
+
         final Span span = tracer.buildSpan(routingContext.request().method().toString())
                 .asChildOf(extractedContext)
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)

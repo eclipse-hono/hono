@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,20 +13,22 @@
 package org.eclipse.hono.tracing;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.message.Message;
 
-import io.opentracing.propagation.TextMapInject;
+import io.opentracing.propagation.TextMap;
 
 /**
  * An adapter for injecting properties into an AMQP 1.0 message's message annotations.
  *
  */
-public class MessageAnnotationsInjectAdapter implements TextMapInject {
+public class MessageAnnotationsInjectAdapter implements TextMap {
 
     private final Message message;
     private final String propertiesMapName;
@@ -41,6 +43,11 @@ public class MessageAnnotationsInjectAdapter implements TextMapInject {
     public MessageAnnotationsInjectAdapter(final Message message, final String propertiesMapName) {
         this.message = Objects.requireNonNull(message);
         this.propertiesMapName = Objects.requireNonNull(propertiesMapName);
+    }
+
+    @Override
+    public Iterator<Entry<String, String>> iterator() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
