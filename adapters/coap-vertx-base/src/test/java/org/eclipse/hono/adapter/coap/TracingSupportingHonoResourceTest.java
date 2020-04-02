@@ -72,7 +72,7 @@ public class TracingSupportingHonoResourceTest {
     public void testExtractTraceContext() {
 
         final SpanContext extractedContext = mock(SpanContext.class);
-        when(tracer.extract(eq(Format.Builtin.BINARY_EXTRACT), any(CoapOptionInjectExtractAdapter.class))).thenReturn(extractedContext);
+        when(tracer.extract(eq(Format.Builtin.BINARY), any(CoapOptionInjectExtractAdapter.class))).thenReturn(extractedContext);
 
         resource = new TracingSupportingHonoResource(tracer, "test", "adapter") {
             /**

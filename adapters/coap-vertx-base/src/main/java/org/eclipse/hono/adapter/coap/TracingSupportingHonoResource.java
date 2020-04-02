@@ -78,7 +78,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
     }
 
     private SpanContext extractSpanContextFromRequest(final OptionSet requestOptions) {
-        return tracer.extract(Format.Builtin.BINARY_EXTRACT, new CoapOptionInjectExtractAdapter(requestOptions));
+        return tracer.extract(Format.Builtin.BINARY, new CoapOptionInjectExtractAdapter(requestOptions));
     }
 
     private Span newSpan(final Exchange exchange) {

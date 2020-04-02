@@ -23,7 +23,7 @@ import org.eclipse.californium.core.coap.OptionSet;
 import io.opentracing.propagation.Binary;
 
 /**
- * An adapter for injecting/extracting an OpenTracing span context to/from a CoAP option.
+ * An adapter for injecting/extracting an OpenTracing {@code SpanContext} to/from a CoAP option.
  * <p>
  * The option number being used to hold the context is {@link #OPTION_TRACE_CONTEXT}.
  *
