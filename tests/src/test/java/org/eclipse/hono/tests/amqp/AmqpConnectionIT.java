@@ -209,7 +209,6 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .setHandler(ctx.failing(t -> {
             // THEN the connection is refused
-            ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
             ctx.completeNow();
          }));
     }

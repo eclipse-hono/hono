@@ -155,15 +155,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      */
     @Override
     protected void doStart(final Promise<Void> startPromise) {
+
+        if (getConnectionLimitManager() == null) {
+            setConnectionLimitManager(createConnectionLimitManager());
+        }
+
         checkPortConfiguration()
         .compose(success -> {
             if (tenantObjectWithAuthIdProvider == null) {
                 tenantObjectWithAuthIdProvider = new AmqpContextTenantAndAuthIdProvider(getConfig(), getTenantClientFactory());
             }
             if (authenticatorFactory == null && getConfig().isAuthenticationRequired()) {
-                final ConnectionLimitManager connectionLimitManager = Optional.ofNullable(
-                        getConnectionLimitManager()).orElse(createConnectionLimitManager());
-                setConnectionLimitManager(connectionLimitManager);
                 authenticatorFactory = new AmqpAdapterSaslAuthenticatorFactory(
                         getTenantClientFactory(),
                         getConfig(),
@@ -172,8 +174,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
                             .withTag(Tags.COMPONENT.getKey(), getTypeName())
                             .start(),
-                        connectionLimitManager,
-                        (tenantConfig, spanContext) -> checkConnectionLimit(tenantConfig, spanContext),
                         new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
                         new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer),
                         (saslResponseContext, span) -> applyTenantTraceSamplingPriority(saslResponseContext, span));
@@ -358,18 +358,27 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (getConfig().isAuthenticationRequired()) {
 
             if (authenticatedDevice == null) {
-                connectAuthorizationCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "anonymous devices not supported"));
+                connectAuthorizationCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
+                        "anonymous devices not supported"));
             } else {
                 log.trace("received connection request from {}", authenticatedDevice);
                 // the SASL handshake will already have authenticated the device
-                // and will have verified that the adapter is enabled for the tenant
-                // we still need to check if the device/gateway exists and is enabled
-                checkDeviceRegistration(authenticatedDevice, span.context())
-                .map(ok -> {
-                    log.debug("{} is registered and enabled", authenticatedDevice);
-                    span.log("device is registered and enabled");
-                    return ok;
-                }).setHandler(connectAuthorizationCheck);
+                // we still need to verify that
+                // the adapter is enabled for the tenant,
+                // the device/gateway exists and is enabled and
+                // that the connection limit for the tenant and the adapter are not exceeded.
+
+                CompositeFuture.all(checkDeviceRegistration(authenticatedDevice, span.context()),
+                        getTenantConfiguration(authenticatedDevice.getTenantId(), span.context())
+                                .compose(tenantConfig -> CompositeFuture.all(
+                                        isAdapterEnabled(tenantConfig),
+                                        checkConnectionLimitForAdapter(),
+                                        checkConnectionLimit(tenantConfig, span.context()))))
+                        .map(ok -> {
+                            log.debug("{} is registered and enabled", authenticatedDevice);
+                            span.log(String.format("device [%s] is registered and enabled", authenticatedDevice));
+                            return (Void) null;
+                        }).setHandler(connectAuthorizationCheck);
             }
 
         } else {
@@ -1268,6 +1277,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 .orElse(null);
     }
 
+    private Future<Void> checkConnectionLimitForAdapter() {
+        if (getConnectionLimitManager() != null && getConnectionLimitManager().isLimitExceeded()) {
+            //The error code is set so to be in sync with that of the tenant level connection limit.
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                    "connection limit for the adapter exceeded"));
+        }
+        return Future.succeededFuture();
+    }
     // -------------------------------------------< AbstractServiceBase >---
 
     /**
