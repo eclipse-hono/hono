@@ -449,7 +449,12 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public ProtocolAdapterCommandConsumerFactory commandConsumerFactory() {
-        return ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection(), getAdapterInstanceId());
+        // be sure to use a new ClientConfigProperties instance so that its unique container-id
+        // is only used for the specific consumer factory instance created here (as adapterInstanceId, which has to be unique)
+        final ClientConfigProperties clientConfigProperties = new ClientConfigProperties(commandConsumerFactoryConfig());
+        final HonoConnection honoConnection = HonoConnection.newConnection(vertx(), clientConfigProperties);
+        final String adapterInstanceId = clientConfigProperties.getContainerId();
+        return ProtocolAdapterCommandConsumerFactory.create(honoConnection, adapterInstanceId);
     }
 
     /**
@@ -459,9 +464,13 @@ public abstract class AbstractAdapterConfig {
      * the AMQP Messaging Network used for receiving commands.
      *
      * @return The identifier.
+     * @deprecated This id is not used anymore. The id representing the protocol adapter instance for usage in the
+     *             <em>ProtocolAdapterCommandConsumerFactory</em> instance is now initialized in
+     *             {@link #commandConsumerFactory()}.
      */
     @Qualifier("adapterInstanceId")
     @Bean
+    @Deprecated
     public String getAdapterInstanceId() {
         return commandConsumerFactoryConfig().getContainerId();
     }
