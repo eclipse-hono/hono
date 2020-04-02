@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -38,9 +38,7 @@
     <infinispan.version>9.4.17.Final</infinispan.version>
     <infinispan.image.name>jboss/infinispan-server:9.4.11.Final</infinispan.image.name>
     <jackson.version>2.9.10</jackson.version>
-    <jaeger.version>0.35.2</jaeger.version>
-    <jaeger-agent.image.name>jaegertracing/jaeger-agent:1.16.0</jaeger-agent.image.name>
-    <jaeger-all-in-one.image.name>jaegertracing/all-in-one:1.16.0</jaeger-all-in-one.image.name>
+    <jaeger.version>1.2.0</jaeger.version>
     <java-base-image.name>docker.io/openjdk:11-jre-slim</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
