@@ -14,6 +14,7 @@ package org.eclipse.hono.deviceregistry.service.credentials;
 
 import java.util.Objects;
 
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.credentials.CredentialsService;
@@ -31,15 +32,18 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class AbstractCredentialsService implements CredentialsService {
 
-    protected TenantInformationService tenantInformationService;
+    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     /**
-     * Set tenant information service.
+     * Sets the service to use for checking existence of tenants.
+     * <p>
+     * If not set, tenant existence will not be verified.
+     * 
      * @param tenantInformationService The tenant information service.
      * @throws NullPointerException if service is {@code null};
      */
-    @Autowired
-    public void setTenantInformationService(final TenantInformationService tenantInformationService) {
+    @Autowired(required = false)
+    public final void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }
 
@@ -55,12 +59,12 @@ public abstract class AbstractCredentialsService implements CredentialsService {
     protected abstract Future<CredentialsResult<JsonObject>> processGet(TenantKey tenant, CredentialKey key, JsonObject clientContext, Span span);
 
     @Override
-    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final Span span) {
+    public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final Span span) {
         return get(tenantId, type, authId, null, span);
     }
 
     @Override
-    public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Span span) {
+    public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final JsonObject clientContext, final Span span) {
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
