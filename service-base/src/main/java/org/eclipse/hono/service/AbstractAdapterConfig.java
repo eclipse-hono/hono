@@ -449,21 +449,7 @@ public abstract class AbstractAdapterConfig {
     @Bean
     @Scope("prototype")
     public ProtocolAdapterCommandConsumerFactory commandConsumerFactory() {
-        return ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection(), getAdapterInstanceId());
-    }
-
-    /**
-     * Exposes the protocol adapter instance identifier.
-     * <p>
-     * It is equivalent to the <em>container-id</em> advertised on the connection to
-     * the AMQP Messaging Network used for receiving commands.
-     *
-     * @return The identifier.
-     */
-    @Qualifier("adapterInstanceId")
-    @Bean
-    public String getAdapterInstanceId() {
-        return commandConsumerFactoryConfig().getContainerId();
+        return ProtocolAdapterCommandConsumerFactory.create(commandConsumerConnection());
     }
 
     /**

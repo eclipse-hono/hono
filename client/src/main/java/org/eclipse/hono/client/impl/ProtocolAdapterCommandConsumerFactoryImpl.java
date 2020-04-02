@@ -64,6 +64,11 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      */
     private CachingClientFactory<MessageConsumer> mappingAndDelegatingCommandConsumerFactory;
 
+    /**
+     * Identifier that has to be unique to this factory instance.
+     * Will be used to represent the protocol adapter instance that this factory instance is used in, when registering
+     * command handlers with the Device Connection service.
+     */
     private final String adapterInstanceId;
     private final AdapterInstanceCommandHandler adapterInstanceCommandHandler;
     private final AtomicBoolean recreatingConsumers = new AtomicBoolean(false);
@@ -78,12 +83,12 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      * Creates a new factory for an existing connection.
      * 
      * @param connection The connection to the AMQP network.
-     * @param adapterInstanceId The id of the protocol adapter instance that this factory is running in.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public ProtocolAdapterCommandConsumerFactoryImpl(final HonoConnection connection, final String adapterInstanceId) {
+    public ProtocolAdapterCommandConsumerFactoryImpl(final HonoConnection connection) {
         super(connection);
-        this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
+        // the container id contains a UUID therefore it can be used as a unique adapter instance id
+        adapterInstanceId = connection.getContainerId();
 
         adapterInstanceCommandHandler = new AdapterInstanceCommandHandler(connection.getTracer(), adapterInstanceId);
     }

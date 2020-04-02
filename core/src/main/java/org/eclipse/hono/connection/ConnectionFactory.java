@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.connection;
 
+import java.util.UUID;
+
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 
@@ -26,13 +28,6 @@ import io.vertx.proton.ProtonConnection;
  * A factory for AMQP 1.0 connections.
  */
 public interface ConnectionFactory {
-
-    /**
-     * Gets the name being indicated as the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
-     *
-     * @return The name or {@code null} if no name has been set.
-     */
-    String getName();
 
     /**
      * Gets the host name of the server that this factory creates connections to.
@@ -85,8 +80,10 @@ public interface ConnectionFactory {
      * Connects to a server.
      *
      * @param options The client options to use for connecting. If {@code null} default options will be used.
-     * @param username The username to use for authenticating to the server using SASL PLAIN.
-     * @param password The password to use for authenticating to the server using SASL PLAIN.
+     * @param username The username to use for authenticating to the server using SASL PLAIN. If {@code null}, the
+     *                 default username defined for this factory will be used.
+     * @param password The password to use for authenticating to the server using SASL PLAIN. If {@code null}, the
+     *                 default password defined for this factory will be used.
      * @param closeHandler The handler to invoke when an AMQP <em>Close</em> frame is received from the server (may be
      *            {@code null}).
      * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly (may be
@@ -98,6 +95,32 @@ public interface ConnectionFactory {
             ProtonClientOptions options,
             String username,
             String password,
+            Handler<AsyncResult<ProtonConnection>> closeHandler,
+            Handler<ProtonConnection> disconnectHandler,
+            Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
+
+    /**
+     * Connects to a server.
+     *
+     * @param options The client options to use for connecting. If {@code null} default options will be used.
+     * @param username The username to use for authenticating to the server using SASL PLAIN. If {@code null}, the
+     *                 default username defined for this factory will be used.
+     * @param password The password to use for authenticating to the server using SASL PLAIN. If {@code null}, the
+     *                 default password defined for this factory will be used.
+     * @param containerId The container id to be advertised to the remove peer. If {@code null}, a generated
+     *                    container id will be used.
+     * @param closeHandler The handler to invoke when an AMQP <em>Close</em> frame is received from the server (may be
+     *            {@code null}).
+     * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly (may be
+     *            {@code null}).
+     * @param connectionResultHandler The callback to invoke with the outcome of the connection attempt.
+     * @throws NullPointerException if the result handler is {@code null}.
+     */
+    void connect(
+            ProtonClientOptions options,
+            String username,
+            String password,
+            String containerId,
             Handler<AsyncResult<ProtonConnection>> closeHandler,
             Handler<ProtonConnection> disconnectHandler,
             Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
@@ -115,5 +138,21 @@ public interface ConnectionFactory {
     static ConnectionFactory newConnectionFactory(final Vertx vertx,
             final ClientConfigProperties clientConfigProperties) {
         return new ConnectionFactoryImpl(vertx, clientConfigProperties);
+    }
+
+    /**
+     * Creates a container id to be advertised to the remote peer.
+     *
+     * @param name The name part. If {@code null}, the string 'null' will be used.
+     * @param serverRole The server role part. If {@code null}, that part will be omitted.
+     * @param uuid The unique identifier to use. If {@code null}, a random UUID will be used.
+     * @return The container id.
+     */
+    static String createContainerId(final String name, final String serverRole, final UUID uuid) {
+        final UUID effectiveUuid = uuid == null ? UUID.randomUUID() : uuid;
+        if (serverRole == null) {
+            return String.format("%s-%s", name, effectiveUuid);
+        }
+        return String.format("%s-%s-%s", name, serverRole, effectiveUuid);
     }
 }
