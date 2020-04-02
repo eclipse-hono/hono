@@ -156,6 +156,11 @@
         <version>${vertx.version}</version>
       </dependency>
       <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-mongo-client</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
@@ -187,6 +192,11 @@
       <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-service-base</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-service-device-registry-base</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
