@@ -104,6 +104,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         props = new ClientConfigProperties();
 
         connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, props);
+        when(connection.getContainerId()).thenReturn(adapterInstanceId);
 
         adapterInstanceCommandReceiver = mock(ProtonReceiver.class);
         adapterInstanceCommandConsumerAddress = CommandConstants.INTERNAL_COMMAND_ENDPOINT + "/" + adapterInstanceId;
@@ -133,7 +134,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                 .thenReturn(Future.succeededFuture(devConClient));
         when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), any())).thenReturn(Future.succeededFuture());
 
-        commandConsumerFactory = new ProtocolAdapterCommandConsumerFactoryImpl(connection, adapterInstanceId);
+        commandConsumerFactory = new ProtocolAdapterCommandConsumerFactoryImpl(connection);
         commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
     }
 

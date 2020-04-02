@@ -225,14 +225,19 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Gets the remote container id as advertised by the peer.
-     * <p>
-     * This default implementation simply returns {@code N/A}.
      *
      * @return The remote container id or {@code null}.
      */
-    default String getRemoteContainer() {
-        return "N/A";
-    }
+    String getRemoteContainerId();
+
+    /**
+     * Gets the container id that is advertised to the peer.
+     * <p>
+     * The identifier is supposed to be unique for this HonoConnection.
+     *
+     * @return The container id.
+     */
+    String getContainerId();
 
     /**
      * Checks if this client supports a certain capability.

@@ -8,6 +8,13 @@ title = "Release Notes"
 
 * An admin guide for the CoAP adapter has been added.
 
+### API Changes
+
+* The `getRemoteContainer` method in `org.eclipse.hono.client.HonoConnection` has been
+  renamed to `getRemoteContainerId`.
+* The `getName` method in `org.eclipse.hono.connection.ConnectionFactory` has been removed
+  and an additional `connect` method has been added.  
+
 ## 1.2.2 (not yet released)
 
 ### Fixes & Enhancements

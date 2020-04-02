@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -111,6 +112,7 @@ public class HonoConnectionImpl implements HonoConnection {
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
 
+    private final String containerId;
     private final DeferredConnectionCheckHandler deferredConnectionCheckHandler;
 
     private ProtonClientOptions clientOptions;
@@ -156,6 +158,8 @@ public class HonoConnectionImpl implements HonoConnection {
         } else {
             this.connectionFactory = ConnectionFactory.newConnectionFactory(this.vertx, clientConfigProperties);
         }
+        this.containerId = ConnectionFactory.createContainerId(clientConfigProperties.getName(),
+                clientConfigProperties.getServerRole(), UUID.randomUUID());
         this.clientConfigProperties = clientConfigProperties;
         this.connectAttempts = new AtomicInteger(0);
     }
@@ -403,6 +407,9 @@ public class HonoConnectionImpl implements HonoConnection {
                 clientOptions = options;
                 connectionFactory.connect(
                         clientOptions,
+                        null,
+                        null,
+                        containerId,
                         remoteClose -> onRemoteClose(remoteClose, disconnectHandler),
                         failedConnection -> onRemoteDisconnect(failedConnection, disconnectHandler),
                         conAttempt -> {
@@ -1043,11 +1050,16 @@ public class HonoConnectionImpl implements HonoConnection {
      * @return The remote container id or {@code null}.
      */
     @Override
-    public String getRemoteContainer() {
+    public String getRemoteContainerId() {
         if (!isConnectedInternal()) {
             return null;
         }
         return connection.getRemoteContainer();
+    }
+
+    @Override
+    public String getContainerId() {
+        return containerId;
     }
 
     //-----------------------------------< private methods >---

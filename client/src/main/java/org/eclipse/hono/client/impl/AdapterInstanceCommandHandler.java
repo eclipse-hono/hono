@@ -39,7 +39,7 @@ import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * Handler for commands received at the protocol adapter specific address.
+ * Handler for commands received at the protocol adapter instance specific address.
  */
 public final class AdapterInstanceCommandHandler {
 

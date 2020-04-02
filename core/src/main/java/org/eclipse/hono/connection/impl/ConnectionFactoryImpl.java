@@ -14,6 +14,7 @@
 package org.eclipse.hono.connection.impl;
 
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
@@ -78,11 +79,6 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
     }
 
     @Override
-    public String getName() {
-        return config.getName();
-    }
-
-    @Override
     public String getHost() {
         return config.getHost();
     }
@@ -122,6 +118,18 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
             final Handler<ProtonConnection> disconnectHandler,
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+        connect(options, username, password, null, closeHandler, disconnectHandler, connectionResultHandler);
+    }
+
+    @Override
+    public void connect(
+            final ProtonClientOptions options,
+            final String username,
+            final String password,
+            final String containerId,
+            final Handler<AsyncResult<ProtonConnection>> closeHandler,
+            final Handler<ProtonConnection> disconnectHandler,
+            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
         if (vertx == null) {
             throw new IllegalStateException("Vert.x instance must be set");
@@ -134,6 +142,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         final String effectiveUsername = username == null ? config.getUsername() : username;
         final String effectivePassword = password == null ? config.getPassword() : password;
         addOptions(clientOptions, effectiveUsername, effectivePassword);
+        final String effectiveContainerId = containerId == null ? getContainerIdDefault() : containerId;
 
         final ProtonClient client = protonClient != null ? protonClient : ProtonClient.create(vertx);
         logger.debug("connecting to AMQP 1.0 container [{}://{}:{}, role: {}]",
@@ -158,8 +167,12 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                 config.getPort(),
                 effectiveUsername,
                 effectivePassword,
-                conAttempt -> handleConnectionAttemptResult(conAttempt, connectionTimeoutTimerId, connectionTimeoutReached,
-                        clientOptions, closeHandler, disconnectHandler, connectionResultHandler));
+                conAttempt -> handleConnectionAttemptResult(conAttempt, effectiveContainerId, connectionTimeoutTimerId,
+                        connectionTimeoutReached, clientOptions, closeHandler, disconnectHandler, connectionResultHandler));
+    }
+
+    private String getContainerIdDefault() {
+        return ConnectionFactory.createContainerId(config.getName(), config.getServerRole(), UUID.randomUUID());
     }
 
     private void failConnectionAttempt(final ProtonClientOptions clientOptions,
@@ -175,6 +188,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
 
     private void handleConnectionAttemptResult(
             final AsyncResult<ProtonConnection> conAttempt,
+            final String containerId,
             final Long connectionTimeoutTimerId,
             final AtomicBoolean connectionTimeoutReached,
             final ProtonClientOptions clientOptions,
@@ -202,7 +216,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                     config.getServerRole());
             final ProtonConnection downstreamConnection = conAttempt.result();
             downstreamConnection
-                    .setContainer(config.getContainerId())
+                    .setContainer(containerId)
                     .setHostname(config.getAmqpHostname())
                     .openHandler(openCon -> {
                         if (connectionTimeoutTimerId != null) {

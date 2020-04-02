@@ -368,6 +368,7 @@ public class HonoConnectionImplTest {
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
             @Override
             public void connect(final ProtonClientOptions options, final String username, final String password,
+                                final String containerId,
                                 final Handler<AsyncResult<ProtonConnection>> closeHandler,
                                 final Handler<ProtonConnection> disconnectHandler,
                                 final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
@@ -383,7 +384,7 @@ public class HonoConnectionImplTest {
                         assertThat(isConnected2FutureRef.get().isComplete()).isFalse();
                     });
                 }
-                super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
+                super.connect(options, username, password, containerId, closeHandler, disconnectHandler, connectionResultHandler);
             }
         };
         connectionFactory.setExpectedFailingConnectionAttempts(2);
@@ -426,6 +427,7 @@ public class HonoConnectionImplTest {
         connectionFactory = new DisconnectHandlerProvidingConnectionFactory(con) {
             @Override
             public void connect(final ProtonClientOptions options, final String username, final String password,
+                                final String containerId,
                                 final Handler<AsyncResult<ProtonConnection>> closeHandler,
                                 final Handler<ProtonConnection> disconnectHandler,
                                 final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
@@ -439,7 +441,7 @@ public class HonoConnectionImplTest {
                         assertThat(isConnected2FutureRef.get().isComplete()).isFalse();
                     });
                 }
-                super.connect(options, username, password, closeHandler, disconnectHandler, connectionResultHandler);
+                super.connect(options, username, password, containerId, closeHandler, disconnectHandler, connectionResultHandler);
             }
         };
         connectionFactory.setExpectedFailingConnectionAttempts(3);
@@ -480,14 +482,15 @@ public class HonoConnectionImplTest {
         when(factory.getHost()).thenReturn("server");
         when(factory.getPort()).thenReturn(5672);
         doAnswer(invocation -> {
-            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(3);
+            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(6);
             if (connectAttempts.incrementAndGet() == 3) {
                 // WHEN client gets shutdown
                 honoConnection.shutdown();
             }
             resultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
             return null;
-        }).when(factory).connect(any(), VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
+        }).when(factory).connect(any(), any(), any(), anyString(), VertxMockSupport.anyHandler(),
+                VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
         honoConnection = new HonoConnectionImpl(vertx, factory, props);
         honoConnection.connect().setHandler(ctx.failing(cause -> {
                     // THEN three attempts have been made to connect

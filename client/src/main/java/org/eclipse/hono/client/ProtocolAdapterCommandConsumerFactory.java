@@ -30,12 +30,11 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * Creates a new factory for an existing connection.
      *
      * @param connection The connection to the AMQP network.
-     * @param adapterInstanceId The id of the protocol adapter instance that this factory is running in.
      * @return The factory.
      * @throws NullPointerException if connection or gatewayMapper is {@code null}.
      */
-    static ProtocolAdapterCommandConsumerFactory create(final HonoConnection connection, final String adapterInstanceId) {
-        return new ProtocolAdapterCommandConsumerFactoryImpl(connection, adapterInstanceId);
+    static ProtocolAdapterCommandConsumerFactory create(final HonoConnection connection) {
+        return new ProtocolAdapterCommandConsumerFactoryImpl(connection);
     }
 
     /**

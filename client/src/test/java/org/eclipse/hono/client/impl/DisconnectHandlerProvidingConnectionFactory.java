@@ -65,6 +65,18 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
             final Handler<ProtonConnection> disconnectHandler,
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+        connect(options, null, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+    }
+
+    @Override
+    public void connect(
+            final ProtonClientOptions options,
+            final String username,
+            final String password,
+            final String containerId,
+            final Handler<AsyncResult<ProtonConnection>> closeHandler,
+            final Handler<ProtonConnection> disconnectHandler,
+            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
         this.closeHandler = closeHandler;
         this.disconnectHandler = disconnectHandler;
@@ -75,11 +87,6 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
             expectedSucceedingConnectionAttempts.countDown();
             connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
         }
-    }
-
-    @Override
-    public String getName() {
-        return "client";
     }
 
     @Override

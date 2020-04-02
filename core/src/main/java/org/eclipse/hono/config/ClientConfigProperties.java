@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.config;
 
-import java.util.UUID;
-
 import org.eclipse.hono.util.Constants;
 
 /**
@@ -70,7 +68,6 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      */
     public static final long DEFAULT_SEND_MESSAGE_TIMEOUT = 1000L; // ms
 
-    private final String containerIdUuidPart = UUID.randomUUID().toString();
     private String amqpHostname;
     private int connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT;
     private long flowLatency = DEFAULT_FLOW_LATENCY;
@@ -119,7 +116,6 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * Gets the name being indicated as part of the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
      * 
      * @return The name or {@code null} if no name has been set.
-     * @see #getContainerId()
      */
     public final String getName() {
         return name;
@@ -129,7 +125,6 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * Sets the name to indicate as part of the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
      * 
      * @param name The name to set.
-     * @see #getContainerId()
      */
     public final void setName(final String name) {
         this.name = name;
@@ -151,17 +146,6 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      */
     public final void setAmqpHostname(final String amqpHostname) {
         this.amqpHostname = amqpHostname;
-    }
-
-    /**
-     * Gets the identifier being indicated as the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
-     * <p>
-     * The identifier consists of the name returned by {@link #getName()} plus a UUID.
-     *
-     * @return The identifier.
-     */
-    public final String getContainerId() {
-        return String.format("%s-%s", getName(), containerIdUuidPart);
     }
 
     /**
