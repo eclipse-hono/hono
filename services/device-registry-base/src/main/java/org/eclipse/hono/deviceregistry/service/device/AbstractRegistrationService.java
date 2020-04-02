@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.registration.RegistrationService;
@@ -53,15 +54,18 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
     private static final Logger log = LoggerFactory.getLogger(AbstractRegistrationService.class);
 
-    protected TenantInformationService tenantInformationService;
+    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     /**
-     * Set tenant information service.
+     * Sets the service to use for checking existence of tenants.
+     * <p>
+     * If not set, tenant existence will not be verified.
+     * 
      * @param tenantInformationService The tenant information service.
      * @throws NullPointerException if service is {@code null};
      */
-    @Autowired
-    public void setTenantInformationService(final TenantInformationService tenantInformationService) {
+    @Autowired(required = false)
+    public final void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }
 
