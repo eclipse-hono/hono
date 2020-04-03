@@ -43,6 +43,8 @@ public final class DeviceDto extends BaseDto {
     }
 
     /**
+     * Creates a new data transfer object to store device information in mongodb.
+     *
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
      * @param device The device information.
