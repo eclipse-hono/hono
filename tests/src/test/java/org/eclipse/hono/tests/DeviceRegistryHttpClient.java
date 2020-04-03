@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -80,12 +80,12 @@ public final class DeviceRegistryHttpClient {
      * The URI pattern for addressing the credentials of a device.
      */
     public static final String TEMPLATE_URI_CREDENTIALS_BY_DEVICE = String.format("/%s/%s/%%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_HTTP_ENDPOINT);
     /**
      * The URI pattern for addressing a device's credentials of a specific type.
      */
     public static final String TEMPLATE_URI_CREDENTIALS_INSTANCE = String.format("/%s/%s/%%s/%%s/%%s",
-            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_ENDPOINT);
+            RegistryManagementConstants.API_VERSION, RegistryManagementConstants.CREDENTIALS_HTTP_ENDPOINT);
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryHttpClient.class);
 

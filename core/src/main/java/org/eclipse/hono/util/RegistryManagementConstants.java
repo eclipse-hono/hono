@@ -165,10 +165,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the field that contains the comment about the secret.
      */
     public static final String FIELD_SECRETS_COMMENT           = "comment";
-    /**
-     * The Credential service's endpoint name.
-     */
-    public static final String CREDENTIALS_ENDPOINT              = "credentials";
 
     /**
      * The type name that indicates an X.509 client certificate secret.
