@@ -21,6 +21,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +40,8 @@ import io.vertx.core.json.JsonObject;
  * information from persistent storage. Thus, subclasses need to override (and implement) this method in order to get a
  * working implementation of the default assertion mechanism.
  *
- * @deprecated This class has been moved to "services/device-registry-base" module.
+ * @deprecated Use {@code org.eclipse.hono.deviceregistry.device.AbstractRegistrationService} from the
+ *             <em>device-registry-base</em> module.
  */
 @Deprecated
 public abstract class AbstractRegistrationService implements RegistrationService {
@@ -201,9 +203,9 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * Checks if a gateway is authorized to act <em>on behalf of</em> a device.
      * <p>
      * This default implementation checks if the gateway's identifier matches the value of the
-     * {@link RegistrationConstants#FIELD_VIA} property in the device's registration information. The property may
+     * {@link RegistryManagementConstants#FIELD_VIA} property in the device's registration information. The property may
      * either contain a single String value or a JSON array of Strings.
-     * Alternatively, the {@link RegistrationConstants#FIELD_VIA_GROUPS} property value in the device's registration
+     * Alternatively, the {@link RegistryManagementConstants#FIELD_VIA_GROUPS} property value in the device's registration
      * information is checked against the group membership defined in the gateway's registration information.
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated check.
@@ -215,30 +217,32 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * @return {@code true} if the gateway is authorized.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected boolean isGatewayAuthorized(final String gatewayId, final JsonObject gatewayData,
-            final String deviceId, final JsonObject deviceData) {
+    protected boolean isGatewayAuthorized(
+            final String gatewayId,
+            final JsonObject gatewayData,
+            final String deviceId,
+            final JsonObject deviceData) {
+
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(gatewayData);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(deviceData);
 
-        final JsonArray via = convertObjectToJsonArray(deviceData.getValue(RegistrationConstants.FIELD_VIA));
-        final JsonArray viaGroups = convertObjectToJsonArray(deviceData.getValue(RegistrationConstants.FIELD_VIA_GROUPS));
-        final JsonArray gatewayDataMemberOf = convertObjectToJsonArray(gatewayData.getValue(RegistrationConstants.FIELD_MEMBER_OF));
+        final JsonArray via = convertObjectToJsonArray(deviceData.getValue(RegistryManagementConstants.FIELD_VIA));
+        final JsonArray viaGroups = convertObjectToJsonArray(deviceData.getValue(RegistryManagementConstants.FIELD_VIA_GROUPS));
+        final JsonArray gatewayDataMemberOf = convertObjectToJsonArray(gatewayData.getValue(RegistryManagementConstants.FIELD_MEMBER_OF));
 
         return isGatewayInVia(gatewayId, via) || anyGatewayGroupInViaGroups(gatewayDataMemberOf, viaGroups);
     }
 
     private boolean isGatewayInVia(final String gatewayId, final JsonArray via) {
-        return via
-                .stream()
+        return via.stream()
                 .filter(String.class::isInstance)
                 .anyMatch(gatewayId::equals);
     }
 
     private boolean anyGatewayGroupInViaGroups(final JsonArray gatewayDataMemberOf, final JsonArray viaGroups) {
-        return viaGroups
-                .stream()
+        return viaGroups.stream()
                 .filter(String.class::isInstance)
                 .anyMatch(gatewayDataMemberOf::contains);
     }
@@ -326,21 +330,26 @@ public abstract class AbstractRegistrationService implements RegistrationService
     }
 
     /**
-     * Checks if a given device allows a gateway to possibly act on behalf of the given device. This is determined by checking whether the
-     * {@link RegistrationConstants#FIELD_VIA} property or the {@link RegistrationConstants#FIELD_VIA_GROUPS} property
-     * of the registration data of the given device have one or more entries.
+     * Checks if any gateways are allowed to act on behalf of a given device.
+     * <p>
+     * This is determined by checking whether the {@link RegistryManagementConstants#FIELD_VIA} property
+     * or the {@link RegistryManagementConstants#FIELD_VIA_GROUPS} property of the registration data
+     * of the given device have one or more entries.
      * <p>
      * Subclasses may override this method to provide a different means to determine gateway support.
      *
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param registrationInfo The device's registration information.
-     * @return {@code true} if a gateway may act on behalf of the given device.
+     * @return {@code true} if at least one gateway may act on behalf of the given device.
      */
-    protected boolean isGatewaySupportedForDevice(final String tenantId, final String deviceId,
+    protected boolean isGatewaySupportedForDevice(
+            final String tenantId,
+            final String deviceId,
             final JsonObject registrationInfo) {
-        final Object viaObj = registrationInfo.getValue(RegistrationConstants.FIELD_VIA);
-        final Object viaGroups = registrationInfo.getValue(RegistrationConstants.FIELD_VIA_GROUPS);
+
+        final Object viaObj = registrationInfo.getValue(RegistryManagementConstants.FIELD_VIA);
+        final Object viaGroups = registrationInfo.getValue(RegistryManagementConstants.FIELD_VIA_GROUPS);
 
         return (viaObj instanceof String && !((String) viaObj).isEmpty())
                 || (viaObj instanceof JsonArray && !((JsonArray) viaObj).isEmpty())
@@ -373,11 +382,11 @@ public abstract class AbstractRegistrationService implements RegistrationService
     }
 
     /**
-     * Gets the list of gateways that may act on behalf of the given device.
+     * Gets the list of gateways that may act on behalf of a given device.
      * <p>
      * To compile this list of gateways, this default implementation gets the list of gateways from the value of the
-     * {@link RegistrationConstants#FIELD_VIA} property in the device's registration information and resolves
-     * the members of the groups that are in the {@link RegistrationConstants#FIELD_VIA_GROUPS} property of the device.
+     * {@link RegistryManagementConstants#FIELD_VIA} property in the device's registration information and resolves
+     * the members of the groups that are in the {@link RegistryManagementConstants#FIELD_VIA_GROUPS} property of the device.
      * <p>
      * Subclasses may override this method to provide a different means to determine the supported gateways.
      *
@@ -392,10 +401,14 @@ public abstract class AbstractRegistrationService implements RegistrationService
      *         The future will succeed with the list of gateways as a JSON array of Strings (never {@code null})
      *         or it will fail with a {@link ServiceInvocationException} indicating the cause of the failure.
      */
-    protected Future<JsonArray> getSupportedGatewaysForDevice(final String tenantId, final String deviceId,
-            final JsonObject registrationInfo, final Span span) {
-        final JsonArray via = convertObjectToJsonArray(registrationInfo.getValue(RegistrationConstants.FIELD_VIA));
-        final JsonArray viaGroups = convertObjectToJsonArray(registrationInfo.getValue(RegistrationConstants.FIELD_VIA_GROUPS));
+    protected Future<JsonArray> getSupportedGatewaysForDevice(
+            final String tenantId,
+            final String deviceId,
+            final JsonObject registrationInfo,
+            final Span span) {
+
+        final JsonArray via = convertObjectToJsonArray(registrationInfo.getValue(RegistryManagementConstants.FIELD_VIA));
+        final JsonArray viaGroups = convertObjectToJsonArray(registrationInfo.getValue(RegistryManagementConstants.FIELD_VIA_GROUPS));
 
         final Future<JsonArray> resultFuture;
         if (viaGroups.isEmpty()) {

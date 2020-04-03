@@ -83,8 +83,27 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String TENANT_HTTP_ENDPOINT = "tenants";
 
-    /// FIELDS
-    //CREDENTIALS
+    // FIELD DEFINTIONS
+
+    // DEVICES
+
+    /**
+     * The name of the field that contains the identifiers of those gateways that may act on behalf of the device.
+     */
+    public static final String FIELD_VIA = RegistrationConstants.FIELD_VIA;
+
+    /**
+     * The name of the field that contains the identifiers of groups of gateways that may act on behalf of the device.
+     */
+    public static final String FIELD_VIA_GROUPS = "viaGroups";
+
+    /**
+     * The name of the field that contains the names of the gateway groups that the (gateway) device is a member of.
+     */
+    public static final String FIELD_MEMBER_OF = "memberOf";
+
+    // CREDENTIALS
+
     /**
      * The name of the field that contains the type of credentials.
      */
@@ -110,7 +129,8 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_ID = "id";
 
-    /* secrets fields */
+    // SECRETS
+
     /**
      * The name of the field that contains the password hash.
      */
@@ -184,7 +204,8 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String DEFAULT_HASH_FUNCTION             = HASH_FUNCTION_SHA256;
 
-    //TENANTS
+    // TENANTS
+
     /**
      * The default number of seconds that a protocol adapter should wait for
      * an upstream command.

@@ -25,6 +25,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -476,7 +477,7 @@ public class BaseRegistrationServiceTest {
                             .put(RegistrationConstants.FIELD_ENABLED, true)
                             .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject()
                                     .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/default"))
-                            .put(RegistrationConstants.FIELD_VIA_GROUPS, "group-1"));
+                            .put(RegistryManagementConstants.FIELD_VIA_GROUPS, "group-1"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("4716".equals(deviceId)) {
             final JsonObject responsePayload = getResultPayload(
@@ -493,7 +494,7 @@ public class BaseRegistrationServiceTest {
                     "gw-2",
                     new JsonObject()
                             .put(RegistrationConstants.FIELD_ENABLED, true)
-                            .put(RegistrationConstants.FIELD_MEMBER_OF, "group-2"));
+                            .put(RegistryManagementConstants.FIELD_MEMBER_OF, "group-2"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("gw-3".equals(deviceId)) {
             final JsonObject responsePayload = getResultPayload(
@@ -510,14 +511,14 @@ public class BaseRegistrationServiceTest {
                     "gw-5",
                     new JsonObject()
                             .put(RegistrationConstants.FIELD_ENABLED, true)
-                            .put(RegistrationConstants.FIELD_MEMBER_OF, "group-1"));
+                            .put(RegistryManagementConstants.FIELD_MEMBER_OF, "group-1"));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else if ("gw-6".equals(deviceId)) {
             final JsonObject responsePayload = getResultPayload(
                     "gw-6",
                     new JsonObject()
                             .put(RegistrationConstants.FIELD_ENABLED, true)
-                            .put(RegistrationConstants.FIELD_MEMBER_OF, new JsonArray().add("group-1").add("group-2")));
+                            .put(RegistryManagementConstants.FIELD_MEMBER_OF, new JsonArray().add("group-1").add("group-2")));
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, responsePayload));
         } else {
             return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
