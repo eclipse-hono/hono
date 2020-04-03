@@ -14,10 +14,13 @@ package org.eclipse.hono.deviceregistry.mongodb.utils;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.mongodb.config.AbstractMongoDbBasedRegistryConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.BaseDto;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -51,7 +54,6 @@ public final class MongoDbDeviceRegistryUtils {
     }
 
     /**
-     /**
      * Checks whether this registry allows the creation, modification and removal of entries.
      *
      * @param config the config properties
@@ -96,5 +98,45 @@ public final class MongoDbDeviceRegistryUtils {
             return OperationResult.empty(((ClientErrorException) error).getErrorCode());
         }
         return OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR);
+    }
+
+    /**
+     * Checks if the version of the given resource matches that of the request and returns a
+     * failed future with an appropriate status code. 
+
+     * @param resourceId The resource identifier.
+     * @param versionFromRequest The version specified in the request.
+     * @param resourceSupplierFuture The Future that supplies the resource for which the version 
+     *                               is to be checked.
+     * @param <T> The type of the field.
+     * @return A failed future with a {@link ServiceInvocationException}. The <em>status</em> will be
+     *         <ul>
+     *         <li><em>404 Not Found</em> if no resource with the given identifier exists.</li>
+     *         <li><em>412 Precondition Failed</em> if the resource exists but the version does not match.</li>
+     *         <li><em>500 Internal Server Error</em> if the reason is not any of the above.</li>
+     *         </ul>
+     */
+    public static <T> Future<T> checkForVersionMismatchAndFail(final String resourceId,
+            final Optional<String> versionFromRequest, final Future<? extends BaseDto> resourceSupplierFuture) {
+        Objects.requireNonNull(resourceId);
+        Objects.requireNonNull(versionFromRequest);
+        Objects.requireNonNull(resourceSupplierFuture);
+
+        if (versionFromRequest.isPresent()) {
+            return resourceSupplierFuture
+                    .compose(foundResource -> {
+                        if (!foundResource.getVersion().equals(versionFromRequest.get())) {
+                            return Future.failedFuture(
+                                    new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
+                                            "Resource version mismatch"));
+                        }
+                        return Future.failedFuture(
+                                new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                        String.format("Error modifying resource [%s].", resourceId)));
+                    });
+        } else {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                    String.format("Resource [%s] not found.", resourceId)));
+        }
     }
 }
