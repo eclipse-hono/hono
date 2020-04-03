@@ -52,8 +52,10 @@ import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
+import io.vertx.ext.mongo.UpdateOptions;
 
 /**
  * This is an implementation of the device registration service and the device management service where data 
@@ -321,9 +323,9 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .document();
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
-        mongoClient.findOneAndReplace(config.getCollectionName(), updateDeviceQuery,
+        mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(), updateDeviceQuery,
                 JsonObject.mapFrom(new DeviceDto(tenantId, deviceId, device, new Versioned<>(device).getVersion())),
-                updateDevicePromise);
+                new FindOptions(), new UpdateOptions().setReturningNewDocument(true), updateDevicePromise);
 
         return updateDevicePromise.future()
                 .compose(result -> Optional.ofNullable(result)
