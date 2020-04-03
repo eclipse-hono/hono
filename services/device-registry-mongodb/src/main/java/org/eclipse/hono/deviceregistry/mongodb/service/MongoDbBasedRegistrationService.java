@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDto;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
@@ -296,7 +295,9 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             span.log(String.format("successfully deleted device [%s]", deviceId));
                             return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
                         })
-                        .orElse(checkForVersionMismatchAndFail(tenantId, deviceId, resourceVersion)));
+                        .orElse(MongoDbDeviceRegistryUtils
+                                .checkForVersionMismatchAndFail(deviceId, resourceVersion,
+                                        findDevice(tenantId, deviceId))));
     }
 
     private Future<OperationResult<Device>> processReadDevice(final String tenantId, final String deviceId) {
@@ -335,27 +336,9 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                     Optional.empty(),
                                     Optional.of(result.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))));
                         })
-                        .orElse(checkForVersionMismatchAndFail(tenantId, deviceId, resourceVersion)));
-    }
-
-    private <T> Future<T> checkForVersionMismatchAndFail(final String tenantId, final String deviceId,
-            final Optional<String> versionFromRequest) {
-        if (versionFromRequest.isPresent()) {
-            return findDevice(tenantId, deviceId)
-                    .compose(foundDevice -> {
-                        if (!foundDevice.getVersion().equals(versionFromRequest.get())) {
-                            return Future.failedFuture(
-                                    new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
-                                            "Resource version mismatch"));
-                        }
-                        return Future.failedFuture(
-                                new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                        String.format("Error updating resource [%s].", deviceId)));
-                    });
-        } else {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                    String.format("Device [%s] not found.", deviceId)));
-        }
+                        .orElse(MongoDbDeviceRegistryUtils
+                                .checkForVersionMismatchAndFail(deviceId, resourceVersion,
+                                        findDevice(tenantId, deviceId))));
     }
 
     private <T> Future<T> isMaxDevicesLimitReached(final String tenantId) {
