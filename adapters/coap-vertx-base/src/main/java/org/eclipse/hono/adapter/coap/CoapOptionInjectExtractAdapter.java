@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.coap;
 
 import java.nio.ByteBuffer;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.OptionSet;
@@ -45,15 +46,54 @@ public class CoapOptionInjectExtractAdapter implements Binary {
     public static final int OPTION_TRACE_CONTEXT = 0b1111110111111110; // 65022
 
     private OptionSet options;
+    private Option optionToExtractFrom;
+
+    private CoapOptionInjectExtractAdapter() {
+    }
 
     /**
-     * Creates a new adapter for CoAP options.
+     * Creates a new carrier for extracting a trace context from CoAP options.
      * 
-     * @param options The CoAP options to inject/extract the context to/from.
+     * @param options The CoAP options to extract the context from.
      * @throws NullPointerException if options is {@code null}.
+     * @return The carrier to use for extraction.
      */
-    public CoapOptionInjectExtractAdapter(final OptionSet options) {
-        this.options = Objects.requireNonNull(options);
+    public static Optional<CoapOptionInjectExtractAdapter> forExtraction(final OptionSet options) {
+        Objects.requireNonNull(options);
+        return getTraceContextOption(options)
+                .map(option -> {
+                    final CoapOptionInjectExtractAdapter adapter = new CoapOptionInjectExtractAdapter();
+                    adapter.optionToExtractFrom = option;
+                    return Optional.of(adapter);
+                })
+                .orElse(Optional.empty());
+    }
+
+    /**
+     * Creates a new carrier for injecting a trace context into CoAP options.
+     * 
+     * @param options The CoAP options to inject the context to.
+     * @throws NullPointerException if options is {@code null}.
+     * @return The carrier to use for injection.
+     */
+    public static CoapOptionInjectExtractAdapter forInjection(final OptionSet options) {
+        Objects.requireNonNull(options);
+        final CoapOptionInjectExtractAdapter adapter = new CoapOptionInjectExtractAdapter();
+        adapter.options = options;
+        return adapter;
+    }
+
+    /**
+     * Gets the CoAP option that contains the binary encoded trace context from
+     * a request's set of options.
+     * 
+     * @param optionSet The request option set.
+     * @return The option.
+     */
+    private static Optional<Option> getTraceContextOption(final OptionSet optionSet) {
+        return optionSet.getOthers().stream()
+                .filter(option -> option.getNumber() == OPTION_TRACE_CONTEXT)
+                .findFirst();
     }
 
     /**
@@ -61,9 +101,13 @@ public class CoapOptionInjectExtractAdapter implements Binary {
      */
     @Override
     public ByteBuffer injectionBuffer(final int length) {
-        final byte[] buffer = new byte[length];
-        options.addOption(new Option(OPTION_TRACE_CONTEXT, buffer));
-        return ByteBuffer.wrap(buffer);
+        if (options == null) {
+            throw new IllegalStateException("this carrier is not suitable for injection");
+        } else {
+            final byte[] buffer = new byte[length];
+            options.addOption(new Option(OPTION_TRACE_CONTEXT, buffer));
+            return ByteBuffer.wrap(buffer);
+        }
     }
 
     /**
@@ -71,11 +115,10 @@ public class CoapOptionInjectExtractAdapter implements Binary {
      */
     @Override
     public ByteBuffer extractionBuffer() {
-        return options.getOthers().stream()
-                .filter(option -> option.getNumber() == OPTION_TRACE_CONTEXT)
-                .findFirst()
-                .map(traceContextOption -> traceContextOption.getValue())
-                .map(ByteBuffer::wrap)
-                .orElse(null);
+        if (optionToExtractFrom == null) {
+            throw new IllegalStateException("this carrier is not suitable for extraction");
+        } else {
+            return ByteBuffer.wrap(optionToExtractFrom.getValue());
+        }
     }
 }

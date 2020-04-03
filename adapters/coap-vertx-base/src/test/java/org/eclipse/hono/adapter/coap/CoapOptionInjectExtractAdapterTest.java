@@ -37,17 +37,19 @@ class CoapOptionInjectExtractAdapterTest {
      * a SpanContext.
      */
     @Test
-    public void testJaegerTracerCanUseAdapter() {
+    public void testJaegerTracerInjectsAndExtractsSpanContext() {
+
         final Configuration config = new Configuration("test");
         final Tracer tracer = config.getTracer();
         final Span span = tracer.buildSpan("do").start();
 
         final OptionSet optionSet = new OptionSet();
-        final CoapOptionInjectExtractAdapter injectAdapter = new CoapOptionInjectExtractAdapter(optionSet);
+        final CoapOptionInjectExtractAdapter injectAdapter = CoapOptionInjectExtractAdapter.forInjection(optionSet);
         tracer.inject(span.context(), Format.Builtin.BINARY, injectAdapter);
 
-        final SpanContext context = tracer.extract(Format.Builtin.BINARY, new CoapOptionInjectExtractAdapter(optionSet));
+        final SpanContext context = CoapOptionInjectExtractAdapter.forExtraction(optionSet)
+            .map(carrier -> tracer.extract(Format.Builtin.BINARY, carrier))
+            .orElse(null);
         assertThat(context.toSpanId()).isEqualTo(span.context().toSpanId());
     }
-
 }
