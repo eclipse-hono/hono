@@ -132,6 +132,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                         return processAssertRegistration(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
                                 .compose(result -> {
                                     if (result.isNotFound()) {
+                                        log.debug("no such device");
                                         TracingHelper.logError(span, "no such device");
                                         return Future.succeededFuture(RegistrationResult.from(result.getStatus()));
                                     } else if (isDeviceEnabled(result)) {
@@ -139,6 +140,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                                 .getJsonObject(RegistrationConstants.FIELD_DATA);
                                         return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
                                     } else {
+                                        log.debug("no such device");
                                         TracingHelper.logError(span, "device not enabled");
                                         return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
                                     }
