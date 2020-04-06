@@ -155,6 +155,11 @@
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
+        <artifactId>vertx-jdbc-client</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
         <artifactId>vertx-mongo-client</artifactId>
         <version>${vertx.version}</version>
       </dependency>
@@ -207,6 +212,16 @@
         <artifactId>snakeyaml</artifactId>
         <version>${snakeyaml.version}</version>
         <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.qpid</groupId>
@@ -573,6 +588,11 @@
       <dependency>
         <groupId>org.eclipse.hono</groupId>
         <artifactId>client-device-connection-infinispan</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>service-base-jdbc</artifactId>
         <version>${project.version}</version>
       </dependency>
     </dependencies>
