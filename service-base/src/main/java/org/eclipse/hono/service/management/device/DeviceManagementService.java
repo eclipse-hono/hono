@@ -39,11 +39,10 @@ public interface DeviceManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *          An implementation should log (error) events on this span and it may set tags and use this span as the
      *          parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. The <em>status</em> will be
-     *            <ul>
-     *            <li><em>201 Created</em> if the device has been registered successfully.</li>
-     *            <li><em>409 Conflict</em> if a device with the given identifier already exists for the tenant.</li>
-     *            </ul>
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status code</em> is set as specified in the 
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/createDeviceRegistration"> 
+     *         Device Registry Management API - Create Device Registration </a>
      * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/createDeviceRegistration">
      *      Device Registry Management API - Create Device Registration</a>
@@ -58,12 +57,10 @@ public interface DeviceManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *          An implementation should log (error) events on this span and it may set tags and use this span as the
      *          parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. The <em>status</em> will be
-     *            <ul>
-     *            <li><em>200 OK</em> if a device with the given ID is registered for the tenant. The <em>payload</em>
-     *            will contain the properties registered for the device.</li>
-     *            <li><em>404 Not Found</em> if no device with the given identifier is registered for the tenant.</li>
-     *            </ul>
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status code</em> is set as specified in the 
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/getRegistration"> 
+     *         Device Registry Management API - Get Device Registration </a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/getRegistration">
      *      Device Registry Management API - Get Device Registration</a>
@@ -80,11 +77,10 @@ public interface DeviceManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *          An implementation should log (error) events on this span and it may set tags and use this span as the
      *          parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. The <em>status</em> will be
-     *            <ul>
-     *            <li><em>204 No Content</em> if the registration information has been updated successfully.</li>
-     *            <li><em>404 Not Found</em> if no device with the given identifier is registered for the tenant.</li>
-     *            </ul>
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status code</em> is set as specified in the 
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/updateRegistration"> 
+     *         Device Registry Management API - Update Device Registration </a>
      * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/updateRegistration">
      *      Device Registry Management API - Update Device Registration</a>
@@ -101,12 +97,10 @@ public interface DeviceManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *          An implementation should log (error) events on this span and it may set tags and use this span as the
      *          parent for any spans created in this method.
-     * @return  A future indicating the outcome of the operation. The <em>status</em> will be
-     *             <ul>
-     *             <li><em>204 No Content</em> if the device has been removed successfully.</li>
-     *             <li><em>404 Not Found</em> if no device with the given identifier is
-     *             registered for the tenant.</li>
-     *             </ul>
+     * @return  A future indicating the outcome of the operation.
+     *         The <em>status code</em> is set as specified in the 
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteRegistration"> 
+     *         Device Registry Management API - Delete Device Registration </a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteRegistration">
      *      Device Registry Management API - Delete Device Registration</a>

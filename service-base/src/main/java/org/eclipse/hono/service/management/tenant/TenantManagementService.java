@@ -39,11 +39,9 @@ public interface TenantManagementService {
      *              An implementation should log (error) events on this span and it may set tags and use this span as the
      *              parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
-     *             The <em>status</em> will be
-     *             <ul>
-     *             <li><em>201 Created</em> if the tenant has been added successfully.</li>
-     *             <li><em>409 Conflict</em> if a tenant with the given identifier and version already exists.</li>
-     *             </ul>
+     *         The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/createTenant">
+     *         Device Registry Management API - Create Tenant</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/createTenant">
      *      Device Registry Management API - Create Tenant</a>
@@ -57,12 +55,10 @@ public interface TenantManagementService {
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. The <em>status</em> will be
-     *            <ul>
-     *            <li><em>200 OK</em> if a tenant with the given ID is registered. The <em>payload</em> will contain the
-     *            tenant's configuration information.</li>
-     *            <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
-     *            </ul>
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/getTenant">
+     *         Device Registry Management API - Get Tenant</a>
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/getTenant">
      *      Device Registry Management API - Get Tenant</a>
@@ -79,11 +75,9 @@ public interface TenantManagementService {
      *             An implementation should log (error) events on this span and it may set tags and use this span as the
      *             parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
-     *             The <em>status</em> will be
-     *             <ul>
-     *             <li><em>204 No Content</em> if the tenant has been updated successfully.</li>
-     *             <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
-     *             </ul>
+     *         The <em>status code</em> is set as specified in the 
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/updateTenant">
+     *         Device Registry Management API - Update Tenant</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/updateTenant">
      *      Device Registry Management API - Update Tenant</a>
@@ -100,11 +94,9 @@ public interface TenantManagementService {
      *              An implementation should log (error) events on this span and it may set tags and use this span as the
      *              parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
-     *             The <em>status</em> will be
-     *             <ul>
-     *             <li><em>204 No Content</em> if the tenant has been removed successfully.</li>
-     *             <li><em>404 Not Found</em> if no tenant with the given identifier and version exists.</li>
-     *             </ul>
+     *         The <em>status code</em> is set as specified in the 
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/deleteTenant">
+     *         Device Registry Management API - Delete Tenant</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/tenants/deleteTenant">
      *      Device Registry Management API - Delete Tenant</a>
