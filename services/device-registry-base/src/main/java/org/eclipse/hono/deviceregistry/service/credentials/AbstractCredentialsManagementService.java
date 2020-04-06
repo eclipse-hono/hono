@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -40,7 +41,7 @@ import io.vertx.core.Vertx;
  */
 public abstract class AbstractCredentialsManagementService implements CredentialsManagementService {
 
-    protected TenantInformationService tenantInformationService;
+    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     private HonoPasswordEncoder passwordEncoder;
 
@@ -58,12 +59,14 @@ public abstract class AbstractCredentialsManagementService implements Credential
     }
 
     /**
-     * Set tenant information service.
+     * Sets the service to use for checking existence of tenants.
+     * <p>
+     * If not set, tenant existence will not be verified.
      *
      * @param tenantInformationService The tenant information service.
      * @throws NullPointerException if service is {@code null};
      */
-    @Autowired
+    @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }

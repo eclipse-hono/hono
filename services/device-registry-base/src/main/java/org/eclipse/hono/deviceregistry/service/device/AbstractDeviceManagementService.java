@@ -16,6 +16,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -35,13 +36,16 @@ import io.vertx.core.Future;
 public abstract class AbstractDeviceManagementService implements DeviceManagementService {
 
 
-    protected TenantInformationService tenantInformationService;
+    protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     /**
-     * Set tenant information service.
+     * Sets the service to use for checking existence of tenants.
+     * <p>
+     * If not set, tenant existence will not be verified.
+     *
      * @param tenantInformationService The tenant information service.
      */
-    @Autowired
+    @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }
