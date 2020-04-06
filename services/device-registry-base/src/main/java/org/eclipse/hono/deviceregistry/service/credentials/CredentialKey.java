@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceregistry.service.credentials;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
@@ -26,7 +25,7 @@ import com.google.common.base.MoreObjects.ToStringHelper;
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  * It is used for storing and retrieving values from the backend storage and external systems.
  */
-public final class CredentialKey implements Serializable {
+public final class CredentialKey {
 
     private final String tenantId;
     private final String authId;
