@@ -16,7 +16,6 @@ package org.eclipse.hono.deviceregistry.service.device;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,12 +27,13 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Dummy implementation of the registration service.
+ * Dummy implementation of the registration service which successfully
+ * asserts the registration status of all devices.
  */
 @Service
 @Qualifier("backend")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
-public class DummyRegistrationService extends AbstractRegistrationService {
+public final class DummyRegistrationService extends AbstractRegistrationService {
 
     @Override
     public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final Span span) {
@@ -50,8 +50,11 @@ public class DummyRegistrationService extends AbstractRegistrationService {
                         .succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(thr))));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    protected Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
+    protected Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
         return Future.failedFuture("Not implemented");
     }
 
@@ -59,5 +62,4 @@ public class DummyRegistrationService extends AbstractRegistrationService {
     protected Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
         return Future.failedFuture("Not implemented");
     }
-
 }
