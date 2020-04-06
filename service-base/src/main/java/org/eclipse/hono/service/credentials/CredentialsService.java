@@ -35,12 +35,9 @@ public interface CredentialsService {
      * @param type The type of credentials to get.
      * @param authId The authentication identifier of the device to get credentials for (may be {@code null}.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status</em> will be
-     *         <ul>
-     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
-     *         <em>payload</em> will contain the credentials.</li>
-     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
-     *         </ul>
+     *         The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
@@ -61,12 +58,9 @@ public interface CredentialsService {
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status</em> will be
-     *         <ul>
-     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
-     *         <em>payload</em> will contain the credentials.</li>
-     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
-     *         </ul>
+     *         The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
@@ -81,12 +75,9 @@ public interface CredentialsService {
      * @param authId The authentication identifier of the device to get credentials for (may be {@code null}.
      * @param clientContext Optional bag of properties that can be used to identify the device.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status</em> will be
-     *         <ul>
-     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
-     *         <em>payload</em> will contain the credentials.</li>
-     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
-     *         </ul>
+     *         The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
@@ -109,12 +100,9 @@ public interface CredentialsService {
      *            An implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status</em> will be
-     *         <ul>
-     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
-     *         <em>payload</em> will contain the credentials.</li>
-     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
-     *         </ul>
+     *         The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
+     *         Credentials API - Get Credentials</a>
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#get-credentials">
      *      Credentials API - Get Credentials</a>
