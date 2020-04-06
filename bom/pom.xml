@@ -30,6 +30,7 @@
   <properties>
     <artemis.image.name>quay.io/enmasse/artemis-base:2.10.1</artemis.image.name>
     <assertj-core.version>3.15.0</assertj-core.version>
+    <mockito-inline.version>2.7.13</mockito-inline.version>
     <californium.version>2.2.0</californium.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.10.0</dispatch-router.image.name>
     <guava.version>28.0-jre</guava.version>
@@ -259,6 +260,12 @@
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
         <version>${assertj-core.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-inline</artifactId>
+        <version>${mockito-inline.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>

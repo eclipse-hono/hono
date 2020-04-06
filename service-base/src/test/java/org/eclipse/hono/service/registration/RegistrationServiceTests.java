@@ -61,6 +61,10 @@ public abstract class RegistrationServiceTests {
      * The gateway identifier used in the tests.
      */
     protected static final String GW = "gw-1";
+    /**
+     * The version identifier used in tests.
+     */
+    protected static final String VERSION = "dummy_version";
 
     /**
      * Gets registration service being tested.
@@ -577,6 +581,43 @@ public abstract class RegistrationServiceTests {
                     });
                     register.flag();
                 }));
+    }
+
+    /**
+     * Verify that deleting a device fails when the request contains a non existing device id and a resourceVersion
+     * parameter.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeleteFailsWithNonExistingDeviceAndResourceVersion(final VertxTestContext ctx) {
+
+        // GIVEN a device db without devices
+        // WHEN tenant is deleted with version provided
+        getDeviceManagementService().deleteDevice(TENANT, DEVICE, Optional.of(VERSION), NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN deletion should fail
+                    assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verify that deleting a device fails when the request contains a non existing device id.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeleteFailsWithNonExistingDevice(final VertxTestContext ctx) {
+
+        // GIVEN a device db without devices
+        // WHEN tenant is deleted
+        getDeviceManagementService().deleteDevice(TENANT, DEVICE, Optional.empty(), NoopSpan.INSTANCE)
+                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    // THEN deletion should fail
+                    assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                    ctx.completeNow();
+                })));
     }
 
     // updateDevice tests

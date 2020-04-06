@@ -33,8 +33,21 @@
             <artifactId>hono-service-device-registry-base</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-service-base</artifactId>
+            <version>${project.version}</version>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-mongo-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
