@@ -24,17 +24,12 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedTenantsConfigProperties;
-import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.deviceregistry.service.device.AutowiredDeviceManagementHttpEndpoint;
-import org.eclipse.hono.deviceregistry.service.device.AutowiredRegistrationAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
-import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.deviceconnection.AutowiredDeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
@@ -43,7 +38,6 @@ import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCusto
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
@@ -135,49 +129,7 @@ public class ApplicationConfig {
         return props;
     }
 
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint registrationAmqpEndpoint() {
-        return new AutowiredRegistrationAmqpEndpoint(vertx());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint credentialsAmqpEndpoint() {
-        return new AutowiredCredentialsAmqpEndpoint(vertx());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint tenantAmqpEndpoint() {
-        return new AutowiredTenantAmqpEndpoint(vertx());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
-        return new AutowiredDeviceConnectionAmqpEndpoint(vertx());
-    }
+    // all AMQP endpoints are instantiated via component scan
 
     /**
      * Gets properties for configuring the HTTP based Device Registry Management endpoint.
@@ -199,7 +151,6 @@ public class ApplicationConfig {
      * @return The handler.
      */
     @Bean
-    @Scope("prototype")
     public HttpEndpoint deviceHttpEndpoint() {
         return new AutowiredDeviceManagementHttpEndpoint(vertx());
     }
@@ -211,7 +162,6 @@ public class ApplicationConfig {
      * @return The handler.
      */
     @Bean
-    @Scope("prototype")
     public HttpEndpoint credentialsHttpEndpoint() {
         return new AutowiredCredentialsManagementHttpEndpoint(vertx());
     }
@@ -223,7 +173,6 @@ public class ApplicationConfig {
      * @return The handler.
      */
     @Bean
-    @Scope("prototype")
     public HttpEndpoint tenantHttpEndpoint() {
         return new AutowiredTenantManagementHttpEndpoint(vertx());
     }
