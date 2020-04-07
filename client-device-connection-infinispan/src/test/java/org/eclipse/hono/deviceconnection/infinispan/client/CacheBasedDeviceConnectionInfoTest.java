@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,16 +27,15 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
+import org.infinispan.configuration.cache.ConfigurationBuilder;
+import org.infinispan.manager.DefaultCacheManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,25 +47,25 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
-
 /**
- * Tests verifying behavior of {@link HotrodBasedDeviceConnectionInfo}.
+ * Tests verifying behavior of {@link CacheBasedDeviceConnectionInfo}.
  *
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-class HotrodBasedDeviceConnectionInfoTest {
+class CacheBasedDeviceConnectionInfoTest {
 
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
 
     private DeviceConnectionInfo info;
-    private RemoteCache<String, String> cache;
+    private BasicCache<String, String> cache;
     private Tracer tracer;
     private SpanContext spanContext;
 
@@ -78,9 +76,14 @@ class HotrodBasedDeviceConnectionInfoTest {
         );
     }
 
+    @SuppressWarnings("unchecked")
+    private static <K, V> Cache<K, V> mockCache() {
+        return mock(Cache.class);
+    }
+
     private static Set<String> getViaGatewaysExceedingThreshold() {
         final HashSet<String> set = new HashSet<>();
-        for (int i = 0; i < HotrodBasedDeviceConnectionInfo.VIA_GATEWAYS_OPTIMIZATION_THRESHOLD + 1; i++) {
+        for (int i = 0; i < CacheBasedDeviceConnectionInfo.VIA_GATEWAYS_OPTIMIZATION_THRESHOLD + 1; i++) {
             set.add("gw#" + i);
         }
         return set;
@@ -89,10 +92,14 @@ class HotrodBasedDeviceConnectionInfoTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
-    void setUp() {
-        cache = new SimpleTestRemoteCache();
+    void setUp(final Vertx vertx, final VertxTestContext testContext) {
+
+        final var cacheManager = new DefaultCacheManager(false);
+        cacheManager.defineConfiguration("cache-name", new ConfigurationBuilder()
+                .build());
+        cache = new EmbeddedCache<>(vertx, cacheManager, "cache-name", "foo", "bar");
+        cache.connect().onComplete(testContext.completing());
 
         spanContext = mock(SpanContext.class);
         final Span span = mock(Span.class);
@@ -107,18 +114,18 @@ class HotrodBasedDeviceConnectionInfoTest {
         tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 
-        info = new HotrodBasedDeviceConnectionInfo(cache, tracer);
+        info = new CacheBasedDeviceConnectionInfo(cache, tracer);
     }
 
     /**
      * Verifies that a last known gateway can be successfully set.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     void testSetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
-        final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
-        info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
+        final Cache<String, String> mockedCache = mockCache();
+        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.put(anyString(), anyString())).thenReturn(Future.succeededFuture("oldValue"));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", null)
             .setHandler(ctx.completing());
@@ -126,13 +133,13 @@ class HotrodBasedDeviceConnectionInfoTest {
 
     /**
      * Verifies that a request to set a gateway fails with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     void testSetLastKnownGatewayFails(final VertxTestContext ctx) {
-        final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
-        info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
+        final Cache<String, String> mockedCache = mockCache();
+        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.put(anyString(), anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", mock(SpanContext.class))
             .setHandler(ctx.failing(t -> {
@@ -143,13 +150,13 @@ class HotrodBasedDeviceConnectionInfoTest {
 
     /**
      * Verifies that a last known gateway can be successfully retrieved.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     void testGetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
-        final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
-        info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
+        final Cache<String, String> mockedCache = mockCache();
+        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.get(anyString())).thenReturn(Future.succeededFuture("gw-id"));
         info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", null)
             .setHandler(ctx.succeeding(value -> {
@@ -162,13 +169,13 @@ class HotrodBasedDeviceConnectionInfoTest {
 
     /**
      * Verifies that a request to set a gateway fails with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
     void testGetLastKnownGatewayFails(final VertxTestContext ctx) {
-        final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
-        info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
+        final Cache<String, String> mockedCache = mockCache();
+        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.get(anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
         info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(SpanContext.class))
             .setHandler(ctx.failing(t -> {
@@ -229,7 +236,7 @@ class HotrodBasedDeviceConnectionInfoTest {
     }
 
     /**
-     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a PRECON_FAILED status
+     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a NOT_FOUND status
      * if the given adapter instance parameter doesn't match the one of the entry registered for the given device.
      *
      * @param ctx The vert.x context.
@@ -243,7 +250,7 @@ class HotrodBasedDeviceConnectionInfoTest {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, "otherAdapterInstance", spanContext);
         }).setHandler(ctx.failing(t -> ctx.verify(() -> {
             assertThat(t).isInstanceOf(ServiceInvocationException.class);
-            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
+            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         })));
     }
@@ -291,6 +298,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation succeeds if an adapter instance has
      * been registered for the last known gateway associated with the given device.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -326,6 +334,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * have been registered for gateways of the given device, but the last known gateway associated with the given
      * device is not in the viaGateways list of the device.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -363,6 +372,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * have been registered for gateways of the given device, but the last known gateway associated with the given
      * device has no adapter associated with it.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -400,6 +410,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * been registered for the last known gateway associated with the given device, but that gateway isn't in the
      * given viaGateways set.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -428,6 +439,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * the mapping of *the given device* to its command handling adapter instance, even though an adapter instance is
      * also registered for the last known gateway associated with the given device.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -462,6 +474,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * the mapping of *the given device* to its command handling adapter instance, even though an adapter instance is
      * also registered for the other gateway given in the viaGateway.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -493,6 +506,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation succeeds with a result containing
      * the mapping of a gateway, even though there is no last known gateway set for the device.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -520,6 +534,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation succeeds with a result containing
      * the mappings of gateways, even though there is no last known gateway set for the device.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -552,6 +567,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails for a device with a
      * non-empty set of given viaGateways, if no matching instance has been registered.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -573,6 +589,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails if no matching instance
      * has been registered. An adapter instance has been registered for another device of the same tenant though.
      *
+     * @param extraUnusedViaGateways Test values.
      * @param ctx The vert.x context.
      */
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
@@ -619,55 +636,6 @@ class HotrodBasedDeviceConnectionInfoTest {
         final JsonArray adapterInstancesJson = resultJson.getJsonArray(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES);
         assertNotNull(adapterInstancesJson);
         assertEquals(size, adapterInstancesJson.size());
-    }
-
-    /**
-     * {@link RemoteCache} test implementation backed by a map.
-     */
-    private static class SimpleTestRemoteCache implements RemoteCache<String, String> {
-
-        final ConcurrentHashMap<String, Versioned<String>> map = new ConcurrentHashMap<>();
-        long versionCounter = 1L;
-
-        @Override
-        public Future<JsonObject> checkForCacheAvailability() {
-            return Future.failedFuture("not supported");
-        }
-
-        @Override
-        public Future<String> put(final String key, final String value) {
-            final Versioned<String> oldValue = map.put(key, new Versioned<>(versionCounter++, value));
-            return Future.succeededFuture(oldValue != null ? oldValue.getValue() : null);
-        }
-
-        @Override
-        public Future<Boolean> removeWithVersion(final String key, final long version) {
-            final Versioned<String> versioned = map.get(key);
-            if (versioned == null || versioned.getVersion() != version) {
-                return Future.succeededFuture(false);
-            }
-            map.remove(key);
-            return Future.succeededFuture(true);
-        }
-
-        @Override
-        public Future<String> get(final String key) {
-            final Versioned<String> versioned = map.get(key);
-            return Future.succeededFuture(versioned != null ? versioned.getValue() : null);
-        }
-
-        @Override
-        public Future<Versioned<String>> getWithVersion(final String key) {
-            return Future.succeededFuture(map.get(key));
-        }
-
-        @Override
-        public Future<Map<String, String>> getAll(final Set<? extends String> keys) {
-            final Map<String, String> filteredMap = map.entrySet().stream()
-                    .filter(entry -> keys.contains(entry.getKey()))
-                    .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getValue()));
-            return Future.succeededFuture(filteredMap);
-        }
     }
 
 }

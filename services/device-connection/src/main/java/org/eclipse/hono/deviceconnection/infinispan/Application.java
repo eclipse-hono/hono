@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,24 +43,24 @@ import io.vertx.core.Verticle;
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 
-    private RemoteCacheBasedDeviceConnectionService serviceImplementation;
+    private CacheBasedDeviceConnectionService serviceImplementation;
     private AuthenticationService authService;
 
     /**
      * Sets the Device Connection service implementation.
-     * 
+     *
      * @param service The service implementation.
      * @throws NullPointerException if service is {@code null}.
      */
     @Autowired
-    public void setServiceImplementation(final RemoteCacheBasedDeviceConnectionService service) {
+    public void setServiceImplementation(final CacheBasedDeviceConnectionService service) {
         this.serviceImplementation = Objects.requireNonNull(service);
         log.info("using service implementation [{}]", service.getClass().getName());
     }
 
     /**
      * Sets the service to use for authenticating clients.
-     * 
+     *
      * @param service The service.
      * @throws NullPointerException if service is {@code null}.
      * @throws IllegalArgumentException if the given service is not a {@code Verticle}.
@@ -117,7 +117,7 @@ public class Application extends AbstractApplication {
 
     /**
      * Starts the Device Registry Server.
-     * 
+     *
      * @param args command line arguments to pass to the server.
      */
     public static void main(final String[] args) {

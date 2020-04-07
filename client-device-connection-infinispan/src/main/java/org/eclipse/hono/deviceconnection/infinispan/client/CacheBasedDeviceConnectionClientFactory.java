@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Objects;
@@ -36,12 +35,12 @@ import io.vertx.core.Handler;
  * an Infinispan cluster for reading and writing device connection information.
  *
  */
-public final class HotrodBasedDeviceConnectionClientFactory implements BasicDeviceConnectionClientFactory, ConnectionLifecycle<HotrodCache<String, String>> {
+public final class CacheBasedDeviceConnectionClientFactory implements BasicDeviceConnectionClientFactory, ConnectionLifecycle<BasicCache<String, String>> {
 
-    private final Cache<String, HotrodBasedDeviceConnectionClient> clients = Caffeine.newBuilder()
+    private final Cache<String, CacheBasedDeviceConnectionClient> clients = Caffeine.newBuilder()
             .maximumSize(100)
             .build();
-    private final HotrodCache<String, String> cache;
+    private final BasicCache<String, String> cache;
     private final Tracer tracer;
 
     /**
@@ -49,7 +48,7 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
      * @param tracer The OpenTracing {@code Tracer} to use for tracking requests done by clients created by this factory.
      * @throws NullPointerException if cache or tracer is {@code null}.
      */
-    public HotrodBasedDeviceConnectionClientFactory(final HotrodCache<String, String> cache, final Tracer tracer) {
+    public CacheBasedDeviceConnectionClientFactory(final BasicCache<String, String> cache, final Tracer tracer) {
         this.cache = Objects.requireNonNull(cache);
         this.tracer = Objects.requireNonNull(tracer);
     }
@@ -58,7 +57,7 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
      * {@inheritDoc}
      */
     @Override
-    public Future<HotrodCache<String, String>> connect() {
+    public Future<BasicCache<String, String>> connect() {
         return cache.connect();
     }
 
@@ -66,7 +65,7 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
      * {@inheritDoc}
      */
     @Override
-    public void addDisconnectListener(final DisconnectListener<HotrodCache<String, String>> listener) {
+    public void addDisconnectListener(final DisconnectListener<BasicCache<String, String>> listener) {
         cache.addDisconnectListener(listener);
     }
 
@@ -74,7 +73,7 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
      * {@inheritDoc}
      */
     @Override
-    public void addReconnectListener(final ReconnectListener<HotrodCache<String, String>> listener) {
+    public void addReconnectListener(final ReconnectListener<BasicCache<String, String>> listener) {
         cache.addReconnectListener(listener);
     }
 
@@ -104,14 +103,14 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @throws IllegalStateException if the factory is not connected to the data grid.
      */
     @Override
     public Future<DeviceConnectionClient> getOrCreateDeviceConnectionClient(final String tenantId) {
         final DeviceConnectionClient result = clients.get(tenantId, key -> {
-            final DeviceConnectionInfo info = new HotrodBasedDeviceConnectionInfo(cache, tracer);
-            return new HotrodBasedDeviceConnectionClient(key, info);
+            final DeviceConnectionInfo info = new CacheBasedDeviceConnectionInfo(cache, tracer);
+            return new CacheBasedDeviceConnectionClient(key, info);
         });
         return Future.succeededFuture(result);
     }

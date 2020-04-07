@@ -16,7 +16,8 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.infinispan.client.hotrod.RemoteCacheContainer;
+import org.infinispan.lifecycle.ComponentStatus;
+import org.infinispan.manager.EmbeddedCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,37 +26,45 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
- * A remote cache that connects to a data grid using the Hotrod protocol.
+ * An embedded cache.
  *
  * @param <K> The type of keys used by the cache.
  * @param <V> The type of values stored in the cache.
  */
-public final class HotrodCache<K, V> extends BasicCache<K, V> {
+public class EmbeddedCache<K, V> extends BasicCache<K, V> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HotrodCache.class);
+    private static final Logger LOG = LoggerFactory.getLogger(EmbeddedCache.class);
 
     private final AtomicBoolean connecting = new AtomicBoolean(false);
-    private final RemoteCacheContainer cacheManager;
+
+    private final EmbeddedCacheManager cacheManager;
     private final String cacheName;
 
     /**
+     * Create a new embedded cache instance.
+     *
      * @param vertx The vert.x instance to run on.
      * @param cacheManager The connection to the remote cache.
-     * @param name The name of the (remote) cache.
+     * @param cacheName The name of the (remote) cache.
      * @param connectionCheckKey The key to use for checking the connection
-     *                           to the data grid.
+     *        to the data grid.
      * @param connectionCheckValue The value to use for checking the connection
-     *                           to the data grid.
+     *        to the data grid.
      */
-    public HotrodCache(
+    public EmbeddedCache(
             final Vertx vertx,
-            final RemoteCacheContainer cacheManager,
-            final String name,
+            final EmbeddedCacheManager cacheManager,
+            final String cacheName,
             final K connectionCheckKey,
             final V connectionCheckValue) {
         super(vertx, cacheManager, connectionCheckKey, connectionCheckValue);
         this.cacheManager = Objects.requireNonNull(cacheManager);
-        this.cacheName = Objects.requireNonNull(name);
+        this.cacheName = Objects.requireNonNull(cacheName);
+    }
+
+    @Override
+    protected boolean isStarted() {
+        return cacheManager.getStatus() == ComponentStatus.RUNNING && getCache() != null;
     }
 
     @Override
@@ -67,15 +76,16 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
 
             vertx.executeBlocking(r -> {
                 try {
-                    if (!cacheManager.isStarted()) {
-                        LOG.debug("trying to start cache manager");
+                    final var status = cacheManager.getStatus();
+                    if (status != ComponentStatus.RUNNING) {
+                        LOG.debug("trying to start cache manager, current state: {}", status);
                         cacheManager.start();
                         LOG.info("started cache manager, now connecting to remote cache");
                     }
-                    LOG.debug("trying to connect to remote cache");
-                    setCache(cacheManager.getCache(cacheName, cacheManager.getConfiguration().forceReturnValues()));
+                    LOG.debug("trying to get cache");
+                    setCache(cacheManager.getCache(cacheName));
                     if (getCache() == null) {
-                        r.fail(new IllegalStateException("remote cache [" + cacheName + "] does not exist"));
+                        r.fail(new IllegalStateException("cache [" + cacheName + "] is not configured"));
                     } else {
                         getCache().start();
                         r.complete(getCache());
@@ -85,10 +95,10 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
                 }
             }, attempt -> {
                 if (attempt.succeeded()) {
-                    LOG.info("successfully connected to remote cache");
+                    LOG.info("successfully connected to cache");
                     result.complete();
                 } else {
-                    LOG.debug("failed to connect to remote cache: {}", attempt.cause().getMessage());
+                    LOG.debug("failed to connect to cache: {}", attempt.cause().getMessage());
                     result.fail(attempt.cause());
                 }
                 connecting.set(false);
@@ -98,11 +108,6 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
             result.fail("already trying to establish connection to data grid");
         }
         return result.future();
-    }
-
-    @Override
-    protected boolean isStarted() {
-        return cacheManager.isStarted() && getCache() != null;
     }
 
 }

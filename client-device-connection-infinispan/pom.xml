@@ -24,6 +24,10 @@
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
       <artifactId>infinispan-query-dsl</artifactId>
       <!-- This is currently only needed to mock a RemoteCache instance in a test. -->
       <scope>test</scope>
@@ -83,4 +87,13 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
 </project>

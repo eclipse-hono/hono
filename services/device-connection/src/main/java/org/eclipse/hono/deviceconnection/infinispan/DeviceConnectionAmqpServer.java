@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceconnection.infinispan;
 
-
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.util.Constants;
