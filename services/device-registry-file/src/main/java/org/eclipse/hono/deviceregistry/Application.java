@@ -30,14 +30,21 @@ import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 
 /**
- * A Spring Boot application exposing an AMQP based endpoint that implements Hono's device registry.
+ * A Spring Boot application exposing AMQP 1.0 based endpoints that implement Hono's
+ * <ul>
+ * <li><a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a></li>
+ * <li><a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a></li>
+ * <li><a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a></li>
+ * <li><a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device Connection API</a></li>
+ * <li></li>
+ * </ul>
  * <p>
- * The application implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
- * and <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
- * </p>
+ * The application also implements Hono's HTTP based <a href="https://www.eclipse.org/hono/docs/api/management/">
+ * Device Registry Management API</a>.
  */
 @ComponentScan(basePackages = "org.eclipse.hono.service.auth", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
+@ComponentScan(basePackages = "org.eclipse.hono.service.deviceconnection", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @ComponentScan(basePackages = "org.eclipse.hono.deviceregistry", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @Configuration
 @EnableAutoConfiguration
@@ -66,13 +73,18 @@ public class Application extends AbstractBaseApplication {
     @Override
     protected final Future<?> deployVerticles() {
 
+        if (getConfig().getMaxInstances() > 1) {
+            log.warn("file based registry supports single instance deployment only, ignoring configured maxInstances [{}]",
+                    getConfig().getMaxInstances());
+        }
+
         return super.deployVerticles().compose(ok -> {
 
             @SuppressWarnings("rawtypes")
             final List<Future> futures = new LinkedList<>();
 
             for (final Verticle verticle : this.verticles) {
-                log.info("Deploying: {}", verticle);
+                log.info("deploying Verticle: {}", verticle);
                 final Promise<String> result = Promise.promise();
                 getVertx().deployVerticle(verticle, result);
                 futures.add(result.future());
