@@ -20,24 +20,25 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A simple {@code Map} like interface to a remote data grid.
+ * A simple {@code Map} like interface to a data grid cache.
  *
  * @param <K> The type of keys used for looking up data.
  * @param <V> The type of values stored in grid.
  */
-public interface RemoteCache<K, V> {
+public interface Cache<K, V> {
 
     /**
      * Checks if the cache is connected to the data grid.
-     * 
+     *
      * @return A future that is completed with information about a successful check's result.
-     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServerErrorException}.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServerErrorException}.
      */
     Future<JsonObject> checkForCacheAvailability();
 
     /**
      * Puts a value to the cache.
-     * 
+     *
      * @param key The key.
      * @param value The value.
      * @return A succeeded future containing the previous value or {@code null} if the
@@ -47,18 +48,8 @@ public interface RemoteCache<K, V> {
     Future<V> put(K key, V value);
 
     /**
-     * Removes the cache entry for a key only if the currently mapped entry has the given version.
-     *
-     * @param key The key.
-     * @param version The version of the cache entry to match.
-     * @return A succeeded future containing {@code true} if the value was removed
-     *         and {@code false} otherwise.
-     */
-    Future<Boolean> removeWithVersion(K key, long version);
-
-    /**
      * Gets a value from the cache.
-     * 
+     *
      * @param key The key.
      * @return A succeeded future containing the value or {@code null} if the
      *         cache didn't contain the key yet.
@@ -67,14 +58,15 @@ public interface RemoteCache<K, V> {
     Future<V> get(K key);
 
     /**
-     * Gets a value from the cache.
+     * Remove a key/value mapping from the cache.
      *
      * @param key The key.
-     * @return A succeeded future containing the value or {@code null} if the
-     *         cache didn't contain the key yet.
-     *         A failed future if the value could not be read from the cache.
+     * @param value The value.
+     * @return A succeeded future containing {@code true} if the key was
+     *         mapped to the value, {@code false} otherwise.
+     *         A failed future if the value could not be remove from the cache.
      */
-    Future<Versioned<V>> getWithVersion(K key);
+    Future<Boolean> remove(K key, V value);
 
     /**
      * Gets the values for the specified keys from the cache.

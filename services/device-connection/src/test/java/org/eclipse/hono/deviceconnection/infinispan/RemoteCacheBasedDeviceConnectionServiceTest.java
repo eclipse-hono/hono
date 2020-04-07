@@ -47,13 +47,13 @@ import io.vertx.junit5.VertxTestContext;
 
 
 /**
- * Tests verifying behavior of {@link RemoteCacheBasedDeviceConnectionService}.
+ * Tests verifying behavior of {@link CacheBasedDeviceConnectionService}.
  *
  */
 @ExtendWith(VertxExtension.class)
 public class RemoteCacheBasedDeviceConnectionServiceTest {
 
-    private RemoteCacheBasedDeviceConnectionService svc;
+    private CacheBasedDeviceConnectionService svc;
     private Span span;
     private DeviceConnectionInfo cache;
 
@@ -66,7 +66,7 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
         span = mock(Span.class);
         when(span.context()).thenReturn(spanContext);
         cache = mock(DeviceConnectionInfo.class);
-        svc = new RemoteCacheBasedDeviceConnectionService(cache);
+        svc = new CacheBasedDeviceConnectionService(cache);
     }
 
     @SuppressWarnings("unchecked")

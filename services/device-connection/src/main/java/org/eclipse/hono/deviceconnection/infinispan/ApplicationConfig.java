@@ -19,9 +19,8 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
-import org.eclipse.hono.deviceconnection.infinispan.client.HotrodBasedDeviceConnectionInfo;
-import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
-import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
+import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -29,8 +28,6 @@ import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpE
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.infinispan.client.hotrod.RemoteCacheManager;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -53,6 +50,11 @@ import io.vertx.core.VertxOptions;
 @Configuration
 public class ApplicationConfig {
 
+    /**
+     * Profile for using a embedded (vs remote) cache.
+     */
+    static final String PROFILE_EMBEDDED_CACHE = "embedded-cache";
+
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
 
     /**
@@ -61,8 +63,8 @@ public class ApplicationConfig {
      * This method creates new Vert.x default options and invokes
      * {@link VertxProperties#configureVertx(VertxOptions)} on the object returned
      * by {@link #vertxProperties()}.
-     * 
-     * @return The Vert.x instance. 
+     *
+     * @return The Vert.x instance.
      */
     @Bean
     public Vertx vertx() {
@@ -71,7 +73,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes configuration properties for Vert.x.
-     * 
+     *
      * @return The properties.
      */
     @ConfigurationProperties("hono.vertx")
@@ -86,7 +88,7 @@ public class ApplicationConfig {
      * The Tracer will be resolved by means of a Java service lookup.
      * If no tracer can be resolved this way, the {@code NoopTracer} is
      * returned.
-     * 
+     *
      * @return The tracer.
      */
     @Bean
@@ -109,7 +111,7 @@ public class ApplicationConfig {
 
     /**
      * Gets properties for configuring the Device Connection service's AMQP 1.0 endpoint.
-     * 
+     *
      * @return The properties.
      */
     @Qualifier(Constants.QUALIFIER_AMQP)
@@ -132,7 +134,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes the AMQP based Device Connection service as a Spring Bean.
-     * 
+     *
      * @return The service.
      */
     @Bean(name = BEAN_NAME_AMQP_SERVER)
@@ -154,61 +156,22 @@ public class ApplicationConfig {
     }
 
     /**
-     * Gets properties for configuring the connection to the remote cache.
-     * 
-     * @return The properties.
-     */
-    @Bean
-    @ConfigurationProperties(prefix = "hono.device-connection.remote")
-    public InfinispanRemoteConfigurationProperties remoteCacheProperties() {
-        return new InfinispanRemoteConfigurationProperties();
-    }
-
-    /**
-     * Exposes a remote cache manager as a Spring bean.
-     * 
-     * @return The newly created cache manager. The manager will not be started.
-     */
-    @Bean
-    public RemoteCacheManager remoteCacheManager() {
-        final InfinispanRemoteConfigurationProperties properties = remoteCacheProperties();
-        return new RemoteCacheManager(properties.getConfigurationBuilder().build(), false);
-    }
-
-    /**
-     * Exposes a remote cache for accessing the Infinispan data grid that contains device
-     * connection information.
-     *
-     * @param vertx The vert.x instance to run on.
-     * @return The cache.
-     */
-    @Bean
-    public HotrodCache<String, String> remoteCache(final Vertx vertx) {
-        return new HotrodCache<>(
-                vertx,
-                remoteCacheManager(),
-                DeviceConnectionConstants.CACHE_NAME,
-                "KEY_CONNECTION_CHECK",
-                "VALUE_CONNECTION_CHECK");
-    }
-
-    /**
      * Exposes a Device Connection service as a Spring bean.
-     * 
+     *
      * @param cache The remote cache.
      * @param tracer The tracer instance.
      * @return The service implementation.
      */
     @Bean
     @Qualifier("backend")
-    public RemoteCacheBasedDeviceConnectionService deviceConnectionService(final HotrodCache<String, String> cache,
+    public CacheBasedDeviceConnectionService deviceConnectionService(final BasicCache<String, String> cache,
             final Tracer tracer) {
-        return new RemoteCacheBasedDeviceConnectionService(new HotrodBasedDeviceConnectionInfo(cache, tracer));
+        return new CacheBasedDeviceConnectionService(new CacheBasedDeviceConnectionInfo(cache, tracer));
     }
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean
@@ -220,7 +183,7 @@ public class ApplicationConfig {
 
     /**
      * Gets properties for configuring the service's health check endpoint.
-     * 
+     *
      * @return The properties.
      */
     @Bean

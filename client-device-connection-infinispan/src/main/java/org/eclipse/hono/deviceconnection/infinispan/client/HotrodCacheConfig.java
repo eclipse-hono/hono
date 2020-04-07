@@ -92,6 +92,6 @@ public class HotrodCacheConfig {
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
     public BasicDeviceConnectionClientFactory hotrodBasedDeviceConnectionClientFactory(
             final HotrodCache<String, String> cache, final Optional<Tracer> tracer) {
-        return new HotrodBasedDeviceConnectionClientFactory(cache, tracer.orElse(NoopTracerFactory.create()));
+        return new CacheBasedDeviceConnectionClientFactory(cache, tracer.orElse(NoopTracerFactory.create()));
     }
 }

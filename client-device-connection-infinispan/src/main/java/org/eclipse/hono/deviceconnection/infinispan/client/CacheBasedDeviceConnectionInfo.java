@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.net.HttpURLConnection;
@@ -45,11 +44,9 @@ import io.vertx.ext.healthchecks.Status;
 
 
 /**
- * A client for accessing device connection information in a data grid using the
- * Hotrod protocol.
- *
+ * A client for accessing device connection information in a data grid.
  */
-public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionInfo, HealthCheckProvider {
+public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInfo, HealthCheckProvider {
 
     /**
      * For <em>viaGateways</em> parameter value lower or equal to this value, the {@link #getCommandHandlingAdapterInstances(String, String, Set, SpanContext)}
@@ -57,7 +54,7 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
      */
     static final int VIA_GATEWAYS_OPTIMIZATION_THRESHOLD = 3;
 
-    private static final Logger LOG = LoggerFactory.getLogger(HotrodBasedDeviceConnectionInfo.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CacheBasedDeviceConnectionInfo.class);
 
     /**
      * Prefix for cache entries having gateway id values, concerning <em>lastKnownGatewayForDevice</em>
@@ -71,24 +68,24 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
     private static final String KEY_PREFIX_ADAPTER_INSTANCE_VALUES = "ai";
     private static final String KEY_SEPARATOR = "@@";
 
-    final RemoteCache<String, String> cache;
+    final Cache<String, String> cache;
     final Tracer tracer;
 
     /**
      * Creates a client for accessing device connection information.
-     * 
+     *
      * @param cache The remote cache that contains the data.
      * @param tracer The tracer instance.
      * @throws NullPointerException if cache or tracer is {@code null}.
      */
-    public HotrodBasedDeviceConnectionInfo(final RemoteCache<String, String> cache, final Tracer tracer) {
+    public CacheBasedDeviceConnectionInfo(final Cache<String, String> cache, final Tracer tracer) {
         this.cache = Objects.requireNonNull(cache);
         this.tracer = Objects.requireNonNull(tracer);
     }
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * If this method is invoked from a vert.x Context, then the returned future will be completed on that context.
      */
     @Override
@@ -167,39 +164,26 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
         Objects.requireNonNull(adapterInstanceId);
 
         final String key = getAdapterInstanceEntryKey(tenantId, deviceId);
-        return cache.getWithVersion(key)
-               .recover(t -> {
-                    LOG.debug("failed to get cache entry when trying to remove command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
+
+        return cache
+                .remove(key, adapterInstanceId)
+                .recover(t -> {
+                    LOG.debug("failed to remove the cache entry when for the command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
                             tenantId, deviceId, adapterInstanceId, t);
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
-                }).compose(versioned -> {
-                    if (versioned == null) {
-                        LOG.debug("command handling adapter instance was not removed, entry not found [tenant: {}, device-id: {}, adapter-instance: {}]",
+                })
+                .compose(removed -> {
+                    if (!removed) {
+                        LOG.debug("command handling adapter instance was not removed, key not mapped or value didn't match [tenant: {}, device-id: {}, adapter-instance: {}]",
                                 tenantId, deviceId, adapterInstanceId);
                         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND));
+                    } else {
+                        LOG.debug("removed command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
+                                tenantId, deviceId, adapterInstanceId);
+                        return Future.succeededFuture();
                     }
-                    if (!adapterInstanceId.equals(versioned.getValue())) {
-                        LOG.debug("command handling adapter instance was not removed, value '{}' didn't match [tenant: {}, device-id: {}, adapter-instance: {}]",
-                                versioned.getValue(), tenantId, deviceId, adapterInstanceId);
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED));
-                    }
-                    return cache.removeWithVersion(key, versioned.getVersion())
-                            .recover(t -> {
-                                LOG.debug("failed to remove command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]", tenantId, deviceId,
-                                        adapterInstanceId, t);
-                                return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
-                            }).compose(removed -> {
-                                if (removed) {
-                                    LOG.debug("removed command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
-                                            tenantId, deviceId, adapterInstanceId);
-                                    return Future.succeededFuture();
-                                } else {
-                                    LOG.debug("command handling adapter instance was not removed, has been updated in the meantime [tenant: {}, device-id: {}, adapter-instance: {}]",
-                                            tenantId, deviceId, adapterInstanceId);
-                                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED));
-                                }
-                            });
                 });
+
     }
 
     @Override

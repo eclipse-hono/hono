@@ -14,16 +14,14 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 
-import org.infinispan.client.hotrod.Flag;
-import org.infinispan.client.hotrod.RemoteCacheContainer;
-import org.infinispan.client.hotrod.configuration.Configuration;
+import org.infinispan.Cache;
+import org.infinispan.manager.EmbeddedCacheManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -37,28 +35,24 @@ import io.vertx.junit5.VertxExtension;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
-class HotrodCacheTest extends AbstractBasicCacheTest {
+class EmbeddedCacheTest extends AbstractBasicCacheTest {
 
-    private RemoteCacheContainer remoteCacheManager;
+    private EmbeddedCacheManager remoteCacheManager;
 
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     void setUpCache() {
-        remoteCacheManager = mock(RemoteCacheContainer.class);
-        cache = new HotrodCache<>(vertx, remoteCacheManager, "cache", "testKey", "testValue");
+        remoteCacheManager = mock(EmbeddedCacheManager.class);
+        cache = new EmbeddedCache<>(vertx, remoteCacheManager, "cache", "testKey", "testValue");
     }
 
     @Override
-    protected org.infinispan.client.hotrod.RemoteCache<Object, Object> givenAConnectedCache() {
-        final Configuration configuration = mock(Configuration.class);
+    protected org.infinispan.commons.api.BasicCache<Object, Object> givenAConnectedCache() {
         @SuppressWarnings("unchecked")
-        final org.infinispan.client.hotrod.RemoteCache<Object, Object> result = mock(org.infinispan.client.hotrod.RemoteCache.class);
-        when(remoteCacheManager.getCache(anyString(), anyBoolean())).thenReturn(result);
-        when(remoteCacheManager.getConfiguration()).thenReturn(configuration);
-        when(configuration.forceReturnValues()).thenReturn(false);
-        when(result.withFlags(Flag.FORCE_RETURN_VALUE)).thenReturn(result);
+        final Cache<Object, Object> result = mock(Cache.class);
+        when(remoteCacheManager.getCache(anyString())).thenReturn(result);
         return result;
     }
 }

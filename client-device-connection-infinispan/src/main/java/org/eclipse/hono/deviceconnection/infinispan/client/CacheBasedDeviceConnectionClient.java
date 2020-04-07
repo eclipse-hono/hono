@@ -28,29 +28,27 @@ import io.vertx.core.json.JsonObject;
 
 
 /**
- * A client for accessing device connection information in a data grid using the
- * Hotrod protocol.
- *
+ * A client for accessing device connection information in a data grid.
  */
-public final class HotrodBasedDeviceConnectionClient implements DeviceConnectionClient {
+public final class CacheBasedDeviceConnectionClient implements DeviceConnectionClient {
 
     final String tenantId;
     final DeviceConnectionInfo cache;
 
     /**
      * Creates a client for accessing device connection information.
-     * 
+     *
      * @param tenantId The tenant that this client is scoped to.
      * @param cache The remote cache that contains the data.
      */
-    public HotrodBasedDeviceConnectionClient(final String tenantId, final DeviceConnectionInfo cache) {
+    public CacheBasedDeviceConnectionClient(final String tenantId, final DeviceConnectionInfo cache) {
         this.tenantId = Objects.requireNonNull(tenantId);
         this.cache = Objects.requireNonNull(cache);
     }
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * The given handler will immediately be invoked with a succeeded result.
      */
     @Override
@@ -60,7 +58,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @return {@code true} if this client is connected to the data grid.
      */
     @Override
@@ -70,7 +68,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * Invocations of this method are ignored.
      */
     @Override
@@ -80,7 +78,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @return Always 1.
      */
     @Override
@@ -90,7 +88,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * The given handler will be invoked immediately.
      */
     @Override
@@ -100,7 +98,7 @@ public final class HotrodBasedDeviceConnectionClient implements DeviceConnection
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * If this method is invoked from a vert.x Context, then the returned future will be completed on that context.
      */
     @Override

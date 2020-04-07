@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.deviceconnection.infinispan;
 
 import java.net.HttpURLConnection;
@@ -35,17 +34,17 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * An implementation of Hono's <em>Device Connection</em> API that uses an Infinispan cache
  * for storing the device connection data.
  */
-public class RemoteCacheBasedDeviceConnectionService extends AbstractVerticle implements DeviceConnectionService, HealthCheckProvider {
+public class CacheBasedDeviceConnectionService extends AbstractVerticle implements DeviceConnectionService, HealthCheckProvider {
 
     private final DeviceConnectionInfo cache;
 
     /**
      * Creates a new service instance for a remote cache.
-     * 
+     *
      * @param cache The remote cache.
      * @throws NullPointerException if the cache is {@code null}.
      */
-    public RemoteCacheBasedDeviceConnectionService(final DeviceConnectionInfo cache) {
+    public CacheBasedDeviceConnectionService(final DeviceConnectionInfo cache) {
         this.cache = Objects.requireNonNull(cache);
     }
 
