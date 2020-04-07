@@ -16,7 +16,6 @@ package org.eclipse.hono.service.http;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,7 +51,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
-    private final Set<HttpEndpoint> endpoints = new HashSet<>();
+    private final Map<String, HttpEndpoint> endpoints = new HashMap<>();
 
     private HttpServer server;
     private HttpServer insecureServer;
@@ -69,7 +68,10 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     @Autowired(required = false)
     public final void addEndpoints(final Set<HttpEndpoint> definedEndpoints) {
-        endpoints.addAll(Objects.requireNonNull(definedEndpoints));
+        Objects.requireNonNull(definedEndpoints);
+        for (final HttpEndpoint ep : definedEndpoints) {
+            addEndpoint(ep);
+        }
     }
 
     /**
@@ -78,8 +80,20 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * @param ep The endpoint.
      */
     public final void addEndpoint(final HttpEndpoint ep) {
-        log.debug("registering endpoint [{}]", ep.getName());
-        endpoints.add(Objects.requireNonNull(ep));
+        if (endpoints.putIfAbsent(ep.getName(), ep) != null) {
+            log.warn("multiple endpoints defined with name [{}]", ep.getName());
+        } else {
+            log.debug("registering endpoint [{}]", ep.getName());
+        }
+    }
+
+    /**
+     * Iterates over the endpoints registered with this service.
+     * 
+     * @return The endpoints.
+     */
+    protected final Iterable<HttpEndpoint> endpoints() {
+        return endpoints.values();
     }
 
     /**
@@ -238,7 +252,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     private void addEndpointRoutes(final Router router) {
-        for (final HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints()) {
             ep.addRoutes(router);
         }
     }
@@ -364,7 +378,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             @SuppressWarnings("rawtypes")
             final
             List<Future> endpointFutures = new ArrayList<>(endpoints.size());
-            for (final HttpEndpoint ep : endpoints) {
+            for (final HttpEndpoint ep : endpoints()) {
                 log.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
                 endpointFutures.add(ep.start());
             }
@@ -385,7 +399,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         @SuppressWarnings("rawtypes")
         final
         List<Future> endpointFutures = new ArrayList<>(endpoints.size());
-        for (final HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints()) {
             log.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
@@ -464,7 +478,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        for (final HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints()) {
             ep.registerReadinessChecks(handler);
         }
     }
@@ -478,9 +492,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
-        for (final HttpEndpoint ep : endpoints) {
+        for (final HttpEndpoint ep : endpoints()) {
             ep.registerLivenessChecks(handler);
         }
     }
-
 }
