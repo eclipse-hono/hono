@@ -13,8 +13,10 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
@@ -187,8 +189,11 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     @Override
     protected Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups,
             final Span span) {
-        // TODO.
-        return null;
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(viaGroups);
+        Objects.requireNonNull(span);
+
+        return processResolveGroupMembers(tenantId, viaGroups, span);
     }
 
     private JsonObject convertDevice(final String deviceId, final Device payload) {
@@ -292,6 +297,35 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                 Optional.ofNullable(
                                         DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                                 Optional.ofNullable(deviceDto.getVersion()))));
+    }
+
+    private Future<JsonArray> processResolveGroupMembers(final String tenantId, final JsonArray viaGroups,
+            final Span span) {
+        final JsonObject resolveGroupMembersQuery = new MongoDbDocumentBuilder()
+                .withTenantId(tenantId).document()
+                .put(String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_DEVICE,
+                        RegistryManagementConstants.FIELD_MEMBER_OF),
+                        new JsonObject()
+                                .put("$exists", true)
+                                .put("$in", viaGroups));
+        //Retrieve only the deviceId instead of the whole document.
+        final FindOptions findOptionsForDeviceId = new FindOptions()
+                .setFields(new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
+        final Promise<List<JsonObject>> resolveGroupMembersPromise = Promise.promise();
+
+        mongoClient.findWithOptions(config.getCollectionName(), resolveGroupMembersQuery, findOptionsForDeviceId,
+                resolveGroupMembersPromise);
+
+        return resolveGroupMembersPromise.future()
+                .map(deviceIdsList -> {
+                    final JsonArray deviceIds = Optional.ofNullable(deviceIdsList)
+                            .map(ok -> deviceIdsList.stream()
+                                    .map(json -> json.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID))
+                                    .collect(Collectors.collectingAndThen(Collectors.toList(), JsonArray::new)))
+                            .orElse(new JsonArray());
+                    span.log("successfully resolved group members.");
+                    return deviceIds;
+                });
     }
 
     private Future<OperationResult<Id>> processUpdateDevice(final String tenantId, final String deviceId,
