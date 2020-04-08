@@ -437,6 +437,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, getConfig().getConnectorThreads());
         networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getConnectorThreads());
         networkConfig.setInt(NetworkConfig.Keys.MAX_RESOURCE_BODY_SIZE, getConfig().getMaxPayloadSize());
+        networkConfig.setInt(NetworkConfig.Keys.EXCHANGE_LIFETIME, getConfig().getExchangeLifetime());
+        networkConfig.setBoolean(NetworkConfig.Keys.USE_MESSAGE_OFFLOADING, getConfig().isMessageOffloadingEnabled());
         return networkConfig;
     }
 
@@ -453,6 +455,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     protected Future<NetworkConfig> getSecureNetworkConfig() {
 
         final NetworkConfig networkConfig = newDefaultNetworkConfig();
+        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getDtlsThreads());
         return loadNetworkConfig(getConfig().getNetworkConfig(), networkConfig)
                 .compose(c -> loadNetworkConfig(getConfig().getSecureNetworkConfig(), c));
     }
