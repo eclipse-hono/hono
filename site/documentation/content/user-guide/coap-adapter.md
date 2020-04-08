@@ -95,10 +95,6 @@ The device is authenticated using PSK.
 This is the preferred way for devices to publish telemetry data. It is available only if the protocol adapter is configured to require
 devices to authenticate (which is the default).
 
-If the `hono-ttd` *URI-query* option is set in order to receive a command and if the authenticated device is actually a gateway,
-the returned command will be the first command that the north bound application has sent to either the gateway itself or to *any*
-device that has last sent a telemetry or event message via this gateway.
-
 **Examples**
 
 The examples provided below make use of the *coap-client* command line tool which is part of the [libcoap project](https://libcoap.net/).
@@ -342,10 +338,6 @@ The device is authenticated using PSK.
 This is the preferred way for devices to publish events. It is available only if the protocol adapter is configured to require
 devices to authenticate (which is the default).
 
-If the `hono-ttd` *URI-query* option is set in order to receive a command and if the authenticated device is actually a gateway,
-the returned command will be the first command that the north bound application has sent to either the gateway itself or to *any*
-device that has last sent a telemetry or event message via this gateway.
-
 **Examples**
 
 The examples provided below make use of the *coap-client* command line tool which is part of the [libcoap project](https://libcoap.net/).
@@ -519,7 +511,25 @@ coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseproject
 **NB** The examples above assume that a gateway device has been registered with `psk` credentials with *auth-id* `gw` and secret `gw-secret`
 which is authorized to publish data *on behalf of* device `4712`.
 
-## Sending a Response to a Command (authenticated Device)
+## Command & Control
+
+The CoAP adapter enables devices to receive commands that have been sent by business applications. Commands are delivered to the device by means of a response message. That means a device first has to send a request, indicating how long it will wait for the response. That request can either be a telemetry or event message, with a `hono-ttd` query parameter (`ttd` for `time till disconnect`) specifying the number of seconds the device will wait for the response. The business application can react on that message by sending a command message, targeted at the device. The CoAP adapter will then send the command message as part of the response message to the device.
+
+### Commands handled by gateways
+
+Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details.
+
+A gateway can send a request with the `hono-ttd` query parameter on the `/event` or `/telemetry` URI, indicating its readiness to receive a command for *any* device it acts on behalf of. Note that in this case, the business application will be notified with the gateway id in the `device_id` property of the downstream message.
+
+An authenticated gateway can also indicate its readiness to receive a command targeted at a *specific* device. For that, the `/event/${tenantId}/${deviceId}` or `/telemetry/${tenantId}/${deviceId}` URI is to be used, containing the id of the device to receive a command for. The business application will receive a notification with that device id.
+
+If there are multiple concurrent requests with a `hono-ttd` query parameter, sent by the command target device and/or one or more of its potential gateways, the CoAP adapter will choose the device or gateway to send the command to as follows:
+
+- A request done by the command target device or by a gateway specifically done for that device, has precedence. If there are multiple, concurrent such requests, the last one will get the command message (if received) in its response. Note that the other requests won't be answered with a command message in their response event if the business application sent multiple command messages. That means commands for a single device can only be requested sequentially, not in parallel.
+- If the above doesn't apply, a single `hono-ttd` request on the `/event` or `/telemetry` URI, sent by a gateway that the command target device is configured for, will get the command message in its response.
+- If there are multiple, concurrent such requests by different gateways, all configured for the command target device, the request by the gateway will be chosen, through which the target device has last sent a telemetry or event message. If the target device hasn't sent a message yet and it is thereby unknown via which gateway the device communicates, then one of the requests will be chosen randomly to set the command in its response. 
+
+### Sending a Response to a Command (authenticated Device)
 
 The device is authenticated using PSK.
 
@@ -558,7 +568,7 @@ Send a response to a previously received command with the command-request-id `re
 coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseprojects.io/command_response/req-id-uuid?hono-cmd-status=200
 ~~~
 
-## Sending a Response to a Command (unauthenticated Device)
+### Sending a Response to a Command (unauthenticated Device)
 
 * URI: `/command_response/${tenantId}/${deviceId}/${commandRequestId}`
 * Method: `PUT`
@@ -596,7 +606,7 @@ Send a response to a previously received command with the command-request-id `re
 coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseprojects.io/command_response/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200 -e '{"brightness-changed": true}'
 ~~~
 
-## Sending a Response to a Command (authenticated Gateway)
+### Sending a Response to a Command (authenticated Gateway)
 
 * URI: `/command_response/${tenantId}/${deviceId}/${commandRequestId}`
 * Method: `PUT`
@@ -656,7 +666,7 @@ The adapter includes the following meta data in the application properties of me
 | *device_id*        | *string*  | The identifier of the device that the message originates from.  |
 | *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The CoAP adapter's type name is `hono-coap`. |
 | *orig_address*     | *string*  | Contains the (relative) URI that the device has originally posted the data to. |
-| *ttd*              | *integer* | Contains the effective number of seconds that the device will wait for a response. This property is only set if the HTTP request contains the `hono-ttd` header or request parameter. |
+| *ttd*              | *integer* | Contains the effective number of seconds that the device will wait for a response. This property is only set if the request contains the `hono-ttd` *URI-query* option. |
 
 The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#tenant-information-format" >}}) or the [device level]({{< relref "/api/device-registration#assert-device-registration" >}}). The values of the default properties are determined as follows:
 
