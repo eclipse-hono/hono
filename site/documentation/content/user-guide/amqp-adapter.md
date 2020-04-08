@@ -271,7 +271,7 @@ In this example, we are using message address `e/DEFAULT_TENANT/4711` which cont
 
 ## Command & Control
 
-The AMQP adapter supports devices to receive commands that have been sent by business applications by means of opening a receiver link using a device specific *source address* as described below. When a device no longer wants to receive commands anymore, it can simply close the link.
+The AMQP adapter enables devices to receive commands that have been sent by business applications by means of opening a receiver link using a device specific *source address* as described below. When a device no longer wants to receive commands anymore, it can simply close the link.
 
 When a device has successfully opened a receiver link for commands, the adapter sends an [empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device closes the link or disconnects.
 
@@ -301,9 +301,14 @@ Once the link has been established, the adapter will send command messages havin
 
 Authenticated gateways will receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway. Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details.
 
-If a device is configured in such a way that there can be *one* gateway, acting on behalf of the device, a command sent to this device will by default be directed to that gateway. However, if a device has last sent telemetry/event messages directly to the protocol adapter instead of via the gateway, this will cause commands to be directed to the device and not the gateway. 
+A gateway can open a link to receive commands for *all* devices it acts on behalf of. An authenticated gateway can also open a receiver link for commands targeted at a *specific* device.
 
-If a device is configured to be used with *multiple* gateways, the particular gateway that last acted on behalf of the device will be the target that commands for that device will be routed to. The mapping of device and gateway last used by the device is updated whenever a device sends a telemetry, event or command response message via the gateway. This means that for a device configured to be used via multiple gateways to receive commands, the device first has to send at least one telemetry or event message to establish which gateway to use for receiving commands for that device.
+When processing an incoming command message, the protocol adapter will give precedence to a device-specific command consumer matching the command target device, whether it was created by a gateway or by the device itself. If multiple such consumer links have been created, by multiple gateways and/or from the device itself, the gateway or device that last created the consumer link will get the command messages.
+
+If no device-specific command consumer exists for a command target device, but *one* gateway, that may act on behalf of the device, has opened a generic, device-unspecific command consumer link, then the command message is sent to that gateway. 
+
+If *multiple* gateways have opened a generic command consumer link, the protocol adapter may have to decide to which gateway a particular command message will be sent to.
+In case the command target device has already sent a telemetry, event or command response message via a gateway and if that gateway has opened a command consumer link, that gateway will be chosen. Otherwise one gateway that may act on behalf of the command target device and that has opened a command consumer link will be chosen randomly to receive the command message.
 
 ### Sending a Response to a Command
 
