@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.AbstractDelegatingHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.OperationResult;
@@ -49,8 +49,10 @@ import io.vertx.ext.web.handler.BodyHandler;
  * It receives HTTP requests representing operation invocations and forward them to the
  * Credential Management Service Implementation for processing.
  * The outcome is then returned to the client in the HTTP response.
+ *
+ * @param <S> The type of service this endpoint delegates to.
  */
-public abstract class AbstractCredentialsManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsManagementService> extends AbstractDelegatingHttpEndpoint<S, ServiceConfigProperties> {
 
 
     private static final String SPAN_NAME_GET_CREDENTIALS = "get Credentials from management API";
@@ -67,7 +69,7 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
      * @throws NullPointerException if vertx is {@code null};
      */
     @Autowired
-    public AbstractCredentialsManagementHttpEndpoint(final Vertx vertx) {
+    public DelegatingCredentialsManagementHttpEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
     }
 
@@ -98,14 +100,6 @@ public abstract class AbstractCredentialsManagementHttpEndpoint extends Abstract
         router.put(pathWithTenantAndDeviceId).handler(this::extractIfMatchVersionParam);
         router.put(pathWithTenantAndDeviceId).handler(this::updateCredentials);
     }
-
-
-    /**
-     * The service to forward requests to.
-     *
-     * @return The service to bind to, must never return {@code null}.
-     */
-    protected abstract CredentialsManagementService getService();
 
     private void updateCredentials(final RoutingContext ctx) {
 

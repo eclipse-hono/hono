@@ -19,7 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.AbstractDelegatingHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.Id;
@@ -45,8 +45,10 @@ import io.vertx.ext.web.RoutingContext;
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  * It receives HTTP requests representing operation invocations and executes the matching service
  * implementation methods. The outcome is then returned to the peer in the HTTP response.
+ *
+ * @param <S> The type of service this endpoint delegates to.
  */
-public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementService> extends AbstractDelegatingHttpEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_CREATE_DEVICE = "create Device from management API";
     private static final String SPAN_NAME_GET_DEVICE = "get Device from management API";
@@ -64,7 +66,7 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
      * @throws NullPointerException if vertx is {@code null};
      */
     @Autowired
-    public AbstractDeviceManagementHttpEndpoint(final Vertx vertx) {
+    public DelegatingDeviceManagementHttpEndpoint(final Vertx vertx) {
         super(vertx);
     }
 
@@ -110,13 +112,6 @@ public abstract class AbstractDeviceManagementHttpEndpoint extends AbstractHttpE
                 .handler(this::extractIfMatchVersionParam)
                 .handler(this::doDeleteDevice);
     }
-
-    /**
-     * The service to forward requests to.
-     *
-     * @return The service to bind to, must never return {@code null}.
-     */
-    protected abstract DeviceManagementService getService();
 
     private void doGetDevice(final RoutingContext ctx) {
 

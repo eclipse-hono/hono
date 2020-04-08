@@ -24,14 +24,26 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.file.FileBasedTenantsConfigProperties;
-import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsManagementHttpEndpoint;
-import org.eclipse.hono.deviceregistry.service.device.AutowiredDeviceManagementHttpEndpoint;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
+import org.eclipse.hono.service.amqp.AmqpEndpoint;
+import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
+import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpEndpoint;
+import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.http.HttpEndpoint;
+import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
+import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
+import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
+import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -129,7 +141,61 @@ public class ApplicationConfig {
         return props;
     }
 
-    // all AMQP endpoints are instantiated via component scan
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> service.
+     *
+     * @param service The service instance to delegate to.
+     * @return The handler.
+     */
+    @Bean
+    public AmqpEndpoint tenantAmqpEndpoint(@Qualifier("backend") final TenantService service) {
+        final DelegatingTenantAmqpEndpoint<TenantService> ep = new DelegatingTenantAmqpEndpoint<>(vertx());
+        ep.setConfiguration(amqpServerProperties());
+        ep.setService(service);
+        return ep;
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> service.
+     *
+     * @param service The service instance to delegate to.
+     * @return The handler.
+     */
+    @Bean
+    public AmqpEndpoint registrationAmqpEndpoint(@Qualifier("backend") final RegistrationService service) {
+        final DelegatingRegistrationAmqpEndpoint<RegistrationService> ep = new DelegatingRegistrationAmqpEndpoint<>(vertx());
+        ep.setConfiguration(amqpServerProperties());
+        ep.setService(service);
+        return ep;
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> service.
+     *
+     * @param service The service instance to delegate to.
+     * @return The handler.
+     */
+    @Bean
+    public AmqpEndpoint credentialsAmqpEndpoint(@Qualifier("backend") final CredentialsService service) {
+        final DelegatingCredentialsAmqpEndpoint<CredentialsService> ep = new DelegatingCredentialsAmqpEndpoint<>(vertx());
+        ep.setConfiguration(amqpServerProperties());
+        ep.setService(service);
+        return ep;
+    }
+
+    /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> service.
+     *
+     * @param service The service instance to delegate to.
+     * @return The handler.
+     */
+    @Bean
+    public AmqpEndpoint deviceConnectionAmqpEndpoint(@Qualifier("backend") final DeviceConnectionService service) {
+        final DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService> ep = new DelegatingDeviceConnectionAmqpEndpoint<>(vertx());
+        ep.setConfiguration(amqpServerProperties());
+        ep.setService(service);
+        return ep;
+    }
 
     /**
      * Gets properties for configuring the HTTP based Device Registry Management endpoint.
@@ -140,8 +206,7 @@ public class ApplicationConfig {
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.rest")
     public ServiceConfigProperties httpServerProperties() {
-        final ServiceConfigProperties props = new ServiceConfigProperties();
-        return props;
+        return new ServiceConfigProperties();
     }
 
     /**
@@ -152,7 +217,7 @@ public class ApplicationConfig {
      */
     @Bean
     public HttpEndpoint deviceHttpEndpoint() {
-        return new AutowiredDeviceManagementHttpEndpoint(vertx());
+        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx());
     }
 
     /**
@@ -163,7 +228,7 @@ public class ApplicationConfig {
      */
     @Bean
     public HttpEndpoint credentialsHttpEndpoint() {
-        return new AutowiredCredentialsManagementHttpEndpoint(vertx());
+        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx());
     }
 
     /**
@@ -174,7 +239,7 @@ public class ApplicationConfig {
      */
     @Bean
     public HttpEndpoint tenantHttpEndpoint() {
-        return new AutowiredTenantManagementHttpEndpoint(vertx());
+        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx());
     }
 
     /**

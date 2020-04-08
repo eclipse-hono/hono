@@ -19,7 +19,7 @@ import java.util.Optional;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -37,8 +37,10 @@ import io.vertx.core.json.JsonObject;
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>.
  * It receives AMQP 1.0 messages representing requests and forward them to the credential service implementation.
  * The outcome is then returned to the peer in a response message.
+ *
+ * @param <S> The type of service this endpoint delegates to.
  */
-public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestResponseEndpoint<ServiceConfigProperties> {
+public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> extends AbstractDelegatingRequestResponseEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_CREDENTIALS = "get Credentials";
 
@@ -47,7 +49,7 @@ public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestRes
      *
      * @param vertx The vertx instance to use.
      */
-    public AbstractCredentialsAmqpEndpoint(final Vertx vertx) {
+    public DelegatingCredentialsAmqpEndpoint(final Vertx vertx) {
         super(vertx);
     }
 
@@ -55,14 +57,6 @@ public abstract class AbstractCredentialsAmqpEndpoint extends AbstractRequestRes
     public final String getName() {
         return CredentialsConstants.CREDENTIALS_ENDPOINT;
     }
-
-    /**
-     * The service to forward requests to.
-     *
-     * @return The service to bind to, must never return {@code null}.
-     */
-    protected abstract CredentialsService getService();
-
 
     @Override
     protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {

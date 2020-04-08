@@ -21,7 +21,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -39,8 +39,10 @@ import io.vertx.core.json.JsonObject;
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a>. It receives AMQP 1.0
  * messages representing requests and sends them to an address on the vertx event bus for processing. The outcome is
  * then returned to the peer in a response message.
+ *
+ * @param <S> The type of service this endpoint delegates to.
  */
-public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponseEndpoint<ServiceConfigProperties> {
+public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends AbstractDelegatingRequestResponseEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant";
 
@@ -51,7 +53,7 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
      *
      * @param vertx The vertx instance to use.
      */
-    public AbstractTenantAmqpEndpoint(final Vertx vertx) {
+    public DelegatingTenantAmqpEndpoint(final Vertx vertx) {
         super(vertx);
     }
 
@@ -59,13 +61,6 @@ public abstract class AbstractTenantAmqpEndpoint extends AbstractRequestResponse
     public final String getName() {
         return TenantConstants.TENANT_ENDPOINT;
     }
-
-    /**
-     * The service to forward requests to.
-     *
-     * @return The service to bind to, must never return {@code null}.
-     */
-    protected abstract TenantService getService();
 
     @Override
     protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
