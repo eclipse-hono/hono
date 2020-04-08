@@ -58,7 +58,6 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -100,7 +99,6 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
     @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
-        final Context ctx = mock(Context.class);
         eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
@@ -111,14 +109,12 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         this.credentialsConfig = new FileBasedCredentialsConfigProperties();
         this.credentialsConfig.setCacheMaxAge(30);
 
-        this.registrationService = new FileBasedRegistrationService();
+        this.registrationService = new FileBasedRegistrationService(vertx);
         this.registrationService.setConfig(registrationConfig);
-        this.registrationService.init(this.vertx, ctx);
 
-        this.credentialsService = new FileBasedCredentialsService();
+        this.credentialsService = new FileBasedCredentialsService(vertx);
         this.credentialsService.setPasswordEncoder(new SpringBasedHonoPasswordEncoder());
         this.credentialsService.setConfig(credentialsConfig);
-        this.credentialsService.init(this.vertx, ctx);
 
         this.svc = new FileBasedDeviceBackend(this.registrationService, this.credentialsService);
     }
@@ -154,22 +150,15 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
 
     private void start(final Promise<?> startupTracker) {
 
-        final Promise<Void> registrationStartupTracker = Promise.promise();
-        final Promise<Void> credentialsStartupTracker = Promise.promise();
-
-        this.registrationService.start(registrationStartupTracker.future());
-        this.credentialsService.start(credentialsStartupTracker);
-
-        CompositeFuture.all(registrationStartupTracker.future(), credentialsStartupTracker.future())
-        .setHandler(result -> {
-            log.debug("Startup complete", result.cause());
-            if (result.failed()) {
-                startupTracker.fail(result.cause());
-            } else {
-                startupTracker.complete();
-            }
-        });
-
+        CompositeFuture.all(registrationService.start(), credentialsService.start())
+            .onComplete(result -> {
+                log.debug("Startup complete", result.cause());
+                if (result.failed()) {
+                    startupTracker.fail(result.cause());
+                } else {
+                    startupTracker.complete();
+                }
+            });
     }
 
     /**

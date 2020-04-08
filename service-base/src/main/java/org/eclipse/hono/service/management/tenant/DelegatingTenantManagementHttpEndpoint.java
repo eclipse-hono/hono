@@ -19,7 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractHttpEndpoint;
+import org.eclipse.hono.service.http.AbstractDelegatingHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.Id;
@@ -47,8 +47,10 @@ import io.vertx.ext.web.handler.BodyHandler;
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  * It receives HTTP requests representing operation invocations and executes the matching service implementation methods.
  * The outcome is then returned to the peer in the HTTP response.
+ *
+ * @param <S> The type of service this endpoint delegates to.
  */
-public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpEndpoint<ServiceConfigProperties> {
+public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementService> extends AbstractDelegatingHttpEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";
@@ -66,7 +68,7 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
      * @throws NullPointerException if vertx is {@code null};
      */
     @Autowired
-    public AbstractTenantManagementHttpEndpoint(final Vertx vertx) {
+    public DelegatingTenantManagementHttpEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
     }
 
@@ -112,13 +114,6 @@ public abstract class AbstractTenantManagementHttpEndpoint extends AbstractHttpE
         router.delete(pathWithTenant).handler(this::extractIfMatchVersionParam);
         router.delete(pathWithTenant).handler(this::deleteTenant);
     }
-
-    /**
-     * The service to forward requests to.
-     *
-     * @return The service to bind to, must never return {@code null}.
-     */
-    protected abstract TenantManagementService getService();
 
     /**
      * Check that the tenantId value is not blank then

@@ -18,7 +18,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -35,8 +35,10 @@ import io.vertx.core.Vertx;
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>.
  * It receives AMQP 1.0 messages representing requests and and forward them to the registration service implementation.
  * The outcome is then returned to the peer in a response message.
+ *
+ * @param <S> The type of service this endpoint delegates to.
  */
-public abstract class AbstractRegistrationAmqpEndpoint extends AbstractRequestResponseEndpoint<ServiceConfigProperties> {
+public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> extends AbstractDelegatingRequestResponseEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_ASSERT_DEVICE_REGISTRATION = "assert Device Registration";
 
@@ -45,7 +47,7 @@ public abstract class AbstractRegistrationAmqpEndpoint extends AbstractRequestRe
      *
      * @param vertx The vertx instance to use.
      */
-    public AbstractRegistrationAmqpEndpoint(final Vertx vertx) {
+    public DelegatingRegistrationAmqpEndpoint(final Vertx vertx) {
         super(vertx);
     }
 
@@ -53,13 +55,6 @@ public abstract class AbstractRegistrationAmqpEndpoint extends AbstractRequestRe
     public final String getName() {
         return RegistrationConstants.REGISTRATION_ENDPOINT;
     }
-
-    /**
-     * The service to forward requests to.
-     *
-     * @return The service to bind to, must never return {@code null}.
-     */
-    protected abstract RegistrationService getService();
 
     @Override
     protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {

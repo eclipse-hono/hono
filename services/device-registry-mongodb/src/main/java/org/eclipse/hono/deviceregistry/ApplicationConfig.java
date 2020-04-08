@@ -21,21 +21,27 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
-import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsAmqpEndpoint;
-import org.eclipse.hono.deviceregistry.service.credentials.AutowiredCredentialsManagementHttpEndpoint;
-import org.eclipse.hono.deviceregistry.service.device.AutowiredDeviceManagementHttpEndpoint;
-import org.eclipse.hono.deviceregistry.service.device.AutowiredRegistrationAmqpEndpoint;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantAmqpEndpoint;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.deviceconnection.AutowiredDeviceConnectionAmqpEndpoint;
+import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
+import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpEndpoint;
+import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.http.HttpEndpoint;
+import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
+import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
+import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
+import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
+import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -141,7 +147,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint registrationAmqpEndpoint() {
-        return new AutowiredRegistrationAmqpEndpoint(vertx());
+        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx());
     }
 
     /**
@@ -152,7 +158,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint credentialsAmqpEndpoint() {
-        return new AutowiredCredentialsAmqpEndpoint(vertx());
+        return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx());
     }
 
     /**
@@ -163,7 +169,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint tenantAmqpEndpoint() {
-        return new AutowiredTenantAmqpEndpoint(vertx());
+        return new DelegatingTenantAmqpEndpoint<TenantService>(vertx());
     }
 
     /**
@@ -174,7 +180,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint deviceConnectionAmqpEndpoint() {
-        return new AutowiredDeviceConnectionAmqpEndpoint(vertx());
+        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx());
     }
 
     /**
@@ -198,7 +204,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint deviceHttpEndpoint() {
-        return new AutowiredDeviceManagementHttpEndpoint(vertx());
+        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx());
     }
 
     /**
@@ -210,7 +216,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint credentialsHttpEndpoint() {
-        return new AutowiredCredentialsManagementHttpEndpoint(vertx());
+        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx());
     }
 
     /**
@@ -222,7 +228,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint tenantHttpEndpoint() {
-        return new AutowiredTenantManagementHttpEndpoint(vertx());
+        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx());
     }
 
     /**
@@ -249,7 +255,7 @@ public class ApplicationConfig {
     }
 
     /**
-     * Gets properties for configuring {@link MongoDbBasedRegistrationService} which implements the <em>Device
+     * Gets properties for configuring {@link org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService} which implements the <em>Device
      * Registration</em> API.
      *
      * @return The properties.

@@ -44,7 +44,6 @@ import io.vertx.core.Verticle;
  */
 @ComponentScan(basePackages = "org.eclipse.hono.service.auth", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
-@ComponentScan(basePackages = "org.eclipse.hono.service.deviceconnection", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @ComponentScan(basePackages = "org.eclipse.hono.deviceregistry", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @Configuration
 @EnableAutoConfiguration

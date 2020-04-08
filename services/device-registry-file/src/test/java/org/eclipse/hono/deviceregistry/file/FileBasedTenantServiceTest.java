@@ -52,7 +52,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -89,16 +88,14 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
     @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
-        final Context ctx = mock(Context.class);
         eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
         when(vertx.fileSystem()).thenReturn(fileSystem);
 
         props = new FileBasedTenantsConfigProperties();
-        svc = new FileBasedTenantService();
+        svc = new FileBasedTenantService(vertx);
         svc.setConfig(props);
-        svc.init(vertx, ctx);
     }
 
     @Override
@@ -143,7 +140,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
             verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.start(startupTracker);
+        svc.start().onComplete(startupTracker);
     }
 
     /**
@@ -171,7 +168,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         startupTracker.future().setHandler(ctx.failing(started -> {
             ctx.completeNow();
         }));
-        svc.start(startupTracker);
+        svc.start().onComplete(startupTracker);
     }
 
     /**
@@ -201,7 +198,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         startupTracker.future().setHandler(ctx.completing(
             // THEN startup succeeds
         ));
-        svc.start(startupTracker);
+        svc.start().onComplete(startupTracker);
     }
 
     /**
@@ -224,8 +221,8 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         }).when(fileSystem).readFile(eq(props.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Promise<Void> startFuture = Promise.promise();
-        startFuture.future().compose(ok -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().compose(ok -> {
             // THEN the credentials from the file are loaded
             return assertTenantExists(svc, Constants.DEFAULT_TENANT);
         })
@@ -242,7 +239,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         })
         .setHandler(ctx.completing());
 
-        svc.start(startFuture);
+        svc.start().onComplete(startupTracker);
     }
 
     /**
@@ -260,13 +257,13 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         when(fileSystem.existsBlocking(props.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Promise<Void> startFuture = Promise.promise();
-        startFuture.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the credentials from the file are loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
         })));
-        svc.start(startFuture);
+        svc.start().onComplete(startupTracker);
     }
 
     /**

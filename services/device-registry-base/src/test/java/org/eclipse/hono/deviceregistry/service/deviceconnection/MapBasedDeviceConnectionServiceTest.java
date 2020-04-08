@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
-import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonArray;
@@ -57,7 +56,6 @@ public class MapBasedDeviceConnectionServiceTest {
     public void setUp() {
         span = mock(Span.class);
 
-        final Context ctx = mock(Context.class);
         final EventBus eventBus = mock(EventBus.class);
         final Vertx vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
@@ -65,7 +63,6 @@ public class MapBasedDeviceConnectionServiceTest {
         svc = new MapBasedDeviceConnectionService();
         props = new MapBasedDeviceConnectionsConfigProperties();
         svc.setConfig(props);
-        svc.init(vertx, ctx);
     }
 
     /**

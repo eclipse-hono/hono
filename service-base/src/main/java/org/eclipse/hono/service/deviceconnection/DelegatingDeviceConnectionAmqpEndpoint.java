@@ -19,7 +19,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -38,8 +38,10 @@ import io.vertx.core.json.JsonObject;
  * This endpoint implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device
  * Connection API</a>. It receives AMQP 1.0 messages representing requests and sends them to an address on the vertx
  * event bus for processing. The outcome is then returned to the peer in a response message.
+ *
+ * @param <S> The type of service this endpoint delegates to.
  */
-public abstract class AbstractDeviceConnectionAmqpEndpoint extends AbstractRequestResponseEndpoint<ServiceConfigProperties> {
+public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionService> extends AbstractDelegatingRequestResponseEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_LAST_GATEWAY = "get last known gateway";
     private static final String SPAN_NAME_SET_LAST_GATEWAY = "set last known gateway";
@@ -52,16 +54,9 @@ public abstract class AbstractDeviceConnectionAmqpEndpoint extends AbstractReque
      *
      * @param vertx The vertx instance to use.
      */
-    public AbstractDeviceConnectionAmqpEndpoint(final Vertx vertx) {
+    public DelegatingDeviceConnectionAmqpEndpoint(final Vertx vertx) {
         super(vertx);
     }
-
-    /**
-     * The service to forward requests to.
-     *
-     * @return The service to bind to, must never return {@code null}.
-     */
-    protected abstract DeviceConnectionService getService();
 
     @Override
     protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
