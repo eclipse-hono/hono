@@ -12,9 +12,8 @@ title = "Release Notes"
 
 ### Fixes & Enhancements
 
-* Commands might have been routed to the wrong protocol adapter instance under certain
-  conditions when devices switch from connecting to an adapter via a gateway to
-  connecting to the adapter directly and back to via a gateway. This has been fixed.
+* Commands might not have been routed to the target device or gateway if multiple
+  verticle instances were deployed in a protocol adapter instance. This has been fixed.
 
 ## 1.2.1
 
