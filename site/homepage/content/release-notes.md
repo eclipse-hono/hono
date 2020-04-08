@@ -41,6 +41,10 @@ title = "Release Notes"
 * Devices can now be configured with *groups* of gateways that are allowed to act on behalf of the
   device. This makes it easier to support scenarios in which a device may *roam* between multiple
   gateways. The HTTP based management API has been adapted accordingly.
+* The CoAP adapter now supports forwarding commands to devices in the response body of requests for
+  uploading telemetry data and/or events, analogous to the HTTP adapter.
+  Please note that the CoAP adapter is still considered *experimental* and its device facing API
+  is therefore still subject to change.
 
 ### Fixes & Enhancements
 
