@@ -97,12 +97,25 @@ class MongoDbClientMock implements MongoClient {
             final Handler<AsyncResult<List<JsonObject>>> resultHandler) {
         final List<JsonObject> collectionList = this.mongoDbData.get(collection);
         final List<JsonObject> foundDocuments = new ArrayList<>();
+
+        // filter out searchAttr with a "." since these are not simple attributes and must be dealt with separately.
+        final Map<String, Object> searchAttr = query.getMap().entrySet().stream().filter(e -> !e.getKey().contains(".")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        final Map<String, Object> complexSearchAttr = query.getMap().entrySet().stream().filter(e -> e.getKey().contains(".")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         // get entity by comparing key-val-pairs, success if all match
-        for (JsonObject entity : collectionList) {
-            final Map<String, Object> entityAttr = entity.getMap();
-            if (query.getMap().entrySet().stream()
-                    .allMatch(queryAttr -> queryAttr.getValue().equals(entityAttr.get(queryAttr.getKey())))) {
-                foundDocuments.add(entity);
+        for (JsonObject document : collectionList) {
+            final Map<String, Object> documentAttr = document.getMap();
+            if ( searchAttr.entrySet().stream().allMatch(queryAttr -> queryAttr.getValue().equals(documentAttr.get(queryAttr.getKey())))) {
+                // treat complex query attributes
+                final Boolean allComplexSearchAttrSatisfied = complexSearchAttr.entrySet().stream().map(e -> {
+                    if (e.getValue().getClass() == JsonObject.class) {
+                     return checkForConditionInPath(document, e.getKey(), (JsonObject) e.getValue());
+                    }
+                    // else complexSearchAttr NotImplemented
+                    throw new UnsupportedOperationException("Mock: MongoDb query attribute not implemented.");
+                }).allMatch(e -> e);
+                if (allComplexSearchAttrSatisfied) {
+                foundDocuments.add(document);
+                }
             }
         }
         // special query mocks:
@@ -116,6 +129,38 @@ class MongoDbClientMock implements MongoClient {
         resultHandler.handle(Future.succeededFuture(foundDocuments));
         // nothing found
         return this;
+    }
+
+    /**
+     * Traverse JsonObject path and check if it satisfy an {@code $exist} and {@code $in} condition.
+     *
+     * @param document The document to look in.
+     * @param path the path.
+     * @param condition the memberOf condition.
+     * @return {@code true} if condition can be satisfied.
+     * @see <a href="https://docs.mongodb.com/manual/reference/operator/query/in/">MongodDB reference $in</a>
+     */
+    private Boolean checkForConditionInPath(final JsonObject document, final String path, final JsonObject condition) {
+        final String[] pathElements = path.split("\\.");
+        if (pathElements.length == 1 && document.getMap().containsKey(pathElements[0])) {
+            final Map<String, Object> conditionMap = condition.getMap();
+            // if condition is for $exist check in JsonArray
+            if (conditionMap.containsKey("$exists") && conditionMap.get("$exists").equals(true)
+                    && conditionMap.containsKey("$in") && conditionMap.get("$in").getClass() == JsonArray.class) {
+                // if document contains JsonArray in path
+                if (document.getMap().get(pathElements[0]).getClass() == JsonArray.class) {
+                    final List<String> conditionList = ((JsonArray) conditionMap.get("$in")).getList();
+                    final List<String> docInPathList = ((JsonArray) document.getMap().get(pathElements[0])).getList();
+                    return docInPathList.containsAll(conditionList);
+                }
+            }
+        } else {
+            if (pathElements.length > 1 && document.getMap().containsKey(pathElements[0])) {
+                final String restOfPath = String.join(".", Arrays.copyOfRange(pathElements, 1, pathElements.length));
+                return checkForConditionInPath(document.getJsonObject(pathElements[0]), restOfPath, condition);
+            }
+        }
+        return false;
     }
 
     @Override
@@ -328,6 +373,16 @@ class MongoDbClientMock implements MongoClient {
                 return this;
     }
 
+    @Override
+    public MongoClient findWithOptions(final String collection, final JsonObject query, final FindOptions options,
+            final Handler<AsyncResult<List<JsonObject>>> resultHandler) {
+        final Promise<List<JsonObject>> findDocument = Promise.promise();
+        find(collection, query, findDocument);
+        findDocument.future()
+                .compose(Future::succeededFuture)
+                .setHandler(resultHandler);
+        return this;
+    }
     // Not implemented methods
 
     @Override
@@ -407,12 +462,6 @@ class MongoDbClientMock implements MongoClient {
 
     @Override
     public ReadStream<JsonObject> findBatch(final String collection, final JsonObject query) {
-        throw new UnsupportedOperationException("Mock: Not implemented");
-    }
-
-    @Override
-    public MongoClient findWithOptions(final String collection, final JsonObject query, final FindOptions options,
-            final Handler<AsyncResult<List<JsonObject>>> resultHandler) {
         throw new UnsupportedOperationException("Mock: Not implemented");
     }
 
