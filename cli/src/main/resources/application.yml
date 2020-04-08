@@ -38,6 +38,15 @@ message:
 
 ---
 
+spring:
+  profiles: statistic
+
+statistic:
+  interval: 10000
+  autoreset: false
+
+---
+
 # For use with the demo certificates.
 # Do not use this profile for certificates that the JVM trusts, e.g. for the Hono sandbox. Simply set hono.client.tlsEnabled 
 # to true. 
