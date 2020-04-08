@@ -22,6 +22,8 @@ import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDto;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
+import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
+import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Id;
@@ -29,7 +31,6 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -192,16 +193,18 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    protected Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
+    protected Future<RegistrationResult> processAssertRegistration(final DeviceKey deviceKey, final Span span) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);
 
-        return processReadDevice(tenantId, deviceId)
+        return processReadDevice(deviceKey.getTenantId(), deviceKey.getDeviceId())
                 .compose(result -> Future.succeededFuture(RegistrationResult.from(result.getStatus(),
-                        convertDevice(deviceId, result.getPayload()), result.getCacheDirective().orElse(null))));
+                        convertDevice(deviceKey.getDeviceId(), result.getPayload()), result.getCacheDirective().orElse(null))));
     }
 
     @Override

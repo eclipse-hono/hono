@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
+import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.Lifecycle;
@@ -34,7 +36,6 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.registration.AbstractRegistrationService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -67,7 +68,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
     //// VERTICLE
 
-    private static final Logger log = LoggerFactory.getLogger(FileBasedRegistrationService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileBasedRegistrationService.class);
 
     // <tenantId, <deviceId, registrationData>>
     private final ConcurrentMap<String, ConcurrentMap<String, Versioned<Device>>> identities = new ConcurrentHashMap<>();
@@ -105,25 +106,25 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         if (running.compareAndSet(false, true)) {
 
             if (!getConfig().isModificationEnabled()) {
-                log.info("modification of registered devices has been disabled");
+                LOG.info("modification of registered devices has been disabled");
             }
 
             if (getConfig().getFilename() == null) {
-                log.debug("device identity filename is not set, no identity information will be loaded");
+                LOG.debug("device identity filename is not set, no identity information will be loaded");
                 result.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
                     .compose(ok -> loadRegistrationData())
                     .onSuccess(ok -> {
                         if (getConfig().isSaveToFile()) {
-                            log.info("saving device identities to file every 3 seconds");
+                            LOG.info("saving device identities to file every 3 seconds");
                             vertx.setPeriodic(3000, tid -> saveToFile());
                         } else {
-                            log.info("persistence is disabled, will not save device identities to file");
+                            LOG.info("persistence is disabled, will not save device identities to file");
                         }
                     })
                     .onFailure(t -> {
-                        log.error("failed to start up service", t);
+                        LOG.error("failed to start up service", t);
                         running.set(false);
                     })
                     .onComplete(result);
@@ -137,7 +138,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     Future<Void> loadRegistrationData() {
 
         if (getConfig().getFilename() == null || getConfig().isStartEmpty()) {
-            log.info("Either filename is null or empty start is set, won't load any device identities");
+            LOG.info("Either filename is null or empty start is set, won't load any device identities");
             return Future.succeededFuture();
         }
 
@@ -146,7 +147,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         return readResult.future()
                 .compose(this::addAll)
                 .recover(t -> {
-                    log.debug("cannot load device identities from file [{}]: {}", getConfig().getFilename(),
+                    LOG.debug("cannot load device identities from file [{}]: {}", getConfig().getFilename(),
                             t.getMessage());
                     return Future.succeededFuture();
                 });
@@ -162,7 +163,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         } else if (createIfMissing) {
             vertx.fileSystem().createFile(getConfig().getFilename(), result);
         } else {
-            log.debug("no such file [{}]", getConfig().getFilename());
+            LOG.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
         }
         return result.future();
@@ -180,10 +181,10 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                     deviceCount += addDevicesForTenant((JsonObject) obj);
                 }
             }
-            log.info("successfully loaded {} device identities from file [{}]", deviceCount, getConfig().getFilename());
+            LOG.info("successfully loaded {} device identities from file [{}]", deviceCount, getConfig().getFilename());
             result.complete();
         } catch (final DecodeException e) {
-            log.warn("cannot read malformed JSON from device identity file [{}]", getConfig().getFilename());
+            LOG.warn("cannot read malformed JSON from device identity file [{}]", getConfig().getFilename());
             result.fail(e);
         }
         return result.future();
@@ -193,19 +194,19 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
         final String tenantId = tenant.getString(RegistryManagementConstants.FIELD_TENANT);
         if (tenantId == null) {
-            log.debug("Tenant field missing, skipping!");
+            LOG.debug("Tenant field missing, skipping!");
             return 0;
         }
 
         int count = 0;
-        log.debug("loading devices for tenant [{}]", tenantId);
+        LOG.debug("loading devices for tenant [{}]", tenantId);
         final ConcurrentMap<String, Versioned<Device>> deviceMap = new ConcurrentHashMap<>();
         for (final Object deviceObj : tenant.getJsonArray(RegistryManagementConstants.FIELD_DEVICES)) {
             if (deviceObj instanceof JsonObject) {
                 final JsonObject entry = (JsonObject) deviceObj;
                 final String deviceId = entry.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID);
                 if (deviceId != null) {
-                    log.trace("loading device [{}]", deviceId);
+                    LOG.trace("loading device [{}]", deviceId);
                     final Device device = mapFromStoredJson(entry.getJsonObject(RegistrationConstants.FIELD_DATA));
                     deviceMap.put(deviceId, new Versioned<>(device));
                     count++;
@@ -214,7 +215,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         }
         identities.put(tenantId, deviceMap);
 
-        log.debug("Loaded {} devices for tenant {}", count, tenantId);
+        LOG.debug("Loaded {} devices for tenant {}", count, tenantId);
         return count;
     }
 
@@ -252,7 +253,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         }
 
         if (!dirty.get()) {
-            log.trace("registry does not need to be persisted");
+            LOG.trace("registry does not need to be persisted");
             return Future.succeededFuture();
         }
 
@@ -279,11 +280,11 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                     writeHandler);
             return writeHandler.future().map(ok -> {
                 dirty.set(false);
-                log.trace("successfully wrote {} device identities to file {}", idCount.get(),
+                LOG.trace("successfully wrote {} device identities to file {}", idCount.get(),
                         getConfig().getFilename());
                 return (Void) null;
             }).otherwise(t -> {
-                log.warn("could not write device identities to file {}", getConfig().getFilename(), t);
+                LOG.warn("could not write device identities to file {}", getConfig().getFilename(), t);
                 return (Void) null;
             });
         });
@@ -293,18 +294,18 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     ///// DEVICES
 
     @Override
-    public Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
+    protected Future<RegistrationResult> processAssertRegistration(final DeviceKey key, final Span span) {
+
+        Objects.requireNonNull(key);
         Objects.requireNonNull(span);
 
-        return Future
-                .succeededFuture(convertResult(deviceId, processReadDevice(tenantId, deviceId, span)));
+        return Future.succeededFuture(
+                convertResult(key.getDeviceId(), processReadDevice(key.getTenantId(), key.getDeviceId(), span)));
     }
-
 
     @Override
     public Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(viaGroups);
         Objects.requireNonNull(span);
@@ -349,6 +350,9 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     }
 
     OperationResult<Device> processReadDevice(final String tenantId, final String deviceId, final Span span) {
+
+        LOG.debug("reading registration data [device-id: {}, tenant-id: {}]", deviceId, tenantId);
+
         final Versioned<Device> device = getRegistrationData(tenantId, deviceId);
 
         if (device == null) {

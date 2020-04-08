@@ -64,7 +64,7 @@ import io.vertx.core.json.JsonObject;
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public final class FileBasedTenantService implements TenantService, TenantManagementService, Lifecycle {
 
-    private static final Logger log = LoggerFactory.getLogger(FileBasedTenantService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileBasedTenantService.class);
 
     // <ID, tenant>
     private final ConcurrentMap<String, Versioned<Tenant>> tenants = new ConcurrentHashMap<>();
@@ -112,25 +112,25 @@ public final class FileBasedTenantService implements TenantService, TenantManage
         if (running.compareAndSet(false, true)) {
 
             if (!getConfig().isModificationEnabled()) {
-                log.info("modification of registered tenants has been disabled");
+                LOG.info("modification of registered tenants has been disabled");
             }
 
             if (getConfig().getFilename() == null) {
-                log.debug("tenant file name is not set, tenant information will not be loaded");
+                LOG.debug("tenant file name is not set, tenant information will not be loaded");
                 startPromise.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
                     .compose(ok -> loadTenantData())
                     .onSuccess(ok -> {
                         if (getConfig().isSaveToFile()) {
-                            log.info("saving tenants to file every 3 seconds");
+                            LOG.info("saving tenants to file every 3 seconds");
                             vertx.setPeriodic(3000, tid -> saveToFile());
                         } else {
-                            log.info("persistence is disabled, will not save tenants to file");
+                            LOG.info("persistence is disabled, will not save tenants to file");
                         }
                     })
                     .onFailure(t -> {
-                        log.error("failed to start up service", t);
+                        LOG.error("failed to start up service", t);
                         running.set(false);
                     })
                     .onComplete(startPromise);
@@ -144,7 +144,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
     Future<Void> loadTenantData() {
 
         if (getConfig().getFilename() == null || getConfig().isStartEmpty()) {
-            log.info("Either filename is null or empty start is set, won't load any tenants");
+            LOG.info("Either filename is null or empty start is set, won't load any tenants");
             return Future.succeededFuture();
         } else {
             final Promise<Buffer> readResult = Promise.promise();
@@ -152,7 +152,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
             return readResult.future().compose(buffer -> {
                 return addAll(buffer);
             }).recover(t -> {
-                log.debug("cannot load tenants from file [{}]: {}", getConfig().getFilename(), t.getMessage());
+                LOG.debug("cannot load tenants from file [{}]: {}", getConfig().getFilename(), t.getMessage());
                 return Future.succeededFuture();
             });
         }
@@ -168,7 +168,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
         } else if (createIfMissing) {
             vertx.fileSystem().createFile(getConfig().getFilename(), result);
         } else {
-            log.debug("no such file [{}]", getConfig().getFilename());
+            LOG.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
         }
         return result.future();
@@ -187,11 +187,11 @@ public final class FileBasedTenantService implements TenantService, TenantManage
                         addTenant((JsonObject) obj);
                     }
                 }
-                log.info("successfully loaded {} tenants from file [{}]", tenantCount, getConfig().getFilename());
+                LOG.info("successfully loaded {} tenants from file [{}]", tenantCount, getConfig().getFilename());
             }
             result.complete();
         } catch (final DecodeException e) {
-            log.warn("cannot read malformed JSON from tenants file [{}]", getConfig().getFilename());
+            LOG.warn("cannot read malformed JSON from tenants file [{}]", getConfig().getFilename());
             result.fail(e);
         }
         return result.future();
@@ -206,10 +206,10 @@ public final class FileBasedTenantService implements TenantService, TenantManage
             }
             final String tenantId = tenantToAdd.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
             final Versioned<Tenant> tenant = new Versioned<>(tenantToAdd.mapTo(Tenant.class));
-            log.debug("loading tenant [{}]", tenantId);
+            LOG.debug("loading tenant [{}]", tenantId);
             tenants.put(tenantId, tenant);
         } catch (final IllegalArgumentException | ClassCastException e) {
-            log.warn("cannot deserialize tenant", e);
+            LOG.warn("cannot deserialize tenant", e);
         }
     }
 
@@ -249,16 +249,16 @@ public final class FileBasedTenantService implements TenantService, TenantManage
                 })
                 .map(tenantsJson -> {
                     dirty.set(false);
-                    log.trace("successfully wrote {} tenants to file {}", tenantsJson.size(),
+                    LOG.trace("successfully wrote {} tenants to file {}", tenantsJson.size(),
                             getConfig().getFilename());
                     return (Void) null;
                 })
                 .onFailure(t -> {
-                    log.warn("could not write tenants to file {}", getConfig().getFilename(), t);
+                    LOG.warn("could not write tenants to file {}", getConfig().getFilename(), t);
                 })
                 .onComplete(result);
         } else {
-            log.trace("tenants registry does not need to be persisted");
+            LOG.trace("tenants registry does not need to be persisted");
             result.complete();;
         }
 
@@ -277,6 +277,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
 
     TenantResult<JsonObject> getTenantObjectResult(final String tenantId, final Span span) {
 
+        LOG.debug("reading tenant info [id: {}]", tenantId);
         final Versioned<Tenant> tenant = tenants.get(tenantId);
 
         if (tenant == null) {
@@ -414,8 +415,8 @@ public final class FileBasedTenantService implements TenantService, TenantManage
             return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
         }
         try {
-            if (log.isTraceEnabled()) {
-                log.trace("adding tenant [id: {}]: {}", tenantId, JsonObject.mapFrom(tenantSpec).encodePrettily());
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("adding tenant [id: {}]: {}", tenantId, JsonObject.mapFrom(tenantSpec).encodePrettily());
             }
             final boolean existsConflictingTenant = tenantSpec.getTrustedCertificateAuthoritySubjectDNs()
             .stream().anyMatch(subjectDn -> getByCa(subjectDn) != null);
@@ -432,7 +433,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
                         Id.of(tenantId), Optional.empty(), Optional.of(tenant.getVersion()));
             }
         } catch (final IllegalArgumentException e) {
-            log.debug("error parsing payload of add tenant request", e);
+            LOG.debug("error parsing payload of add tenant request", e);
             TracingHelper.logError(span, e);
             return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
         }
@@ -553,7 +554,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
         do {
             id = UUID.randomUUID().toString();
         } while (tenants.containsKey(id));
-        log.debug("Generated tenantID: {}", id);
+        LOG.debug("Generated tenantID: {}", id);
         return id;
     }
 

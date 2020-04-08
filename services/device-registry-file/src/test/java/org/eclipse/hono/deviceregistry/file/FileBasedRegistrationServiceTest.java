@@ -38,8 +38,8 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.service.registration.RegistrationServiceTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +62,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests {@link FileBasedRegistrationService}.
  */
 @ExtendWith(VertxExtension.class)
-public class FileBasedRegistrationServiceTest extends AbstractRegistrationServiceTest {
+public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
 
     private static final String FILE_NAME = "/device-identities.json";
 
@@ -392,7 +392,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
      * Verifies that the registry enforces the maximum devices per tenant limit.
      */
     @Test
-    public void testAddDeviceFailsIfDeviceLimitIsReached() {
+    public void testCreateDeviceFailsIfDeviceLimitIsReached() {
 
         // GIVEN a registry whose devices-per-tenant limit has been reached
         registrationConfig.setMaxDevicesPerTenant(1);
@@ -435,10 +435,10 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
     }
 
     /**
-     * Verifies that the <em>modificationEnabled</em> property prevents removing an existing entry.
+     * Verifies that the <em>modificationEnabled</em> property prevents deleting an existing entry.
      */
     @Test
-    public void testRemoveDeviceFailsIfModificationIsDisabled() {
+    public void testDeleteDeviceFailsIfModificationIsDisabled() {
 
         // GIVEN a registry that has been configured to not allow modification of entries
         // which contains a device

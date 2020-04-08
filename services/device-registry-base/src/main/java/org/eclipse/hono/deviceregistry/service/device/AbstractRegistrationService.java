@@ -53,7 +53,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      */
     public static final int DEFAULT_MAX_AGE_SECONDS = 300;
 
-    private static final Logger log = LoggerFactory.getLogger(AbstractRegistrationService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractRegistrationService.class);
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
@@ -67,7 +67,9 @@ public abstract class AbstractRegistrationService implements RegistrationService
      */
     @Autowired(required = false)
     public final void setTenantInformationService(final TenantInformationService tenantInformationService) {
-        this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
+        Objects.requireNonNull(tenantInformationService);
+        LOG.info("using {}", tenantInformationService);
+        this.tenantInformationService = tenantInformationService;
     }
 
     /**
@@ -132,7 +134,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                         return processAssertRegistration(DeviceKey.from(tenantKeyResult.getPayload(), deviceId), span)
                                 .compose(result -> {
                                     if (result.isNotFound()) {
-                                        log.debug("no such device");
+                                        LOG.debug("no such device");
                                         TracingHelper.logError(span, "no such device");
                                         return Future.succeededFuture(RegistrationResult.from(result.getStatus()));
                                     } else if (isDeviceEnabled(result)) {
@@ -140,7 +142,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                                 .getJsonObject(RegistrationConstants.FIELD_DATA);
                                         return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
                                     } else {
-                                        log.debug("no such device");
+                                        LOG.debug("no such device");
                                         TracingHelper.logError(span, "device not enabled");
                                         return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
                                     }
@@ -191,19 +193,19 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
                                 if (!isDeviceEnabled(deviceResult)) {
                                     if (deviceResult.isNotFound()) {
-                                        log.debug("no such device");
+                                        LOG.debug("no such device");
                                         TracingHelper.logError(span, "no such device");
                                     } else {
-                                        log.debug("device not enabled");
+                                        LOG.debug("device not enabled");
                                         TracingHelper.logError(span, "device not enabled");
                                     }
                                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND));
                                 } else if (!isDeviceEnabled(gatewayResult)) {
                                     if (gatewayResult.isNotFound()) {
-                                        log.debug("no such gateway");
+                                        LOG.debug("no such gateway");
                                         TracingHelper.logError(span, "no such gateway");
                                     } else {
-                                        log.debug("gateway not enabled");
+                                        LOG.debug("gateway not enabled");
                                         TracingHelper.logError(span, "gateway not enabled");
                                     }
                                     return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
@@ -214,15 +216,15 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                     final JsonObject gatewayData = gatewayResult.getPayload()
                                             .getJsonObject(RegistrationConstants.FIELD_DATA, new JsonObject());
 
-                                    if (log.isDebugEnabled()) {
-                                        log.debug("Device data: {}", deviceData.encodePrettily());
-                                        log.debug("Gateway data: {}", gatewayData.encodePrettily());
+                                    if (LOG.isDebugEnabled()) {
+                                        LOG.debug("Device data: {}", deviceData.encodePrettily());
+                                        LOG.debug("Gateway data: {}", gatewayData.encodePrettily());
                                     }
 
                                     if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
                                         return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
                                     } else {
-                                        log.debug("gateway not authorized");
+                                        LOG.debug("gateway not authorized");
                                         TracingHelper.logError(span, "gateway not authorized");
                                         return Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_FORBIDDEN));
                                     }
@@ -451,7 +453,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                 }
                 return Future.succeededFuture(via);
             }).recover(thr -> {
-                log.debug("failed to resolve group members", thr);
+                LOG.debug("failed to resolve group members", thr);
                 TracingHelper.logError(span, "failed to resolve group members: " + thr.getMessage());
                 return Future.failedFuture(thr);
             });

@@ -65,7 +65,9 @@ public abstract class AbstractDelegatingHttpEndpoint<S, T extends ServiceConfigP
     @Autowired
     @Qualifier("backend")
     public void setService(final S service) {
-        this.service = Objects.requireNonNull(service);
+        Objects.requireNonNull(service);
+        logger.debug("using service instance: {}", service);
+        this.service = service;
     }
 
     /**

@@ -28,10 +28,8 @@ import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceCo
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpEndpoint;
-import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
@@ -41,9 +39,7 @@ import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttp
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
-import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
-import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -144,57 +140,41 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> service.
      *
-     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint tenantAmqpEndpoint(@Qualifier("backend") final TenantService service) {
-        final DelegatingTenantAmqpEndpoint<TenantService> ep = new DelegatingTenantAmqpEndpoint<>(vertx());
-        ep.setConfiguration(amqpServerProperties());
-        ep.setService(service);
-        return ep;
+    public AmqpEndpoint tenantAmqpEndpoint() {
+        return new DelegatingTenantAmqpEndpoint<>(vertx());
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> service.
      *
-     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint registrationAmqpEndpoint(@Qualifier("backend") final RegistrationService service) {
-        final DelegatingRegistrationAmqpEndpoint<RegistrationService> ep = new DelegatingRegistrationAmqpEndpoint<>(vertx());
-        ep.setConfiguration(amqpServerProperties());
-        ep.setService(service);
-        return ep;
+    public AmqpEndpoint registrationAmqpEndpoint() {
+        return new DelegatingRegistrationAmqpEndpoint<>(vertx());
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> service.
      *
-     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint credentialsAmqpEndpoint(@Qualifier("backend") final CredentialsService service) {
-        final DelegatingCredentialsAmqpEndpoint<CredentialsService> ep = new DelegatingCredentialsAmqpEndpoint<>(vertx());
-        ep.setConfiguration(amqpServerProperties());
-        ep.setService(service);
-        return ep;
+    public AmqpEndpoint credentialsAmqpEndpoint() {
+        return new DelegatingCredentialsAmqpEndpoint<>(vertx());
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> service.
      *
-     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint deviceConnectionAmqpEndpoint(@Qualifier("backend") final DeviceConnectionService service) {
-        final DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService> ep = new DelegatingDeviceConnectionAmqpEndpoint<>(vertx());
-        ep.setConfiguration(amqpServerProperties());
-        ep.setService(service);
-        return ep;
+    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
+        return new DelegatingDeviceConnectionAmqpEndpoint<>(vertx());
     }
 
     /**

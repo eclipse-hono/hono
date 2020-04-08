@@ -64,7 +64,9 @@ public abstract class AbstractDelegatingRequestResponseEndpoint<S, T extends Ser
     @Autowired
     @Qualifier("backend")
     public void setService(final S service) {
-        this.service = Objects.requireNonNull(service);
+        Objects.requireNonNull(service);
+        log.debug("using service instance: {}", service);
+        this.service = service;
     }
 
     /**

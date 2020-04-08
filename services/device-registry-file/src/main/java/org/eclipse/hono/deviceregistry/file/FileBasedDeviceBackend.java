@@ -19,6 +19,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
@@ -34,6 +35,8 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistrationResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -58,6 +61,8 @@ import io.vertx.core.json.JsonObject;
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend, Lifecycle {
 
+    private static final Logger LOG = LoggerFactory.getLogger(FileBasedDeviceBackend.class);
+
     private final FileBasedRegistrationService registrationService;
     private final FileBasedCredentialsService credentialsService;
 
@@ -66,11 +71,16 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
      * 
      * @param registrationService an implementation of registration service.
      * @param credentialsService an implementation of credentials service.
+     * @throws NullPointerException if any of the services are {@code null}.
      */
     @Autowired
     public FileBasedDeviceBackend(
             @Qualifier("serviceImpl") final FileBasedRegistrationService registrationService,
             @Qualifier("serviceImpl") final FileBasedCredentialsService credentialsService) {
+        Objects.requireNonNull(registrationService);
+        Objects.requireNonNull(credentialsService);
+        LOG.debug("using registration service instance: {}", registrationService);
+        LOG.debug("using credentials service instance: {}", credentialsService);
         this.registrationService = registrationService;
         this.credentialsService = credentialsService;
     }
@@ -80,6 +90,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
      */
     @Override
     public Future<Void> start() {
+        LOG.debug("starting up services");
         return CompositeFuture.all(registrationService.start(), credentialsService.start()).mapEmpty();
     }
 
@@ -88,6 +99,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
      */
     @Override
     public Future<Void> stop() {
+        LOG.debug("stopping services");
         return CompositeFuture.join(registrationService.stop(), credentialsService.stop()).mapEmpty();
     }
 

@@ -18,21 +18,13 @@ hono:
     rest:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
-    svc:
-      filename: /etc/hono/device-identities.json
-      saveToFile: false
-      startEmpty: true
   credentials:
     svc:
-      filename: /etc/hono/credentials.json
       maxBcryptIterations: ${max.bcrypt.iterations}
-      saveToFile: false
-      startEmpty: true
   tenant:
     svc:
       filename: /etc/hono/tenants.json
       saveToFile: false
-      startEmpty: true
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
 

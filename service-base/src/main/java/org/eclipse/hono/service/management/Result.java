@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -63,6 +64,10 @@ public class Result<T> {
 
     public int getStatus() {
         return this.status;
+    }
+
+    public boolean isOk() {
+        return HttpURLConnection.HTTP_OK == this.status;
     }
 
     public boolean isError() {

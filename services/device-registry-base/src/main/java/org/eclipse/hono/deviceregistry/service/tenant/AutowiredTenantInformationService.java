@@ -19,6 +19,8 @@ import java.util.Optional;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.tenant.TenantService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -32,24 +34,24 @@ import io.vertx.core.Future;
 @Component
 public class AutowiredTenantInformationService implements TenantInformationService {
 
+    private static final Logger LOG = LoggerFactory.getLogger(AutowiredTenantInformationService.class);
+
     private TenantService service;
 
     @Override
     public final Future<Result<TenantKey>> tenantExists(final String tenantId, final Span span) {
         return service.get(tenantId, span)
-                .compose(result -> {
+                .map(result -> {
                     if (result.isOk()) {
-                        return Future.succeededFuture(
-                                OperationResult.ok(
+                        LOG.debug("tenant [{}] exists", tenantId);
+                        return OperationResult.ok(
                                         HttpURLConnection.HTTP_OK,
                                         TenantKey.from(tenantId),
                                         Optional.empty(),
-                                        Optional.empty()
-                                )
-                        );
+                                        Optional.empty());
                     } else {
-                        final Result<TenantKey> res = Result.from(HttpURLConnection.HTTP_NOT_FOUND);
-                        return Future.succeededFuture(res);
+                        LOG.debug("tenant [{}] does not exist", tenantId);
+                        return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
                     }
                 });
     }
@@ -63,6 +65,8 @@ public class AutowiredTenantInformationService implements TenantInformationServi
     @Autowired
     @Qualifier("backend")
     public final void setService(final TenantService service) {
-        this.service = Objects.requireNonNull(service);
+        Objects.requireNonNull(service);
+        LOG.debug("using service instance: {}", service);
+        this.service = service;
     }
 }
