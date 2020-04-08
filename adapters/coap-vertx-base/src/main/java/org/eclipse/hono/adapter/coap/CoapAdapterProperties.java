@@ -26,13 +26,46 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The default regular expression to split the identity into authority and tenant.
      */
     public static final String DEFAULT_ID_SPLIT_REGEX = "@";
+    /**
+     * The default number of threads for the connector.
+     */
+    public static final int DEFAULT_CONNECTOR_THREADS = 2;
+    /**
+     * The default number of threads for the coap protocol stack.
+     */
+    public static final int DEFAULT_COAP_THREADS = 2;
+    /**
+     * The default number of threads for the dtls connector.
+     */
+    public static final int DEFAULT_DTLS_THREADS = 32;
+    /**
+     * The default timeout in milliseconds for DTLS retransmissions.
+     */
+    public static final int DEFAULT_DTLS_RETRANSMISSION_TIMEOUT = 2000;
+    /**
+     * The default exchange lifetime in milliseconds.
+     * 
+     * According <a href= "https://tools.ietf.org/html/rfc7252#page-30"> RFC 7252 - 4.8. Transmission Parameters</a> the
+     * default value is 247 seconds. Such a large time requires also a huge amount of heap. That time includes a
+     * processing time of 100s and retransmissions of CON messages. Therefore a practical value could be much smaller.
+     */
+    public static final int DEFAULT_EXCHANGE_LIFETIME = 247000;
+    /**
+     * The default for message offloading. When messages are kept for deduplication, some parts of the messages are not
+     * longer required and could be release earlier. That helps to reduce the heap consumption.
+     */
+    public static final boolean DEFAULT_MESSAGE_OFFLOADING = true;
 
     private String idSplitRegex = DEFAULT_ID_SPLIT_REGEX;
     private String networkConfig = null;
     private String secureNetworkConfig = null;
     private String insecureNetworkConfig = null;
-    private int connectorThreads = 1;
-    private int coapThreads = 2;
+    private int connectorThreads = DEFAULT_CONNECTOR_THREADS;
+    private int coapThreads = DEFAULT_COAP_THREADS;
+    private int dtlsThreads = DEFAULT_DTLS_THREADS;
+    private int dtlsRetransmissionTimeout = DEFAULT_DTLS_RETRANSMISSION_TIMEOUT;
+    private int exchangeLifetime = DEFAULT_EXCHANGE_LIFETIME;
+    private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
 
     /**
      * Gets the regular expression used for splitting up
@@ -147,7 +180,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The connector will start the given number of threads for each direction, outbound (sending)
      * as well as inbound (receiving).
      * <p>
-     * The default value of this property is 1.
+     * The default value of this property is {@value #DEFAULT_CONNECTOR_THREADS}.
      * 
      * @return The number of threads.
      */
@@ -161,7 +194,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The connector will start the given number of threads for each direction, outbound (sending)
      * as well as inbound (receiving).
      * <p>
-     * The default value of this property is 1.
+     * The default value of this property is {@value #DEFAULT_CONNECTOR_THREADS}.
      * 
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
@@ -177,7 +210,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Gets the number of threads used for processing CoAP message exchanges at the
      * protocol layer.
      * <p>
-     * The default value of this property is 2.
+     * The default value of this property is {@value #DEFAULT_COAP_THREADS}.
      * 
      * @return The number of threads.
      */
@@ -189,7 +222,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Sets the number of threads to be used for processing CoAP message exchanges at the
      * protocol layer.
      * <p>
-     * The default value of this property is 2.
+     * The default value of this property is {@value #DEFAULT_COAP_THREADS}.
      * 
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
@@ -199,6 +232,124 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
             throw new IllegalArgumentException("protocol thread count must be at least 1");
         }
         this.coapThreads = threads;
+    }
+
+    /**
+     * Gets the number of threads used for processing DTLS message exchanges at the
+     * connection layer.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_DTLS_THREADS}.
+     * 
+     * @return The number of threads.
+     */
+    public final int getDtlsThreads() {
+        return dtlsThreads;
+    }
+
+    /**
+     * Sets the number of threads to be used for processing DTLS message exchanges at the
+     * connection layer.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_DTLS_THREADS}.
+     * 
+     * @param threads The number of threads.
+     * @throws IllegalArgumentException if threads is &lt; 1.
+     */
+    public final void setDtlsThreads(final int threads) {
+        if (threads < 1) {
+            throw new IllegalArgumentException("dtls thread count must be at least 1");
+        }
+        this.dtlsThreads = threads;
+    }
+
+    /**
+     * Gets the DTLS retransmission timeout.
+     * <p>
+     * Timeout to wait before retransmit a flight, if no response is received.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT},
+     * {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
+     * 
+     * @return The timeout in milliseconds.
+     */
+    public final int getDtlsRetransmissionTimeout() {
+        return dtlsRetransmissionTimeout;
+    }
+
+    /**
+     * Sets the DTLS retransmission timeout.
+     * <p>
+     * Timeout to wait before retransmit a flight, if no response is received.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT},
+     * {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
+     * 
+     * @param dtlsRetransmissionTimeout timeout in milliseconds to retransmit a flight.
+     * @throws IllegalArgumentException if dtlsRetransmissionTimeout is &lt; 1.
+     */
+    public final void setDtlsRetransmissionTimeout(final int dtlsRetransmissionTimeout) {
+        if (dtlsRetransmissionTimeout < 1) {
+            throw new IllegalArgumentException("dtls retransmission timeout must be at least 1");
+        }
+        this.dtlsRetransmissionTimeout = dtlsRetransmissionTimeout;
+    }
+
+    /**
+     * Gets the exchange lifetime.
+     * <p>
+     * Time to keep coap request for deduplication.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_EXCHANGE_LIFETIME}, {@value #DEFAULT_EXCHANGE_LIFETIME}
+     * milliseconds.
+     * 
+     * @return The exchange lifetime in milliseconds.
+     */
+    public final int getExchangeLifetime() {
+        return exchangeLifetime;
+    }
+
+    /**
+     * Gets the exchange lifetime.
+     * <p>
+     * Time to keep coap request for deduplication.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_EXCHANGE_LIFETIME}, {@value #DEFAULT_EXCHANGE_LIFETIME}
+     * milliseconds.
+     * 
+     * @param exchangeLifetime the exchange lifetime in milliseconds to keep the request for deduplication.
+     * @throws IllegalArgumentException if exchangeLifetime is &lt; 1.
+     */
+    public final void setExchangeLifetime(final int exchangeLifetime) {
+        if (exchangeLifetime < 1) {
+            throw new IllegalArgumentException("exchange lifetime must be at least -1");
+        }
+        this.exchangeLifetime = exchangeLifetime;
+    }
+
+    /**
+     * Checks, if message offloading is enabled.
+     * <p>
+     * When messages are kept for deduplication, parts of the message could be offloaded to reduce the heap consumption.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_MESSAGE_OFFLOADING}, {@value #DEFAULT_MESSAGE_OFFLOADING}.
+     * 
+     * @return {@code true} enable message offloading, {@code false} disable message offloading.
+     */
+    public final boolean isMessageOffloadingEnabled() {
+        return messageOffloadingEnabled;
+    }
+
+    /**
+     * Sets the message offloading mode.
+     * <p>
+     * When messages are kept for deduplication, parts of the message could be offloaded to reduce the heap consumption.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_MESSAGE_OFFLOADING}, {@value #DEFAULT_MESSAGE_OFFLOADING}.
+     * 
+     * @param messageOffloading {@code true} enable message offloading, {@code false} disable message offloading.
+     */
+    public final void setMessageOffloadingEnabled(final boolean messageOffloading) {
+        this.messageOffloadingEnabled = messageOffloading;
     }
 
 }
