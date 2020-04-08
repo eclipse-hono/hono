@@ -217,7 +217,7 @@ mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t event/DEFAULT_TENANT/4712 -
 
 ## Command & Control
 
-The MQTT adapter supports devices to receive commands that have been sent by business applications by means of sending an MQTT *SUBSCRIBE* packet containing a device specific *topic filter* as described below. Devices can subscribe with QoS 1 or QoS 0. The adapter indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet. The SUBACK packet will contain *Success - QoS 0* (`0x00`) or *Success - QoS 1* (`0x01`) for a command topic filter indicating QoS 0 or 1 and will contain the *Failure* (`0x80`) value for all other filters. When a device no longer wants to receive commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been used to subscribe.
+The MQTT adapter enables devices to receive commands that have been sent by business applications by means of sending an MQTT *SUBSCRIBE* packet containing a device specific *topic filter* as described below. Devices can subscribe with QoS 1 or QoS 0. The adapter indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet. The SUBACK packet will contain *Success - QoS 0* (`0x00`) or *Success - QoS 1* (`0x01`) for a command topic filter indicating QoS 0 or 1 and will contain the *Failure* (`0x80`) value for all other filters. When a device no longer wants to receive commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been used to subscribe.
 
 When a device has successfully subscribed, the adapter sends an [empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0` when a device unsubscribes from commands.
 
@@ -313,10 +313,6 @@ Note that the topic in the latter case doesn't contain a request identifier.
 
 *Gateway* components can receive commands for devices which do not connect to a protocol adapter directly but instead are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). Corresponding devices have to be configured so that they can be used with a gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details.
 
-If a device is configured in such a way that there can be *one* gateway, acting on behalf of the device, a command sent to this device will by default be directed to that gateway. However, if a device has last sent telemetry/event messages directly to the protocol adapter instead of via the gateway, this will cause commands to be directed to the device and not the gateway.
-
-If a device is configured to be used with *multiple* gateways, the particular gateway that last acted on behalf of the device will be the target that commands for that device will be routed to. The mapping of device and gateway last used by the device is updated whenever a device sends a telemetry, event or command response message via the gateway. This means that for a device configured to be used via multiple gateways to receive commands, the device first has to send at least one telemetry or event message to establish which gateway to use for receiving commands for that device.
-
 An authenticated gateway MUST use the topic filter `command//+/req/#` to subscribe to commands for all devices in whose behalf it acts.
 
 To subscribe only to commands for a specific device, an authenticated gateway MUST use the topic filter `command//${device-id}/req/#`.
@@ -325,6 +321,13 @@ To subscribe only to commands for a specific device, an authenticated gateway MU
 Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
 This old topic filter is deprecated. Gateways MAY still use it until support for it will be removed in a future Hono version.
 {{% /note %}}
+
+When processing an incoming command message, the protocol adapter will give precedence to a device-specific command subscription matching the command target device, whether the subscription comes from a gateway or the device itself. If there are multiple such subscriptions from multiple gateways and/or from the device itself, the subscription initiated last will get the command messages.
+
+If no device-specific command subscription exists for a command target device, but *one* gateway, that may act on behalf of the device, has subscribed to commands for all its devices, then the command message is sent to that gateway. 
+
+If *multiple* gateways have initiated such generic subscriptions, the protocol adapter may have to decide to which gateway a particular command message will be sent to.
+In case the command target device has already sent a telemetry, event or command response message via a gateway and if that gateway has created such a command subscription, that gateway will be chosen. Otherwise one gateway that may act on behalf of the command target device and that has an open subscription will be chosen randomly to receive the command message.
 
 **Example**
 
