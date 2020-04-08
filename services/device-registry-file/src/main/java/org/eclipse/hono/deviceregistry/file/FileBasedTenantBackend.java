@@ -17,6 +17,7 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -29,9 +30,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 import io.opentracing.Span;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
-import io.vertx.core.Verticle;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -46,7 +45,7 @@ import io.vertx.core.json.JsonObject;
 @Repository
 @Qualifier("backend")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedTenantBackend extends AbstractVerticle implements TenantBackend, Verticle {
+public final class FileBasedTenantBackend implements TenantBackend, Lifecycle {
 
     private final FileBasedTenantService tenantService;
 
@@ -59,6 +58,22 @@ public final class FileBasedTenantBackend extends AbstractVerticle implements Te
     public FileBasedTenantBackend(
             @Qualifier("serviceImpl") final FileBasedTenantService tenantService) {
         this.tenantService = tenantService;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> start() {
+        return tenantService.start();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> stop() {
+        return tenantService.stop();
     }
 
     // Tenant management API

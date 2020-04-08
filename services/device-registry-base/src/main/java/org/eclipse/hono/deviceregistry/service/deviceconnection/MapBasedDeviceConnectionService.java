@@ -34,7 +34,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
 
 import io.opentracing.Span;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -44,7 +43,7 @@ import io.vertx.core.json.JsonObject;
  */
 @Repository
 @Qualifier("backend")
-public final class MapBasedDeviceConnectionService extends AbstractVerticle implements DeviceConnectionService {
+public final class MapBasedDeviceConnectionService implements DeviceConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(MapBasedDeviceConnectionService.class);
 

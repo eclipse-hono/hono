@@ -48,7 +48,6 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -79,7 +78,6 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
     @BeforeEach
     public void setUp() {
         fileSystem = mock(FileSystem.class);
-        final Context ctx = mock(Context.class);
         eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
@@ -88,9 +86,8 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
         registrationConfig = new FileBasedRegistrationConfigProperties();
         registrationConfig.setFilename(FILE_NAME);
 
-        registrationService = new FileBasedRegistrationService();
+        registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationConfig);
-        registrationService.init(vertx, ctx);
     }
 
     @Override
@@ -167,7 +164,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             verify(fileSystem).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startupTracker.future());
+        registrationService.start().onComplete(startupTracker);
     }
 
     /**
@@ -196,7 +193,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             // THEN startup has failed
             ctx.completeNow();
         }));
-        registrationService.start(startupTracker.future());
+        registrationService.start().onComplete(startupTracker);
 
     }
 
@@ -225,7 +222,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             // THEN startup succeeds
             ctx.completeNow();
         }));
-        registrationService.start(startupTracker.future());
+        registrationService.start().onComplete(startupTracker);
 
     }
 
@@ -248,8 +245,8 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         // WHEN the service is started
-        final Promise<Void> startFuture = Promise.promise();
-        startFuture.future()
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future()
                 .compose(ok -> assertCanReadDevice(TENANT, DEVICE))
                 .compose(ok -> assertCanReadDevice(TENANT, GW))
                 .compose(ok -> assertDevice(TENANT, "4712", Optional.of(GW),
@@ -272,7 +269,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
                         })
                 .setHandler(ctx.succeeding(s -> ctx.completeNow())));
 
-        registrationService.start(startFuture.future());
+        registrationService.start().onComplete(startupTracker);
 
     }
 
@@ -381,13 +378,13 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
         when(fileSystem.existsBlocking(registrationConfig.getFilename())).thenReturn(Boolean.TRUE);
 
         // WHEN the service is started
-        final Promise<Void> startFuture = Promise.promise();
-        startFuture.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        final Promise<Void> startupTracker = Promise.promise();
+        startupTracker.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the device identities from the file are not loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startFuture.future());
+        registrationService.start().onComplete(startupTracker);
 
     }
 
@@ -481,7 +478,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startupTracker.future());
+        registrationService.start().onComplete(startupTracker);
     }
 
     /**
@@ -509,7 +506,7 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
             // WHEN adding a device
                     registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE);
             final Promise<Void> shutdownTracker = Promise.promise();
-                    registrationService.stop(shutdownTracker.future());
+                    registrationService.stop().onComplete(shutdownTracker);
             return shutdownTracker.future();
         })
         .setHandler(ctx.succeeding(shutDown -> ctx.verify(() -> {
@@ -517,6 +514,6 @@ public class FileBasedRegistrationServiceTest extends AbstractRegistrationServic
                     verify(fileSystem, never()).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
         })));
-        registrationService.start(startupTracker.future());
+        registrationService.start().onComplete(startupTracker);
     }
 }

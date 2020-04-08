@@ -12,12 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.credentials;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.credentials.AbstractCredentialsAmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -27,7 +29,7 @@ import io.vertx.core.Vertx;
  * in a Spring Boot environment.
  */
 @Component
-public class AutowiredCredentialsAmqpEndpoint extends AbstractCredentialsAmqpEndpoint {
+public final class AutowiredCredentialsAmqpEndpoint extends AbstractCredentialsAmqpEndpoint {
 
     private CredentialsService service;
 
@@ -50,5 +52,29 @@ public class AutowiredCredentialsAmqpEndpoint extends AbstractCredentialsAmqpEnd
     @Qualifier("backend")
     public void setService(final CredentialsService service) {
         this.service = service;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStart(final Promise<Void> startPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).start().onComplete(startPromise);
+        } else {
+            startPromise.complete();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStop(final Promise<Void> stopPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).stop().onComplete(stopPromise);
+        } else {
+            stopPromise.complete();
+        }
     }
 }

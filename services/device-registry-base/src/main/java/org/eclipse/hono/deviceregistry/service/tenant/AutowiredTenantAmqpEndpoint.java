@@ -12,12 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.tenant;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.tenant.AbstractTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -50,5 +52,29 @@ public class AutowiredTenantAmqpEndpoint extends AbstractTenantAmqpEndpoint {
     @Qualifier("backend")
     public void setService(final TenantService service) {
         this.service = service;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStart(final Promise<Void> startPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).start().onComplete(startPromise);
+        } else {
+            startPromise.complete();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStop(final Promise<Void> stopPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).stop().onComplete(stopPromise);
+        } else {
+            stopPromise.complete();
+        }
     }
 }

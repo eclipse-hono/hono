@@ -25,11 +25,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.auth.BCryptHelper;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -53,11 +55,11 @@ import org.springframework.stereotype.Repository;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -73,8 +75,7 @@ import io.vertx.core.json.JsonObject;
 @Repository
 @Qualifier("serviceImpl")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedCredentialsService extends AbstractVerticle
-        implements CredentialsManagementService, CredentialsService {
+public final class FileBasedCredentialsService implements CredentialsManagementService, CredentialsService, Lifecycle {
 
     /**
      * The name of the JSON array within a tenant that contains the credentials.
@@ -91,11 +92,24 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     private final ConcurrentMap<String, ConcurrentMap<String, JsonArray>> credentials = new ConcurrentHashMap<>();
     // <tenantId, <deviceId, version>>
     private final ConcurrentMap<String, ConcurrentMap<String, String>> versions = new ConcurrentHashMap<>();
-    private boolean running = false;
-    private boolean dirty = false;
+    private final Vertx vertx;
+
+    private AtomicBoolean running = new AtomicBoolean(false);
+    private AtomicBoolean dirty = new AtomicBoolean(false);
     private FileBasedCredentialsConfigProperties config;
 
     private HonoPasswordEncoder passwordEncoder;
+
+    /**
+     * Creates a new service instance.
+     * 
+     * @param vertx The vert.x instance to run on.
+     * @throws NullPointerException if vertx is {@code null}.
+     */
+    @Autowired
+    public FileBasedCredentialsService(final Vertx vertx) {
+        this.vertx = Objects.requireNonNull(vertx);
+    }
 
     @Autowired
     public void setConfig(final FileBasedCredentialsConfigProperties configuration) {
@@ -128,37 +142,38 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void start(final Promise<Void> startPromise) {
+    public Future<Void> start() {
 
-        if (running) {
-            startPromise.complete();
-        } else {
+        final Promise<Void> startPromise = Promise.promise();
+        if (running.compareAndSet(false, true)) {
             if (!getConfig().isModificationEnabled()) {
                 log.info("modification of credentials has been disabled");
             }
 
             if (getConfig().getFilename() == null) {
                 log.debug("credentials filename is not set, no credentials will be loaded");
-                running = true;
                 startPromise.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
-                .compose(ok -> loadCredentials())
-                .map(ok -> {
-                    if (getConfig().isSaveToFile()) {
-                        log.info("saving credentials to file every 3 seconds");
-                        vertx.setPeriodic(3000, saveIdentities -> {
-                            saveToFile();
-                        });
-                    } else {
-                        log.info("persistence is disabled, will not save credentials to file");
-                    }
-                    running = true;
-                    return ok;
-                })
-                .setHandler(startPromise);
+                    .compose(ok -> loadCredentials())
+                    .onSuccess(ok -> {
+                        if (getConfig().isSaveToFile()) {
+                            log.info("saving credentials to file every 3 seconds");
+                            vertx.setPeriodic(3000, saveIdentities -> saveToFile());
+                        } else {
+                            log.info("persistence is disabled, will not save credentials to file");
+                        }
+                    })
+                    .onFailure(t -> {
+                        log.error("failed to start up service", t);
+                        running.set(false);
+                    })
+                    .onComplete(startPromise);
             }
+        } else {
+            startPromise.complete();
         }
+        return startPromise.future();
     }
 
     Future<Void> loadCredentials() {
@@ -222,27 +237,22 @@ public final class FileBasedCredentialsService extends AbstractVerticle
     }
 
     @Override
-    public void stop(final Promise<Void> stopPromise) {
+    public Future<Void> stop() {
 
-        if (running) {
-            saveToFile().setHandler(attempt -> {
-                if (attempt.succeeded()) {
-                    running = false;
-                    stopPromise.complete();
-                } else {
-                    stopPromise.fail(attempt.cause());
-                }
-            });
+        final Promise<Void> stopPromise = Promise.promise();
+        if (running.compareAndSet(true, false)) {
+            saveToFile().onComplete(stopPromise);
         } else {
             stopPromise.complete();
         }
+        return stopPromise.future();
     }
 
     Future<Void> saveToFile() {
 
         if (!getConfig().isSaveToFile()) {
             return Future.succeededFuture();
-        } else if (dirty) {
+        } else if (dirty.get()) {
             return checkFileExists(true).compose(s -> {
                 final AtomicInteger idCount = new AtomicInteger();
                 final JsonArray tenants = new JsonArray();
@@ -263,7 +273,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                         Buffer.buffer(tenants.encodePrettily(), StandardCharsets.UTF_8.name()),
                         writeHandler);
                 return writeHandler.future().map(ok -> {
-                    dirty = false;
+                    dirty.set(false);
                     log.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getFilename());
                     return (Void) null;
                 }).otherwise(t -> {
@@ -583,7 +593,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
                 }
             }
 
-            dirty = true;
+            dirty.set(true);
 
             // Now we can remove all the secrets
             secretsJson.clear();
@@ -703,7 +713,7 @@ public final class FileBasedCredentialsService extends AbstractVerticle
 
                 // remove device from credentials set
                 i.remove();
-                this.dirty = true;
+                dirty.set(true);
             }
         }
     }
@@ -867,8 +877,8 @@ public final class FileBasedCredentialsService extends AbstractVerticle
      * Removes all credentials from the registry.
      */
     public void clear() {
-        dirty = true;
         credentials.clear();
+        dirty.set(true);
     }
 
     @Override

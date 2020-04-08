@@ -21,11 +21,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -43,9 +45,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -60,15 +62,28 @@ import io.vertx.core.json.JsonObject;
 @Component
 @Qualifier("serviceImpl")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public final class FileBasedTenantService extends AbstractVerticle implements TenantService, TenantManagementService {
+public final class FileBasedTenantService implements TenantService, TenantManagementService, Lifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(FileBasedTenantService.class);
 
     // <ID, tenant>
     private final ConcurrentMap<String, Versioned<Tenant>> tenants = new ConcurrentHashMap<>();
-    private boolean running = false;
-    private boolean dirty = false;
+    private final Vertx vertx;
+
+    private AtomicBoolean running = new AtomicBoolean(false);
+    private AtomicBoolean dirty = new AtomicBoolean(false);
     private FileBasedTenantsConfigProperties config;
+
+    /**
+     * Creates a new service instance.
+     * 
+     * @param vertx The vert.x instance to run on.
+     * @throws NullPointerException if vertx is {@code null}.
+     */
+    @Autowired
+    public FileBasedTenantService(final Vertx vertx) {
+        this.vertx = Objects.requireNonNull(vertx);
+    }
 
     /**
      * Sets the configuration properties for this service.
@@ -90,11 +105,11 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void start(final Promise<Void> startPromise) {
+    public Future<Void> start() {
 
-        if (running) {
-            startPromise.complete();
-        } else {
+        final Promise<Void> startPromise = Promise.promise();
+
+        if (running.compareAndSet(false, true)) {
 
             if (!getConfig().isModificationEnabled()) {
                 log.info("modification of registered tenants has been disabled");
@@ -102,31 +117,28 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
 
             if (getConfig().getFilename() == null) {
                 log.debug("tenant file name is not set, tenant information will not be loaded");
-                running = true;
                 startPromise.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
-                .compose(ok -> {
-                    return loadTenantData();
-                })
-                .setHandler(attempt -> {
-                    if (attempt.succeeded()) {
+                    .compose(ok -> loadTenantData())
+                    .onSuccess(ok -> {
                         if (getConfig().isSaveToFile()) {
                             log.info("saving tenants to file every 3 seconds");
-                            vertx.setPeriodic(3000, tid -> {
-                                saveToFile();
-                            });
+                            vertx.setPeriodic(3000, tid -> saveToFile());
                         } else {
                             log.info("persistence is disabled, will not save tenants to file");
                         }
-                        running = true;
-                        startPromise.complete();
-                    } else {
-                        startPromise.fail(attempt.cause());
-                    }
-                });
+                    })
+                    .onFailure(t -> {
+                        log.error("failed to start up service", t);
+                        running.set(false);
+                    })
+                    .onComplete(startPromise);
             }
+        } else {
+            startPromise.complete();
         }
+        return startPromise.future();
     }
 
     Future<Void> loadTenantData() {
@@ -202,51 +214,55 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     }
 
     @Override
-    public void stop(final Promise<Void> stopPromise) {
+    public Future<Void> stop() {
 
-        if (running) {
-            saveToFile()
-            .map(ok -> {
-                running = false;
-                return ok;
-            })
-            .setHandler(stopPromise);
+        final Promise<Void> stopPromise = Promise.promise();
+        if (running.compareAndSet(true, false)) {
+            saveToFile().onComplete(stopPromise);
         } else {
             stopPromise.complete();
         }
+        return stopPromise.future();
     }
 
     Future<Void> saveToFile() {
 
+        final Promise<Void> result = Promise.promise();
+
         if (!getConfig().isSaveToFile()) {
-            return Future.succeededFuture();
-        } else if (dirty) {
-            return checkFileExists(true).compose(s -> {
+            result.complete();;
+        } else if (dirty.get()) {
+            checkFileExists(true)
+                .compose(s -> {
 
-                final JsonArray tenantsJson = new JsonArray();
-                tenants.forEach((tenantId, versionedTenant) -> {
-                    final JsonObject json = JsonObject.mapFrom(versionedTenant.getValue());
-                    json.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-                    tenantsJson.add(json);
-                });
+                    final JsonArray tenantsJson = new JsonArray();
+                    tenants.forEach((tenantId, versionedTenant) -> {
+                        final JsonObject json = JsonObject.mapFrom(versionedTenant.getValue());
+                        json.put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+                        tenantsJson.add(json);
+                    });
 
-                final Promise<Void> writeHandler = Promise.promise();
-                vertx.fileSystem().writeFile(getConfig().getFilename(),
-                        Buffer.factory.buffer(tenantsJson.encodePrettily()), writeHandler);
-                return writeHandler.future().map(ok -> {
-                    dirty = false;
+                    final Promise<Void> writeHandler = Promise.promise();
+                    vertx.fileSystem().writeFile(getConfig().getFilename(),
+                            Buffer.factory.buffer(tenantsJson.encodePrettily()), writeHandler);
+                    return writeHandler.future().map(tenantsJson);
+                })
+                .map(tenantsJson -> {
+                    dirty.set(false);
                     log.trace("successfully wrote {} tenants to file {}", tenantsJson.size(),
                             getConfig().getFilename());
                     return (Void) null;
-                }).otherwise(t -> {
+                })
+                .onFailure(t -> {
                     log.warn("could not write tenants to file {}", getConfig().getFilename(), t);
-                    return (Void) null;
-                });
-            });
+                })
+                .onComplete(result);
         } else {
             log.trace("tenants registry does not need to be persisted");
-            return Future.succeededFuture();
+            result.complete();;
         }
+
+        return result.future();
     }
 
     @Override
@@ -257,6 +273,21 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
     @Override
     public Future<TenantResult<JsonObject>> get(final String tenantId, final Span span) {
         return Future.succeededFuture(getTenantObjectResult(tenantId, span));
+    }
+
+    TenantResult<JsonObject> getTenantObjectResult(final String tenantId, final Span span) {
+
+        final Versioned<Tenant> tenant = tenants.get(tenantId);
+
+        if (tenant == null) {
+            TracingHelper.logError(span, "tenant not found");
+            return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
+        } else {
+            return TenantResult.from(
+                    HttpURLConnection.HTTP_OK,
+                    DeviceRegistryUtils.convertTenant(tenantId, tenant.getValue(), true),
+                    DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()));
+        }
     }
 
     @Override
@@ -288,21 +319,6 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                     tenant.getValue(),
                     Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                     Optional.ofNullable(tenant.getVersion()));
-        }
-    }
-
-    TenantResult<JsonObject> getTenantObjectResult(final String tenantId, final Span span) {
-
-        final Versioned<Tenant> tenant = tenants.get(tenantId);
-
-        if (tenant == null) {
-            TracingHelper.logError(span, "tenant not found");
-            return TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND);
-        } else {
-            return TenantResult.from(
-                    HttpURLConnection.HTTP_OK,
-                    DeviceRegistryUtils.convertTenant(tenantId, tenant.getValue(), true),
-                    DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()));
         }
     }
 
@@ -353,7 +369,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                 final String actualVersion = tenants.get(tenantId).getVersion();
                 if (checkResourceVersion(resourceVersion, actualVersion)) {
                     tenants.remove(tenantId);
-                    dirty = true;
+                    dirty.set(true);
                     return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
                 } else {
                     TracingHelper.logError(span, "Resource Version mismatch.");
@@ -411,7 +427,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
             } else {
                 final Versioned<Tenant> tenant = new Versioned<>(tenantSpec);
                 tenants.put(tenantId, tenant);
-                dirty = true;
+                dirty.set(true);
                 return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
                         Id.of(tenantId), Optional.empty(), Optional.of(tenant.getVersion()));
             }
@@ -480,7 +496,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
                         if ( updatedTenant != null ) {
 
                             tenants.put(tenantId, updatedTenant);
-                            dirty = true;
+                            dirty.set(true);
                             return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT,
                                     null, Optional.empty(),
                                     Optional.of(updatedTenant.getVersion()));
@@ -520,7 +536,7 @@ public final class FileBasedTenantService extends AbstractVerticle implements Te
      */
     public void clear() {
         tenants.clear();
-        dirty = true;
+        dirty.set(true);
     }
 
     @Override

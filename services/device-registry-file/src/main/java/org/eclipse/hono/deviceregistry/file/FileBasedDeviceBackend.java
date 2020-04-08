@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -55,7 +56,7 @@ import io.vertx.core.json.JsonObject;
 @Repository
 @Qualifier("backend")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend {
+public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend, Lifecycle {
 
     private final FileBasedRegistrationService registrationService;
     private final FileBasedCredentialsService credentialsService;
@@ -72,6 +73,22 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
             @Qualifier("serviceImpl") final FileBasedCredentialsService credentialsService) {
         this.registrationService = registrationService;
         this.credentialsService = credentialsService;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> start() {
+        return CompositeFuture.all(registrationService.start(), credentialsService.start()).mapEmpty();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> stop() {
+        return CompositeFuture.join(registrationService.stop(), credentialsService.stop()).mapEmpty();
     }
 
     // DEVICES

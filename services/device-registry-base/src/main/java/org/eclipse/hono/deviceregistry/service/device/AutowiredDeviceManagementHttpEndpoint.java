@@ -12,11 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.device;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.device.AbstractDeviceManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -52,5 +54,29 @@ public final class AutowiredDeviceManagementHttpEndpoint extends AbstractDeviceM
     @Override
     protected DeviceManagementService getService() {
         return this.service;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStart(final Promise<Void> startPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).start().onComplete(startPromise);
+        } else {
+            startPromise.complete();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStop(final Promise<Void> stopPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).stop().onComplete(stopPromise);
+        } else {
+            stopPromise.complete();
+        }
     }
 }

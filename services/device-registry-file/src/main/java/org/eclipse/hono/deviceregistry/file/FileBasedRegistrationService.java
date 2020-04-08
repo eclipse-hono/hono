@@ -22,11 +22,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -46,10 +48,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
-import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
@@ -61,8 +62,8 @@ import io.vertx.core.json.JsonObject;
 @Component
 @Qualifier("serviceImpl")
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
-public class FileBasedRegistrationService extends AbstractVerticle
-        implements DeviceManagementService, RegistrationService {
+public class FileBasedRegistrationService extends AbstractRegistrationService
+        implements DeviceManagementService, RegistrationService, Lifecycle {
 
     //// VERTICLE
 
@@ -70,29 +71,22 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
     // <tenantId, <deviceId, registrationData>>
     private final ConcurrentMap<String, ConcurrentMap<String, Versioned<Device>>> identities = new ConcurrentHashMap<>();
-    private boolean running = false;
-    private boolean dirty = false;
+    private final Vertx vertx;
+
+    private AtomicBoolean running = new AtomicBoolean(false);
+    private AtomicBoolean dirty = new AtomicBoolean(false);
     private FileBasedRegistrationConfigProperties config;
 
     /**
-     * Registration service, based on {@link AbstractRegistrationService}.
-     * <p>
-     * This helps work around Java's inability to inherit from multiple base classes. We create a new Registration
-     * service, overriding the implementation of {@link AbstractRegistrationService} with the implementation of our
-     * {@link FileBasedRegistrationService#getDevice(String, String)}.
+     * Creates a new service instance.
+     * 
+     * @param vertx The vert.x instance to run on.
+     * @throws NullPointerException if vertx is {@code null}.
      */
-    private final AbstractRegistrationService registrationService = new AbstractRegistrationService() {
-
-        @Override
-        public Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
-            return FileBasedRegistrationService.this.getDevice(tenantId, deviceId);
-        }
-
-        @Override
-        public Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
-            return FileBasedRegistrationService.this.resolveGroupMembers(tenantId, viaGroups);
-        }
-    };
+    @Autowired
+    public FileBasedRegistrationService(final Vertx vertx) {
+        this.vertx = Objects.requireNonNull(vertx);
+    }
 
     @Autowired
     public void setConfig(final FileBasedRegistrationConfigProperties config) {
@@ -104,14 +98,11 @@ public class FileBasedRegistrationService extends AbstractVerticle
     }
 
     @Override
-    public void start(final Future<Void> startFuture) {
+    public Future<Void> start() {
 
         final Promise<Void> result = Promise.promise();
-        result.future().setHandler(startFuture);
 
-        if (running) {
-            result.complete();
-        } else {
+        if (running.compareAndSet(false, true)) {
 
             if (!getConfig().isModificationEnabled()) {
                 log.info("modification of registered devices has been disabled");
@@ -119,29 +110,28 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
             if (getConfig().getFilename() == null) {
                 log.debug("device identity filename is not set, no identity information will be loaded");
-                running = true;
                 result.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
-                .compose(ok -> loadRegistrationData())
-                .map(ok -> {
-                    if (getConfig().isSaveToFile()) {
-                        log.info("saving device identities to file every 3 seconds");
-                        vertx.setPeriodic(3000, tid -> {
-                            saveToFile();
-                        });
-                    } else {
-                        log.info("persistence is disabled, will not save device identities to file");
-                    }
-                    running = true;
-                    return ok;
-                })
-                .setHandler(ar -> {
-                    log.debug("startup complete", ar.cause());
-                    result.handle(ar);
-                });
+                    .compose(ok -> loadRegistrationData())
+                    .onSuccess(ok -> {
+                        if (getConfig().isSaveToFile()) {
+                            log.info("saving device identities to file every 3 seconds");
+                            vertx.setPeriodic(3000, tid -> saveToFile());
+                        } else {
+                            log.info("persistence is disabled, will not save device identities to file");
+                        }
+                    })
+                    .onFailure(t -> {
+                        log.error("failed to start up service", t);
+                        running.set(false);
+                    })
+                    .onComplete(result);
             }
+        } else {
+            result.complete();
         }
+        return result.future();
     }
 
     Future<Void> loadRegistrationData() {
@@ -243,21 +233,16 @@ public class FileBasedRegistrationService extends AbstractVerticle
     }
 
     @Override
-    public void stop(final Future<Void> stopFuture) {
+    public Future<Void> stop() {
 
         final Promise<Void> result = Promise.promise();
-        result.future().setHandler(stopFuture);
 
-        if (running) {
-            saveToFile()
-            .map(ok -> {
-                running = false;
-                return ok;
-            })
-            .setHandler(result);
+        if (running.compareAndSet(true, false)) {
+            saveToFile().onComplete(result);
         } else {
             result.complete();
         }
+        return result.future();
     }
 
     Future<Void> saveToFile() {
@@ -266,7 +251,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
             return Future.succeededFuture();
         }
 
-        if (!dirty) {
+        if (!dirty.get()) {
             log.trace("registry does not need to be persisted");
             return Future.succeededFuture();
         }
@@ -293,7 +278,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
             vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()),
                     writeHandler);
             return writeHandler.future().map(ok -> {
-                dirty = false;
+                dirty.set(false);
                 log.trace("successfully wrote {} device identities to file {}", idCount.get(),
                         getConfig().getFilename());
                 return (Void) null;
@@ -308,28 +293,21 @@ public class FileBasedRegistrationService extends AbstractVerticle
     ///// DEVICES
 
     @Override
-    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId) {
-        return registrationService.assertRegistration(tenantId, deviceId);
-    }
-
-    @Override
-    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
-            final String gatewayId) {
-        return registrationService.assertRegistration(tenantId, deviceId, gatewayId);
-    }
-
-    private Future<RegistrationResult> getDevice(final String tenantId, final String deviceId) {
-
+    public Future<RegistrationResult> getDevice(final String tenantId, final String deviceId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(span);
 
         return Future
-                .succeededFuture(convertResult(deviceId, processReadDevice(tenantId, deviceId, NoopSpan.INSTANCE)));
+                .succeededFuture(convertResult(deviceId, processReadDevice(tenantId, deviceId, span)));
     }
 
-    private Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups) {
+
+    @Override
+    public Future<JsonArray> resolveGroupMembers(final String tenantId, final JsonArray viaGroups, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(viaGroups);
+        Objects.requireNonNull(span);
 
         final Map<String, Versioned<Device>> devices = getDevicesForTenant(tenantId);
         final List<String> gatewaySet = devices.entrySet().stream()
@@ -436,7 +414,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
         }
 
         devices.remove(deviceId);
-        dirty = true;
+        dirty.set(true);
         return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
 
     }
@@ -477,7 +455,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
 
         final Versioned<Device> newDevice = new Versioned<>(device);
         if (devices.putIfAbsent(deviceIdValue, newDevice) == null) {
-            dirty = true;
+            dirty.set(true);
             return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
                     Id.of(deviceIdValue), Optional.empty(), Optional.of(newDevice.getVersion()));
         } else {
@@ -534,7 +512,7 @@ public class FileBasedRegistrationService extends AbstractVerticle
         }
 
         devices.put(deviceId, newDevice);
-        dirty = true;
+        dirty.set(true);
 
         return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, Id.of(deviceId), Optional.empty(),
                 Optional.ofNullable(newDevice.getVersion()));
@@ -548,8 +526,8 @@ public class FileBasedRegistrationService extends AbstractVerticle
      * Removes all devices from the registry.
      */
     public void clear() {
-        dirty = true;
         identities.clear();
+        dirty.set(true);
     }
 
     @Override

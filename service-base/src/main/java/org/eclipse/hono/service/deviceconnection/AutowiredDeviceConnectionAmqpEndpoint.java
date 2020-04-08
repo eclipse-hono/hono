@@ -12,12 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.service.deviceconnection;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.deviceconnection.AbstractDeviceConnectionAmqpEndpoint;
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -50,5 +52,29 @@ public class AutowiredDeviceConnectionAmqpEndpoint extends AbstractDeviceConnect
     @Override
     protected DeviceConnectionService getService() {
         return service;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStart(final Promise<Void> startPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).start().onComplete(startPromise);
+        } else {
+            startPromise.complete();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStop(final Promise<Void> stopPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).stop().onComplete(stopPromise);
+        } else {
+            stopPromise.complete();
+        }
     }
 }

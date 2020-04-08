@@ -12,12 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.device;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.registration.AbstractRegistrationAmqpEndpoint;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -52,4 +54,27 @@ public final class AutowiredRegistrationAmqpEndpoint extends AbstractRegistratio
         return this.service;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStart(final Promise<Void> startPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).start().onComplete(startPromise);
+        } else {
+            startPromise.complete();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void doStop(final Promise<Void> stopPromise) {
+        if (service instanceof Lifecycle) {
+            ((Lifecycle) service).stop().onComplete(stopPromise);
+        } else {
+            stopPromise.complete();
+        }
+    }
 }
