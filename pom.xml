@@ -79,10 +79,10 @@
     <developer>
       <id>khudalla</id>
       <name>Kai Hudalla</name>
-      <email>kai.hudalla@bosch-si.com</email>
+      <email>kai.hudalla@bosch.io</email>
       <url>https://github.com/sophokles73</url>
-      <organization>Bosch Software Innovations GmbH</organization>
-      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <organization>Bosch.IO GmbH</organization>
+      <organizationUrl>https://www.bosch.io</organizationUrl>
       <roles>
         <role>Lead</role>
         <role>Committer</role>
@@ -100,9 +100,9 @@
     <developer>
       <id>dguggemos</id>
       <name>Dominik Guggemos</name>
-      <email>dominik.guggemos@bosch-si.com</email>
-      <organization>Bosch Software Innovations GmbH</organization>
-      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <email>dominik.guggemos@bosch.io</email>
+      <organization>Bosch.IO GmbH</organization>
+      <organizationUrl>https://www.bosch.io</organizationUrl>
       <roles>
         <role>Committer</role>
       </roles>
@@ -118,9 +118,9 @@
     <developer>
       <id>kfrank</id>
       <name>Karsten Frank</name>
-      <email>karsten.frank@bosch-si.com</email>
-      <organization>Bosch Software Innovations GmbH</organization>
-      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <email>karsten.frank@bosch.io</email>
+      <organization>Bosch.IO GmbH</organization>
+      <organizationUrl>https://www.bosch.io</organizationUrl>
       <roles>
         <role>Committer</role>
       </roles>
@@ -149,9 +149,9 @@
     <developer>
       <id>calohmn</id>
       <name>Carsten Lohmann</name>
-      <email>carsten.lohmann@bosch-si.com</email>
-      <organization>Bosch Software Innovations GmbH</organization>
-      <organizationUrl>http://www.bosch-si.com</organizationUrl>
+      <email>carsten.lohmann@bosch.io</email>
+      <organization>Bosch.IO GmbH</organization>
+      <organizationUrl>https://www.bosch.io</organizationUrl>
       <roles>
         <role>Committer</role>
       </roles>
