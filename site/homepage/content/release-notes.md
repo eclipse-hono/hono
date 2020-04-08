@@ -4,6 +4,10 @@ title = "Release Notes"
 
 ## 1.3.0 (not yet released)
 
+### Fixes & Enhancements
+
+* An admin guide for the CoAP adapter has been added.
+
 ## 1.2.2 (not yet released)
 
 ### Fixes & Enhancements
