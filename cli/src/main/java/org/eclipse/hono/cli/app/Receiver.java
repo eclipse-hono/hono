@@ -14,6 +14,8 @@ package org.eclipse.hono.cli.app;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiConsumer;
 
 import javax.annotation.PostConstruct;
 
@@ -53,6 +55,21 @@ public class Receiver extends AbstractApplicationClient {
     protected String messageType;
 
     /**
+     * Bi consumer to handle messages based on endpoint.
+     */
+    private BiConsumer<String, Message> messageHandler = (endpoint, msg) -> handleMessage(endpoint, msg);
+
+    /**
+     * Set message handler for processing adaption.
+     * 
+     * @param messageHandler message handler.
+     * @throws NullPointerException if message handlerr is {@code null}.
+     */
+    void setMessageHandler(final BiConsumer<String, Message> messageHandler) {
+        this.messageHandler = Objects.requireNonNull(messageHandler);
+    }
+
+    /**
      * Starts this component.
      * <p>
      * 
@@ -82,12 +99,16 @@ public class Receiver extends AbstractApplicationClient {
         final List<Future> consumerFutures = new ArrayList<>();
         if (messageType.equals(TYPE_EVENT) || messageType.equals(TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createEventConsumer(tenantId, msg -> handleMessage(TYPE_EVENT, msg), closeHandler));
+                    clientFactory.createEventConsumer(tenantId, msg -> {
+                        messageHandler.accept(TYPE_EVENT, msg);
+                    }, closeHandler));
         }
 
         if (messageType.equals(TYPE_TELEMETRY) || messageType.equals(TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createTelemetryConsumer(tenantId, msg -> handleMessage(TYPE_TELEMETRY, msg), closeHandler));
+                    clientFactory.createTelemetryConsumer(tenantId, msg -> {
+                        messageHandler.accept(TYPE_TELEMETRY, msg);
+                    }, closeHandler));
         }
 
         if (consumerFutures.isEmpty()) {
@@ -99,6 +120,14 @@ public class Receiver extends AbstractApplicationClient {
         return CompositeFuture.all(consumerFutures);
     }
 
+    /**
+     * Handle received message.
+     * 
+     * Write log messages to stdout.
+     * 
+     * @param endpoint receiving endpoint, "telemetry" or "event".
+     * @param msg received message
+     */
     private void handleMessage(final String endpoint, final Message msg) {
         final String deviceId = MessageHelper.getDeviceId(msg);
 
