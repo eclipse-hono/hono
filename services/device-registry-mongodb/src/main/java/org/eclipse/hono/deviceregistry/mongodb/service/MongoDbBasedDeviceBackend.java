@@ -30,7 +30,6 @@ import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistrationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Repository;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -44,8 +43,6 @@ import io.vertx.core.json.JsonObject;
  * A device backend that leverages and unifies {@link MongoDbBasedRegistrationService} and
  * {@link MongoDbBasedCredentialsService}.
  */
-@Repository
-@Qualifier("backend")
 public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend {
 
     private final MongoDbBasedRegistrationService registrationService;

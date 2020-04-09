@@ -17,12 +17,10 @@ package org.eclipse.hono.deviceregistry.server;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.util.Constants;
-import org.springframework.stereotype.Component;
 
 /**
  * Default AMQP server for Hono's example device registry.
  */
-@Component
 public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     @Override

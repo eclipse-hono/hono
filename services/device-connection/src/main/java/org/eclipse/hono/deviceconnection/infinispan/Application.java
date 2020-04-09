@@ -23,7 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -36,10 +36,9 @@ import io.vertx.core.Verticle;
  * The application implements Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">
  * Device Connection API</a>.
  */
-@ComponentScan("org.eclipse.hono.deviceconnection.infinispan")
 @ComponentScan("org.eclipse.hono.service.auth")
 @ComponentScan("org.eclipse.hono.service.metric")
-@Configuration
+@Import(value = { ApplicationConfig.class, EmbeddedCacheConfig.class, RemoteCacheConfig.class })
 @EnableAutoConfiguration
 public class Application extends AbstractApplication {
 

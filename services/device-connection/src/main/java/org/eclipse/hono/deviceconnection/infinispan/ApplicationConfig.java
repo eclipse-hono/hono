@@ -122,17 +122,6 @@ public class ApplicationConfig {
     }
 
     /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
-        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx());
-    }
-
-    /**
      * Exposes the AMQP based Device Connection service as a Spring Bean.
      *
      * @return The service.
@@ -156,6 +145,17 @@ public class ApplicationConfig {
     }
 
     /**
+     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> API.
+     *
+     * @return The handler.
+     */
+    @Bean
+    @Scope("prototype")
+    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
+        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx());
+    }
+
+    /**
      * Exposes a Device Connection service as a Spring bean.
      *
      * @param cache The remote cache.
@@ -163,7 +163,6 @@ public class ApplicationConfig {
      * @return The service implementation.
      */
     @Bean
-    @Qualifier("backend")
     public CacheBasedDeviceConnectionService deviceConnectionService(final BasicCache<String, String> cache,
             final Tracer tracer) {
         return new CacheBasedDeviceConnectionService(new CacheBasedDeviceConnectionInfo(cache, tracer));
