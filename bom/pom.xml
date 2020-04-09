@@ -35,7 +35,7 @@
     <guava.version>28.0-jre</guava.version>
     <caffeine.version>2.8.0</caffeine.version>
     <hamcrest-core.version>2.2</hamcrest-core.version>
-    <infinispan.version>9.4.17.Final</infinispan.version>
+    <infinispan.version>11.0.0.Dev03</infinispan.version>
     <infinispan.image.name>jboss/infinispan-server:9.4.11.Final</infinispan.image.name>
     <jackson.version>2.9.10</jackson.version>
     <jaeger.version>1.2.0</jaeger.version>
