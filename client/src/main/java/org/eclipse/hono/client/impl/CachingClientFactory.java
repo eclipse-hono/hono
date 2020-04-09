@@ -162,9 +162,12 @@ class CachingClientFactory<T> extends ClientFactory<T> {
             // so that we can fail the result handler passed in
             final Handler<Void> connectionFailureHandler = connectionLost -> {
                 // remove lock so that next attempt to open a sender doesn't fail
-                creationLocks.remove(key);
-                result.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
+                if (creationLocks.remove(key, Boolean.TRUE)) {
+                    result.handle(Future.failedFuture(
+                            new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "no connection to service")));
+                } else {
+                    log.debug("creation attempt already finished for [{}]", key);
+                }
             };
             creationRequests.add(connectionFailureHandler);
             creationLocks.put(key, Boolean.TRUE);
@@ -172,17 +175,20 @@ class CachingClientFactory<T> extends ClientFactory<T> {
 
             try {
                 clientInstanceSupplier.get().setHandler(creationAttempt -> {
-                    creationLocks.remove(key);
                     creationRequests.remove(connectionFailureHandler);
-                    if (creationAttempt.succeeded()) {
-                        final T newClient = creationAttempt.result();
-                        log.debug("successfully created new client for [{}]", key);
-                        activeClients.put(key, newClient);
-                        result.handle(Future.succeededFuture(newClient));
+                    if (creationLocks.remove(key, Boolean.TRUE)) {
+                        if (creationAttempt.succeeded()) {
+                            final T newClient = creationAttempt.result();
+                            log.debug("successfully created new client for [{}]", key);
+                            activeClients.put(key, newClient);
+                            result.handle(Future.succeededFuture(newClient));
+                        } else {
+                            log.debug("failed to create new client for [{}]", key, creationAttempt.cause());
+                            activeClients.remove(key);
+                            result.handle(Future.failedFuture(creationAttempt.cause()));
+                        }
                     } else {
-                        log.debug("failed to create new client for [{}]", key, creationAttempt.cause());
-                        activeClients.remove(key);
-                        result.handle(Future.failedFuture(creationAttempt.cause()));
+                        log.debug("creation attempt already finished for [{}]", key);
                     }
                 });
             } catch (final Exception ex) {

@@ -191,4 +191,44 @@ public class CachingClientFactoryTest {
         }));
 
     }
+
+    /**
+     * Verifies that having the factory's clearState method invoked while
+     * a request to create a client is taking place, immediately causes
+     * the request to get failed. It is also verified that a subsequent
+     * completion of the clientInstanceSupplier method used for creating
+     * the client is getting ignored.
+     *
+     * @param ctx The Vertx test context.
+     */
+    @Test
+    public void testGetOrCreateClientWithClearStateCalledInBetween(final VertxTestContext ctx) {
+
+        // GIVEN a factory that tries to create a client for key "tenant"
+        final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
+        final Promise<Object> creationFailure = Promise.promise();
+        final Promise<Object> creationAttempt = Promise.promise();
+        factory.getOrCreateClient(
+                "tenant",
+                () -> {
+                    // WHEN the factory's state is being cleared while the client
+                    // is being created
+                    factory.clearState();
+                    // AND the client creation fails afterwards
+                    creationFailure.fail("creation failure");
+                    return creationFailure.future();
+                }, creationAttempt);
+
+        // THEN the creation request is failed with the error produced when clearing the creation attempts
+        // and the client creation failure triggered above is ignored
+        creationAttempt.future().setHandler(ctx.failing(t -> {
+            ctx.verify(() -> {
+                // make sure the creationFailure was actually completed at this point
+                assertThat(creationFailure.future().isComplete()).isTrue();
+                assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+            });
+            ctx.completeNow();
+        }));
+    }
+
 }
