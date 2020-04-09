@@ -18,9 +18,14 @@ hono:
     rest:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
+    svc:
+      startEmpty: true
+      saveToFile: false
   credentials:
     svc:
       maxBcryptIterations: ${max.bcrypt.iterations}
+      startEmpty: true
+      saveToFile: false
   tenant:
     svc:
       filename: /etc/hono/tenants.json
