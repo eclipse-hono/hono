@@ -26,6 +26,7 @@ import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationServic
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -45,11 +46,8 @@ import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 
 import io.opentracing.Span;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Verticle;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
@@ -66,14 +64,13 @@ import io.vertx.ext.mongo.UpdateOptions;
  */
 @Component
 @Qualifier("serviceImpl")
-public final class MongoDbBasedRegistrationService extends AbstractRegistrationService implements DeviceManagementService, Verticle {
+public final class MongoDbBasedRegistrationService extends AbstractRegistrationService implements DeviceManagementService, Lifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(MongoDbBasedRegistrationService.class);
     private static final int INDEX_CREATION_MAX_RETRIES = 3;
     private MongoClient mongoClient;
     private MongoDbBasedRegistrationConfigProperties config;
     private MongoDbCallExecutor mongoDbCallExecutor;
-    private Vertx vertx;
 
     /**
      * Creates an instance of the {@link MongoDbCallExecutor}.
@@ -99,42 +96,22 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     @Override
-    public Vertx getVertx() {
-        return vertx;
-    }
+    public Future<Void> start() {
 
-    @Override
-    public void init(final Vertx vertx, final Context context) {
-        this.vertx = Objects.requireNonNull(vertx);
-    }
-
-    @Override
-    public void start(final Future<Void> startFuture) {
-    }
-
-    @Override
-    public void start(final Promise<Void> startPromise) {
-
+        final Promise<Void> startPromise = Promise.promise();
         mongoDbCallExecutor
                 .createCollectionIndex(config.getCollectionName(),
                         new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, 1)
                                 .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
                         new IndexOptions().unique(true), INDEX_CREATION_MAX_RETRIES)
-                .map(success -> {
-                    startPromise.complete();
-                    return null;
-                })
-                .onFailure(startPromise::fail);
+                .onComplete(startPromise);
+        return startPromise.future();
     }
 
     @Override
-    public void stop(final Future<Void> stopFuture) {
-    }
-
-    @Override
-    public void stop(final Promise<Void> stopPromise) {
+    public Future<Void> stop() {
         mongoClient.close();
-        stopPromise.complete();
+        return Future.succeededFuture();
     }
 
     @Override

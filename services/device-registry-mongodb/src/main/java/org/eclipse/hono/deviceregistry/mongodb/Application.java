@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.deviceregistry.mongodb;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -22,7 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -38,8 +38,7 @@ import io.vertx.core.Verticle;
  */
 @ComponentScan(basePackages = "org.eclipse.hono.service.auth", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
-@ComponentScan(basePackages = "org.eclipse.hono.deviceregistry", excludeFilters = @ComponentScan.Filter(Deprecated.class))
-@Configuration
+@Import(ApplicationConfig.class)
 @EnableAutoConfiguration
 public class Application extends AbstractBaseApplication {
 
@@ -72,7 +71,7 @@ public class Application extends AbstractBaseApplication {
             final List<Future> futures = new LinkedList<>();
 
             for (final Verticle verticle : this.verticles) {
-                log.info("Deploying: {}", verticle);
+                log.info("deploying verticle: {}", verticle);
                 final Promise<String> result = Promise.promise();
                 getVertx().deployVerticle(verticle, result);
                 futures.add(result.future());

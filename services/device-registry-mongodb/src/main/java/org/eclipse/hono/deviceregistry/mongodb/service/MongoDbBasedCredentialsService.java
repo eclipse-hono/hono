@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -27,7 +28,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
-import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -40,8 +40,23 @@ import io.vertx.core.json.JsonObject;
  */
 @Component
 @Qualifier("serviceImpl")
-public class MongoDbBasedCredentialsService extends AbstractVerticle
-        implements CredentialsManagementService, CredentialsService {
+public class MongoDbBasedCredentialsService implements CredentialsManagementService, CredentialsService, Lifecycle {
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> start() {
+        return Future.succeededFuture();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> stop() {
+        return Future.succeededFuture();
+    }
 
     @Override
     public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type,
