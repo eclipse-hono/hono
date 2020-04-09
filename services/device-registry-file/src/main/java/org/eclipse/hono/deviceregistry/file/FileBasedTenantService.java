@@ -40,9 +40,6 @@ import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -59,9 +56,6 @@ import io.vertx.core.json.JsonObject;
  * On startup this adapter loads all registered tenants from a file. On shutdown all tenants kept in memory are written
  * to the file.
  */
-@Component
-@Qualifier("serviceImpl")
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public final class FileBasedTenantService implements TenantService, TenantManagementService, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedTenantService.class);

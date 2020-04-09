@@ -38,9 +38,6 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Repository;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -56,9 +53,6 @@ import io.vertx.core.json.JsonObject;
  * A device backend that keeps all data in memory but is backed by a file. This is done by leveraging and unifying
  * {@link FileBasedRegistrationService} and {@link FileBasedCredentialsService}
  */
-@Repository
-@Qualifier("backend")
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBackend, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedDeviceBackend.class);
@@ -75,8 +69,8 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
      */
     @Autowired
     public FileBasedDeviceBackend(
-            @Qualifier("serviceImpl") final FileBasedRegistrationService registrationService,
-            @Qualifier("serviceImpl") final FileBasedCredentialsService credentialsService) {
+            final FileBasedRegistrationService registrationService,
+            final FileBasedCredentialsService credentialsService) {
         Objects.requireNonNull(registrationService);
         Objects.requireNonNull(credentialsService);
         LOG.debug("using registration service instance: {}", registrationService);

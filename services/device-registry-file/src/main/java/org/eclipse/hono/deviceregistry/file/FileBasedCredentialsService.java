@@ -49,9 +49,6 @@ import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Repository;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
@@ -72,9 +69,6 @@ import io.vertx.core.json.JsonObject;
  * On startup this adapter tries to load credentials from a file (if configured).
  * On shutdown all credentials kept in memory are written to the file (if configured).
  */
-@Repository
-@Qualifier("serviceImpl")
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public final class FileBasedCredentialsService implements CredentialsManagementService, CredentialsService, Lifecycle {
 
     /**

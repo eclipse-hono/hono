@@ -19,7 +19,6 @@ import java.util.Objects;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.Lifecycle;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -63,7 +62,6 @@ public abstract class AbstractDelegatingHttpEndpoint<S, T extends ServiceConfigP
      * @throws NullPointerException if service is {@code null}.
      */
     @Autowired
-    @Qualifier("backend")
     public void setService(final S service) {
         Objects.requireNonNull(service);
         logger.debug("using service instance: {}", service);

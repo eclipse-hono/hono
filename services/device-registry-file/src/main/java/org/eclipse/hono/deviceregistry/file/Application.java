@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.deviceregistry;
+package org.eclipse.hono.deviceregistry.file;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -22,7 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -30,7 +30,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 
 /**
- * A Spring Boot application exposing AMQP 1.0 based endpoints that implement Hono's
+ * A Spring Boot application exposing an AMQP 1.0 based endpoint that implements Hono's
  * <ul>
  * <li><a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a></li>
  * <li><a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a></li>
@@ -44,18 +44,18 @@ import io.vertx.core.Verticle;
  */
 @ComponentScan(basePackages = "org.eclipse.hono.service.auth", excludeFilters = @ComponentScan.Filter(Deprecated.class))
 @ComponentScan(basePackages = "org.eclipse.hono.service.metric", excludeFilters = @ComponentScan.Filter(Deprecated.class))
-@ComponentScan(basePackages = "org.eclipse.hono.deviceregistry", excludeFilters = @ComponentScan.Filter(Deprecated.class))
-@Configuration
+@Import(value = { ApplicationConfig.class, FileBasedServiceConfig.class, DummyServiceConfig.class })
 @EnableAutoConfiguration
 public class Application extends AbstractBaseApplication {
 
     /**
-     * All the verticles.
+     * The verticles that should be deployed.
      */
     private List<Verticle> verticles;
 
     /**
-     * All the health check providers.
+     * The health check providers that should be registered with the
+     * health check server.
      */
     private List<HealthCheckProvider> healthCheckProviders;
 
@@ -72,18 +72,13 @@ public class Application extends AbstractBaseApplication {
     @Override
     protected final Future<?> deployVerticles() {
 
-        if (getConfig().getMaxInstances() > 1) {
-            log.warn("file based registry supports single instance deployment only, ignoring configured maxInstances [{}]",
-                    getConfig().getMaxInstances());
-        }
-
         return super.deployVerticles().compose(ok -> {
 
             @SuppressWarnings("rawtypes")
             final List<Future> futures = new LinkedList<>();
 
             for (final Verticle verticle : this.verticles) {
-                log.info("deploying Verticle: {}", verticle);
+                log.info("deploying verticle: {}", verticle);
                 final Promise<String> result = Promise.promise();
                 getVertx().deployVerticle(verticle, result);
                 futures.add(result.future());
@@ -96,20 +91,19 @@ public class Application extends AbstractBaseApplication {
     }
 
     /**
-     * Registers any additional health checks that the service implementation components provide.
+     * Registers the health checks set using {@link #setHealthCheckProviders(List)}.
      * 
      * @return A succeeded future.
      */
     @Override
     protected Future<Void> postRegisterServiceVerticles() {
-        return super.postRegisterServiceVerticles().compose(ok -> {
-            this.healthCheckProviders.forEach(this::registerHealthchecks);
-            return Future.succeededFuture();
-        });
+        return super.postRegisterServiceVerticles()
+                .onSuccess(ok -> this.healthCheckProviders.forEach(this::registerHealthchecks))
+                .mapEmpty();
     }
 
     /**
-     * Starts the Device Registry Server.
+     * Starts the example Device Registry.
      * 
      * @param args command line arguments to pass to the server.
      */

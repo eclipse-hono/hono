@@ -24,8 +24,6 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.util.CredentialsResult;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -38,8 +36,6 @@ import io.vertx.core.json.JsonObject;
  * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
-@Component
-@Qualifier("serviceImpl")
 public class MongoDbBasedCredentialsService implements CredentialsManagementService, CredentialsService, Lifecycle {
 
     /**

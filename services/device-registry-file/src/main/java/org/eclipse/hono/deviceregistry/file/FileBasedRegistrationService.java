@@ -44,9 +44,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -60,9 +57,6 @@ import io.vertx.core.json.JsonObject;
 /**
  * A device backend that keeps all data in memory but is backed by a file.
  */
-@Component
-@Qualifier("serviceImpl")
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "file", matchIfMissing = true)
 public class FileBasedRegistrationService extends AbstractRegistrationService
         implements DeviceManagementService, RegistrationService, Lifecycle {
 

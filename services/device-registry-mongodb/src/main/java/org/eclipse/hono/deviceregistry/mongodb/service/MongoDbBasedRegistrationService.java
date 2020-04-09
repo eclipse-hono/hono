@@ -41,8 +41,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
@@ -64,8 +62,6 @@ import io.vertx.ext.mongo.UpdateOptions;
  * @see <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
-@Component
-@Qualifier("serviceImpl")
 public final class MongoDbBasedRegistrationService extends AbstractRegistrationService implements DeviceManagementService, Lifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(MongoDbBasedRegistrationService.class);
