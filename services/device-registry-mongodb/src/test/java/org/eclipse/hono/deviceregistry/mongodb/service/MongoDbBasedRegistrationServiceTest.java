@@ -48,13 +48,12 @@ class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTests {
         final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
         svc = spy(new MongoDbBasedRegistrationService());
         svc.setConfig(config);
-        svc.init(vertx, ctx);
 
         mongoDbCallExecutor = mock(MongoDbCallExecutor.class);
         mongoClient = new MongoDbClientMock();
         prepareMongoDbCallExecutorMock();
         svc.setExecutor(mongoDbCallExecutor);
-        svc.start(Promise.promise());
+        svc.start();
     }
 
     private void prepareMongoDbCallExecutorMock() {

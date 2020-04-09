@@ -27,6 +27,7 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationS
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -116,6 +117,16 @@ public class ApplicationConfig {
 
         return r -> r.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_DEVICE_REGISTRY));
 
+    }
+
+    /**
+     * Gets properties for configuring
+     * the {@link org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionService}.
+     * @return the properties.
+     */
+    @Bean
+    public MapBasedDeviceConnectionsConfigProperties serviceConnectionProperties() {
+        return new MapBasedDeviceConnectionsConfigProperties();
     }
 
     /**
