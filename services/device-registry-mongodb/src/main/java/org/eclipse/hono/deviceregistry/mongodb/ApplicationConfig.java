@@ -253,6 +253,8 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint credentialsAmqpEndpoint() {
+        // need to use backend service because the Credentials service's "get" operation
+        // supports auto-provisioning and thus needs to be able to create a device on the fly
         final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(
                 new MongoDbBasedRegistrationService(),
                 new MongoDbBasedCredentialsService());
@@ -312,7 +314,11 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint deviceHttpEndpoint() {
-        final DeviceManagementService service = new MongoDbBasedRegistrationService();
+        // need to use backend service because creating a device implicitly
+        // creates (empty) credentials as well for the device
+        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(
+                new MongoDbBasedRegistrationService(),
+                new MongoDbBasedCredentialsService());
         final DelegatingDeviceManagementHttpEndpoint<DeviceManagementService> ep = new DelegatingDeviceManagementHttpEndpoint<>(vertx());
         ep.setService(service);
         return ep;
