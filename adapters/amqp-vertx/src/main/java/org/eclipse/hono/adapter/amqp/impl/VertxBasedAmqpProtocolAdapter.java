@@ -892,7 +892,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
 
         // TODO time out waiting for disposition update
+        final Long timerId = vertx.setTimer(getConfig().getDeliveryUpdateTimeout(), tid -> {
+            log.debug("waiting for delivery update timed out after " + getConfig().getDeliveryUpdateTimeout() + " ms");
+            final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "timeout waiting for delivery update");
+            closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
+            // timeout expired -> release command
+            commandContext.getCurrentSpan().log("timeout waiting for delivery update from device");
+            commandContext.release();
+        });
+
         sender.send(msg, delivery -> {
+            // disposition received -> cancel timer
+            vertx.cancelTimer(timerId);
+
             // release the command message when the device either
             // rejects or does not settle the command request message.
             final DeliveryState remoteState = delivery.getRemoteState();
@@ -927,6 +940,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     command.getPayloadSize(),
                     getMicrometerSample(commandContext));
         });
+
         final Map<String, Object> items = new HashMap<>(4);
         items.put(Fields.EVENT, "command sent to device");
         if (sender.getRemoteTarget() != null) {

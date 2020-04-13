@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.adapter.amqp;
 
+
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 
 
@@ -36,10 +37,15 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * a connection to be stale.
      */
     public static final int DEFAULT_IDLE_TIMEOUT_MILLIS = 60_000;
+    /**
+     * The amount of time (in milliseconds) to wait for a device to acknowledge receiving a command message. 
+     */
+    public static final long DEFAULT_DELIVERY_UPDATE_TIMEOUT = 1000L; // ms
 
     private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE_BYTES;
     private int maxSessionFrames = DEFAULT_MAX_SESSION_FRAMES;
     private int idleTimeout = DEFAULT_IDLE_TIMEOUT_MILLIS;
+    private long deliveryUpdateTimeout = DEFAULT_DELIVERY_UPDATE_TIMEOUT;
 
     /**
      * Gets the maximum number of bytes that can be sent in an AMQP message delivery
@@ -136,5 +142,31 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      */
     public final int getIdleTimeout() {
         return this.idleTimeout;
+    }
+
+    /**
+     * Gets the time to wait for a delivery update from a device before the AMQP sender link to the
+     * device is closed.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_COMMAND_TIMEOUT}.
+     * 
+     * @return The wait time in milliseconds.
+     */
+    public long getDeliveryUpdateTimeout() {
+        return this.deliveryUpdateTimeout;
+    }
+
+    /**
+     * Sets the time to wait for a delivery update from a device before the AMQP sender link is closed.
+     * 
+     * @param deliveryUpdateTimeout The timeout value in milliseconds.
+     * 
+     * @throws IllegalArgumentException if the timeout value is negative.
+     */
+    public final void setDeliveryUpdateTimeout(final long deliveryUpdateTimeout) {
+        if (deliveryUpdateTimeout < 0) {
+            throw new IllegalArgumentException("timeout value must be >= 0");
+        }
+        this.deliveryUpdateTimeout = deliveryUpdateTimeout;
     }
 }
