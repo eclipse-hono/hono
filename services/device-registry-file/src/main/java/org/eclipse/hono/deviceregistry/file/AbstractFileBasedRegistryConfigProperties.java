@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
-import java.util.HashSet;
-import java.util.Set;
-
 /**
  * Common configuration properties for file based implementations of the APIs of Hono's device registry as own server.
  * <p>
@@ -34,7 +31,6 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
     private boolean modificationEnabled = true;
     private boolean startEmpty = false;
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
-    private Set<String> hashAlgorithmsWhitelist = new HashSet<>();
 
     /**
      * Gets the path to the file that the registry should be persisted to periodically.
@@ -167,35 +163,5 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
      */
     public final void setStartEmpty(final boolean flag) {
         this.startEmpty = flag;
-    }
-
-    /**
-     * Get the list of authorised hashing algorithms for already hashed passwords.
-     * The device registry will not accept credentials using a hashing
-     * algorithm that is not present in that list.
-     * If the list is empty, the device registry will accept any hashing algorithm.
-     * <p>
-     * Default value is an empty HashSet.
-     *
-     * @return The list of authorized algorithms.
-     */
-    public Set<String> getHashAlgorithmsWhitelist() {
-        return hashAlgorithmsWhitelist;
-    }
-
-    /**
-     * Set the list of authorised hashing algorithms for already hashed passwords.
-     * The device registry will not accept credentials using a hashing
-     * algorithm that is not present in that list.
-     * <p>
-     * The default value is empty.
-     *
-     * @param hashAlgorithmsWhitelist The list of authorized algorithms.
-     */
-    public void setHashAlgorithmsWhitelist(final String[] hashAlgorithmsWhitelist) {
-
-        for (String s : hashAlgorithmsWhitelist) {
-            this.hashAlgorithmsWhitelist.add(s);
-        }
     }
 }

@@ -13,6 +13,11 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
 /**
  * Configuration properties for Hono's credentials API as own server.
  *
@@ -23,6 +28,8 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
      * The default name of the file that the registry persists credentials to.
      */
     private static final String DEFAULT_CREDENTIALS_FILENAME = "/var/lib/hono/device-registry/credentials.json";
+
+    private final Set<String> hashAlgorithmsWhitelist = new HashSet<>();
 
     private int maxBcryptIterations = 10;
 
@@ -60,6 +67,43 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
             throw new IllegalArgumentException("iterations must be > 3 and < 32");
         } else {
             maxBcryptIterations = iterations;
+        }
+    }
+
+
+    /**
+     * Gets the list of supported hashing algorithms for pre-hashed passwords.
+     * <p>
+     * The device registry will not accept credentials using a hashing
+     * algorithm that is not contained in this list.
+     * If the list is empty, the device registry will accept any hashing algorithm.
+     * <p>
+     * Default value is an empty list.
+     *
+     * @return The supported algorithms.
+     */
+    public Set<String> getHashAlgorithmsWhitelist() {
+        return Collections.unmodifiableSet(hashAlgorithmsWhitelist);
+    }
+
+    /**
+     * Sets the list of supported hashing algorithms for pre-hashed passwords.
+     * <p>
+     * The device registry will not accept credentials using a hashing
+     * algorithm that is not contained in this list.
+     * If the list is empty, the device registry will accept any hashing algorithm.
+     * <p>
+     * Default value is an empty list.
+     *
+     * @param hashAlgorithmsWhitelist The algorithms to support.
+     * @throws NullPointerException if the list is {@code null}.
+     */
+    public void setHashAlgorithmsWhitelist(final String[] hashAlgorithmsWhitelist) {
+
+        Objects.requireNonNull(hashAlgorithmsWhitelist);
+        this.hashAlgorithmsWhitelist.clear();
+        for (String s : hashAlgorithmsWhitelist) {
+            this.hashAlgorithmsWhitelist.add(s);
         }
     }
 }
