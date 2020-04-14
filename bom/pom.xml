@@ -37,7 +37,7 @@
     <hamcrest-core.version>2.2</hamcrest-core.version>
     <infinispan.version>9.4.17.Final</infinispan.version>
     <infinispan.image.name>jboss/infinispan-server:9.4.11.Final</infinispan.image.name>
-    <jackson.version>2.9.10</jackson.version>
+    <jackson.version>2.10.3</jackson.version>
     <jaeger.version>1.2.0</jaeger.version>
     <java-base-image.name>docker.io/openjdk:11-jre-slim</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
