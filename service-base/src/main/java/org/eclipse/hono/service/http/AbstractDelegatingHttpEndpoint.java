@@ -18,7 +18,6 @@ import java.util.Objects;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.Lifecycle;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -43,26 +42,14 @@ public abstract class AbstractDelegatingHttpEndpoint<S, T extends ServiceConfigP
     protected S service;
 
     /**
-     * Creates an endpoint for a vert.x instance.
+     * Creates an endpoint for a service instance.
      *
      * @param vertx The vert.x instance to use.
-     * @throws NullPointerException if vertx is {@code null};
+     * @param service The service to delegate to.
+     * @throws NullPointerException if any of the parameters are {@code null};
      */
-    public AbstractDelegatingHttpEndpoint(final Vertx vertx) {
+    public AbstractDelegatingHttpEndpoint(final Vertx vertx, final S service) {
         super(vertx);
-    }
-
-    /**
-     * Sets the service that this endpoint should delegate to.
-     * <p>
-     * Subclasses may want to override this method in order to use a different
-     * qualifier (or none at all) for injecting the instance.
-     * 
-     * @param service The service.
-     * @throws NullPointerException if service is {@code null}.
-     */
-    @Autowired
-    public void setService(final S service) {
         Objects.requireNonNull(service);
         logger.debug("using service instance: {}", service);
         this.service = service;

@@ -69,7 +69,6 @@ public class AutoProvisioningEnabledDeviceBackendTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testProvisionDeviceSucceeds(final VertxTestContext ctx) {
 
@@ -102,7 +101,6 @@ public class AutoProvisioningEnabledDeviceBackendTest {
      * 
      * @param ctx The vert.x test context.
      */
-    @SuppressWarnings("unchecked")
     @Test
     public void testProvisionDeviceRemovesDeviceIfCredentialsCreationFails(final VertxTestContext ctx) {
 

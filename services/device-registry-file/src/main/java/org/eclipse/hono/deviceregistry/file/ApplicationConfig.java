@@ -204,40 +204,44 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> API.
      *
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint tenantAmqpEndpoint() {
-        return new DelegatingTenantAmqpEndpoint<TenantService>(vertx());
+    public AmqpEndpoint tenantAmqpEndpoint(final TenantService service) {
+        return new DelegatingTenantAmqpEndpoint<TenantService>(vertx(), service);
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint registrationAmqpEndpoint() {
-        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx());
+    public AmqpEndpoint registrationAmqpEndpoint(final RegistrationService service) {
+        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx(), service);
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
      *
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint credentialsAmqpEndpoint() {
-        return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx());
+    public AmqpEndpoint credentialsAmqpEndpoint(final CredentialsService service) {
+        return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
     }
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> API.
      *
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
-        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx());
+    public AmqpEndpoint deviceConnectionAmqpEndpoint(final DeviceConnectionService service) {
+        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx(), service);
     }
 }

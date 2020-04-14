@@ -26,7 +26,6 @@ import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
@@ -62,14 +61,14 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
             RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
 
     /**
-     * Creates an endpoint for a Vertx instance.
+     * Creates an endpoint for a service instance.
      *
-     * @param vertx The Vertx instance to use.
-     * @throws NullPointerException if vertx is {@code null};
+     * @param vertx The vert.x instance to use.
+     * @param service The service to delegate to.
+     * @throws NullPointerException if any of the parameters are {@code null};
      */
-    @Autowired
-    public DelegatingTenantManagementHttpEndpoint(final Vertx vertx) {
-        super(Objects.requireNonNull(vertx));
+    public DelegatingTenantManagementHttpEndpoint(final Vertx vertx, final S service) {
+        super(vertx, service);
     }
 
     @Override

@@ -43,12 +43,14 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
     private static final String SPAN_NAME_ASSERT_DEVICE_REGISTRATION = "assert Device Registration";
 
     /**
-     * Creates a new registration endpoint for a vertx instance.
+     * Creates a new registration endpoint for a service instance.
      *
-     * @param vertx The vertx instance to use.
+     * @param vertx The vert.x instance to use.
+     * @param service The service to delegate to.
+     * @throws NullPointerException if any of the parameters are {@code null};
      */
-    public DelegatingRegistrationAmqpEndpoint(final Vertx vertx) {
-        super(vertx);
+    public DelegatingRegistrationAmqpEndpoint(final Vertx vertx, final S service) {
+        super(vertx, service);
     }
 
     @Override

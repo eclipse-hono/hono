@@ -47,10 +47,12 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
     /**
      * Creates a new credentials endpoint for a vertx instance.
      *
-     * @param vertx The vertx instance to use.
+     * @param vertx The vert.x instance to use.
+     * @param service The service to delegate to.
+     * @throws NullPointerException if any of the parameters are {@code null};
      */
-    public DelegatingCredentialsAmqpEndpoint(final Vertx vertx) {
-        super(vertx);
+    public DelegatingCredentialsAmqpEndpoint(final Vertx vertx, final S service) {
+        super(vertx, service);
     }
 
     @Override

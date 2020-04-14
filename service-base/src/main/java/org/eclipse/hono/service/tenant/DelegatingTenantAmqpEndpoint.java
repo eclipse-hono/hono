@@ -49,12 +49,14 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
     private static final String TAG_SUBJECT_DN_NAME = "subject_dn_name";
 
     /**
-     * Creates a new tenant endpoint for a vertx instance.
+     * Creates an endpoint for a service instance.
      *
-     * @param vertx The vertx instance to use.
+     * @param vertx The vert.x instance to use.
+     * @param service The service to delegate to.
+     * @throws NullPointerException if any of the parameters are {@code null};
      */
-    public DelegatingTenantAmqpEndpoint(final Vertx vertx) {
-        super(vertx);
+    public DelegatingTenantAmqpEndpoint(final Vertx vertx, final S service) {
+        super(vertx, service);
     }
 
     @Override

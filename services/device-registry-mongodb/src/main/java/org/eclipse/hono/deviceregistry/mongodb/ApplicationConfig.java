@@ -240,9 +240,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint registrationAmqpEndpoint() {
-        final DelegatingRegistrationAmqpEndpoint<RegistrationService> ep = new DelegatingRegistrationAmqpEndpoint<>(vertx());
-        ep.setService(new MongoDbBasedRegistrationService());
-        return ep;
+        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx(), new MongoDbBasedRegistrationService());
     }
 
     /**
@@ -258,9 +256,7 @@ public class ApplicationConfig {
         final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(
                 new MongoDbBasedRegistrationService(),
                 new MongoDbBasedCredentialsService());
-        final DelegatingCredentialsAmqpEndpoint<CredentialsService> ep = new DelegatingCredentialsAmqpEndpoint<>(vertx());
-        ep.setService(service);
-        return ep;
+        return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
     }
 
     //
@@ -319,9 +315,7 @@ public class ApplicationConfig {
         final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(
                 new MongoDbBasedRegistrationService(),
                 new MongoDbBasedCredentialsService());
-        final DelegatingDeviceManagementHttpEndpoint<DeviceManagementService> ep = new DelegatingDeviceManagementHttpEndpoint<>(vertx());
-        ep.setService(service);
-        return ep;
+        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx(), service);
     }
 
     /**
@@ -334,8 +328,6 @@ public class ApplicationConfig {
     @Scope("prototype")
     public HttpEndpoint credentialsHttpEndpoint() {
         final CredentialsManagementService service = new MongoDbBasedCredentialsService();
-        final DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService> ep = new DelegatingCredentialsManagementHttpEndpoint<>(vertx());
-        ep.setService(service);
-        return ep;
+        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx(), service);
     }
 }

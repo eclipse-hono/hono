@@ -50,12 +50,14 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
     private static final String SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE = "remove command handling adapter instance";
 
     /**
-     * Creates a new credentials endpoint for a vertx instance.
+     * Creates an endpoint for a service instance.
      *
-     * @param vertx The vertx instance to use.
+     * @param vertx The vert.x instance to use.
+     * @param service The service to delegate to.
+     * @throws NullPointerException if any of the parameters are {@code null};
      */
-    public DelegatingDeviceConnectionAmqpEndpoint(final Vertx vertx) {
-        super(vertx);
+    public DelegatingDeviceConnectionAmqpEndpoint(final Vertx vertx, final S service) {
+        super(vertx, service);
     }
 
     @Override

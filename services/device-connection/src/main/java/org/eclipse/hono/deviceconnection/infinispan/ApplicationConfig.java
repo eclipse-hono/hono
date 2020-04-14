@@ -147,12 +147,13 @@ public class ApplicationConfig {
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> API.
      *
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
     @Scope("prototype")
-    public AmqpEndpoint deviceConnectionAmqpEndpoint() {
-        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx());
+    public AmqpEndpoint deviceConnectionAmqpEndpoint(final DeviceConnectionService service) {
+        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx(), service);
     }
 
     /**

@@ -159,11 +159,12 @@ public class FileBasedServiceConfig {
      * of Hono's Device Registry Management API's.
      *
      * @param vertx The vert.x instance to run on.
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public HttpEndpoint tenantHttpEndpoint(final Vertx vertx) {
-        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx);
+    public HttpEndpoint tenantHttpEndpoint(final Vertx vertx, final TenantManagementService service) {
+        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx, service);
     }
 
     /**
@@ -171,11 +172,12 @@ public class FileBasedServiceConfig {
      * of Hono's Device Registry Management API's.
      *
      * @param vertx The vert.x instance to run on.
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public HttpEndpoint deviceHttpEndpoint(final Vertx vertx) {
-        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx);
+    public HttpEndpoint deviceHttpEndpoint(final Vertx vertx, final DeviceManagementService service) {
+        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx, service);
     }
 
     /**
@@ -183,10 +185,11 @@ public class FileBasedServiceConfig {
      * of Hono's Device Registry Management API's.
      *
      * @param vertx The vert.x instance to run on.
+     * @param service The service instance to delegate to.
      * @return The handler.
      */
     @Bean
-    public HttpEndpoint credentialsHttpEndpoint(final Vertx vertx) {
-        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx);
+    public HttpEndpoint credentialsHttpEndpoint(final Vertx vertx, final CredentialsManagementService service) {
+        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx, service);
     }
 }
