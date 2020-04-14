@@ -177,9 +177,11 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);
 
-        return processReadDevice(deviceKey.getTenantId(), deviceKey.getDeviceId())
-                .compose(result -> Future.succeededFuture(RegistrationResult.from(result.getStatus(),
-                        convertDevice(deviceKey.getDeviceId(), result.getPayload()), result.getCacheDirective().orElse(null))));
+        return findDeviceDocument(deviceKey.getTenantId(), deviceKey.getDeviceId())
+                .map(result -> Optional.ofNullable(result)
+                        .map(ok -> getRegistrationResult(deviceKey.getDeviceId(),
+                                result.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)))
+                        .orElse(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
     @Override
@@ -192,32 +194,32 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         return processResolveGroupMembers(tenantId, viaGroups, span);
     }
 
-    private JsonObject convertDevice(final String deviceId, final Device payload) {
-
-        if (payload == null) {
-            return null;
-        }
-
-        final JsonObject data = JsonObject.mapFrom(payload);
-
-        return new JsonObject()
-                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
-                .put(RegistrationConstants.FIELD_DATA, data);
+    private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
+        return findDeviceDocument(tenantId, deviceId)
+                .compose(result -> Optional.ofNullable(result)
+                        .map(ok -> result.mapTo(DeviceDto.class))
+                        .map(Future::succeededFuture)
+                        .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                String.format("Device [%s] not found.", deviceId)))));
     }
 
-    private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
+    private Future<JsonObject> findDeviceDocument(final String tenantId, final String deviceId) {
         final JsonObject findDeviceQuery = new MongoDbDocumentBuilder()
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
         final Promise<JsonObject> readDevicePromise = Promise.promise();
         mongoClient.findOne(config.getCollectionName(), findDeviceQuery, null, readDevicePromise);
-        return readDevicePromise.future()
-                .compose(result -> Optional.ofNullable(result)
-                        .map(ok -> result.mapTo(DeviceDto.class))
-                        .map(Future::succeededFuture)
-                        .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                                String.format("Device [%s] not found.", deviceId)))));
+        return readDevicePromise.future();
+    }
+
+    private RegistrationResult getRegistrationResult(final String deviceId, final JsonObject devicePayload) {
+        return RegistrationResult.from(HttpURLConnection.HTTP_OK,
+                Optional.ofNullable(devicePayload)
+                        .map(ok -> new JsonObject()
+                                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
+                                .put(RegistrationConstants.FIELD_DATA, devicePayload))
+                        .orElse(null));
     }
 
     private boolean isDuplicateKeyError(final Throwable throwable) {
