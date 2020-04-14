@@ -57,7 +57,7 @@
     <proton.version>0.33.2</proton.version>
     <qpid-jms.version>0.47.0</qpid-jms.version>
     <slf4j.version>1.7.28</slf4j.version>
-    <snakeyaml.version>1.25</snakeyaml.version>
+    <snakeyaml.version>1.26</snakeyaml.version>
     <spring.version>5.2.3.RELEASE</spring.version>
     <spring-boot.version>2.2.4.RELEASE</spring-boot.version>
     <spring-security-crypto.version>5.2.2.RELEASE</spring-security-crypto.version>
