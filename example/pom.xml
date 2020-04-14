@@ -23,8 +23,9 @@
   </parent>
 
   <artifactId>hono-example</artifactId>
+  <packaging>pom</packaging>
   <name>Hono Examples</name>
-  <description>A collection of examples code for Hono.</description>
+  <description>Example code for Hono.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <modules>
@@ -32,8 +33,7 @@
     <module>protocol-gateway-example</module>
   </modules>
 
-  <packaging>pom</packaging>
-
-
-
+  <properties>
+    <maven.compiler.release>11</maven.compiler.release>
+  </properties>
 </project>
