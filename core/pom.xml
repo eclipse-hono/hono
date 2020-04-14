@@ -62,7 +62,7 @@
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-jackson</artifactId>
-    </dependency>    
+    </dependency>
     <dependency>
       <!-- required as a (missing) transient dependency for JJWT -->
       <groupId>javax.xml.bind</groupId>
@@ -71,12 +71,10 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
-      <version>${jackson.version}</version>
     </dependency>
     <dependency>
      <groupId>io.opentracing</groupId>
