@@ -36,6 +36,10 @@ import io.vertx.core.Future;
 public final class MongoDbDeviceRegistryUtils {
 
     /**
+     * The name of the JSON property containing the device data.
+     */
+    public static final String FIELD_DEVICE = "device";
+    /**
      * The name of the JSON property containing the last modification date and time.
      */
     public static final String FIELD_UPDATED_ON = "updatedOn";
@@ -43,10 +47,6 @@ public final class MongoDbDeviceRegistryUtils {
      * The name of the JSON property containing the version of the tenant or device or credentials information.
      */
     public static final String FIELD_VERSION = "version";
-    /**
-     * The name of the JSON property containing the device identifier.
-     */
-    public static final String FIELD_DEVICE = "device";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbDeviceRegistryUtils.class);
 
     private MongoDbDeviceRegistryUtils() {
