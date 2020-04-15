@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -86,9 +87,11 @@ import org.mockito.ArgumentCaptor;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
@@ -132,6 +135,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private AmqpAdapterProperties config;
     private AmqpAdapterMetrics metrics;
     private ResourceLimitChecks resourceLimitChecks;
+    private Vertx vertx;
+    private Context context;
 
     /**
      * Setups the protocol adapter.
@@ -140,6 +145,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
     public void setup() {
 
         metrics = mock(AmqpAdapterMetrics.class);
+        vertx = mock(Vertx.class);
+        context = mock(Context.class);
 
         tenantClient = mock(TenantClient.class);
         when(tenantClient.get(anyString(), (SpanContext) any())).thenAnswer(invocation -> {
@@ -1048,6 +1055,43 @@ public class VertxBasedAmqpProtocolAdapterTest {
                 }));
     }
 
+    /**
+     * Verifies that the adapter closes the link for sending commands to a device when no
+     * delivery update is received after a certain amount of time.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testLinkForSendingCommandsCloseAfterTimeout() {
+        // GIVEN an AMQP adapter
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        // to which a device is connected
+        final ProtonSender deviceLink = mock(ProtonSender.class);
+        when(deviceLink.getQoS()).thenReturn(ProtonQoS.AT_LEAST_ONCE);
+        // that has subscribed to commands
+        final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
+
+        // WHEN an application sends a one-way command to the device
+        final ProtonDelivery commandDelivery = mock(ProtonDelivery.class);
+        final String commandAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
+        final Buffer payload = Buffer.buffer("payload");
+        final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
+        final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
+        final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
+
+        // AND no delivery update is received from the device after sometime
+        doAnswer(invocation -> {
+            final Handler<Long> task =  invocation.getArgument(1);
+            task.handle(1L);
+            return 1L;
+        }).when(vertx).setTimer(anyLong(), any(Handler.class));
+
+        adapter.onCommandReceived(tenantObject, deviceLink, context);
+        // THEN the adapter closes the device link
+        verify(deviceLink).close();
+        // AND notifies the application by sending back a RELEASED disposition
+        verify(commandDelivery).disposition(any(Released.class), eq(true));
+    }
+
     private String getCommandEndpoint() {
         return CommandConstants.COMMAND_ENDPOINT;
     }
@@ -1163,6 +1207,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+        adapter.init(vertx, context);
         return adapter;
     }
 

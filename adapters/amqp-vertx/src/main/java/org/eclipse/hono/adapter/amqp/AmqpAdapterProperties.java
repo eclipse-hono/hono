@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.adapter.amqp;
 
+
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 
 
@@ -36,10 +37,15 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * a connection to be stale.
      */
     public static final int DEFAULT_IDLE_TIMEOUT_MILLIS = 60_000;
+    /**
+     * The amount of time (in milliseconds) to wait for a device to acknowledge receiving a command message. 
+     */
+    public static final long DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT = 1000L; // ms
 
     private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE_BYTES;
     private int maxSessionFrames = DEFAULT_MAX_SESSION_FRAMES;
     private int idleTimeout = DEFAULT_IDLE_TIMEOUT_MILLIS;
+    private long sendMessageToDeviceTimeout = DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT;
 
     /**
      * Gets the maximum number of bytes that can be sent in an AMQP message delivery
@@ -136,5 +142,31 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      */
     public final int getIdleTimeout() {
         return this.idleTimeout;
+    }
+
+    /**
+     * Gets the time to wait for a delivery update from a device before the AMQP sender link to the
+     * device is closed.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT}.
+     * 
+     * @return The wait time in milliseconds.
+     */
+    public long getSendMessageToDeviceTimeout() {
+        return this.sendMessageToDeviceTimeout;
+    }
+
+    /**
+     * Sets the time to wait for a delivery update from a device before the AMQP sender link is closed.
+     * 
+     * @param sendMessageToDeviceTimeout The timeout value in milliseconds.
+     * 
+     * @throws IllegalArgumentException if the timeout value is negative.
+     */
+    public final void setSendMessageToDeviceTimeout(final long sendMessageToDeviceTimeout) {
+        if (sendMessageToDeviceTimeout < 0) {
+            throw new IllegalArgumentException("timeout value must be >= 0");
+        }
+        this.sendMessageToDeviceTimeout = sendMessageToDeviceTimeout;
     }
 }
