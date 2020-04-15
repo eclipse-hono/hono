@@ -78,6 +78,11 @@ public final class DeviceDto extends BaseDto {
         this.tenantId = Objects.requireNonNull(tenantId);
     }
 
+    /**
+     * Gets the identifier of the device.
+     *
+     * @return The identifier of the device.
+     */
     public String getDeviceId() {
         return deviceId;
     }
