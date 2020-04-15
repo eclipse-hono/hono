@@ -15,12 +15,18 @@ title = "Release Notes"
 * The `getName` method in `org.eclipse.hono.connection.ConnectionFactory` has been removed
   and an additional `connect` method has been added.  
 
-## 1.2.2 (not yet released)
+## 1.2.2
 
 ### Fixes & Enhancements
 
 * Commands might not have been routed to the target device or gateway if multiple
-  verticle instances were deployed in a protocol adapter instance. This has been fixed.
+  Verticle instances were deployed in a protocol adapter instance. This has been fixed.
+* The example registry's admin guide has been amended with some missing configuration
+  variables.
+* The documentation of the underlying concepts of Hono's Command & Control functionality
+  has been updated to reflect recent changes.
+* Some dependencies have been updated to more recent versions fixing potential
+  vulnerabilities.
 
 ## 1.2.1
 
