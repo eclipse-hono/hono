@@ -136,6 +136,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHE_MIN_SIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMinSize` | no | `20` | The minimum size of the cache to store the metrics data retrieved from the Prometheus server. The cache is used for storing the current amount of data exchanged with devices of tenants. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHE_MAX_SIZE`<br>`--hono.resourceLimits.prometheusBased.cacheMaxSize` | no | `1000` | The maximum size of the cache to store the metrics data retrieved from the Prometheus server. |
 | `HONO_RESOURCELIMITS_PROMETHEUSBASED_CACHE_TIMEOUT`<br>`--hono.resourceLimits.prometheusBased.cacheTimeout` | no | `600` | The number of seconds after which the cached metrics data should be considered invalid. |
+| `HONO_RESOURCELIMITS_PROMETHEUSBASED_QUERY_TIMEOUT`<br>`--hono.resourceLimits.prometheusBased.queryTimeout` | no | `500` | The number of milliseconds after which a request to a Prometheus server is closed. Setting zero or a negative value disables the timeout.|
 
 In addition to the properties listed above, the resource limit checker also supports the properties listed below as documented in the
 [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}). These properties might be useful if a reverse proxy in front of

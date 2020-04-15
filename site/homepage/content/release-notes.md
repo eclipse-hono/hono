@@ -7,6 +7,8 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * An admin guide for the CoAP adapter has been added.
+* Prometheus resource limits checker configuration supports query timeout.
+  For more information refer to `HONO_RESOURCELIMITS_PROMETHEUSBASED_QUERY_TIMEOUT` [Resource Limits Checker Configuration]({{% doclink "/admin-guide/common-config/#resource-limits-checker-configuration" %}}).
 
 ### API Changes
 

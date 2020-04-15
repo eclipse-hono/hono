@@ -515,6 +515,11 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 .expect(ResponsePredicate.SC_OK)
                 .as(BodyCodec.jsonObject());
 
+        if (config.getQueryTimeout() > 0) {
+            // enables timeout for Prometheus queries via HTTP API
+            request.timeout(config.getQueryTimeout());
+        }
+
         if (!Strings.isNullOrEmpty(config.getUsername()) && !Strings.isNullOrEmpty(config.getPassword())) {
             request.basicAuthentication(config.getUsername(), config.getPassword());
         }
