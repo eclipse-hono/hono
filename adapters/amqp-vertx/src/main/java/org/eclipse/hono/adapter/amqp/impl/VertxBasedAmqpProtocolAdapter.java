@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
@@ -891,54 +892,66 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             MessageHelper.addDeviceId(msg, command.getOriginalDeviceId());
         }
 
-        // TODO time out waiting for disposition update
-        final Long timerId = vertx.setTimer(getConfig().getDeliveryUpdateTimeout(), tid -> {
-            log.debug("waiting for delivery update timed out after " + getConfig().getDeliveryUpdateTimeout() + " ms");
-            final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                    "timeout waiting for delivery update");
-            closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
-            // timeout expired -> release command
-            commandContext.getCurrentSpan().log("timeout waiting for delivery update from device");
-            commandContext.release();
+        final AtomicBoolean isCommandSettled = new AtomicBoolean(false);
+
+        final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null :
+            vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
+            log.debug("waiting for delivery update timed out after " + getConfig().getSendMessageToDeviceTimeout() + " ms");
+            if (isCommandSettled.compareAndSet(false, true)) {
+                final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "timeout waiting for delivery update");
+                closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
+                // timeout expired -> release command
+                commandContext.getCurrentSpan().log("timeout waiting for delivery update from device");
+                commandContext.release();
+            } else {
+                log.trace("command is already settled and downstream application notified");
+            }
         });
 
         sender.send(msg, delivery -> {
-            // disposition received -> cancel timer
-            vertx.cancelTimer(timerId);
 
-            // release the command message when the device either
-            // rejects or does not settle the command request message.
-            final DeliveryState remoteState = delivery.getRemoteState();
-            ProcessingOutcome outcome = null;
-            if (delivery.remotelySettled()) {
-                commandContext.disposition(remoteState);
-                if (Accepted.class.isInstance(remoteState)) {
-                    outcome = ProcessingOutcome.FORWARDED;
-                } else if (Rejected.class.isInstance(remoteState)) {
-                    outcome = ProcessingOutcome.UNPROCESSABLE;
-                } else if (Released.class.isInstance(remoteState)) {
-                    outcome = ProcessingOutcome.UNDELIVERABLE;
-                } else if (Modified.class.isInstance(remoteState)) {
-                    final Modified modified = (Modified) remoteState;
-                    outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
-                }
-            } else {
-                log.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
-                        remoteState);
-                final Map<String, Object> logItems = new HashMap<>(2);
-                logItems.put(Fields.EVENT, "device did not settle command");
-                logItems.put("remote state", remoteState);
-                commandContext.getCurrentSpan().log(logItems);
-                commandContext.release();
-                outcome = ProcessingOutcome.UNDELIVERABLE;
+            if (timerId != null) {
+                // disposition received -> cancel timer
+                vertx.cancelTimer(timerId);
             }
-            metrics.reportCommand(
-                    command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                    command.getTenant(),
-                    tenantObject,
-                    outcome,
-                    command.getPayloadSize(),
-                    getMicrometerSample(commandContext));
+            if (!isCommandSettled.compareAndSet(false, true)) {
+                log.trace("command is already settled and downstream application notified");
+            } else {
+                // release the command message when the device either
+                // rejects or does not settle the command request message.
+                final DeliveryState remoteState = delivery.getRemoteState();
+                ProcessingOutcome outcome = null;
+                if (delivery.remotelySettled()) {
+                    commandContext.disposition(remoteState);
+                    if (Accepted.class.isInstance(remoteState)) {
+                        outcome = ProcessingOutcome.FORWARDED;
+                    } else if (Rejected.class.isInstance(remoteState)) {
+                        outcome = ProcessingOutcome.UNPROCESSABLE;
+                    } else if (Released.class.isInstance(remoteState)) {
+                        outcome = ProcessingOutcome.UNDELIVERABLE;
+                    } else if (Modified.class.isInstance(remoteState)) {
+                        final Modified modified = (Modified) remoteState;
+                        outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
+                    }
+                } else {
+                    log.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
+                            remoteState);
+                    final Map<String, Object> logItems = new HashMap<>(2);
+                    logItems.put(Fields.EVENT, "device did not settle command");
+                    logItems.put("remote state", remoteState);
+                    commandContext.getCurrentSpan().log(logItems);
+                    commandContext.release();
+                    outcome = ProcessingOutcome.UNDELIVERABLE;
+                }
+                metrics.reportCommand(
+                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                        command.getTenant(),
+                        tenantObject,
+                        outcome,
+                        command.getPayloadSize(),
+                        getMicrometerSample(commandContext));
+            }
         });
 
         final Map<String, Object> items = new HashMap<>(4);

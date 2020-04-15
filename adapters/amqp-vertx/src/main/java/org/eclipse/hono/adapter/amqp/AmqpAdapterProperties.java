@@ -40,12 +40,12 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
     /**
      * The amount of time (in milliseconds) to wait for a device to acknowledge receiving a command message. 
      */
-    public static final long DEFAULT_DELIVERY_UPDATE_TIMEOUT = 1000L; // ms
+    public static final long DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT = 1000L; // ms
 
     private int maxFrameSize = DEFAULT_MAX_FRAME_SIZE_BYTES;
     private int maxSessionFrames = DEFAULT_MAX_SESSION_FRAMES;
     private int idleTimeout = DEFAULT_IDLE_TIMEOUT_MILLIS;
-    private long deliveryUpdateTimeout = DEFAULT_DELIVERY_UPDATE_TIMEOUT;
+    private long sendMessageToDeviceTimeout = DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT;
 
     /**
      * Gets the maximum number of bytes that can be sent in an AMQP message delivery
@@ -146,27 +146,27 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
 
     /**
      * Gets the time to wait for a delivery update from a device before the AMQP sender link to the
-     * device is closed.
+     * device is close.
      * <p>
-     * The default value of this property is {@link #DEFAULT_SEND_COMMAND_TIMEOUT}.
+     * The default value of this property is {@link #sendMessageToDeviceTimeout}.
      * 
      * @return The wait time in milliseconds.
      */
-    public long getDeliveryUpdateTimeout() {
-        return this.deliveryUpdateTimeout;
+    public long getSendMessageToDeviceTimeout() {
+        return this.sendMessageToDeviceTimeout;
     }
 
     /**
      * Sets the time to wait for a delivery update from a device before the AMQP sender link is closed.
      * 
-     * @param deliveryUpdateTimeout The timeout value in milliseconds.
+     * @param sendMessageToDeviceTimeout The timeout value in milliseconds.
      * 
      * @throws IllegalArgumentException if the timeout value is negative.
      */
-    public final void setDeliveryUpdateTimeout(final long deliveryUpdateTimeout) {
-        if (deliveryUpdateTimeout < 0) {
+    public final void setSendMessageToDeviceTimeout(final long sendMessageToDeviceTimeout) {
+        if (sendMessageToDeviceTimeout < 0) {
             throw new IllegalArgumentException("timeout value must be >= 0");
         }
-        this.deliveryUpdateTimeout = deliveryUpdateTimeout;
+        this.sendMessageToDeviceTimeout = sendMessageToDeviceTimeout;
     }
 }
