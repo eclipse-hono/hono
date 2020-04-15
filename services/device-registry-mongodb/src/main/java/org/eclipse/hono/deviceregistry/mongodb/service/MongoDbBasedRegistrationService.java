@@ -201,8 +201,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         final JsonObject data = JsonObject.mapFrom(payload);
 
         return new JsonObject()
-                .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
-                .put("data", data);
+                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId)
+                .put(RegistrationConstants.FIELD_DATA, data);
     }
 
     private Future<DeviceDto> findDevice(final String tenantId, final String deviceId) {
