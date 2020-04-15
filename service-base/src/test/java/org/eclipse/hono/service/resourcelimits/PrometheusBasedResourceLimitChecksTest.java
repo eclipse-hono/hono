@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,6 +34,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 import org.eclipse.hono.cache.CacheProvider;
 import org.eclipse.hono.cache.ExpiringValueCache;
@@ -93,6 +95,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         when(req.expect(any(ResponsePredicate.class))).thenReturn(req);
         when(req.as(any(BodyCodec.class))).thenReturn(request);
         when(request.basicAuthentication(anyString(), anyString())).thenReturn(request);
+        when(request.timeout(anyLong())).thenReturn(request);
 
         webClient = mock(WebClient.class);
         when(webClient.get(anyInt(), anyString(), anyString())).thenReturn(req);
@@ -190,6 +193,29 @@ public class PrometheusBasedResourceLimitChecksTest {
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
+                        verify(request).send(any(Handler.class));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the connection limit check returns {@code false} if a timeout occurred.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testConnectionLimitIsNotReachedWhenTimeOutOccurred(final VertxTestContext ctx) {
+
+        givenFailResponseWithTimeoutException();
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
+                .setResourceLimits(new ResourceLimits().setMaxConnections(10));
+
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).setHandler(
+                ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
                         verify(request).send(any(Handler.class));
                     });
                     ctx.completeNow();
@@ -520,6 +546,35 @@ public class PrometheusBasedResourceLimitChecksTest {
     }
 
     /**
+     * Verifies that the message limit check returns {@code false} if a timeout has occurred.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testMessageLimitNotExceededWhenTimeoutOccurred(final VertxTestContext ctx) {
+
+        givenFailResponseWithTimeoutException();
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setDataVolume(new DataVolume()
+                                .setMaxBytes(50L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new ResourceLimitsPeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
+
+        limitChecksImpl.isMessageLimitReached(tenant, 100L, mock(SpanContext.class))
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(request).send(any(Handler.class));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that the connection duration limit check returns {@code false} if no metrics are
      * available (yet).
      *
@@ -551,6 +606,35 @@ public class PrometheusBasedResourceLimitChecksTest {
                 }));
     }
 
+    /**
+     *
+     * Verifies that the connection duration limit check returns {@code false} if a timeout occurred.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testConnectionDurationLimitNotExceededWhenTimeoutOccurred(final VertxTestContext ctx) {
+
+        givenFailResponseWithTimeoutException();
+        final TenantObject tenant = TenantObject.from("tenant", true)
+                .setResourceLimits(new ResourceLimits()
+                        .setConnectionDuration(new ConnectionDuration()
+                                .setMaxDuration(10L)
+                                .setEffectiveSince(Instant.parse("2019-01-03T14:30:00Z"))
+                                .setPeriod(new ResourceLimitsPeriod()
+                                        .setMode("days")
+                                        .setNoOfDays(30))));
+        limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
+                .setHandler(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertFalse(response);
+                        verify(request).send(any(Handler.class));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
     private void givenCurrentConnections(final Integer currentConnections) {
         givenResponseWithValue(currentConnections);
     }
@@ -570,6 +654,15 @@ public class PrometheusBasedResourceLimitChecksTest {
             final HttpResponse<JsonObject> response = mock(HttpResponse.class);
             when(response.body()).thenReturn(createPrometheusResponse(value));
             responseHandler.handle(Future.succeededFuture(response));
+            return null;
+        }).when(request).send(any(Handler.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void givenFailResponseWithTimeoutException() {
+        doAnswer(invocation -> {
+            final Handler<AsyncResult<HttpResponse<JsonObject>>> responseHandler = invocation.getArgument(0);
+            responseHandler.handle(Future.failedFuture(new TimeoutException()));
             return null;
         }).when(request).send(any(Handler.class));
     }

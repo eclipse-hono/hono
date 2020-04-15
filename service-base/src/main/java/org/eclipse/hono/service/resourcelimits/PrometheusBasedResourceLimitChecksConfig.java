@@ -32,9 +32,15 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      */
     public static final long DEFAULT_CACHE_TIMEOUT = 600L;
 
+    /**
+     * The default timeout in milliseconds, after the client close the request to a remote server.
+     */
+    public static final long DEFAULT_QUERY_TIMEOUT = 500L;
+
     private int cacheMinSize = DEFAULT_CACHE_MIN_SIZE;
     private long cacheMaxSize = DEFAULT_CACHE_MAX_SIZE;
     private long cacheTimeout = DEFAULT_CACHE_TIMEOUT;
+    private long queryTimeout = DEFAULT_QUERY_TIMEOUT;
 
     /**
      * Creates new properties with default values.
@@ -136,6 +142,30 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
             throw new IllegalArgumentException("default cache timeout must be greater than zero");
         }
         this.cacheTimeout = timeout;
+    }
+
+    /**
+     * Gets the period of time after which a request to a Prometheus server are closed.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_QUERY_TIMEOUT}.
+     *
+     * @return The timeout for the request to a remote server in milliseconds, zero or negative value is for disabled timeout.
+     */
+    public long getQueryTimeout() {
+        return queryTimeout;
+    }
+
+    /**
+     * Sets the period of time after which a request to a Prometheus server are closed.
+     * <p>
+     * Setting zero or a negative {@code timeout} disables the timeout.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_QUERY_TIMEOUT}.
+     *
+     * @param timeout The timeout in milliseconds.
+     */
+    public void setQueryTimeout(final long timeout) {
+        this.queryTimeout = timeout;
     }
 
 }
