@@ -179,8 +179,9 @@ public class ApplicationConfig {
     //
 
     /**
-     * Gets properties for configuring {@link org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService} which implements the <em>Device
-     * Registration</em> API.
+     * Gets properties for configuring
+     * {@link org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService} which 
+     * implements the <em>Device Registration</em> API.
      *
      * @return The properties.
      */
@@ -233,6 +234,28 @@ public class ApplicationConfig {
     }
 
     /**
+     * Exposes the MongoDB registration service as a Spring bean.
+     *
+     * @return The MongoDB registration service.
+     */
+    @Bean
+    @Scope("prototype")
+    public MongoDbBasedRegistrationService registrationService() {
+        return new MongoDbBasedRegistrationService();
+    }
+
+    /**
+     * Exposes the MongoDB credentials service as a Spring bean.
+     *
+     * @return The MongoDB credentials service.
+     */
+    @Bean
+    @Scope("prototype")
+    public MongoDbBasedCredentialsService credentialsService() {
+        return new MongoDbBasedCredentialsService();
+    }
+
+    /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
      *
      * @return The handler.
@@ -240,7 +263,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint registrationAmqpEndpoint() {
-        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx(), new MongoDbBasedRegistrationService());
+        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx(), registrationService());
     }
 
     /**
@@ -253,9 +276,8 @@ public class ApplicationConfig {
     public AmqpEndpoint credentialsAmqpEndpoint() {
         // need to use backend service because the Credentials service's "get" operation
         // supports auto-provisioning and thus needs to be able to create a device on the fly
-        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(
-                new MongoDbBasedRegistrationService(),
-                new MongoDbBasedCredentialsService());
+        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
+                credentialsService());
         return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
     }
 
@@ -312,9 +334,8 @@ public class ApplicationConfig {
     public HttpEndpoint deviceHttpEndpoint() {
         // need to use backend service because creating a device implicitly
         // creates (empty) credentials as well for the device
-        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(
-                new MongoDbBasedRegistrationService(),
-                new MongoDbBasedCredentialsService());
+        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
+                credentialsService());
         return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx(), service);
     }
 
@@ -327,7 +348,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint credentialsHttpEndpoint() {
-        final CredentialsManagementService service = new MongoDbBasedCredentialsService();
-        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx(), service);
+        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx(),
+                credentialsService());
     }
 }
