@@ -894,20 +894,21 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final AtomicBoolean isCommandSettled = new AtomicBoolean(false);
 
-        final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null :
-            vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
-            log.debug("waiting for delivery update timed out after " + getConfig().getSendMessageToDeviceTimeout() + " ms");
-            if (isCommandSettled.compareAndSet(false, true)) {
-                final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                        "timeout waiting for delivery update");
-                closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
-                // timeout expired -> release command
-                commandContext.getCurrentSpan().log("timeout waiting for delivery update from device");
-                commandContext.release();
-            } else {
-                log.trace("command is already settled and downstream application notified");
-            }
-        });
+        final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null
+                : vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
+                    log.debug("waiting for delivery update timed out after "
+                            + getConfig().getSendMessageToDeviceTimeout() + " ms");
+                    if (isCommandSettled.compareAndSet(false, true)) {
+                        final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "timeout waiting for delivery update");
+                        closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
+                        // timeout expired -> release command
+                        commandContext.getCurrentSpan().log("timeout waiting for delivery update from device");
+                        commandContext.release();
+                    } else {
+                        log.trace("command is already settled and downstream application notified");
+                    }
+                });
 
         sender.send(msg, delivery -> {
 

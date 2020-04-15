@@ -146,9 +146,9 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
 
     /**
      * Gets the time to wait for a delivery update from a device before the AMQP sender link to the
-     * device is close.
+     * device is closed.
      * <p>
-     * The default value of this property is {@link #sendMessageToDeviceTimeout}.
+     * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT}.
      * 
      * @return The wait time in milliseconds.
      */
