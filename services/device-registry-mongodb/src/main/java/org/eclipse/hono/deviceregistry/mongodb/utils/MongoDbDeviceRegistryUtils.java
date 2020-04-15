@@ -92,7 +92,7 @@ public final class MongoDbDeviceRegistryUtils {
     public static <T> OperationResult<T> mapErrorToResult(final Throwable error, final Span span) {
         Objects.requireNonNull(error);
 
-        LOG.error(error.getMessage(), error);
+        LOG.debug(error.getMessage(), error);
         TracingHelper.logError(span, error.getMessage(), error);
         if (error instanceof ClientErrorException) {
             return OperationResult.empty(((ClientErrorException) error).getErrorCode());

@@ -64,7 +64,7 @@ import io.vertx.ext.mongo.UpdateOptions;
  */
 public final class MongoDbBasedRegistrationService extends AbstractRegistrationService implements DeviceManagementService, Lifecycle {
 
-    private static final Logger log = LoggerFactory.getLogger(MongoDbBasedRegistrationService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationService.class);
     private static final int INDEX_CREATION_MAX_RETRIES = 3;
     private MongoClient mongoClient;
     private MongoDbBasedRegistrationConfigProperties config;
@@ -246,14 +246,14 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 })
                 .recover(error -> {
                     if (isDuplicateKeyError(error)) {
-                        log.debug("Device [{}] already exists for the tenant [{}]", device.getDeviceId(),
+                        LOG.debug("Device [{}] already exists for the tenant [{}]", device.getDeviceId(),
                                 device.getTenantId(), error);
                         TracingHelper.logError(span, String.format("Device [%s] already exists for the tenant [%s]",
                                 device.getDeviceId(), device.getTenantId()));
                         return Future.succeededFuture(
                                 OperationResult.empty(HttpURLConnection.HTTP_CONFLICT));
                     } else {
-                        log.error("Error adding device [{}] for the tenant [{}]", device.getDeviceId(),
+                        LOG.error("Error adding device [{}] for the tenant [{}]", device.getDeviceId(),
                                 device.getTenantId(), error);
                         TracingHelper.logError(span, String.format("Error adding device [%s] for the tenant [%s]",
                                 device.getDeviceId(), device.getTenantId()), error);
