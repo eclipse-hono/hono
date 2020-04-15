@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -114,20 +114,6 @@ void notifyBuildStatus() {
         echo "Error notifying build status via Email"
         echo error.getMessage()
         throw error
-    }
-}
-
-/**
- * Capture code coverage reports using Jacoco jenkins plugin.
- *
- */
-void captureCodeCoverageReport() {
-    stage('Capture Code Coverage Report') {
-        step([$class       : 'JacocoPublisher',
-              execPattern  : '**/**.exec',
-              classPattern : '**/classes',
-              sourcePattern: '**/src/main/java'
-        ])
     }
 }
 

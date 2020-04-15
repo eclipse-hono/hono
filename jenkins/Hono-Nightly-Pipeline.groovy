@@ -27,7 +27,6 @@ node {
         utils.checkOutHonoRepoMaster()
         nightlyBuild(utils)
         utils.aggregateJunitResults()
-        utils.captureCodeCoverageReport()
         utils.publishJavaDoc()
         utils.archiveArtifacts("deploy/target/eclipse-hono-deploy-*.tar.gz,cli/target/hono-cli-*-exec.jar")
         currentBuild.result = 'SUCCESS'
@@ -48,7 +47,7 @@ node {
  */
 def nightlyBuild(def utils) {
     stage('Build') {
-        withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+        withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [artifactsPublisher(disabled: true)]) {
             sh 'mvn clean package javadoc:aggregate'
             sh 'mvn --projects :hono-service-auth,:hono-service-device-registry-file,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DcreateJavadoc=true -DenableEclipseJarSigner=true'
         }

@@ -56,7 +56,7 @@ def buildAndDeploy(def utils) {
         withMaven(maven: utils.getMavenVersion(),
                 jdk: utils.getJDKVersion(),
                 mavenLocalRepo: '.repository',
-                options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+                options: [artifactsPublisher(disabled: true)]) {
             sh "mvn --projects :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true"
         }
     }

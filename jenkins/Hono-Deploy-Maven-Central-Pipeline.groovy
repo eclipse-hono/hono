@@ -61,7 +61,7 @@ def buildAndDeploy(def utils) {
                 jdk: utils.getJDKVersion(),
                 mavenLocalRepo: '.repository',
                 mavenSettingsFilePath: "${params.MAVEN_SETTINGS_FILE}",
-                options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+                options: [artifactsPublisher(disabled: true)]) {
             sh "mvn deploy -X -pl :hono-service-auth,:hono-service-device-registry-file,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-example,:hono-cli -am -DskipTests=true -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
         }
     }
