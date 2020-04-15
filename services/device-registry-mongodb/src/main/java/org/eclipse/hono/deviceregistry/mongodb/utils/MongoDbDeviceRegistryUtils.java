@@ -39,6 +39,10 @@ import io.vertx.core.Future;
 public final class MongoDbDeviceRegistryUtils {
 
     /**
+     * The name of the JSON property containing the credentials.
+     */
+    public static final String FIELD_CREDENTIALS = "credentials";
+    /**
      * The name of the JSON property containing the device data.
      */
     public static final String FIELD_DEVICE = "device";

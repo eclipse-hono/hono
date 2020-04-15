@@ -48,14 +48,16 @@ public abstract class AbstractCredentialsManagementService implements Credential
     private final Vertx vertx;
 
     /**
-     * Creates a service for a Vertx instance.
+     * Creates a service for the given Vertx and password encoder instances.
      *
      * @param vertx The Vertx instance to use.
-     * @throws NullPointerException if vertx is {@code null};
+     * @param passwordEncoder The password encoder.
+     * @throws NullPointerException if any of the parameters is {@code null};
      */
     @Autowired
-    public AbstractCredentialsManagementService(final Vertx vertx) {
+    public AbstractCredentialsManagementService(final Vertx vertx, final HonoPasswordEncoder passwordEncoder) {
         this.vertx = Objects.requireNonNull(vertx);
+        this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
     }
 
     /**
@@ -69,17 +71,6 @@ public abstract class AbstractCredentialsManagementService implements Credential
     @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
-    }
-
-    /**
-     * Set password encoder.
-     *
-     * @param passwordEncoder The password encoder.
-     * @throws NullPointerException if encoder is {@code null};
-     */
-    @Autowired
-    public void setPasswordEncoder(final HonoPasswordEncoder passwordEncoder) {
-        this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
     }
 
     /**

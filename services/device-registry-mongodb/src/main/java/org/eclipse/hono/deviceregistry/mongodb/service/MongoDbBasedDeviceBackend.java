@@ -109,7 +109,7 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
                         return Future.succeededFuture(result);
                     }
                     // now create the empty credentials set and pass on the original result
-                    return credentialsService.updateCredentials(
+                    return credentialsService.addCredentials(
                             tenantId,
                             result.getPayload().getId(),
                             Collections.emptyList(),
