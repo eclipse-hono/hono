@@ -12,9 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.util.Arrays;
-import java.util.List;
-
 /**
  * Constants &amp; utility methods used throughout the Registration API.
  */
@@ -58,29 +55,7 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
      */
     public static final String REGISTRATION_ENDPOINT = "registration";
 
-    /**
-     * The vert.x event bus address to which inbound registration messages are published.
-     */
-    public static final String EVENT_BUS_ADDRESS_REGISTRATION_IN = "registration.in";
-
-    private static final List<String> ACTIONS = Arrays.asList(ACTION_ASSERT, ACTION_REGISTER,
-            ACTION_GET, ACTION_DEREGISTER, ACTION_UPDATE);
-
     private RegistrationConstants() {
         // prevent instantiation
-    }
-
-    /**
-     * Checks if a given string represents a valid action.
-     *
-     * @param action The string to check.
-     * @return {@code true} if the given string is a supported action.
-     */
-    public static boolean isValidAction(final String action) {
-        if (action == null) {
-            return false;
-        } else {
-            return ACTIONS.contains(action);
-        }
     }
 }
