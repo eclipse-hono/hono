@@ -21,24 +21,21 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.hono.auth.BCryptHelper;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.Lifecycle;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
-import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -501,7 +498,8 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         for (final CommonCredential credential : credentials) {
 
             try {
-                checkCredential(credential);
+                DeviceRegistryUtils.checkCredential(credential, passwordEncoder, config.getHashAlgorithmsWhitelist(),
+                        config.getMaxBcryptIterations());
             } catch (final IllegalStateException e) {
                 TracingHelper.logError(span, e);
                 log.debug("Failed to validate credentials", e);
@@ -602,79 +600,6 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         }
 
         return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, null, Optional.empty(), Optional.of(newVersion));
-    }
-
-    /**
-     * Validate a secret.
-     *
-     * @param credential The secret to validate.
-     * @throws IllegalStateException if the secret is not valid.
-     */
-    protected void checkCredential(final CommonCredential credential) {
-        credential.checkValidity();
-        if (credential instanceof PasswordCredential) {
-            for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
-                passwordSecret.encode(passwordEncoder);
-                passwordSecret.checkValidity();
-                verifyHashAlgorithmIsAuthorised(passwordSecret);
-                if (!passwordSecret.containsOnlySecretId()) {
-                    switch (passwordSecret.getHashFunction()) {
-                    case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
-                        final String pwdHash = passwordSecret.getPasswordHash();
-                        verifyBcryptPasswordHash(pwdHash);
-                        break;
-                    default:
-                        // pass
-                    }
-                    // pass
-                }
-                // pass
-            }
-        }
-    }
-
-    /**
-     * Verifies that a hash algorithm in the supplied PasswordSecret is authorised.
-     * <p>
-     * The value must be present in the whitelist provided in the configuration
-     * by {@link #getHashAlgorithmsWhitelist()}
-     * If the whitelist is empty, any value will be accepted.
-     *
-     * @param secret The PasswordSecret object to verify.
-     * @throws IllegalStateException if the hash algorithm provided in the PasswordSecret is not in the whitelist.
-     */
-    protected void verifyHashAlgorithmIsAuthorised(final PasswordSecret secret) {
-
-        Objects.requireNonNull(secret);
-        if (getHashAlgorithmsWhitelist().isEmpty()
-            || secret.containsOnlySecretId()) {
-            return;
-        }
-
-        final String hashAlgorithm = secret.getHashFunction();
-        Objects.requireNonNull(hashAlgorithm);
-
-        if (getHashAlgorithmsWhitelist().contains(hashAlgorithm)) {
-                return;
-        }
-        throw new IllegalStateException("Hashing algorithm is not in whitelist: " + hashAlgorithm);
-    }
-
-    /**
-     * Verifies that a hash value is a valid BCrypt password hash.
-     * <p>
-     * The hash must be a version 2a hash and must not use more than the configured
-     * maximum number of iterations as returned by {@link #getMaxBcryptIterations()}.
-     *
-     * @param pwdHash The hash to verify.
-     * @throws IllegalStateException if the secret does not match the criteria.
-     */
-    protected void verifyBcryptPasswordHash(final String pwdHash) {
-
-        Objects.requireNonNull(pwdHash);
-        if (BCryptHelper.getIterations(pwdHash) > getMaxBcryptIterations()) {
-            throw new IllegalStateException("password hash uses too many iterations, max is " + getMaxBcryptIterations());
-        }
     }
 
     /**
@@ -878,14 +803,6 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
     @Override
     public String toString() {
         return String.format("%s[filename=%s]", FileBasedCredentialsService.class.getSimpleName(), getConfig().getFilename());
-    }
-
-    protected int getMaxBcryptIterations() {
-        return getConfig().getMaxBcryptIterations();
-    }
-
-    protected Set<String> getHashAlgorithmsWhitelist() {
-        return getConfig().getHashAlgorithmsWhitelist();
     }
 
     /**

@@ -20,12 +20,18 @@ import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.auth.BCryptHelper;
+import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.service.management.credentials.PasswordSecret;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
@@ -196,6 +202,93 @@ public final class DeviceRegistryUtils {
             TracingHelper.logError(span, errorMessage, error);
             return Future
                     .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, errorMessage, error));
+        }
+    }
+
+    /**
+     * Validates the given secret.
+     *
+     * @param credential The secret to validate.
+     * @param passwordEncoder The password encoder.
+     * @param hashAlgorithmsWhitelist The list of supported hashing algorithms for pre-hashed passwords.
+     * @param maxBcryptIterations The maximum number of iterations to use for bcrypt password hashes.
+     * @throws IllegalStateException if the secret is not valid.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static void checkCredential(final CommonCredential credential, final HonoPasswordEncoder passwordEncoder,
+            final Set<String> hashAlgorithmsWhitelist, final int maxBcryptIterations) {
+        Objects.requireNonNull(credential);
+        Objects.requireNonNull(passwordEncoder);
+        Objects.requireNonNull(hashAlgorithmsWhitelist);
+
+        credential.checkValidity();
+        if (credential instanceof PasswordCredential) {
+            for (final PasswordSecret passwordSecret : ((PasswordCredential) credential).getSecrets()) {
+                passwordSecret.encode(passwordEncoder);
+                passwordSecret.checkValidity();
+                verifyHashAlgorithmIsAuthorised(passwordSecret, hashAlgorithmsWhitelist);
+                if (!passwordSecret.containsOnlySecretId()) {
+                    switch (passwordSecret.getHashFunction()) {
+                    case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
+                        final String pwdHash = passwordSecret.getPasswordHash();
+                        verifyBcryptPasswordHash(pwdHash, maxBcryptIterations);
+                        break;
+                    default:
+                        // pass
+                    }
+                    // pass
+                }
+                // pass
+            }
+        }
+    }
+
+    /**
+     * Verifies that a hash algorithm in the supplied PasswordSecret is authorised.
+     * <p>
+     * The value must be present in the whitelist provided.
+     * If the whitelist is empty, any value will be accepted.
+     *
+     * @param secret The PasswordSecret object to verify.
+     * @param hashAlgorithmsWhitelist The list of supported hashing algorithms for pre-hashed passwords.
+     * @throws IllegalStateException if the hash algorithm provided in the PasswordSecret is not in the whitelist.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    private static void verifyHashAlgorithmIsAuthorised(final PasswordSecret secret, final Set<String> hashAlgorithmsWhitelist) {
+        Objects.requireNonNull(secret);
+        Objects.requireNonNull(hashAlgorithmsWhitelist);
+
+        if (hashAlgorithmsWhitelist.isEmpty()
+            || secret.containsOnlySecretId()) {
+            return;
+        }
+
+        final String hashAlgorithm = secret.getHashFunction();
+        Objects.requireNonNull(hashAlgorithm);
+
+        if (hashAlgorithmsWhitelist.contains(hashAlgorithm)) {
+                return;
+        }
+        throw new IllegalStateException("Hashing algorithm is not in whitelist: " + hashAlgorithm);
+    }
+
+    /**
+     * Verifies that a hash value is a valid BCrypt password hash.
+     * <p>
+     * The hash must be a version 2a hash and must not use more than the given
+     * maximum number of iterations.
+     *
+     * @param pwdHash The hash to verify.
+     * @param maxBcryptIterations The maximum number of iterations to use for 
+     *                            bcrypt password hashes.
+     * @throws IllegalStateException if the secret does not match the criteria.
+     * @throws NullPointerException if pwdHash is {@code null}.
+     */
+    private static void verifyBcryptPasswordHash(final String pwdHash, final int maxBcryptIterations) {
+        Objects.requireNonNull(pwdHash);
+
+        if (BCryptHelper.getIterations(pwdHash) > maxBcryptIterations) {
+            throw new IllegalStateException("password hash uses too many iterations, max is " + maxBcryptIterations);
         }
     }
 }
