@@ -12,10 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-
 /**
  * Constants &amp; utility methods used throughout the Device Management API.
  */
@@ -54,30 +50,9 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String CREDENTIALS_HTTP_ENDPOINT = "credentials";
 
     /**
-     * The name of the property that contains credentials object in event bus message.
-     */
-    public static final String CREDENTIALS_OBJECT = "credentials";
-
-    /**
-     * The vert.x event bus address to which inbound registration messages are published.
-     */
-    public static final String EVENT_BUS_ADDRESS_DEVICE_MANAGEMENT_IN = "device.mgmt.in";
-    /**
-     * The vert.x event bus address to which inbound credentials management messages are published.
-     */
-    public static final String EVENT_BUS_ADDRESS_CREDENTIALS_MANAGEMENT_IN = "credentials.mgmt.in";
-    /**
      * The name of the Device Registration HTTP API endpoint.
      */
     public static final String REGISTRATION_HTTP_ENDPOINT = "devices";
-    /**
-     * The vert.x event bus address to which inbound registration messages are published.
-     */
-    public static final String EVENT_BUS_ADDRESS_TENANT_IN = "tenant.in";
-    /**
-     * The vert.x event bus address to which inbound management messages are published.
-     */
-    public static final String EVENT_BUS_ADDRESS_TENANT_MANAGEMENT_IN = "tenant.mgmt.in";
     /**
      * The name of the HTTP endpoint for the Tenant API.
      */
@@ -120,10 +95,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the field that contains the extension fields.
      */
     public static final String FIELD_EXT                         = "ext";
-    /**
-     * The name of the field that contains the number of credentials contained in a message.
-     */
-    public static final String FIELD_CREDENTIALS_TOTAL           = "total";
     /**
      * The name of the field that contains the id of the entity (e.g. secret id).
      */
@@ -178,10 +149,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The type name that indicates a pre-shared key secret.
      */
     public static final String SECRETS_TYPE_PRESHARED_KEY        = "psk";
-    /**
-     * The name of the field that contains the pattern to use for matching authentication identifiers.
-     */
-    public static final String SPECIFIER_WILDCARD                = "*";
 
     /**
      * The name of the BCrypt hash function.
@@ -191,31 +158,13 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the SHA-256 hash function.
      */
     public static final String HASH_FUNCTION_SHA256              = "sha-256";
-    /**
-     * The name of the SHA-512 hash function.
-     */
-    public static final String HASH_FUNCTION_SHA512              = "sha-512";
-    /**
-     * The name of the default hash function to use for hashed passwords if not set explicitly.
-     */
-    public static final String DEFAULT_HASH_FUNCTION             = HASH_FUNCTION_SHA256;
 
     // TENANTS
 
     /**
-     * The default number of seconds that a protocol adapter should wait for
-     * an upstream command.
-     */
-    public static final int DEFAULT_MAX_TTD = 60; // seconds
-    /**
      * The default message size is set to 0, which implies no minimum size is defined.
      */
     public static final int DEFAULT_MINIMUM_MESSAGE_SIZE = 0;
-    /**
-     *  Messages that are sent by the Hono client for the Tenant API use this as a prefix for the messageId.
-     */
-    public static final String MESSAGE_ID_PREFIX = "tenant-client";
-
     /**
      * The name of the property that contains configuration options for specific
      * protocol adapters.
@@ -234,11 +183,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the JSON array containing device registration information for a tenant.
      */
     public static final String FIELD_DEVICES = "devices";
-    /**
-     * The name of the property that contains the maximum <em>time til disconnect</em> that protocol
-     * adapters should use for a tenant.
-     */
-    public static final String FIELD_MAX_TTD = "max-ttd";
     /**
      * The name of the property that contains the minimum message size in bytes.
      */
@@ -288,24 +232,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
 
-    private static final Set<String> ACTIONS = new HashSet<>(
-            Arrays.asList(ACTION_CREATE, ACTION_GET, ACTION_DELETE, ACTION_UPDATE));
-
     private RegistryManagementConstants() {
         // prevent instantiation
-    }
-
-    /**
-     * Checks if a given string represents a valid action.
-     *
-     * @param action The string to check.
-     * @return {@code true} if the given string is a supported action.
-     */
-    public static boolean isValidAction(final String action) {
-        if (action == null) {
-            return false;
-        } else {
-            return ACTIONS.contains(action);
-        }
     }
 }
