@@ -18,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Promise;
 import io.vertx.junit5.Checkpoint;
@@ -29,6 +31,11 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 abstract class DeviceRegistryTestBase {
+
+    /**
+     * A logger to be shared with subclasses.
+     */
+    protected Logger log = LoggerFactory.getLogger(getClass());
 
     /**
      * Gets the helper to use for running tests.

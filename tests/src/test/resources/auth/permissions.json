@@ -82,6 +82,14 @@
       {
         "operation": "tenant/NON_EXISTING_TENANT:*",
         "activities": [ "EXECUTE" ]
+      },
+      {
+        "resource": "device_con/DEFAULT_TENANT",
+        "activities": [ "READ", "WRITE" ]
+      },
+      {
+        "operation": "device_con/DEFAULT_TENANT:*",
+        "activities": [ "EXECUTE" ]
       }
     ],
     "connector": [

@@ -40,7 +40,7 @@ public class RequestResponseResult<T> {
      * @param applicationProperties Arbitrary properties conveyed in the response message's
      *                              <em>application-properties</em>.
      */
-    protected RequestResponseResult(
+    public RequestResponseResult(
             final int status,
             final T payload,
             final CacheDirective directive,

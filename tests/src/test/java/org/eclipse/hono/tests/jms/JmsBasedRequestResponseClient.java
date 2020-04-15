@@ -247,15 +247,25 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
             final CacheDirective cacheDirective,
             final Handler<AsyncResult<R>> resultHandler) {
 
-        // body is expected to contain UTF-8 encoding of JSON
+        LOGGER.debug("handling response to succeeded request");
+
         try {
             final Buffer payload;
             if (message instanceof TextMessage) {
-                payload = Buffer.buffer(((TextMessage) message).getText());
+                final TextMessage textMessage = (TextMessage) message;
+                final String body = textMessage.getText();
+                payload = Buffer.buffer(body);
+                LOGGER.debug("response payload contains text body: {}", body);
             } else if (message instanceof BytesMessage) {
                 final BytesMessage byteMessage = (BytesMessage) message;
-                final byte[] bytes = byteMessage.getBody(byte[].class);
-                payload = Buffer.buffer(bytes);
+                if (byteMessage.getBodyLength() > 0) {
+                    final byte[] bytes = byteMessage.getBody(byte[].class);
+                    payload = Buffer.buffer(bytes);
+                    LOGGER.debug("response payload contains {} bytes", bytes.length);
+                } else {
+                    LOGGER.debug("response payload is empty");
+                    payload = null;
+                }
             } else {
                 throw new ServerErrorException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,
