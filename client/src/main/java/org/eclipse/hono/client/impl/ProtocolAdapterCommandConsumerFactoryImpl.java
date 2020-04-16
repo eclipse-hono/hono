@@ -175,7 +175,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
     private Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId, final SpanContext context) {
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> {
-                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context);
+                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, -1, context);
                 }).recover(thr -> {
                     log.info("error setting command handling adapter instance [tenant: {}, device: {}]", tenantId,
                             deviceId, thr);

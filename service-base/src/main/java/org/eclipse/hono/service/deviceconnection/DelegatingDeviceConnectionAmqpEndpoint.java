@@ -239,6 +239,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
         final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
+        final Integer lifespanPropertyValue = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
@@ -252,12 +253,15 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
+            final int lifespanSeconds = lifespanPropertyValue != null ? lifespanPropertyValue : -1;
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-            log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {}", tenantId, deviceId, adapterInstanceId);
+            span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
+            log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {} (lifespan: {}s)",
+                    tenantId, deviceId, adapterInstanceId, lifespanSeconds);
 
-            resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
+            resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespanSeconds, span)
                     .map(res -> DeviceConnectionConstants.getAmqpReply(
                             DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
                             tenantId,

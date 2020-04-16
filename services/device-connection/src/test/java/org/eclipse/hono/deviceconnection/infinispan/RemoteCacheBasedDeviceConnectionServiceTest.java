@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceconnection.infinispan;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -155,15 +156,15 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
 
         final String deviceId = "testDevice";
         final String adapterInstanceId = "adapterInstanceId";
-        when(cache.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(SpanContext.class)))
+        when(cache.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), anyInt(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture());
 
         givenAStartedService()
-                .compose(ok -> svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
+                .compose(ok -> svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, -1, span))
                 .setHandler(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
-                        verify(cache).setCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));
+                        verify(cache).setCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), anyInt(), any(SpanContext.class));
                     });
                     ctx.completeNow();
                 }));

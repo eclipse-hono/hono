@@ -116,8 +116,8 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
-            final SpanContext context) {
-        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
+            final int lifespanSeconds, final SpanContext context) {
+        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespanSeconds, context);
     }
 
     @Override

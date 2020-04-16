@@ -126,6 +126,7 @@ The following table provides an overview of the properties a client needs to set
 | :-------------------- | :-------: | :----------------------- | :-------- | :---------- |
 | *subject*             | yes       | *properties*             | *string*  | MUST be set to `set-cmd-handling-adapter-instance`. |
 | *adapter_instance_id* | yes       | *application-properties* | *string*  | The identifier of the protocol adapter instance that currently handles commands for the device or gateway identified by the *device_id* property. |
+| *lifespan*            | no        | *application-properties* | *int*     | The desired lifespan of the mapping entry in seconds. If the *Device Registration API* implementation supports this property, the mapping entry shall be treated as non-existent after that period has elapsed. A negative value, as well as an omitted property, is interpreted as an unlimited lifespan. A *Device Registration API* implementation may not support this property, meaning that a client can't rely on the given lifespan to be applied. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 

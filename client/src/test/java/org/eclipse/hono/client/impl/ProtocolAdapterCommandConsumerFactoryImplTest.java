@@ -132,7 +132,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(anyString()))
                 .thenReturn(Future.succeededFuture(devConClient));
-        when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), any())).thenReturn(Future.succeededFuture());
+        when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), anyInt(), any())).thenReturn(Future.succeededFuture());
 
         commandConsumerFactory = new ProtocolAdapterCommandConsumerFactoryImpl(connection);
         commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
