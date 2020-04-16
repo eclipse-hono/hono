@@ -259,12 +259,14 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
     }
 
     @Override
-    public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId, final SpanContext context) {
+    public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
+            final int lifespanSeconds, final SpanContext context) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
         final Map<String, Object> properties = createDeviceIdProperties(deviceId);
         properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        properties.put(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
 
         final Span currentSpan = newChildSpan(context, "set command handling adapter instance");
         final Promise<DeviceConnectionResult> resultTracker = Promise.promise();

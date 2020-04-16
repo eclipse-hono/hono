@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -32,6 +34,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
+
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -43,15 +48,15 @@ import io.vertx.core.json.JsonObject;
  */
 @Repository
 @Qualifier("backend")
-public final class MapBasedDeviceConnectionService implements DeviceConnectionService {
+public class MapBasedDeviceConnectionService implements DeviceConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(MapBasedDeviceConnectionService.class);
 
     // <tenantId, <deviceId, lastKnownGatewayJson>>
-    private final Map<String, Map<String, JsonObject>> lastKnownGatewaysMap = new HashMap<>();
+    private final Map<String, ConcurrentMap<String, JsonObject>> lastKnownGatewaysMap = new HashMap<>();
 
     // <tenantId, <deviceId, adapterInstanceIdJson>>
-    private final Map<String, Map<String, JsonObject>> commandHandlingAdapterInstancesMap = new HashMap<>();
+    private final Map<String, ConcurrentMap<String, ExpiringValue<JsonObject>>> commandHandlingAdapterInstancesMap = new HashMap<>();
 
     private MapBasedDeviceConnectionsConfigProperties config;
 
@@ -65,7 +70,7 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
     }
 
     @Override
-    public Future<DeviceConnectionResult> setLastKnownGatewayForDevice(final String tenantId, final String deviceId,
+    public final Future<DeviceConnectionResult> setLastKnownGatewayForDevice(final String tenantId, final String deviceId,
             final String gatewayId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -90,7 +95,7 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
     }
 
     @Override
-    public Future<DeviceConnectionResult> getLastKnownGatewayForDevice(final String tenantId, final String deviceId,
+    public final Future<DeviceConnectionResult> getLastKnownGatewayForDevice(final String tenantId, final String deviceId,
             final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -111,19 +116,20 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
     }
 
     @Override
-    public Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String protocolAdapterInstanceId, final Span span) {
+    public final Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId,
+            final String deviceId, final String protocolAdapterInstanceId, final int lifespanSeconds, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(protocolAdapterInstanceId);
 
-        final Map<String, JsonObject> adapterInstancesForTenantMap = commandHandlingAdapterInstancesMap.computeIfAbsent(tenantId,
-                k -> new ConcurrentHashMap<>());
+        final ConcurrentMap<String, ExpiringValue<JsonObject>> adapterInstancesForTenantMap = commandHandlingAdapterInstancesMap.computeIfAbsent(tenantId,
+                k -> buildAdapterInstancesForTenantMap());
         final DeviceConnectionResult result;
         final int currentMapSize = adapterInstancesForTenantMap.size();
         if (currentMapSize < getConfig().getMaxDevicesPerTenant()
                 || (currentMapSize == getConfig().getMaxDevicesPerTenant() && adapterInstancesForTenantMap.containsKey(deviceId))) {
-            adapterInstancesForTenantMap.put(deviceId, createAdapterInstanceIdJson(protocolAdapterInstanceId));
+            adapterInstancesForTenantMap.put(deviceId,
+                    createExpiringValue(createAdapterInstanceIdJson(protocolAdapterInstanceId), lifespanSeconds));
             result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
         } else {
             log.debug("cannot set protocol adapter instance for handling commands of device [{}], tenant [{}]: max number of entries per tenant reached ({})",
@@ -133,22 +139,52 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
         return Future.succeededFuture(result);
     }
 
+    private ConcurrentMap<String, ExpiringValue<JsonObject>> buildAdapterInstancesForTenantMap() {
+        return Caffeine.newBuilder()
+                .expireAfter(new Expiry<String, ExpiringValue<JsonObject>>() {
+                    @Override
+                    public long expireAfterCreate(final String key, final ExpiringValue<JsonObject> value,
+                            final long currentTime) {
+                        return value.getLifespanNanos();
+                    }
+
+                    @Override
+                    public long expireAfterUpdate(final String key, final ExpiringValue<JsonObject> value,
+                            final long currentTime, final long currentDuration) {
+                        return Long.MAX_VALUE;
+                    }
+
+                    @Override
+                    public long expireAfterRead(final String key, final ExpiringValue<JsonObject> value,
+                            final long currentTime, final long currentDuration) {
+                        return Long.MAX_VALUE;
+                    }
+                })
+                .build().asMap();
+    }
+
+    // package-private to allow override in unit tests
+    <V> ExpiringValue<V> createExpiringValue(final V adapterInstanceIdJson, final int lifespanSeconds) {
+        final long lifespanNanos = lifespanSeconds < 0 ? Long.MAX_VALUE : TimeUnit.SECONDS.toNanos(lifespanSeconds);
+        return new ExpiringValue<>(adapterInstanceIdJson, lifespanNanos);
+    }
+
     @Override
-    public Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
+    public final Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
             final String adapterInstanceId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        final Map<String, JsonObject> adapterInstancesForTenantMap = commandHandlingAdapterInstancesMap.computeIfAbsent(tenantId,
-                k -> new ConcurrentHashMap<>());
+        final Map<String, ExpiringValue<JsonObject>> adapterInstancesForTenantMap = commandHandlingAdapterInstancesMap.computeIfAbsent(tenantId,
+                k -> buildAdapterInstancesForTenantMap());
 
-        final JsonObject adapterInstanceIdJson = adapterInstancesForTenantMap.get(deviceId);
+        final ExpiringValue<JsonObject> adapterInstanceIdJsonHolder = adapterInstancesForTenantMap.get(deviceId);
         final Future<DeviceConnectionResult> resultFuture;
-        if (adapterInstanceIdJson != null) {
+        if (adapterInstanceIdJsonHolder != null) {
             // remove entry only if existing value contains matching adapterInstanceId
-            final boolean removed = adapterInstanceId.equals(getAdapterInstanceIdFromJson(adapterInstanceIdJson))
-                    && adapterInstancesForTenantMap.remove(deviceId, adapterInstanceIdJson);
+            final boolean removed = adapterInstanceId.equals(getAdapterInstanceIdFromJson(adapterInstanceIdJsonHolder.getValue()))
+                    && adapterInstancesForTenantMap.remove(deviceId, adapterInstanceIdJsonHolder);
             if (removed) {
                 resultFuture = Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT));
             } else {
@@ -163,17 +199,17 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
     }
 
     @Override
-    public Future<DeviceConnectionResult> getCommandHandlingAdapterInstances(final String tenantId,
+    public final Future<DeviceConnectionResult> getCommandHandlingAdapterInstances(final String tenantId,
             final String deviceId, final List<String> viaGateways, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        final Map<String, JsonObject> commandHandlersForTenantMap = commandHandlingAdapterInstancesMap.get(tenantId);
+        final Map<String, ExpiringValue<JsonObject>> commandHandlersForTenantMap = commandHandlingAdapterInstancesMap.get(tenantId);
         final DeviceConnectionResult result;
         if (commandHandlersForTenantMap != null) {
             // resultMap has device id as key and adapter instance id as value
             final Map<String, String> resultMap = new HashMap<>();
-            final JsonObject deviceAdapterInstanceIdJson = commandHandlersForTenantMap.get(deviceId);
+            final JsonObject deviceAdapterInstanceIdJson = getValue(commandHandlersForTenantMap, deviceId);
             if (deviceAdapterInstanceIdJson != null) {
                 // found mapping for given device id
                 resultMap.put(deviceId, getAdapterInstanceIdFromJson(deviceAdapterInstanceIdJson));
@@ -186,7 +222,7 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
                         final String gatewayId = getGatewayIdFromLastKnownGatewayJson(lastKnownGatewayJson);
                         if (viaGateways.contains(gatewayId)) {
                             // get command handler for found gateway device
-                            final JsonObject gwAdapterInstanceIdJson = commandHandlersForTenantMap.get(gatewayId);
+                            final JsonObject gwAdapterInstanceIdJson = getValue(commandHandlersForTenantMap, gatewayId);
                             if (gwAdapterInstanceIdJson != null) {
                                 resultMap.put(gatewayId, getAdapterInstanceIdFromJson(gwAdapterInstanceIdJson));
                             }
@@ -199,7 +235,7 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
             if (resultMap.isEmpty() && !viaGateways.isEmpty()) {
                 log.trace("no command handling adapter instance found for given device or last known gateway; getting instances for all via gateways");
                 for (final String viaGateway : viaGateways) {
-                    final JsonObject gwAdapterInstanceIdJson = commandHandlersForTenantMap.get(viaGateway);
+                    final JsonObject gwAdapterInstanceIdJson = getValue(commandHandlersForTenantMap, viaGateway);
                     if (gwAdapterInstanceIdJson != null) {
                         resultMap.put(viaGateway, getAdapterInstanceIdFromJson(gwAdapterInstanceIdJson));
                     }
@@ -255,6 +291,53 @@ public final class MapBasedDeviceConnectionService implements DeviceConnectionSe
 
     private String getAdapterInstanceIdFromJson(final JsonObject adapterInstanceIdJson) {
         return adapterInstanceIdJson.getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
+    }
+
+    private static <V, K> V getValue(final Map<K, ExpiringValue<V>> map, final K key) {
+        final ExpiringValue<V> expiringValue = map.get(key);
+        return expiringValue != null ? expiringValue.getValue() : null;
+    }
+
+    /**
+     * Keeps a value along with a lifespan.
+     *
+     * @param <T> The type of value.
+     */
+    static class ExpiringValue<T> {
+
+        private final T value;
+        private final long lifespanNanos;
+
+        /**
+         * Creates a new ExpiringValue.
+         * 
+         * @param value The value.
+         * @param lifespanNanos The lifespan in nanoseconds. To indicate no expiration an excessively
+         *                      long period may be given, such as {@code Long#MAX_VALUE}.
+         * @throws NullPointerException if any of the parameters is {@code null}.
+         */
+        ExpiringValue(final T value, final long lifespanNanos) {
+            this.value = Objects.requireNonNull(value);
+            this.lifespanNanos = Objects.requireNonNull(lifespanNanos);
+        }
+
+        /**
+         * Gets the value.
+         *
+         * @return The value.
+         */
+        public T getValue() {
+            return value;
+        }
+
+        /**
+         * Gets the lifespan in nanoseconds.
+         *
+         * @return The lifespan.
+         */
+        public long getLifespanNanos() {
+            return lifespanNanos;
+        }
     }
 
 }

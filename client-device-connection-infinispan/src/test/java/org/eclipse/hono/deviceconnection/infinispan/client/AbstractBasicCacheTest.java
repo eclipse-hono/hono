@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -132,6 +133,28 @@ abstract class AbstractBasicCacheTest {
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that a request to put a value with a lifespan to the cache
+     * results in the value being written to the data grid with the given lifespan.
+     *
+     * @param ctx The vert.x text context.
+     */
+    @Test
+    void testPutWithLifespanSucceeds(final VertxTestContext ctx) {
+        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
+        when(grid.putAsync(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
+                .thenReturn(CompletableFuture.completedFuture("oldValue"));
+        cache.connect()
+                .compose(c -> c.put("key", "value", 1, TimeUnit.SECONDS))
+                .setHandler(ctx.succeeding(v -> {
+                    ctx.verify(() -> {
+                        verify(grid).putAsync("key", "value", 1, TimeUnit.SECONDS);
+                        assertThat(v).isEqualTo("oldValue");
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

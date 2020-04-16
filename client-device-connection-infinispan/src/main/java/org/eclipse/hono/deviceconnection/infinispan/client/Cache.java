@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -46,6 +47,19 @@ public interface Cache<K, V> {
      *         A failed future if the value could not be stored in the cache.
      */
     Future<V> put(K key, V value);
+
+    /**
+     * Puts a value to the cache.
+     *
+     * @param key The key.
+     * @param value The value.
+     * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
+     * @param lifespanUnit The time unit for the lifespan.
+     * @return A succeeded future containing the previous value or {@code null} if the
+     *         cache didn't contain the key yet.
+     *         A failed future if the value could not be stored in the cache.
+     */
+    Future<V> put(K key, V value, long lifespan, TimeUnit lifespanUnit);
 
     /**
      * Gets a value from the cache.

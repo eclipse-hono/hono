@@ -113,12 +113,14 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
     public Future<Void> setCommandHandlingAdapterInstance(
             final String deviceId,
             final String adapterInstanceId,
+            final int lifespanSeconds,
             final SpanContext context) {
 
         return sendRequest(
                 DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
                 Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
-                        MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId),
+                        MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId,
+                        MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds),
                 null)
                 .onSuccess(payload -> LOGGER.debug("successfully set command-handling adapter instance"))
                 .onFailure(t -> LOGGER.error("failed to set command-handling adapter instance", t))

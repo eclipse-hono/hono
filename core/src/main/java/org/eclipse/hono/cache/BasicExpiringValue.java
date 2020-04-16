@@ -23,8 +23,8 @@ import java.util.Objects;
  */
 public class BasicExpiringValue<T> implements ExpiringValue<T> {
 
-    private T value;
-    private Instant expirationTime;
+    private final T value;
+    private final Instant expirationTime;
 
     /**
      * Creates a new instance for a value and an expiration time.

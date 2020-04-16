@@ -73,6 +73,8 @@ public interface DeviceConnectionInfo {
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param adapterInstanceId The protocol adapter instance id.
+     * @param lifespanSeconds The lifespan of the mapping entry in seconds. A negative value is interpreted as an
+     *            unlimited lifespan.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *            Implementing classes should use this as the parent for any span they create for tracing
      *            the execution of this operation.
@@ -82,7 +84,8 @@ public interface DeviceConnectionInfo {
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters except context is {@code null}.
      */
-    Future<Void> setCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId, SpanContext context);
+    Future<Void> setCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId,
+            int lifespanSeconds, SpanContext context);
 
     /**
      * Removes the mapping information that associates the given device with the given protocol adapter instance

@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -138,20 +139,20 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final SpanContext context) {
+            final String adapterInstanceId, final int lifespanSeconds, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return cache.put(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
+        return cache.put(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId, lifespanSeconds, TimeUnit.SECONDS)
                 .map(replacedValue -> {
-                    LOG.debug("set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
-                            tenantId, deviceId, adapterInstanceId);
+                    LOG.debug("set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}s]",
+                            tenantId, deviceId, adapterInstanceId, lifespanSeconds);
                     return (Void) null;
                 })
                 .recover(t -> {
-                    LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
-                            tenantId, deviceId, adapterInstanceId, t);
+                    LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}s]",
+                            tenantId, deviceId, adapterInstanceId, lifespanSeconds, t);
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
                 });
     }

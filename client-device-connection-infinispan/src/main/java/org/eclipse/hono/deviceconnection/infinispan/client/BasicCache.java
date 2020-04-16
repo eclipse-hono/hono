@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.eclipse.hono.client.ConnectionLifecycle;
@@ -204,6 +205,24 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
     public Future<V> put(final K key, final V value) {
 
         return withCache(cache -> cache.putAsync(key, value));
+
+    }
+
+    /**
+     * Puts a value to the cache.
+     *
+     * @param key The key.
+     * @param value The value.
+     * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
+     * @param lifespanUnit The time unit for the lifespan.
+     * @return A succeeded future containing the previous value or {@code null} if the
+     *         cache didn't contain the key yet.
+     *         A failed future if the value could not be stored in the cache.
+     */
+    @Override
+    public Future<V> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
+
+        return withCache(cache -> cache.putAsync(key, value, lifespan, lifespanUnit));
 
     }
 

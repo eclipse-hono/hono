@@ -19,8 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -47,6 +49,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -194,10 +197,23 @@ class CacheBasedDeviceConnectionInfoTest {
     public void testSetCommandHandlingAdapterInstanceSucceeds(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, -1, spanContext)
                 .setHandler(ctx.succeeding(result -> ctx.completeNow()));
     }
 
+    /**
+     * Verifies that the <em>setCommandHandlingAdapterInstance</em> operation succeeds
+     * with a non-negative lifespan given.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testSetCommandHandlingAdapterInstanceWithLifespanSucceeds(final VertxTestContext ctx) {
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, 10, spanContext)
+                .setHandler(ctx.succeeding(result -> ctx.completeNow()));
+    }
 
     /**
      * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation succeeds if there was an entry to be deleted.
@@ -208,7 +224,7 @@ class CacheBasedDeviceConnectionInfoTest {
     public void testRemoveCommandHandlingAdapterInstanceSucceeds(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, -1, spanContext)
         .compose(v -> info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
                 adapterInstance, spanContext))
         .setHandler(ctx.succeeding(result -> ctx.completeNow()));
@@ -225,7 +241,7 @@ class CacheBasedDeviceConnectionInfoTest {
     public void testRemoveCommandHandlingAdapterInstanceFailsForOtherDevice(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, -1, spanContext)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice", adapterInstance, spanContext);
         }).setHandler(ctx.failing(t -> ctx.verify(() -> {
@@ -245,7 +261,7 @@ class CacheBasedDeviceConnectionInfoTest {
     public void testRemoveCommandHandlingAdapterInstanceFailsForOtherAdapterInstance(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, -1, spanContext)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, "otherAdapterInstance", spanContext);
         }).setHandler(ctx.failing(t -> ctx.verify(() -> {
@@ -265,13 +281,50 @@ class CacheBasedDeviceConnectionInfoTest {
     public void testGetCommandHandlingAdapterInstancesForDevice(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, -1, spanContext)
         .compose(v -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, Collections.emptySet(), spanContext);
         }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, deviceId, adapterInstance);
             assertGetInstancesResultSize(result, 1);
+            ctx.completeNow();
+        })));
+    }
+
+    /**
+     * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails
+     * if the adapter instance mapping entry has expired.
+     *
+     * @param vertx The vert.x instance.
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testGetCommandHandlingAdapterInstancesWithExpiredEntry(final Vertx vertx, final VertxTestContext ctx) {
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+
+        final Cache<String, String> mockedCache = spy(cache);
+        info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
+        // for the sake of the test, always let a lifespan of just 1ms be set on the cache
+        when(mockedCache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenAnswer(invocation -> {
+            final String key = invocation.getArgument(0);
+            final String value = invocation.getArgument(1);
+            return cache.put(key, value, 1, TimeUnit.MILLISECONDS);
+        });
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, 10, spanContext)
+        .compose(v -> {
+            final Promise<JsonObject> instancesPromise = Promise.promise();
+            // wait 2ms to make sure entry has expired after that
+            vertx.setTimer(2, tid -> {
+                info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
+                        Collections.emptySet(), spanContext)
+                        .setHandler(instancesPromise.future());
+            });
+            return instancesPromise.future();
+        }).setHandler(ctx.failing(t -> ctx.verify(() -> {
+            assertThat(t).isInstanceOf(ServiceInvocationException.class);
+            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         })));
     }
@@ -312,10 +365,10 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, -1, spanContext)
         .compose(v -> {
             // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, spanContext);
+            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, -1, spanContext);
         }).compose(deviceConnectionResult -> {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, spanContext);
         }).compose(u -> {
@@ -349,10 +402,10 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, -1, spanContext)
         .compose(v -> {
             // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, spanContext);
+            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, -1, spanContext);
         }).compose(deviceConnectionResult -> {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayIdNotInVia, spanContext);
         }).compose(u -> {
@@ -387,10 +440,10 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId, gatewayWithNoAdapterInstance));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, -1, spanContext)
                 .compose(v -> {
                     // set command handling adapter instance for other gateway
-                    return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, spanContext);
+                    return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, -1, spanContext);
                 }).compose(deviceConnectionResult -> {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayWithNoAdapterInstance, spanContext);
         }).compose(u -> {
@@ -422,7 +475,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of("otherGatewayId"));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, -1, spanContext)
         .compose(deviceConnectionResult -> {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, spanContext);
         }).compose(u -> {
@@ -452,10 +505,10 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for device
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, -1, spanContext)
         .compose(v -> {
             // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, otherAdapterInstance, spanContext);
+            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, otherAdapterInstance, -1, spanContext);
         }).compose(u -> {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, spanContext);
         }).compose(w -> {
@@ -487,10 +540,10 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for device
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, -1, spanContext)
         .compose(v -> {
             // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, otherAdapterInstance, spanContext);
+            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, otherAdapterInstance, -1, spanContext);
         }).compose(w -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
         }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
@@ -519,7 +572,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, -1, spanContext)
         .compose(v -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
         }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
@@ -548,10 +601,10 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId, otherGatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, -1, spanContext)
         .compose(v -> {
             // set command handling adapter instance for other gateway
-            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, spanContext);
+            return info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, otherAdapterInstance, -1, spanContext);
         }).compose(u -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
         }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
@@ -602,7 +655,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         // set command handling adapter instance for other gateway
-        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, adapterInstance, spanContext)
+        info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, adapterInstance, -1, spanContext)
         .compose(v -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
         }).setHandler(ctx.failing(t -> ctx.verify(() -> {

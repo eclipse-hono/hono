@@ -28,6 +28,8 @@ import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
@@ -115,7 +117,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String adapterInstance = randomId();
 
         getClient(Constants.DEFAULT_TENANT)
-            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, null).map(client))
+            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, -1, null).map(client))
             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
             .setHandler(ctx.succeeding(r -> {
                 ctx.verify(() -> {
@@ -127,6 +129,40 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that a request to get the command-handling adapter instance for a device fails if the
+     * adapter instance entry has expired.
+     *
+     * @param vertx The vert.x instance.
+     * @param ctx The vert.x test context.
+     */
+    @Timeout(value = 6, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testGetCommandHandlingAdapterInstancesFailsForExpiredEntry(final Vertx vertx, final VertxTestContext ctx) {
+
+        final String deviceId = randomId();
+        final String adapterInstance = randomId();
+        final int lifespanSeconds = 1;
+
+        getClient(Constants.DEFAULT_TENANT)
+                .compose(client -> {
+                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespanSeconds, null).map(client);
+                })
+                .compose(client -> {
+                    final Promise<JsonObject> instancesPromise = Promise.promise();
+                    // wait 1s to make sure that entry has expired after that
+                    vertx.setTimer(1002, tid -> {
+                        client.getCommandHandlingAdapterInstances(deviceId, List.of(), null)
+                                .setHandler(instancesPromise.future());
+                    });
+                    return instancesPromise.future();
+                })
+                .setHandler(ctx.failing(t -> {
+                    ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+                    ctx.completeNow();
+                }));
     }
 
     /**
