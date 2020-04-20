@@ -713,12 +713,18 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 // do not use the current span for sending the disconnected event
                                 // because that span will (usually) be finished long before the
                                 // connection is closed/lost
+                                final Span connectionLostSpan = newSpan("handle closing of command connection",
+                                        authenticatedDevice, traceSamplingPriority);
                                 sendDisconnectedTtdEvent(
                                         validAddress.getTenantId(),
                                         validAddress.getResourceId(),
                                         authenticatedDevice,
-                                        null)
+                                        connectionLostSpan.context())
                                 .setHandler(sendAttempt -> {
+                                    if (sendAttempt.failed()) {
+                                        TracingHelper.logError(connectionLostSpan, sendAttempt.cause());
+                                    }
+                                    connectionLostSpan.finish();
                                     consumer.close(null);
                                 });
                             });
