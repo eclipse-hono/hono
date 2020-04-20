@@ -58,6 +58,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <!-- logging profile: either prod, dev or trace -->
     <logging.profile>prod</logging.profile>
     <trace.frames>0</trace.frames>
+    <jaeger.disabled>true</jaeger.disabled>
+    <jaeger.host>hono-jaeger.hono</jaeger.host>
+    <jaeger.query.port>18080</jaeger.query.port>
   </properties>
 
   <dependencies>
@@ -207,6 +210,60 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>false</startParallel>
               <images>
+                <!-- ##### Jaeger tracing component ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-jaeger-all-in-one-test</name>
+                  <alias>jaeger</alias>
+                  <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${jaeger.image.name}</from>
+                    <ports>
+                      <port>8088</port><!-- admin-http -->
+                      <port>16686</port><!-- query-http -->
+                      <port>6831/udp</port><!-- agent (compact thrift protocol) -->
+                    </ports>
+                  </build>
+                  <run>
+                    <skip>${jaeger.disabled}</skip>
+                    <ports>
+                      <port>+jaeger.ip:jaeger.health.port:8088</port>
+                      <port>+jaeger.ip:jaeger.query.port:16686</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/jaeger.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-jaeger.hono</alias>
+                    </network>
+                    <!--
+                      Setting the swap property to the same value as the memory property effectively
+                      prevents the container from swapping at all.
+                      This way we can force the same behavior for running the integration
+                      tests on both a local machine (which usually has swap space available) as
+                      well as on Travis where there is no swap space available on the build job VMs.
+                      We can thus detect OOM problems when running locally as opposed to only
+                      later on Travis.
+                     -->
+                    <memorySwap>205520896</memorySwap>
+                    <memory>205520896</memory>
+                    <env>
+                      <ADMIN_HTTP_PORT>8088</ADMIN_HTTP_PORT>
+                      <MEMORY_MAX_TRACES>100000</MEMORY_MAX_TRACES>
+                    </env>
+                    <log>
+                      <prefix>JAEGER</prefix>
+                      <color>green</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${jaeger.ip}:${jaeger.health.port}/health</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
                 <!-- ##### Authentication service ##### -->
                 <image>
                   <name>${docker.image.org-name}/hono-service-auth-test</name>
@@ -334,6 +391,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -543,6 +605,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${http.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>hono-adapter-http</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -617,6 +684,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${mqtt.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>hono-adapter-mqtt</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
@@ -683,6 +755,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${amqp.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>hono-adapter-amqp</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
@@ -750,6 +827,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${coap.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>hono-adapter-lora</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
                     </env>
                     <log>
                       <prefix>COAP</prefix>
@@ -871,6 +953,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 </goals>
                 <configuration>
                   <files>
+                    <file>${project.build.directory}/docker/jaeger.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>
@@ -943,6 +1026,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>jaeger</id>
+      <properties>
+        <jaeger.disabled>false</jaeger.disabled>
+      </properties>
     </profile>
   </profiles>
 </project>
