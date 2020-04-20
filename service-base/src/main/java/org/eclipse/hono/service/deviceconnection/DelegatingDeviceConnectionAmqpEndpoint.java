@@ -26,6 +26,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
@@ -61,22 +62,23 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
     }
 
     @Override
-    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
+    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress,
+            final SpanContext spanContext) {
         Objects.requireNonNull(requestMessage);
 
         switch (DeviceConnectionConstants.DeviceConnectionAction.from(requestMessage.getSubject())) {
         case GET_LAST_GATEWAY:
-            return processGetLastGatewayRequest(requestMessage, targetAddress);
+            return processGetLastGatewayRequest(requestMessage, targetAddress, spanContext);
         case SET_LAST_GATEWAY:
-            return processSetLastGatewayRequest(requestMessage, targetAddress);
+            return processSetLastGatewayRequest(requestMessage, targetAddress, spanContext);
         case GET_CMD_HANDLING_ADAPTER_INSTANCES:
-            return processGetCmdHandlingAdapterInstances(requestMessage, targetAddress);
+            return processGetCmdHandlingAdapterInstances(requestMessage, targetAddress, spanContext);
         case SET_CMD_HANDLING_ADAPTER_INSTANCE:
-            return processSetCmdHandlingAdapterInstance(requestMessage, targetAddress);
+            return processSetCmdHandlingAdapterInstance(requestMessage, targetAddress, spanContext);
         case REMOVE_CMD_HANDLING_ADAPTER_INSTANCE:
-            return processRemoveCmdHandlingAdapterInstance(requestMessage, targetAddress);
+            return processRemoveCmdHandlingAdapterInstance(requestMessage, targetAddress, spanContext);
         default:
-            return processCustomOperationMessage(requestMessage);
+            return processCustomOperationMessage(requestMessage, spanContext);
         }
     }
 
@@ -85,15 +87,17 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
      *
      * @param request The request message.
      * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<Message> processGetLastGatewayRequest(final Message request, final ResourceIdentifier targetAddress) {
+    protected Future<Message> processGetLastGatewayRequest(final Message request,
+            final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_GET_LAST_GATEWAY,
                 getClass().getSimpleName()
         ).start();
@@ -124,16 +128,18 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
      *
      * @param request The request message.
      * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<Message> processSetLastGatewayRequest(final Message request, final ResourceIdentifier targetAddress) {
+    protected Future<Message> processSetLastGatewayRequest(final Message request,
+            final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
         final String gatewayId = MessageHelper.getGatewayId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_SET_LAST_GATEWAY,
                 getClass().getSimpleName()
         ).start();
@@ -165,15 +171,17 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
      *
      * @param request The request message.
      * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<Message> processGetCmdHandlingAdapterInstances(final Message request, final ResourceIdentifier targetAddress) {
+    protected Future<Message> processGetCmdHandlingAdapterInstances(final Message request,
+            final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_GET_CMD_HANDLING_ADAPTER_INSTANCES,
                 getClass().getSimpleName()
         ).start();
@@ -223,16 +231,18 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
      *
      * @param request The request message.
      * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<Message> processSetCmdHandlingAdapterInstance(final Message request, final ResourceIdentifier targetAddress) {
+    protected Future<Message> processSetCmdHandlingAdapterInstance(final Message request,
+            final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
         final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_SET_CMD_HANDLING_ADAPTER_INSTANCE,
                 getClass().getSimpleName()
         ).start();
@@ -263,16 +273,18 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
      *
      * @param request The request message.
      * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<Message> processRemoveCmdHandlingAdapterInstance(final Message request, final ResourceIdentifier targetAddress) {
+    protected Future<Message> processRemoveCmdHandlingAdapterInstance(final Message request,
+            final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
         final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_REMOVE_CMD_HANDLING_ADAPTER_INSTANCE,
                 getClass().getSimpleName()
         ).start();
@@ -308,9 +320,10 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
      * {@link ClientErrorException} with an error code <em>400 Bad Request</em>.
      *
      * @param request The request to process.
+     * @param spanContext The span context representing the request to be processed.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<Message> processCustomOperationMessage(final Message request) {
+    protected Future<Message> processCustomOperationMessage(final Message request, final SpanContext spanContext) {
         log.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }

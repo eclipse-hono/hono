@@ -86,11 +86,13 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
      *
      * @param requestMessage The AMQP message representing the service invocation request.
      * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
      * @return A future indicating the outcome of the operation.
      */
     protected abstract Future<Message> handleRequestMessage(
             Message requestMessage,
-            ResourceIdentifier targetAddress);
+            ResourceIdentifier targetAddress,
+            SpanContext spanContext);
 
     /**
      * Gets the object to use for making authorization decisions.
@@ -225,7 +227,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
                                 throw new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "not authorized to invoke operation");
                             }
                         })
-                        .compose(authorized -> handleRequestMessage(requestMessage, targetAddress))
+                        .compose(authorized -> handleRequestMessage(requestMessage, targetAddress, currentSpan.context()))
                         .compose(amqpMessage -> filterResponse(clientPrincipal, requestMessage, amqpMessage))
                         .otherwise(t -> {
 
