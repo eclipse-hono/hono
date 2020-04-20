@@ -28,6 +28,7 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
@@ -65,24 +66,25 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
     }
 
     @Override
-    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
+    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress,
+            final SpanContext spanContext) {
 
         Objects.requireNonNull(requestMessage);
 
         switch (TenantConstants.TenantAction.from(requestMessage.getSubject())) {
             case get:
-                return processGetRequest(requestMessage);
+                return processGetRequest(requestMessage, spanContext);
             default:
-                return processCustomTenantMessage(requestMessage);
+                return processCustomTenantMessage(requestMessage, spanContext);
         }
     }
 
-    private Future<Message> processGetRequest(final Message request) {
+    private Future<Message> processGetRequest(final Message request, final SpanContext spanContext) {
 
         final String tenantId = MessageHelper.getTenantId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_GET_TENANT,
                 getClass().getSimpleName())
                 .start();
@@ -177,9 +179,10 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
      * {@link ClientErrorException} with an error code <em>400 Bad Request</em>.
      *
      * @param request The request to process.
+     * @param spanContext The span context representing the request to be processed.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<Message> processCustomTenantMessage(final Message request) {
+    protected Future<Message> processCustomTenantMessage(final Message request, final SpanContext spanContext) {
         log.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }

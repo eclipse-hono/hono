@@ -26,6 +26,7 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
@@ -59,27 +60,29 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
     }
 
     @Override
-    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
+    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress,
+            final SpanContext spanContext) {
 
         Objects.requireNonNull(requestMessage);
         final String operation = requestMessage.getSubject();
 
         switch (operation) {
             case RegistrationConstants.ACTION_ASSERT:
-                return processAssertRequest(requestMessage, targetAddress);
+                return processAssertRequest(requestMessage, targetAddress, spanContext);
             default:
-                return processCustomRegistrationMessage(requestMessage);
+                return processCustomRegistrationMessage(requestMessage, spanContext);
         }
     }
 
-    private Future<Message> processAssertRequest(final Message request, final ResourceIdentifier targetAddress) {
+    private Future<Message> processAssertRequest(final Message request, final ResourceIdentifier targetAddress,
+            final SpanContext spanContext) {
 
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
         final String gatewayId = MessageHelper.getGatewayId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_ASSERT_DEVICE_REGISTRATION,
                 getClass().getSimpleName()
         ).start();
@@ -122,9 +125,10 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
      * {@link ClientErrorException} with an error code <em>400 Bad Request</em>.
      *
      * @param request The request to process.
+     * @param spanContext The span context representing the request to be processed.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<Message> processCustomRegistrationMessage(final Message request) {
+    protected Future<Message> processCustomRegistrationMessage(final Message request, final SpanContext spanContext) {
         log.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }

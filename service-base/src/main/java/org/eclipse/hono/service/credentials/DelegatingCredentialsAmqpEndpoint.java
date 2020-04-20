@@ -26,6 +26,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.DecodeException;
@@ -61,15 +62,16 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
     }
 
     @Override
-    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress) {
+    protected Future<Message> handleRequestMessage(final Message requestMessage, final ResourceIdentifier targetAddress,
+            final SpanContext spanContext) {
 
         Objects.requireNonNull(requestMessage);
 
         switch (CredentialsConstants.CredentialsAction.from(requestMessage.getSubject())) {
         case get:
-            return processGetRequest(requestMessage, targetAddress);
+            return processGetRequest(requestMessage, targetAddress, spanContext);
         default:
-            return processCustomCredentialsMessage(requestMessage);
+            return processCustomCredentialsMessage(requestMessage, spanContext);
         }
     }
 
@@ -78,15 +80,17 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
      *
      * @param request The request message.
      * @param targetAddress The address the message is sent to.
+     * @param spanContext The span context representing the request to be processed.
      * @return The response to send to the client via the event bus.
      */
-    protected Future<Message> processGetRequest(final Message request, final ResourceIdentifier targetAddress) {
+    protected Future<Message> processGetRequest(final Message request, final ResourceIdentifier targetAddress,
+            final SpanContext spanContext) {
 
         final String tenantId = targetAddress.getTenantId();
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHelper.extractSpanContext(tracer, request),
+                spanContext,
                 SPAN_NAME_GET_CREDENTIALS,
                 getClass().getSimpleName()
         ).start();
@@ -182,9 +186,10 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
      * {@link ClientErrorException} with an error code <em>400 Bad Request</em>.
      *
      * @param request The request to process.
+     * @param spanContext The span context representing the request to be processed.
      * @return A future indicating the outcome of the service invocation.
      */
-    protected Future<Message> processCustomCredentialsMessage(final Message request) {
+    protected Future<Message> processCustomCredentialsMessage(final Message request, final SpanContext spanContext) {
         log.debug("invalid operation in request message [{}]", request.getSubject());
         return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
     }
