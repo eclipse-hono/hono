@@ -25,6 +25,7 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsSe
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
+import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -32,6 +33,7 @@ import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
+import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
@@ -44,6 +46,7 @@ import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -55,6 +58,9 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.web.handler.AuthHandler;
 
 /**
  * Spring Boot configuration for the mongodb based device registry application.
@@ -321,6 +327,26 @@ public class ApplicationConfig {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_HTTP_SERVER);
         return factory;
+    }
+
+    /**
+     * Creates a new instance of an auth handler to provide basic authentication for the 
+     * Hono's Device Registry Management APIs.
+     * <p>
+     * This creates an instance of the {@link HonoBasicAuthHandler} with an auth provider of type
+     * {@link MongoAuth} to verify the credentials.
+     *
+     * @return The auth handler.
+     * @see <a href="https://vertx.io/docs/vertx-auth-mongo/java/">Mongo auth provider docs</a>
+     */
+    @Bean
+    @Scope("prototype")
+    @ConditionalOnProperty(name = "hono.registry.http.authenticationRequired", havingValue = "true", matchIfMissing = true)
+    public AuthHandler createAuthHandler() {
+        return new HonoBasicAuthHandler(
+                MongoAuth.create(mongoDBCallExecutor().getMongoClient(), new JsonObject()),
+                MongoDbDeviceRegistryUtils.DEFAULT_REALM,
+                getTracer());
     }
 
     /**
