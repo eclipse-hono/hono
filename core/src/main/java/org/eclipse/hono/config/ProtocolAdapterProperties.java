@@ -44,7 +44,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * <p>
      * The default value of this property is {@code true}.
      *
-     * @return {@code true} if the protocol adapter demands the authentication of devices to allow the publishing of data.
+     * @return {@code true} if the protocol adapter should require clients to authenticate.
      */
     public final boolean isAuthenticationRequired() {
         return authenticationRequired;
@@ -59,7 +59,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * <p>
      * The default value of this property is {@code true}.
      *
-     * @param authenticationRequired {@code true} if the server should wait for downstream connections to be established during startup.
+     * @param authenticationRequired {@code true} if the protocol adapter should require clients to authenticate.
      */
     public final void setAuthenticationRequired(final boolean authenticationRequired) {
         this.authenticationRequired = authenticationRequired;
