@@ -774,10 +774,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         if (sub.isGatewaySubscriptionForSpecificDevice()) {
             // gateway scenario
             return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(),
-                    sub.getAuthenticatedDeviceId(), commandHandler, span.context());
+                    sub.getAuthenticatedDeviceId(), commandHandler, null, span.context());
         } else {
             return getCommandConsumerFactory().createCommandConsumer(sub.getTenant(), sub.getDeviceId(), commandHandler,
-                    span.context());
+                    null, span.context());
         }
     }
 

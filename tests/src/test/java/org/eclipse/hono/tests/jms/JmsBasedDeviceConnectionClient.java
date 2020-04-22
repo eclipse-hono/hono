@@ -15,6 +15,7 @@
 package org.eclipse.hono.tests.jms;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -113,9 +114,10 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
     public Future<Void> setCommandHandlingAdapterInstance(
             final String deviceId,
             final String adapterInstanceId,
-            final int lifespanSeconds,
+            final Duration lifespan,
             final SpanContext context) {
 
+        final int lifespanSeconds = lifespan != null && lifespan.getSeconds() <= Integer.MAX_VALUE ? (int) lifespan.getSeconds() : -1;
         return sendRequest(
                 DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
                 Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,

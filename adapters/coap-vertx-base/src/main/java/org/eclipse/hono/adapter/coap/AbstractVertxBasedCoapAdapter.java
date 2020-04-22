@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -983,12 +984,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     deviceId,
                     gatewayId,
                     commandHandler,
+                    Duration.ofSeconds(ttdSecs),
                     currentSpan.context());
         } else {
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
                     commandHandler,
+                    Duration.ofSeconds(ttdSecs),
                     currentSpan.context());
         }
         return commandConsumerFuture

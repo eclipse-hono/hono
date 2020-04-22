@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -1057,12 +1058,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     deviceId,
                     gatewayId,
                     commandHandler,
+                    Duration.ofSeconds(ttdSecs),
                     currentSpan.context());
         } else {
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
                     tenantObject.getTenantId(),
                     deviceId,
                     commandHandler,
+                    Duration.ofSeconds(ttdSecs),
                     currentSpan.context());
         }
         return commandConsumerFuture

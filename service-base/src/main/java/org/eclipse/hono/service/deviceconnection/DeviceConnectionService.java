@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.deviceconnection;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.eclipse.hono.util.DeviceConnectionResult;
@@ -79,8 +80,9 @@ public interface DeviceConnectionService {
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param adapterInstanceId The protocol adapter instance id.
-     * @param lifespanSeconds The lifespan of the mapping entry in seconds. A negative value is interpreted as an
-     *            unlimited lifespan.
+     * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
+     *                 interpreted as an unlimited lifespan. The guaranteed granularity taken into account
+     *                 here is seconds.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
@@ -89,7 +91,7 @@ public interface DeviceConnectionService {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(String tenantId, String deviceId,
-            String adapterInstanceId, int lifespanSeconds, Span span);
+            String adapterInstanceId, Duration lifespan, Span span);
 
     /**
      * Removes the mapping information that associates the given device with the given protocol adapter instance

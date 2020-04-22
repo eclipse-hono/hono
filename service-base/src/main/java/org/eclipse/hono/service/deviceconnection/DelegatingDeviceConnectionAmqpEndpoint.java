@@ -13,6 +13,7 @@
 package org.eclipse.hono.service.deviceconnection;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
@@ -239,7 +240,7 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
         final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
-        final Integer lifespanPropertyValue = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class);
+        final Integer lifespanSecondsOrNull = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
@@ -253,15 +254,15 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            final int lifespanSeconds = lifespanPropertyValue != null ? lifespanPropertyValue : -1;
+            final Duration lifespan = lifespanSecondsOrNull != null ? Duration.ofSeconds(lifespanSecondsOrNull) : Duration.ofSeconds(-1);
             TracingHelper.TAG_TENANT_ID.set(span, tenantId);
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-            span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
+            span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespan.getSeconds());
             log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {} (lifespan: {}s)",
-                    tenantId, deviceId, adapterInstanceId, lifespanSeconds);
+                    tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
 
-            resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespanSeconds, span)
+            resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span)
                     .map(res -> DeviceConnectionConstants.getAmqpReply(
                             DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
                             tenantId,

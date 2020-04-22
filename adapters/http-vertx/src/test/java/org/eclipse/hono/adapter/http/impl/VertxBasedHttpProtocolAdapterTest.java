@@ -237,7 +237,7 @@ public class VertxBasedHttpProtocolAdapterTest {
             }
             return null;
         }).when(commandConsumer).close(any(Handler.class));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any())).
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any())).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
         telemetrySender = mock(DownstreamSender.class);
@@ -490,8 +490,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         final Command pendingCommand = Command.from(msg, "DEFAULT_TENANT", "device_1");
         final CommandContext commandContext = CommandContext.from(pendingCommand, mock(ProtonDelivery.class), mock(Span.class));
         final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any())).
-                thenAnswer(invocation -> {
+        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(), any()))
+                .thenAnswer(invocation -> {
                     final Handler<CommandContext> consumer = invocation.getArgument(2);
                     consumer.handle(commandContext);
                     return Future.succeededFuture(commandConsumer);
@@ -518,7 +518,7 @@ public class VertxBasedHttpProtocolAdapterTest {
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                                any(Handler.class), any());
+                                any(Handler.class), any(), any());
                         // and the command consumer has been closed again
                         verify(commandConsumer).close(any());
                     });

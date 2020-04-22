@@ -158,9 +158,9 @@ public class AbstractVertxBasedCoapAdapterTest {
         commandConsumer = mock(MessageConsumer.class);
         commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
 
         deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);

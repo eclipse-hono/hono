@@ -17,6 +17,7 @@ package org.eclipse.hono.tests.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -117,7 +118,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String adapterInstance = randomId();
 
         getClient(Constants.DEFAULT_TENANT)
-            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, -1, null).map(client))
+            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, null).map(client))
             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
             .setHandler(ctx.succeeding(r -> {
                 ctx.verify(() -> {
@@ -144,11 +145,11 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         final String deviceId = randomId();
         final String adapterInstance = randomId();
-        final int lifespanSeconds = 1;
+        final Duration lifespan = Duration.ofSeconds(1);
 
         getClient(Constants.DEFAULT_TENANT)
                 .compose(client -> {
-                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespanSeconds, null).map(client);
+                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespan, null).map(client);
                 })
                 .compose(client -> {
                     final Promise<JsonObject> instancesPromise = Promise.promise();

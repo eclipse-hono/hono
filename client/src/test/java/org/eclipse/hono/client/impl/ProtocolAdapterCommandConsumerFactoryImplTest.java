@@ -22,9 +22,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -33,6 +35,7 @@ import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -132,7 +135,8 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(anyString()))
                 .thenReturn(Future.succeededFuture(devConClient));
-        when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), anyInt(), any())).thenReturn(Future.succeededFuture());
+        when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), any(), any())).thenReturn(Future.succeededFuture());
+        when(devConClient.removeCommandHandlingAdapterInstance(anyString(), anyString(), any())).thenReturn(Future.succeededFuture());
 
         commandConsumerFactory = new ProtocolAdapterCommandConsumerFactoryImpl(connection);
         commandConsumerFactory.initialize(commandTargetMapper, deviceConnectionClientFactory);
@@ -158,7 +162,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                 VertxMockSupport.anyHandler()))
         .thenReturn(Future.failedFuture(ex));
 
-        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null)
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, null)
             .setHandler(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
                 ctx.completeNow();
@@ -166,8 +170,8 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
     }
 
     /**
-     * Verifies that the connection successfully opens a command consumer for a
-     * tenant and device Id and opens a receiver link that is scoped to the device.
+     * Verifies that creating a command consumer successfully creates a tenant-scoped
+     * receiver link and registers the command handling adapter instance.
      *
      * @param ctx The test context.
      */
@@ -176,8 +180,46 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
 
-        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null)
-            .setHandler(ctx.completing());
+        commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, null)
+            .setHandler(ctx.succeeding(c -> {
+                ctx.verify(() -> {
+                    verify(connection).createReceiver(eq(tenantCommandAddress), eq(ProtonQoS.AT_LEAST_ONCE), any(), anyInt(),
+                            eq(false), any());
+                    verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), any());
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that creating a command consumer with a positive lifespan and
+     * closing the consumer afterwards succeeds.
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    public void testCreateTimeLimitedCommandConsumerSucceeds(final VertxTestContext ctx) {
+
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+
+        final Duration lifespan = Duration.ofSeconds(10);
+        final Future<MessageConsumer> commandConsumerFuture = commandConsumerFactory.createCommandConsumer(tenantId,
+                deviceId, commandHandler, lifespan, null);
+        commandConsumerFuture.setHandler(ctx.succeeding(consumer -> {
+            ctx.verify(() -> {
+                verify(connection).createReceiver(eq(tenantCommandAddress), eq(ProtonQoS.AT_LEAST_ONCE), any(), anyInt(),
+                        eq(false), any());
+                verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), any());
+                // verify closing the consumer is successful
+                consumer.close(ctx.succeeding(v -> {
+                    ctx.verify(() -> {
+                        // verify command handling adapter instance has been explicitly removed (since lifespan hasn't elapsed yet)
+                        verify(devConClient).removeCommandHandlingAdapterInstance(eq(deviceId), anyString(), any());
+                    });
+                    ctx.completeNow();
+                }));
+            });
+        }));
     }
 
 }

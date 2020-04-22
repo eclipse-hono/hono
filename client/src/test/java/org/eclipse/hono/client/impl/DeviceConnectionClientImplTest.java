@@ -162,7 +162,7 @@ public class DeviceConnectionClientImplTest {
     public void testSetCommandHandlingAdapterInstance(final VertxTestContext ctx) {
 
         // WHEN setting the last known gateway
-        client.setCommandHandlingAdapterInstance("deviceId", "gatewayId", -1, span.context())
+        client.setCommandHandlingAdapterInstance("deviceId", "gatewayId", null, span.context())
                 .setHandler(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response for setting the command handling adapter instance has been handled by the service
@@ -290,7 +290,7 @@ public class DeviceConnectionClientImplTest {
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN getting last known gateway information
-        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", -1, span.context())
+        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context())
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
@@ -438,7 +438,7 @@ public class DeviceConnectionClientImplTest {
         });
 
         // WHEN getting last known gateway information
-        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", -1, span.context())
+        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context())
                 .setHandler(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
@@ -561,7 +561,7 @@ public class DeviceConnectionClientImplTest {
     public void testSetCommandHandlingAdapterInstanceIncludesRequiredInformationInRequest() {
 
         // WHEN getting last known gateway information
-        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", -1, span.context());
+        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();

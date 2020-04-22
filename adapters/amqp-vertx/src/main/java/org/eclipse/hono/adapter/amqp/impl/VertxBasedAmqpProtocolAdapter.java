@@ -864,10 +864,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
             return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler, span.context());
+                    sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler, null, span.context());
         } else {
             return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
-                    sourceAddress.getResourceId(), commandHandler, span.context());
+                    sourceAddress.getResourceId(), commandHandler, null, span.context());
         }
     }
 

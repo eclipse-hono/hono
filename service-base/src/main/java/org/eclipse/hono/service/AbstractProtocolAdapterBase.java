@@ -934,6 +934,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     Tags.COMPONENT.set(commandContext.getCurrentSpan(), getTypeName());
                     commandConsumer.handle(commandContext);
                 },
+                null,
                 context);
     }
 

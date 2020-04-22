@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
+import java.time.Duration;
 import java.util.Set;
 
 import io.opentracing.SpanContext;
@@ -73,8 +74,8 @@ public interface DeviceConnectionInfo {
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param adapterInstanceId The protocol adapter instance id.
-     * @param lifespanSeconds The lifespan of the mapping entry in seconds. A negative value is interpreted as an
-     *            unlimited lifespan.
+     * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
+     *                 interpreted as an unlimited lifespan.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *            Implementing classes should use this as the parent for any span they create for tracing
      *            the execution of this operation.
@@ -85,7 +86,7 @@ public interface DeviceConnectionInfo {
      * @throws NullPointerException if any of the parameters except context is {@code null}.
      */
     Future<Void> setCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId,
-            int lifespanSeconds, SpanContext context);
+            Duration lifespan, SpanContext context);
 
     /**
      * Removes the mapping information that associates the given device with the given protocol adapter instance

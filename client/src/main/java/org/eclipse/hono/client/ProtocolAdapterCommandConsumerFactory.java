@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client;
 
+import java.time.Duration;
+
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.impl.ProtocolAdapterCommandConsumerFactoryImpl;
 
@@ -67,6 +69,9 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
+     * @param lifespan The time period in which the command consumer shall be active. Using a negative duration or
+     *                 {@code null} here is interpreted as an unlimited lifespan. The guaranteed granularity
+     *                 taken into account here is seconds.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *                An implementation should use this as the parent for any span it creates for tracing
      *                the execution of this operation.
@@ -83,6 +88,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
             String tenantId,
             String deviceId,
             Handler<CommandContext> commandHandler,
+            Duration lifespan,
             SpanContext context);
 
     /**
@@ -104,6 +110,9 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
+     * @param lifespan The time period in which the command consumer shall be active. Using a negative duration or
+     *                 {@code null} here is interpreted as an unlimited lifespan. The guaranteed granularity
+     *                 taken into account here is seconds.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *                An implementation should use this as the parent for any span it creates for tracing
      *                the execution of this operation.
@@ -121,6 +130,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
             String deviceId,
             String gatewayId,
             Handler<CommandContext> commandHandler,
+            Duration lifespan,
             SpanContext context);
 
     /**
