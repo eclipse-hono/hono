@@ -335,6 +335,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 tenantId,
                 LORA_COMMAND_CONSUMER_DEVICE_ID,
                 receivedCommandContext -> commandConsumer(tenantId, receivedCommandContext),
+                null,
                 null);
     }
 

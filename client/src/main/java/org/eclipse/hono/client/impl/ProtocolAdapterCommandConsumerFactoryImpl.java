@@ -14,6 +14,8 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +30,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -47,7 +50,7 @@ import io.vertx.proton.ProtonReceiver;
  * <ul>
  * <li>A single consumer link on an address containing the protocol adapter instance id.</li>
  * <li>A tenant-scoped link, created (if not already existing for that tenant) when
- * {@link #createCommandConsumer(String, String, Handler, SpanContext)} is invoked.</li>
+ * {@link #createCommandConsumer(String, String, Handler, Duration, SpanContext)} is invoked.</li>
  * </ul>
  * <p>
  * Command messages are first received on the tenant-scoped consumer address. It is then determined whether there is
@@ -124,11 +127,11 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      */
     @Override
     public final Future<MessageConsumer> createCommandConsumer(final String tenantId, final String deviceId,
-            final Handler<CommandContext> commandHandler, final SpanContext context) {
+            final Handler<CommandContext> commandHandler, final Duration lifespan, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
-        return doCreateCommandConsumer(tenantId, deviceId, null, commandHandler, context);
+        return doCreateCommandConsumer(tenantId, deviceId, null, commandHandler, lifespan, context);
     }
 
     /**
@@ -136,20 +139,25 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      */
     @Override
     public final Future<MessageConsumer> createCommandConsumer(final String tenantId, final String deviceId,
-            final String gatewayId, final Handler<CommandContext> commandHandler, final SpanContext context) {
+            final String gatewayId, final Handler<CommandContext> commandHandler, final Duration lifespan,
+            final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(commandHandler);
-        return doCreateCommandConsumer(tenantId, deviceId, gatewayId, commandHandler, context);
+        return doCreateCommandConsumer(tenantId, deviceId, gatewayId, commandHandler, lifespan, context);
     }
 
     private Future<MessageConsumer> doCreateCommandConsumer(final String tenantId, final String deviceId,
-            final String gatewayId, final Handler<CommandContext> commandHandler, final SpanContext context) {
+            final String gatewayId, final Handler<CommandContext> commandHandler, final Duration lifespan,
+            final SpanContext context) {
         if (!initialized.get()) {
             log.error("not initialized");
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR));
         }
+        // lifespan greater than what can be expressed in nanoseconds (i.e. 292 years) is considered unlimited, preventing ArithmeticExceptions down the road
+        final Duration sanitizedLifespan = lifespan == null || lifespan.isNegative()
+                || lifespan.getSeconds() > (Long.MAX_VALUE / 1000_000_000L) ? Duration.ofSeconds(-1) : lifespan;
         log.trace("create command consumer [tenant-id: {}, device-id: {}, gateway-id: {}]", tenantId, deviceId, gatewayId);
         return connection.executeOnContext(result -> {
             // create the tenant-scoped consumer ("command/<tenantId>") that maps/delegates incoming commands to the right handler/adapter-instance
@@ -162,20 +170,23 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                             // TODO find a way to provide a notification here so that potential resources associated with the replaced consumer can be freed (maybe add a commandHandlerOverwritten Handler param to createCommandConsumer())
                         }
                         // associate handler with this adapter instance
-                        return setCommandHandlingAdapterInstance(tenantId, deviceId, context);
+                        return setCommandHandlingAdapterInstance(tenantId, deviceId, sanitizedLifespan, context);
                     })
                     .map(res -> {
-                        final Supplier<Future<Void>> onCloseAction = () -> removeCommandConsumer(tenantId, deviceId, context);
+                        final Instant lifespanStart = Instant.now();
+                        final Supplier<Future<Void>> onCloseAction = () -> removeCommandConsumer(tenantId, deviceId,
+                                sanitizedLifespan, lifespanStart, context);
                         return (MessageConsumer) new DeviceSpecificCommandConsumer(onCloseAction);
                     })
                     .setHandler(result);
         });
     }
 
-    private Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId, final SpanContext context) {
+    private Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
+            final Duration lifespan, final SpanContext context) {
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> {
-                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, -1, context);
+                    return client.setCommandHandlingAdapterInstance(deviceId, adapterInstanceId, lifespan, context);
                 }).recover(thr -> {
                     log.info("error setting command handling adapter instance [tenant: {}, device: {}]", tenantId,
                             deviceId, thr);
@@ -185,16 +196,34 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                 });
     }
 
-    private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId, final SpanContext context) {
+    private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId, final Duration lifespan,
+            final Instant lifespanStart, final SpanContext createCommandConsumerSpanContext) {
         log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
         adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(tenantId, deviceId);
+
+        final boolean lifespanReached = !lifespan.isNegative() && Instant.now().isAfter(lifespanStart.plus(lifespan));
+        // TODO when making handling of the lifespan property mandatory for implementors of the Device Connection API,
+        //  removing the adapter instance can be skipped here if 'lifespanReached' is true
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> {
+                    // The given span context from the createCommandConsumer invocation is only used here if a non-unlimited lifespan is set
+                    // meaning creating and removing the consumer will probably happen in a timespan short enough for one overall trace.
+                    // The span context isn't used however if lifespanReached is true since the below 'remove' operation will usually (but not necessarily)
+                    // result in a "not found" error in that case, which is expected and should not cause the overall trace to be marked with an error.
+                    final SpanContext context = !lifespan.isNegative() && !lifespanReached ? createCommandConsumerSpanContext : null;
                     return client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context);
                 }).recover(thr -> {
-                    log.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
-                            deviceId, thr);
-                    return Future.failedFuture(thr);
+                    if (lifespanReached && thr instanceof ServiceInvocationException
+                            && ((ServiceInvocationException) thr).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+                        // entry was not found, meaning it has expired
+                        log.trace("ignoring 404 error when removing command handling adapter instance; entry has already expired [tenant: {}, device: {}]",
+                                tenantId, deviceId);
+                        return Future.succeededFuture();
+                    } else {
+                        log.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
+                                deviceId, thr);
+                        return Future.failedFuture(thr);
+                    }
                 });
     }
 

@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
@@ -139,20 +140,23 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final int lifespanSeconds, final SpanContext context) {
+            final String adapterInstanceId, final Duration lifespan, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
-        return cache.put(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId, lifespanSeconds, TimeUnit.SECONDS)
+        // sanity check, preventing an ArithmeticException in lifespan.toMillis()
+        final long lifespanMillis = lifespan == null || lifespan.isNegative()
+                || lifespan.getSeconds() > (Long.MAX_VALUE / 1000L) ? -1 : lifespan.toMillis();
+        return cache.put(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId, lifespanMillis, TimeUnit.MILLISECONDS)
                 .map(replacedValue -> {
-                    LOG.debug("set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}s]",
-                            tenantId, deviceId, adapterInstanceId, lifespanSeconds);
+                    LOG.debug("set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
+                            tenantId, deviceId, adapterInstanceId, lifespanMillis);
                     return (Void) null;
                 })
                 .recover(t -> {
-                    LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}s]",
-                            tenantId, deviceId, adapterInstanceId, lifespanSeconds, t);
+                    LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
+                            tenantId, deviceId, adapterInstanceId, lifespanMillis, t);
                     return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
                 });
     }

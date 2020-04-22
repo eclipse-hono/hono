@@ -77,7 +77,7 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_ADAPTER_INSTANCE_ID = "adapter_instance_id";
     /**
-     * The name of the AMQP 1.0 message application property containing a lifespan value.
+     * The name of the AMQP 1.0 message application property containing a lifespan value in seconds.
      */
     public static final String APP_PROPERTY_LIFESPAN = "lifespan";
     /**

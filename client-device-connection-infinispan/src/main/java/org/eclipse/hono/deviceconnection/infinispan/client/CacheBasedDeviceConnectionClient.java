@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -116,8 +117,8 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
-            final int lifespanSeconds, final SpanContext context) {
-        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespanSeconds, context);
+            final Duration lifespan, final SpanContext context) {
+        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, context);
     }
 
     @Override

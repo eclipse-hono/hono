@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.service.deviceconnection;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -24,7 +25,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -117,7 +117,7 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
 
     @Override
     public final Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId,
-            final String deviceId, final String protocolAdapterInstanceId, final int lifespanSeconds, final Span span) {
+            final String deviceId, final String protocolAdapterInstanceId, final Duration lifespan, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(protocolAdapterInstanceId);
@@ -129,7 +129,7 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
         if (currentMapSize < getConfig().getMaxDevicesPerTenant()
                 || (currentMapSize == getConfig().getMaxDevicesPerTenant() && adapterInstancesForTenantMap.containsKey(deviceId))) {
             adapterInstancesForTenantMap.put(deviceId,
-                    createExpiringValue(createAdapterInstanceIdJson(protocolAdapterInstanceId), lifespanSeconds));
+                    new ExpiringValue<>(createAdapterInstanceIdJson(protocolAdapterInstanceId), getLifespanNanos(lifespan)));
             result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
         } else {
             log.debug("cannot set protocol adapter instance for handling commands of device [{}], tenant [{}]: max number of entries per tenant reached ({})",
@@ -137,6 +137,14 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
             result = DeviceConnectionResult.from(HttpURLConnection.HTTP_FORBIDDEN);
         }
         return Future.succeededFuture(result);
+    }
+
+    private long getLifespanNanos(final Duration lifespan) {
+        // sanity check, preventing an ArithmeticException in lifespan.toNanos()
+        if (lifespan == null || lifespan.isNegative() || lifespan.getSeconds() > (Long.MAX_VALUE / 1000_000_000L)) {
+            return Long.MAX_VALUE; // "unlimited" lifespan
+        }
+        return lifespan.toNanos();
     }
 
     private ConcurrentMap<String, ExpiringValue<JsonObject>> buildAdapterInstancesForTenantMap() {
@@ -161,12 +169,6 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
                     }
                 })
                 .build().asMap();
-    }
-
-    // package-private to allow override in unit tests
-    <V> ExpiringValue<V> createExpiringValue(final V adapterInstanceIdJson, final int lifespanSeconds) {
-        final long lifespanNanos = lifespanSeconds < 0 ? Long.MAX_VALUE : TimeUnit.SECONDS.toNanos(lifespanSeconds);
-        return new ExpiringValue<>(adapterInstanceIdJson, lifespanNanos);
     }
 
     @Override

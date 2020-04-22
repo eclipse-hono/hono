@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -260,10 +261,11 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
-            final int lifespanSeconds, final SpanContext context) {
+            final Duration lifespan, final SpanContext context) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
+        final int lifespanSeconds = lifespan != null && lifespan.getSeconds() <= Integer.MAX_VALUE ? (int) lifespan.getSeconds() : -1;
         final Map<String, Object> properties = createDeviceIdProperties(deviceId);
         properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
         properties.put(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
