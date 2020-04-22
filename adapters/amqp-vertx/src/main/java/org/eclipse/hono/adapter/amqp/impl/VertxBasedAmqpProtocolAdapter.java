@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
@@ -822,6 +823,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Device authenticatedDevice,
             final Span span) {
 
+        final AtomicReference<MessageConsumer> commandConsumerRef = new AtomicReference<>();
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             final Sample timer = metrics.startTimer();
@@ -842,7 +844,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 }
                 return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
             }).compose(success -> {
-                onCommandReceived(tenantTracker.result(), sender, commandContext);
+                // commandConsumerRef.get() != null here (see above sender.isOpen() check; sender only opened after createCommandConsumer succeeded)
+                onCommandReceived(tenantTracker.result(), sender, commandConsumerRef.get(), commandContext);
                 return Future.succeededFuture();
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
@@ -861,14 +864,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return null;
             });
         };
+        final Future<MessageConsumer> commandConsumer;
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
-            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
+            commandConsumer = getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler, null, span.context());
         } else {
-            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
+            commandConsumer = getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(), commandHandler, null, span.context());
         }
+        return commandConsumer.map(consumer -> {
+            commandConsumerRef.set(consumer);
+            return consumer;
+        });
     }
 
     /**
@@ -880,12 +888,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * 
      * @param tenantObject The tenant configuration object.
      * @param sender The link for sending the command to the device.
+     * @param commandConsumer The command consumer.
      * @param commandContext The context in which the adapter receives the command message.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected void onCommandReceived(final TenantObject tenantObject, final ProtonSender sender, final CommandContext commandContext) {
+    protected void onCommandReceived(final TenantObject tenantObject, final ProtonSender sender,
+            final MessageConsumer commandConsumer, final CommandContext commandContext) {
 
+        Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(sender);
+        Objects.requireNonNull(commandConsumer);
         Objects.requireNonNull(commandContext);
 
         final Command command = commandContext.getCommand();
@@ -909,8 +921,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                 "timeout waiting for delivery update");
                         closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
                         // timeout expired -> release command
-                        commandContext.getCurrentSpan().log("timeout waiting for delivery update from device");
                         commandContext.release();
+                        commandConsumer.close(null);
                     } else {
                         log.trace("command is already settled and downstream application notified");
                     }
