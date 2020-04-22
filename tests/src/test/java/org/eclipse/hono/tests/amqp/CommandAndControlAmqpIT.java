@@ -36,6 +36,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.MessageSender;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -45,6 +46,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -114,6 +116,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final Promise<ProtonReceiver> result = Promise.promise();
         context.runOnContext(go -> {
             final ProtonReceiver recv = connection.createReceiver(endpointConfig.getSubscriptionAddress(tenantId, commandTargetDeviceId));
+            recv.setAutoAccept(false);
             recv.setQoS(ProtonQoS.AT_LEAST_ONCE);
             recv.openHandler(result);
             recv.handler(msgHandler);
@@ -166,6 +169,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final String command = msg.getSubject();
             final Object correlationId = msg.getCorrelationId();
             log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
+            ProtonHelper.accepted(delivery, true);
             // send response
             final Message commandResponse = ProtonHelper.message(command + " ok");
             commandResponse.setAddress(msg.getReplyTo());
@@ -195,6 +199,21 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, REJECTED_COMMAND_ERROR_MESSAGE));
             delivery.disposition(rejected, true);
+        };
+    }
+
+    private ProtonMessageHandler createNotSendingDeliveryUpdateCommandConsumer(final VertxTestContext ctx,
+            final AtomicInteger receivedMessagesCounter) {
+        return (delivery, msg) -> {
+            receivedMessagesCounter.incrementAndGet();
+            ctx.verify(() -> {
+                assertThat(msg.getReplyTo()).isNotNull();
+                assertThat(msg.getSubject()).isNotNull();
+                assertThat(msg.getCorrelationId()).isNotNull();
+            });
+            final String command = msg.getSubject();
+            final Object correlationId = msg.getCorrelationId();
+            log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
         };
     }
 
@@ -230,6 +249,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         assertThat(msg.getSubject()).isEqualTo("setValue");
                     });
                     log.debug("received command [name: {}]", msg.getSubject());
+                    ProtonHelper.accepted(delivery, true);
                     commandsReceived.flag();
                 }, payload -> {
                     return helper.sendOneWayCommand(
@@ -589,6 +609,101 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         if (!commandsFailed.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for commands", timeToWait);
         }
+        final long commandsCompleted = totalNoOfCommandsToSend - commandsFailed.getCount();
+        log.info("commands sent: {}, commands failed: {} after {} milliseconds",
+                commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
+        if (commandsCompleted == commandsSent.get()) {
+            ctx.completeNow();
+        } else {
+            ctx.failNow(new IllegalStateException("did not complete all commands sent"));
+        }
+    }
+
+    /**
+     * Verifies that the adapter forwards the <em>released</em> disposition back to the
+     * application if the device hasn't sent a disposition update for the delivery of
+     * the command message sent to the device.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    public void testSendCommandFailsForCommandNotAcknowledgedByDevice(
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final AmqpCommandEndpointConfiguration endpointConfig = new AmqpCommandEndpointConfiguration(SubscriberRole.DEVICE);
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+
+        final AtomicInteger receivedMessagesCounter = new AtomicInteger(0);
+        // command handler won't send a disposition update
+        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
+                sender -> createNotSendingDeliveryUpdateCommandConsumer(ctx, receivedMessagesCounter));
+
+        final int totalNoOfCommandsToSend = 3;
+        final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
+        final AtomicInteger commandsSent = new AtomicInteger(0);
+        final AtomicLong lastReceivedTimestamp = new AtomicLong();
+        final long start = System.currentTimeMillis();
+
+        final VertxTestContext commandClientCreation = new VertxTestContext();
+        final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
+                .setHandler(ctx.succeeding(c -> {
+                    c.setRequestTimeout(1300); // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
+                    commandClientCreation.completeNow();
+                }));
+
+        assertThat(commandClientCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (commandClientCreation.failed()) {
+            ctx.failNow(commandClientCreation.causeOfFailure());
+        }
+
+        while (commandsSent.get() < totalNoOfCommandsToSend) {
+            final CountDownLatch commandSent = new CountDownLatch(1);
+            context.runOnContext(go -> {
+                final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
+                final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand(commandTargetDeviceId, "setValue", "text/plain",
+                        msg, null);
+                sendCmdFuture.setHandler(sendAttempt -> {
+                    if (sendAttempt.succeeded()) {
+                        log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
+                    } else {
+                        if (sendAttempt.cause() instanceof ServerErrorException
+                                && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+                            log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                    sendAttempt.cause().toString());
+                            lastReceivedTimestamp.set(System.currentTimeMillis());
+                            commandsFailed.countDown();
+                            if (commandsFailed.getCount() % 20 == 0) {
+                                log.info("commands failed as expected: {}",
+                                        totalNoOfCommandsToSend - commandsFailed.getCount());
+                            }
+                        } else {
+                            log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
+                                    sendAttempt.cause());
+                        }
+                    }
+                    if (commandsSent.get() % 20 == 0) {
+                        log.info("commands sent: " + commandsSent.get());
+                    }
+                    commandSent.countDown();
+                });
+            });
+
+            commandSent.await();
+        }
+
+        // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
+        final long timeToWait = 1300 + ((totalNoOfCommandsToSend - 1) * 300);
+        if (!commandsFailed.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            log.info("Timeout of {} milliseconds reached, stop waiting for commands", timeToWait);
+        }
+        // assert that only the first command message has reached the device,
+        // subsequent command messages shouldn't have come so far because the adapter has closed device link and command consumer
+        // after it didn't get a disposition update for the first command
+        assertThat(receivedMessagesCounter.get()).isEqualTo(1);
         final long commandsCompleted = totalNoOfCommandsToSend - commandsFailed.getCount();
         log.info("commands sent: {}, commands failed: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);

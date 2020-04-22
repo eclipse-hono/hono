@@ -773,7 +773,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
-        adapter.onCommandReceived(tenantObject, deviceLink, context);
+        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        adapter.onCommandReceived(tenantObject, deviceLink, commandConsumer, context);
         // and the device settles it
         final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
         verify(deviceLink).send(any(Message.class), deliveryUpdateHandler.capture());
@@ -1077,6 +1078,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
+        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
 
         // AND no delivery update is received from the device after sometime
         doAnswer(invocation -> {
@@ -1085,11 +1087,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
             return 1L;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
 
-        adapter.onCommandReceived(tenantObject, deviceLink, context);
+        adapter.onCommandReceived(tenantObject, deviceLink, commandConsumer, context);
         // THEN the adapter closes the device link
         verify(deviceLink).close();
         // AND notifies the application by sending back a RELEASED disposition
         verify(commandDelivery).disposition(any(Released.class), eq(true));
+        // AND the command consumer is closed
+        verify(commandConsumer).close(any());
     }
 
     private String getCommandEndpoint() {
