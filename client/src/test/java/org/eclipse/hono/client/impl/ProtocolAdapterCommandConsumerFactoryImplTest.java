@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -218,6 +219,41 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                     });
                     ctx.completeNow();
                 }));
+            });
+        }));
+    }
+
+    /**
+     * Verifies that closing an already expired command consumer skips removal of the
+     * mapping entry in the device connection service.
+     *
+     * @param vertx The vert.x instance.
+     * @param ctx The test context.
+     */
+    @Test
+    public void testCloseExpiredCommandConsumer(final Vertx vertx, final VertxTestContext ctx) {
+
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+
+        final Duration lifespan = Duration.ofMillis(1);
+        final Future<MessageConsumer> commandConsumerFuture = commandConsumerFactory.createCommandConsumer(tenantId,
+                deviceId, commandHandler, lifespan, null);
+        commandConsumerFuture.setHandler(ctx.succeeding(consumer -> {
+            ctx.verify(() -> {
+                verify(connection).createReceiver(eq(tenantCommandAddress), eq(ProtonQoS.AT_LEAST_ONCE), any(), anyInt(),
+                        eq(false), any());
+                verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), any());
+                // wait until lifespan period has elapsed
+                vertx.setTimer(10, tid -> {
+                    // verify closing the consumer is successful
+                    consumer.close(ctx.succeeding(v -> {
+                        ctx.verify(() -> {
+                            // verify command handling adapter instance isn't explicitly removed (since lifespan has already elapsed)
+                            verify(devConClient, never()).removeCommandHandlingAdapterInstance(eq(deviceId), anyString(), any());
+                        });
+                        ctx.completeNow();
+                    }));
+                });
             });
         }));
     }
