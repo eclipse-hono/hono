@@ -14,10 +14,12 @@
 package org.eclipse.hono.deviceconnection.infinispan;
 
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.infinispan.client.hotrod.RemoteCacheManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,13 +34,15 @@ import io.vertx.core.Vertx;
 @Profile("!" + ApplicationConfig.PROFILE_EMBEDDED_CACHE)
 public class RemoteCacheConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(RemoteCacheConfig.class);
+
     /**
      * Gets properties for configuring the connection to the remote cache.
      *
      * @return The properties.
      */
     @Bean
-    @ConfigurationProperties(prefix = "hono.device-connection.remote")
+    @ConfigurationProperties("hono.device-connection.remote")
     public InfinispanRemoteConfigurationProperties remoteCacheProperties() {
         return new InfinispanRemoteConfigurationProperties();
     }
@@ -59,16 +63,18 @@ public class RemoteCacheConfig {
      * connection information.
      *
      * @param vertx The vert.x instance to run on.
+     * @param cacheConfig Common cache configuration options.
      * @return The cache.
      */
     @Bean
-    public BasicCache<String, String> remoteCache(final Vertx vertx) {
+    public BasicCache<String, String> remoteCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
+        log.info("Common Config: {}", cacheConfig);
         return new HotrodCache<>(
                 vertx,
                 remoteCacheManager(),
-                DeviceConnectionConstants.CACHE_NAME,
-                "KEY_CONNECTION_CHECK",
-                "VALUE_CONNECTION_CHECK");
+                cacheConfig.getCacheName(),
+                cacheConfig.getCheckKey(),
+                cacheConfig.getCheckValue());
     }
 
 }

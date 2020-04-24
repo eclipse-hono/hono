@@ -19,12 +19,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
+import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
 import org.infinispan.configuration.parsing.ParserRegistry;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,33 +42,38 @@ import io.vertx.core.Vertx;
 @Profile(ApplicationConfig.PROFILE_EMBEDDED_CACHE)
 public class EmbeddedCacheConfig {
 
-    @Value("hono.device-connection.embedded.configuration-file")
+    private static final Logger log = LoggerFactory.getLogger(RemoteCacheConfig.class);
+
+    @Value("${hono.device-connection.embedded.configuration-file}")
     private Path configuration;
 
     /**
      * Exposes an embedded cache that contains device connection information.
      *
      * @param vertx The vert.x instance to run on.
+     * @param cacheConfig Common cache configuration options.
      * @return The cache.
      */
     @Bean
-    public BasicCache<String, String> embeddedCache(final Vertx vertx) {
+    public BasicCache<String, String> embeddedCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
+        log.info("Common Config: {}", cacheConfig);
         return new EmbeddedCache<>(
                 vertx,
-                embeddedCacheManager(),
-                DeviceConnectionConstants.CACHE_NAME,
-                "KEY_CONNECTION_CHECK",
-                "VALUE_CONNECTION_CHECK");
+                embeddedCacheManager(cacheConfig),
+                cacheConfig.getCacheName(),
+                cacheConfig.getCheckKey(),
+                cacheConfig.getCheckValue());
     }
 
     /**
      * Create a new configuration, either from a configured file, or with some reasonable defaults.
      *
+     * @param cacheConfig Common cache configuration options.
      * @return A new configuration.
      * @throws RuntimeException in case a configuration file is configured and loading fails.
      */
     @Bean
-    public ConfigurationBuilderHolder configuration() {
+    public ConfigurationBuilderHolder configuration(final CommonCacheConfig cacheConfig) {
         if (this.configuration != null) {
             try (InputStream in = Files.newInputStream(configuration)) {
                 return new ParserRegistry().parse(in);
@@ -75,7 +82,7 @@ public class EmbeddedCacheConfig {
             }
         } else {
             final var builderHolder = new ConfigurationBuilderHolder();
-            builderHolder.newConfigurationBuilder(DeviceConnectionConstants.CACHE_NAME);
+            builderHolder.newConfigurationBuilder(cacheConfig.getCacheName());
             return builderHolder;
         }
     }
@@ -83,11 +90,12 @@ public class EmbeddedCacheConfig {
     /**
      * Exposes an embedded cache manager as a Spring bean.
      *
+     * @param cacheConfig Common cache configuration options.
      * @return The newly created cache manager. The manager will not be started.
      */
     @Bean
-    public EmbeddedCacheManager embeddedCacheManager() {
-        return new DefaultCacheManager(configuration(), false);
+    public EmbeddedCacheManager embeddedCacheManager(final CommonCacheConfig cacheConfig) {
+        return new DefaultCacheManager(configuration(cacheConfig), false);
     }
 
 }

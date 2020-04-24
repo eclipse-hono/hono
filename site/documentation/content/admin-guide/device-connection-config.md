@@ -90,18 +90,44 @@ The server may be configured to open both a secure and a non-secure port at the 
 
 ## Data Grid Connection Configuration
 
-The Device Connection component requires a connection to a remote data grid using the Infinispan Hotrod protocol to store device connection information in.
+The Device Connection component requires either an embedded cache or a remote
+data grid, using the Infinispan Hotrod protocol to store device information.
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the common aspects of the service:
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_DEVICECONNECTION_COMMON_CACHENAME`<br>`--hono.deviceConnection.common.cacheName` | no | `device-connection` | The name of the cache |
+| `HONO_DEVICECONNECTION_COMMON_CHECKKEY`<br>`--hono.deviceConnection.common.checkKey` | no | `KEY_CONNECTION_CHECK` | The key used to check the health of the cache. |
+| `HONO_DEVICECONNECTION_COMMON_CHECKVALUE`<br>`--hono.deviceConnection.common.checkValue` | no | `VALUE_CONNECTION_CHECK` | The value used to check the health of the cache. |
+
+The type of the cache is selected on startup by enabling or disabling the
+profile `embedded-cache`. If the profile is enabled the embedded cache is
+used, otherwise the remote cache is being used. The remote cache is the default.
+
+### Remote cache
 
 The following table provides an overview of the configuration variables and corresponding command line options for configuring the connection to the data grid:
 
 | Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_DEVICECONNECTION_REMOTE_SERVER_LIST`<br>`--hono.deviceConnection.remote.serverList` | yes | - | A list of remote servers in the form: `host1[:port][;host2[:port]]....`. |
-| `HONO_DEVICECONNECTION_REMOTE_AUTH_SERVER_NAME`<br>`--hono.deviceConnection.remote.authServerName` | yes | - | The server name to indicate in the SASL handshake when authenticating to the server. |
-| `HONO_DEVICECONNECTION_REMOTE_AUTH_USERNAME`<br>`--hono.deviceConnection.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
-| `HONO_DEVICECONNECTION_REMOTE_AUTH_PASSWORD`<br>`--hono.deviceConnection.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
+| `HONO_DEVICECONNECTION_REMOTE_SERVERLIST`<br>`--hono.deviceConnection.remote.serverList` | yes | - | A list of remote servers in the form: `host1[:port][;host2[:port]]....`. |
+| `HONO_DEVICECONNECTION_REMOTE_AUTHSERVERNAME`<br>`--hono.deviceConnection.remote.authServerName` | yes | - | The server name to indicate in the SASL handshake when authenticating to the server. |
+| `HONO_DEVICECONNECTION_REMOTE_AUTHREALM`<br>`--hono.deviceConnection.remote.authRealm` | yes | - | The authentication realm for the SASL handshake when authenticating to the server. |
+| `HONO_DEVICECONNECTION_REMOTE_AUTHUSERNAME`<br>`--hono.deviceConnection.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
+| `HONO_DEVICECONNECTION_REMOTE_AUTHPASSWORD`<br>`--hono.deviceConnection.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
 
 In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/9.4/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.deviceConnection.remote` instead of the `infinispan.client.hotrod` prefix.
+
+### Embedded cache
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the embedded cache:
+
+hono.device-connection.embedded.configuration-file
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_DEVICECONNECTION_EMBEDDED_CONFIGURATIONFILE`<br>`--hono.deviceConnection.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/9.4/configdocs/). |
 
 ## Authentication Service Connection Configuration
 
