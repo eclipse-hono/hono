@@ -21,6 +21,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
+import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -153,7 +154,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint deviceConnectionAmqpEndpoint(final DeviceConnectionService service) {
-        return new DelegatingDeviceConnectionAmqpEndpoint<DeviceConnectionService>(vertx(), service);
+        return new DelegatingDeviceConnectionAmqpEndpoint<>(vertx(), service);
     }
 
     /**
@@ -202,4 +203,16 @@ public class ApplicationConfig {
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), healthCheckProperties());
     }
+
+    /**
+     * Gets properties for configuring the service's common cache aspects.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.device-connection.common")
+    public CommonCacheConfig commonCacheConfig() {
+        return new CommonCacheConfig();
+    }
+
 }

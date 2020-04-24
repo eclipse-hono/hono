@@ -37,7 +37,7 @@ public class HotrodCacheConfig {
     /**
      * Gets properties for configuring the connection to the Infinispan
      * data grid that contains device connection information.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -50,7 +50,7 @@ public class HotrodCacheConfig {
     /**
      * Exposes the Infinispan data grid that contains device connection information
      * as a remote cache manager.
-     * 
+     *
      * @return The newly created cache manager. The manager will not be started.
      */
     @Bean
@@ -65,17 +65,18 @@ public class HotrodCacheConfig {
      * connection information.
      *
      * @param vertx The vert.x instance to run on.
+     * @param cacheConfig Common cache configuration options.
      * @return The cache.
      */
     @Bean
     @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
-    public HotrodCache<String, String> remoteCache(final Vertx vertx) {
+    public HotrodCache<String, String> remoteCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
         return new HotrodCache<>(
                 vertx,
                 remoteCacheManager(),
-                DeviceConnectionConstants.CACHE_NAME,
-                "KEY_CHECK_CONNECTION",
-                "VALUE_CHECK_CONNECTION");
+                cacheConfig.getCacheName(),
+                cacheConfig.getCheckKey(),
+                cacheConfig.getCheckValue());
     }
 
     /**
@@ -93,5 +94,17 @@ public class HotrodCacheConfig {
     public BasicDeviceConnectionClientFactory hotrodBasedDeviceConnectionClientFactory(
             final HotrodCache<String, String> cache, final Optional<Tracer> tracer) {
         return new CacheBasedDeviceConnectionClientFactory(cache, tracer.orElse(NoopTracerFactory.create()));
+    }
+
+    /**
+     * Gets properties for configuring the service's common cache aspects.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.device-connection.common")
+    @ConditionalOnProperty(prefix = "hono.device-connection", name = "server-list")
+    public CommonCacheConfig commonCacheConfig() {
+        return new CommonCacheConfig();
     }
 }
