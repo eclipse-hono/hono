@@ -62,12 +62,9 @@ import io.vertx.proton.ProtonSender;
 @ExtendWith(VertxExtension.class)
 public class DeviceConnectionClientImplTest {
 
-    private Vertx vertx;
     private ProtonSender sender;
     private DeviceConnectionClientImpl client;
-    private Tracer tracer;
     private Span span;
-    private HonoConnection connection;
 
     /**
      * Sets up the fixture.
@@ -81,15 +78,15 @@ public class DeviceConnectionClientImplTest {
         when(span.context()).thenReturn(spanContext);
         final SpanBuilder spanBuilder = HonoClientUnitTestHelper.mockSpanBuilder(span);
 
-        tracer = mock(Tracer.class);
+        final Tracer tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
 
-        vertx = mock(Vertx.class);
+        final Vertx vertx = mock(Vertx.class);
         final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
         sender = HonoClientUnitTestHelper.mockProtonSender();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
-        connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
+        final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(vertx, config);
         when(connection.getTracer()).thenReturn(tracer);
 
         client = new DeviceConnectionClientImpl(connection, Constants.DEFAULT_TENANT, sender, receiver);
@@ -113,8 +110,8 @@ public class DeviceConnectionClientImplTest {
                 .setHandler(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the last known gateway has been retrieved from the service and the span is finished
-                        verify(span).finish();
                         assertThat(r.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID)).isEqualTo(gatewayId);
+                        verify(span).finish();
                     });
                     ctx.completeNow();
                 }));
@@ -140,8 +137,7 @@ public class DeviceConnectionClientImplTest {
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
                 .setHandler(ctx.succeeding(r -> {
                     ctx.verify(() -> {
-                        // THEN the response for setting the last known gateway has been handled by the service
-                        // and the span is finished
+                        // THEN the response has been handled and the span is finished
                         verify(span).finish();
                     });
                     ctx.completeNow();
@@ -161,12 +157,11 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testSetCommandHandlingAdapterInstance(final VertxTestContext ctx) {
 
-        // WHEN setting the last known gateway
+        // WHEN setting the command handling adapter instance
         client.setCommandHandlingAdapterInstance("deviceId", "gatewayId", null, span.context())
                 .setHandler(ctx.succeeding(r -> {
                     ctx.verify(() -> {
-                        // THEN the response for setting the command handling adapter instance has been handled by the service
-                        // and the span is finished
+                        // THEN the response has been handled and the span is finished
                         verify(span).finish();
                     });
                     ctx.completeNow();
@@ -186,12 +181,11 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testRemoveCommandHandlingAdapterInstance(final VertxTestContext ctx) {
 
-        // WHEN setting the last known gateway
+        // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "gatewayId", span.context())
                 .setHandler(ctx.succeeding(r -> {
                     ctx.verify(() -> {
-                        // THEN the response for setting the last known gateway has been handled by the service
-                        // and the span is finished
+                        // THEN the response has been handled and the span is finished
                         verify(span).finish();
                     });
                     ctx.completeNow();
@@ -211,19 +205,32 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testGetCommandHandlingAdapterInstances(final VertxTestContext ctx) {
 
-        // WHEN setting the last known gateway
-        client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.succeeding(r -> {
+        final String adapterInstanceId = "adapterInstanceId";
+        final String deviceId = "4711";
+
+        final JsonArray adapterInstancesArray = new JsonArray();
+        adapterInstancesArray
+                .add(new JsonObject().put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID, adapterInstanceId)
+                        .put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId));
+        final JsonObject adapterInstancesResult = new JsonObject().
+                put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES, adapterInstancesArray);
+
+        // WHEN getting the command handling adapter instances
+        client.getCommandHandlingAdapterInstances(deviceId, Collections.emptyList(), span.context())
+                .setHandler(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        // THEN the response for setting the last known gateway has been handled by the service
-                        // and the span is finished
+                        // THEN the response has been handled and the span is finished
+                        assertThat(result).isEqualTo(adapterInstancesResult);
                         verify(span).finish();
                     });
                     ctx.completeNow();
                 }));
 
         final Message sentMessage = verifySenderSend();
-        final Message response = createNoContentResponseMessage(sentMessage.getMessageId());
+        final Message response = ProtonHelper.message(adapterInstancesResult.encode());
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        response.setCorrelationId(sentMessage.getMessageId());
         client.handleResponse(mock(ProtonDelivery.class), response);
     }
 
@@ -264,7 +271,7 @@ public class DeviceConnectionClientImplTest {
         // GIVEN a client with no credit left 
         when(sender.sendQueueFull()).thenReturn(true);
 
-        // WHEN getting last known gateway information
+        // WHEN setting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -289,7 +296,7 @@ public class DeviceConnectionClientImplTest {
         // GIVEN a client with no credit left
         when(sender.sendQueueFull()).thenReturn(true);
 
-        // WHEN getting last known gateway information
+        // WHEN setting the command handling adapter instance
         client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context())
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -314,7 +321,7 @@ public class DeviceConnectionClientImplTest {
         // GIVEN a client with no credit left
         when(sender.sendQueueFull()).thenReturn(true);
 
-        // WHEN getting last known gateway information
+        // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -339,7 +346,7 @@ public class DeviceConnectionClientImplTest {
         // GIVEN a client with no credit left
         when(sender.sendQueueFull()).thenReturn(true);
 
-        // WHEN getting last known gateway information
+        // WHEN getting the command handling adapter instances
         client.getCommandHandlingAdapterInstances("deviceId", Collections.emptyList(), span.context())
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -404,7 +411,7 @@ public class DeviceConnectionClientImplTest {
             return mock(ProtonDelivery.class);
         });
 
-        // WHEN getting last known gateway information
+        // WHEN setting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -437,7 +444,7 @@ public class DeviceConnectionClientImplTest {
             return mock(ProtonDelivery.class);
         });
 
-        // WHEN getting last known gateway information
+        // WHEN setting the command handling adapter instance
         client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context())
                 .setHandler(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -470,7 +477,7 @@ public class DeviceConnectionClientImplTest {
             return mock(ProtonDelivery.class);
         });
 
-        // WHEN getting last known gateway information
+        // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
                 .setHandler(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -503,7 +510,7 @@ public class DeviceConnectionClientImplTest {
             return mock(ProtonDelivery.class);
         });
 
-        // WHEN getting last known gateway information
+        // WHEN getting the command handling adapter instances
         client.getCommandHandlingAdapterInstances("deviceId", Collections.emptyList(), span.context())
                 .setHandler(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -524,12 +531,14 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testGetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest() {
 
+        final String deviceId = "deviceId";
+
         // WHEN getting last known gateway information
-        client.getLastKnownGatewayForDevice("deviceId", span.context());
+        client.getLastKnownGatewayForDevice(deviceId, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.GET_LAST_GATEWAY.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -542,12 +551,14 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testSetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest() {
 
-        // WHEN getting last known gateway information
-        client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context());
+        final String deviceId = "deviceId";
+
+        // WHEN setting last known gateway information
+        client.setLastKnownGatewayForDevice(deviceId, "gatewayId", span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -560,12 +571,14 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testSetCommandHandlingAdapterInstanceIncludesRequiredInformationInRequest() {
 
-        // WHEN getting last known gateway information
-        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context());
+        final String deviceId = "deviceId";
+
+        // WHEN setting the command handling adapter instance
+        client.setCommandHandlingAdapterInstance(deviceId, "adapterInstanceId", null, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -578,12 +591,14 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testRemoveCommandHandlingAdapterInstanceIncludesRequiredInformationInRequest() {
 
-        // WHEN getting last known gateway information
-        client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context());
+        final String deviceId = "deviceId";
+
+        // WHEN removing the command handling adapter instance
+        client.removeCommandHandlingAdapterInstance(deviceId, "adapterInstanceId", span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.REMOVE_CMD_HANDLING_ADAPTER_INSTANCE.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -596,18 +611,22 @@ public class DeviceConnectionClientImplTest {
     @Test
     public void testGetCommandHandlingAdapterInstancesIncludesRequiredInformationInRequest() {
 
+        final String deviceId = "deviceId";
+        final String gatewayId = "gw-1";
+
         // WHEN getting last known gateway information
-        client.getCommandHandlingAdapterInstances("deviceId", Collections.singletonList("gw-1"), span.context());
+        client.getCommandHandlingAdapterInstances(deviceId, Collections.singletonList(gatewayId), span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.GET_CMD_HANDLING_ADAPTER_INSTANCES.getSubject());
+        // and the 'via' gateway ID in the payload
         final JsonObject msgJsonPayload = MessageHelper.getJsonPayload(sentMessage);
         assertThat(msgJsonPayload).isNotNull();
         final JsonArray gatewaysJsonArray = msgJsonPayload.getJsonArray(DeviceConnectionConstants.FIELD_GATEWAY_IDS);
-        assertThat(gatewaysJsonArray.getList().iterator().next()).isEqualTo("gw-1");
+        assertThat(gatewaysJsonArray.getList().iterator().next()).isEqualTo(gatewayId);
     }
 
     private Message createNoContentResponseMessage(final Object correlationId) {
