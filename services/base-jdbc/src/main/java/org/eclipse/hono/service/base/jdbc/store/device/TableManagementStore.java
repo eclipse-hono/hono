@@ -213,8 +213,12 @@ public class TableManagementStore extends AbstractDeviceManagementStore {
 
                         // commit or rollback ... return original result
                         .flatMap(x -> SQL.commit(this.tracer, span.context(), connection).map(true))
-                        .recover(x -> SQL.rollback(this.tracer, span.context(), connection).flatMap(y -> Future.<Boolean>failedFuture(x))))
+                        .recover(x -> SQL.rollback(this.tracer, span.context(), connection).flatMap(y -> Future.<Boolean>failedFuture(x)))
 
+                        // close the connection
+                        .onComplete(x -> connection.close()))
+
+                // when not found, then return "false"
                 .recover(err -> recoverNotFound(span, err, () -> false))
 
                 .onComplete(x -> span.finish());
@@ -297,7 +301,10 @@ public class TableManagementStore extends AbstractDeviceManagementStore {
                                     log.debug("Credentials: {}", credentials);
 
                                     return Future.succeededFuture(Optional.of(new CredentialsReadResult(key.getDeviceId(), credentials, Optional.ofNullable(version))));
-                                })))
+                                }))
+
+                     .onComplete(x -> connection.close()))
+
                 .recover(err -> recoverNotFound(span, err, () -> Optional.empty()))
 
                 .onComplete(x -> span.finish());
