@@ -9,7 +9,6 @@ hono:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
-    nativeTlsRequired: true
     keyPath: /etc/hono/certs/mqtt-adapter-key.pem
     certPath: /etc/hono/certs/mqtt-adapter-cert.pem
   messaging:
@@ -72,6 +71,7 @@ hono:
     requestTimeout: ${request.timeout}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    preferNative: true
 
 spring:
   jmx:

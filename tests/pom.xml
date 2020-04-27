@@ -149,6 +149,18 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-epoll</artifactId>
+      <classifier>linux-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-kqueue</artifactId>
+      <classifier>osx-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -560,6 +572,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <dependencySets>
                           <dependencySet>
                             <includes>
+                              <!--  use openSSL in HTTP adapter -->
                               <include>io.netty:netty-tcnative-boringssl-static</include>
                             </includes>
                             <outputDirectory>opt/hono/extensions</outputDirectory>
@@ -639,7 +652,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <dependencySets>
                           <dependencySet>
                             <includes>
-                              <include>io.netty:netty-tcnative-boringssl-static</include>
+                              <!--  use native transport in MQTT adapter -->
+                              <include>io.netty:netty-transport-native-*</include>
                             </includes>
                             <outputDirectory>opt/hono/extensions</outputDirectory>
                           </dependencySet>
