@@ -38,7 +38,6 @@ import io.vertx.core.buffer.Buffer;
  * and/or Event API and
  * <p>
  * Statistics are output to stdout.
- * <p>
  */
 @Component
 @Profile("statistic")
