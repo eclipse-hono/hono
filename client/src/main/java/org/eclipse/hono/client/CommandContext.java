@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,8 +44,6 @@ public class CommandContext extends MapBasedExecutionContext {
     public static final String KEY_COMMAND_CONTEXT = "command-context";
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandContext.class);
-
-    private static final String ERROR_MSG_INVALID_CREDIT_VALUE = "credit must be >= 0";
 
     private final Command command;
     private final ProtonDelivery delivery;
