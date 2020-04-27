@@ -14,6 +14,7 @@ title = "Release Notes"
   If none is received, the AMQP link to the device is closed. Please refer to the
   `sendMessageToDeviceTimeout` property description in the
   [AMQP Adapter Configuration]({{% doclink "/admin-guide/amqp-adapter-config/" %}}) for more information.
+* The LoraWAN protocol adapter has been extended with support for the *ChirpStack* provider.
 
 ### API Changes
 
