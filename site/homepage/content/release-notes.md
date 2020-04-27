@@ -9,6 +9,11 @@ title = "Release Notes"
 * An admin guide for the CoAP adapter has been added.
 * Prometheus resource limits checker configuration supports query timeout.
   For more information refer to `HONO_RESOURCELIMITS_PROMETHEUSBASED_QUERY_TIMEOUT` [Resource Limits Checker Configuration]({{% doclink "/admin-guide/common-config/#resource-limits-checker-configuration" %}}).
+* When sending a command message to a device, the AMQP adapter now waits for a
+  configurable time period (default is 1 second) on the acknowledgement from the device.
+  If none is received, the AMQP link to the device is closed. Please refer to the
+  `sendMessageToDeviceTimeout` property description in the
+  [AMQP Adapter Configuration]({{% doclink "/admin-guide/amqp-adapter-config/" %}}) for more information.
 
 ### API Changes
 
@@ -50,7 +55,7 @@ title = "Release Notes"
   and/or a username and password in order to be able to connect to a Prometheus server
   that requires TLS and/or client authentication.
 * A Java client for the communication with the AMQP protocol adapter has been added.
-  It can be used to implement devices, (protocol) gateways and for testing puposes.
+  It can be used to implement devices, (protocol) gateways and for testing purposes.
   For more information refer to [AMQP Adapter Client for Java]({{% doclink "/dev-guide/amqp_adapter_client/" %}}).
 * Devices can now be configured with *groups* of gateways that are allowed to act on behalf of the
   device. This makes it easier to support scenarios in which a device may *roam* between multiple
@@ -69,7 +74,7 @@ title = "Release Notes"
 * The Command & Control implementation in the protocol adapters has been optimized to use
   far fewer consumer links to the AMQP Messaging Network, saving up on resources.
   Before this change, the protocol adapters created a separate receiver link for each device that wanted
-  to receive commands. Now each protocol adapter instance creates onyl a single receiver link over
+  to receive commands. Now each protocol adapter instance creates only a single receiver link over
   which all commands for all devices connected to the adapter instance are transmitted.
 * The base classes for implementing a device registry have been moved into their own `device-registry-based`
   module.
