@@ -59,7 +59,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopSpan;
+import io.opentracing.tag.StringTag;
+import io.opentracing.tag.Tag;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -82,20 +85,21 @@ import io.vertx.ext.web.handler.ChainAuthHandler;
  */
 public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<LoraProtocolAdapterProperties> {
 
-    private static final String ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE = "missing or unsupported content-type";
     private static final Logger LOG = LoggerFactory.getLogger(LoraProtocolAdapter.class);
+
+    private static final String ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE = "missing or unsupported content-type";
+    private static final String ERROR_MSG_INVALID_PAYLOAD = "invalid payload";
+    private static final String ERROR_MSG_JSON_MISSING_REQUIRED_FIELDS = "JSON Body does not contain required fields";
     private static final String LORA_COMMAND_CONSUMER_DEVICE_ID = "lora";
     private static final int LORA_COMMAND_CONSUMER_RETRY_INTERVAL = 2_000;
-    private static final String TAG_LORA_DEVICE_ID = "lora_device_id";
-    private static final String TAG_LORA_PROVIDER = "lora_provider";
-    private static final String JSON_MISSING_REQUIRED_FIELDS = "JSON Body does not contain required fields";
-    private static final String INVALID_PAYLOAD = "Invalid payload";
+    private static final Tag<String> TAG_LORA_DEVICE_ID = new StringTag("lora_device_id");
+    private static final Tag<String> TAG_LORA_PROVIDER = new StringTag("lora_provider");
 
     private final List<LoraProvider> loraProviders = new ArrayList<>();
+    private final AtomicBoolean startOfLoraCommandConsumersScheduled = new AtomicBoolean();
 
     private HonoClientBasedAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private HonoClientBasedAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-    private final AtomicBoolean startOfLoraCommandConsumersScheduled = new AtomicBoolean();
 
     /**
      * Sets the LoRa providers that this adapter should support.
@@ -139,6 +143,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     @Override
     protected void addRoutes(final Router router) {
+
+        // the LoraWAN adapter always requires network providers to authenticate
         setupAuthorization(router);
 
         for (final LoraProvider current : loraProviders) {
@@ -153,6 +159,21 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 handle400(ctx, ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE);
             });
         }
+    }
+
+    private void setupAuthorization(final Router router) {
+
+        final ChainAuthHandler authHandler = new HonoChainAuthHandler();
+        authHandler.append(new X509AuthHandler(
+                new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
+                Optional.ofNullable(clientCertAuthProvider).orElse(
+                        new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer))));
+        authHandler.append(new HonoBasicAuthHandler(
+                Optional.ofNullable(usernamePasswordAuthProvider).orElse(
+                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer)),
+                getConfig().getRealm(), tracer));
+
+        router.route().handler(authHandler);
     }
 
     @SuppressWarnings("unchecked")
@@ -176,30 +197,17 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     }
 
-    private void setupAuthorization(final Router router) {
-        final ChainAuthHandler authHandler = new HonoChainAuthHandler();
-        authHandler.append(new X509AuthHandler(
-                new TenantServiceBasedX509Authentication(getTenantClientFactory(), tracer),
-                Optional.ofNullable(clientCertAuthProvider).orElse(
-                        new X509AuthProvider(getCredentialsClientFactory(), getConfig(), tracer))));
-        authHandler.append(new HonoBasicAuthHandler(
-                Optional.ofNullable(usernamePasswordAuthProvider).orElse(
-                        new UsernamePasswordAuthProvider(getCredentialsClientFactory(), getConfig(), tracer)),
-                getConfig().getRealm(), tracer));
-
-        router.route().handler(authHandler);
-    }
-
     void handleProviderRoute(final RoutingContext ctx, final LoraProvider provider) {
+
         LOG.debug("Handling route for provider with path: [{}]", provider.pathPrefix());
         final Span currentSpan = getCurrentSpan(ctx);
-        ctx.put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, provider.getProviderName());
         currentSpan.setTag(TAG_LORA_PROVIDER, provider.getProviderName());
+        ctx.put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, provider.getProviderName());
 
         if (ctx.user() instanceof Device) {
             final Device gatewayDevice = (Device) ctx.user();
-            final JsonObject loraMessage = ctx.getBodyAsJson();
             currentSpan.setTag(TracingHelper.TAG_TENANT_ID, gatewayDevice.getTenantId());
+            final JsonObject loraMessage = ctx.getBodyAsJson();
 
             LoraMessageType type = LoraMessageType.UNKNOWN;
             try {
@@ -208,7 +216,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 currentSpan.setTag(TAG_LORA_DEVICE_ID, deviceId);
                 currentSpan.setTag(TracingHelper.TAG_DEVICE_ID, deviceId);
 
-                if (LoraMessageType.UPLINK.equals(type)) {
+                switch (type) {
+                case UPLINK:
                     final String payload = provider.extractPayload(loraMessage);
                     if (payload == null) {
                         throw new LoraProviderMalformedPayloadException("Payload == null", new NullPointerException("payload"));
@@ -224,7 +233,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     final String contentType = LoraConstants.CONTENT_TYPE_LORA_BASE +  provider.getProviderName() + LoraConstants.CONTENT_TYPE_LORA_POST_FIX;
 
                     doUpload(ctx, gatewayDevice, deviceId, payloadInBuffer, contentType);
-                } else {
+                    break;
+                default:
                     LOG.debug("Received message '{}' of type [{}] for device [{}], will discard message.", loraMessage,
                             type, deviceId);
                     currentSpan.log(
@@ -233,14 +243,17 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                     handle202(ctx);
                 }
             } catch (final ClassCastException | LoraProviderMalformedPayloadException e) {
-                LOG.debug("Got invalid payload '{}' which leads to exception: {}", loraMessage, e);
-                TracingHelper.logError(currentSpan,
-                        "Received message of type '" + type + "' has invalid payload; error: " + e);
-                handle400(ctx, INVALID_PAYLOAD);
+                LOG.debug("cannot parse request payload", e);
+                TracingHelper.logError(currentSpan, "cannot parse request payload", e);
+                handle400(ctx, ERROR_MSG_INVALID_PAYLOAD);
             }
         } else {
-            LOG.debug("Supplied credentials are not an instance of the user. Returning 401");
-            TracingHelper.logError(currentSpan, "Supplied credentials are not an instance of the user");
+            final String userType = ctx.user() == null ? "null" : ctx.user().getClass().getName();
+            TracingHelper.logError(
+                    currentSpan,
+                    Map.of(Fields.MESSAGE, "request contains unsupported type of user credentials",
+                            "type", userType));
+            LOG.debug("request contains unsupported type of credentials [{}], returning 401", userType);
             handle401(ctx);
         }
     }
@@ -278,7 +291,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             if (payload == null) {
                 TracingHelper.logError(getCurrentSpan(ctx), "Got message without valid payload");
             }
-            handle400(ctx, JSON_MISSING_REQUIRED_FIELDS);
+            handle400(ctx, ERROR_MSG_JSON_MISSING_REQUIRED_FIELDS);
         }
     }
 
