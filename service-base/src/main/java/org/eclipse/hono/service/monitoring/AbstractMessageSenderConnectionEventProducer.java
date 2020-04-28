@@ -82,23 +82,29 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
             return Future.succeededFuture();
         }
 
-        return getOrCreateSender(context.getMessageSenderClient(), authenticatedDevice.getTenantId())
-                .compose(sender -> {
+        return context.getTenantClient().getOrCreateTenantClient()
+                .map(tenantClient -> tenantClient.get(authenticatedDevice.getTenantId()))
+                .map(tenantObject -> {
+                    return getOrCreateSender(context.getMessageSenderClient(), authenticatedDevice.getTenantId())
+                            .compose(sender -> {
 
-                    final JsonObject payload = new JsonObject();
-                    payload.put("cause", cause);
-                    payload.put("remote-id", remoteId);
-                    payload.put("source", protocolAdapter);
+                                final JsonObject payload = new JsonObject();
+                                payload.put("cause", cause);
+                                payload.put("remote-id", remoteId);
+                                payload.put("source", protocolAdapter);
 
-                    if (data != null) {
-                        payload.put("data", data);
-                    }
+                                if (data != null) {
+                                    payload.put("data", data);
+                                }
 
-                    return sender.send(
-                            authenticatedDevice.getDeviceId(),
-                            payload.encode().getBytes(StandardCharsets.UTF_8),
-                            EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE
-                            );
+                                final Long maxTtl = tenantObject.result().getResourceLimits().getMaxTtl();
+                                return sender.send(
+                                        maxTtl,
+                                        authenticatedDevice.getDeviceId(),
+                                        null,
+                                        payload.encode().getBytes(StandardCharsets.UTF_8),
+                                        EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE);
+                            });
                 });
     }
 

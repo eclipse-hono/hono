@@ -133,6 +133,10 @@ public interface DownstreamSender extends MessageSender {
     /**
      * Sends a message for a given device to the endpoint configured for this client.
      *
+     * @param maxTtl   The maximum TTL value in seconds indicating the duration for which the message is to be considered live.
+     *                 <p>
+     *                 The value of this parameter will be contained in the message's <em>ttl</em> header.
+     *
      * @param deviceId The id of the device.
      *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
@@ -162,6 +166,7 @@ public interface DownstreamSender extends MessageSender {
      * @throws IllegalArgumentException if the content type specifies an unsupported character set.
      */
     Future<ProtonDelivery> send(
+            Long maxTtl,
             String deviceId,
             Map<String, ?> properties,
             byte[] payload,

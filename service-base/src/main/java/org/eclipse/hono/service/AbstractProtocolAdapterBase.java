@@ -125,6 +125,11 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             return AbstractProtocolAdapterBase.this.downstreamSenderFactory;
         }
 
+        @Override
+        public TenantClientFactory getTenantClient() {
+            return AbstractProtocolAdapterBase.this.tenantClientFactory;
+        }
+
     };
 
     /**

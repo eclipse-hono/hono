@@ -561,10 +561,10 @@ public final class MessageHelper {
     }
 
     /**
-     * Sets the <em>time-to-live</em> of the AMQP 1.0 message.
+     * Sets the <em>time-to-live</em> for the given AMQP 1.0 message.
      *
-     * @param message the message for that the <em>time-to-live</em> is set.
-     * @param timeToLive The <em>time-to-live</em> duration to be set in the message.
+     * @param message The message whose <em>time-to-live</em> is to be set.
+     * @param timeToLive The <em>time-to-live</em> duration to be set on the message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void setTimeToLive(final Message message, final Duration timeToLive) {
