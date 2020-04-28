@@ -15,6 +15,7 @@ package org.eclipse.hono.tests.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.HttpURLConnection;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.util.UUID;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.sasl.SaslException;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -209,6 +211,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .setHandler(ctx.failing(t -> {
             // THEN the connection is refused
+            ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN));
             ctx.completeNow();
          }));
     }

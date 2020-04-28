@@ -14,6 +14,9 @@ package org.eclipse.hono.tests.amqp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Optional;
+
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterAll;
@@ -203,11 +206,17 @@ public abstract class AmqpAdapterTestBase {
         });
         unopenedConnection.open();
 
-        return result.future().map(con -> {
-            assertThat(unopenedConnection.getRemoteOfferedCapabilities()).contains(Constants.CAP_ANONYMOUS_RELAY);
-            this.context = Vertx.currentContext();
-            this.connection = unopenedConnection;
-            return con;
-        });
+        return result.future()
+                .map(con -> {
+                    assertThat(unopenedConnection.getRemoteOfferedCapabilities()).contains(Constants.CAP_ANONYMOUS_RELAY);
+                    this.context = Vertx.currentContext();
+                    this.connection = unopenedConnection;
+                    return con;
+                })
+                .recover(t -> {
+                    return Optional.ofNullable(unopenedConnection.getRemoteCondition())
+                            .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.from(condition)))
+                            .orElse(Future.failedFuture(t));
+                });
     }
 }
