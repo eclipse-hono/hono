@@ -27,6 +27,18 @@ The client requires a Java 11 runtime environment to run.
 Please refer to the [Admin Guide]({{% doclink "/admin-guide/hono-client-configuration/" %}}) for details regarding the command
 line options that the client supports.
 
+### Milestones
+
+The newest features and bug fixes are available in *milestones* that are published every 4 -6 weeks.
+Please note that these milestones represent the latest *state of development* which also means that APIs or features may
+change from one milestone to the other. Milestones are mainly intended for testing purposes and should generally not
+be used in a production environment.
+
+* [Eclipse Hono 1.3.0-M1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.3.0-M1-exec.jar)
+
+Please refer to the *Using specific Container Images* section of [Hono's Helm chart](https://github.com/eclipse/packages/tree/master/charts/hono)
+for information regarding the installation of milestone container images.
+
 ## Source Code
 
 The source code can be cloned or downloaded from [Hono's GitHub repository](https://github.com/eclipse/hono).
