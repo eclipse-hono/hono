@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>1.3.0-M1</version>
   </parent>
   <artifactId>hono-adapter-mqtt-vertx-base</artifactId>
   <name>Hono MQTT Adapter base</name>
