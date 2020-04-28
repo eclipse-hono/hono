@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,7 +29,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -173,9 +171,8 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                         return setCommandHandlingAdapterInstance(tenantId, deviceId, sanitizedLifespan, context);
                     })
                     .map(res -> {
-                        final Instant lifespanStart = Instant.now();
                         final Supplier<Future<Void>> onCloseAction = () -> removeCommandConsumer(tenantId, deviceId,
-                                sanitizedLifespan, lifespanStart, context);
+                                sanitizedLifespan, context);
                         return (MessageConsumer) new DeviceSpecificCommandConsumer(onCloseAction);
                     })
                     .setHandler(result);
@@ -197,34 +194,23 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
     }
 
     private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId, final Duration lifespan,
-            final Instant lifespanStart, final SpanContext createCommandConsumerSpanContext) {
+            final SpanContext createCommandConsumerSpanContext) {
         log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
         adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(tenantId, deviceId);
 
-        final boolean lifespanReached = !lifespan.isNegative() && Instant.now().isAfter(lifespanStart.plus(lifespan));
-        // TODO when making handling of the lifespan property mandatory for implementors of the Device Connection API,
-        //  removing the adapter instance can be skipped here if 'lifespanReached' is true
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
                 .compose(client -> {
                     // The given span context from the createCommandConsumer invocation is only used here if a non-unlimited lifespan is set
                     // meaning creating and removing the consumer will probably happen in a timespan short enough for one overall trace.
-                    // The span context isn't used however if lifespanReached is true since the below 'remove' operation will usually (but not necessarily)
-                    // result in a "not found" error in that case, which is expected and should not cause the overall trace to be marked with an error.
-                    final SpanContext context = !lifespan.isNegative() && !lifespanReached ? createCommandConsumerSpanContext : null;
+                    final SpanContext context = !lifespan.isNegative() ? createCommandConsumerSpanContext : null;
                     return client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context);
-                }).recover(thr -> {
-                    if (lifespanReached && thr instanceof ServiceInvocationException
-                            && ((ServiceInvocationException) thr).getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-                        // entry was not found, meaning it has expired
-                        log.trace("ignoring 404 error when removing command handling adapter instance; entry has already expired [tenant: {}, device: {}]",
-                                tenantId, deviceId);
-                        return Future.succeededFuture();
-                    } else {
-                        log.info("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
-                                deviceId, thr);
-                        return Future.failedFuture(thr);
-                    }
-                });
+                })
+                .recover(thr -> {
+                    log.warn("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
+                            deviceId, thr);
+                    return Future.failedFuture(thr);
+                })
+                .mapEmpty();
     }
 
     private Future<MessageConsumer> getOrCreateMappingAndDelegatingCommandConsumer(final String tenantId) {

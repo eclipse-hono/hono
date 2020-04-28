@@ -227,11 +227,14 @@ class CacheBasedDeviceConnectionInfoTest {
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, spanContext)
         .compose(v -> info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
                 adapterInstance, spanContext))
-        .setHandler(ctx.succeeding(result -> ctx.completeNow()));
+        .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+            assertThat(result).isTrue();
+            ctx.completeNow();
+        })));
     }
 
     /**
-     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a NOT_FOUND status if
+     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation result is <em>false</em> if
      * no entry was registered for the device. Only an adapter instance for another device of the tenant was
      * registered.
      *
@@ -244,16 +247,15 @@ class CacheBasedDeviceConnectionInfoTest {
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, spanContext)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice", adapterInstance, spanContext);
-        }).setHandler(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(t).isInstanceOf(ServiceInvocationException.class);
-            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+            assertThat(result).isFalse();
             ctx.completeNow();
         })));
     }
 
     /**
-     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation fails with a NOT_FOUND status
-     * if the given adapter instance parameter doesn't match the one of the entry registered for the given device.
+     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation result is <em>false</em> if
+     * the given adapter instance parameter doesn't match the one of the entry registered for the given device.
      *
      * @param ctx The vert.x context.
      */
@@ -264,9 +266,8 @@ class CacheBasedDeviceConnectionInfoTest {
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, spanContext)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, "otherAdapterInstance", spanContext);
-        }).setHandler(ctx.failing(t -> ctx.verify(() -> {
-            assertThat(t).isInstanceOf(ServiceInvocationException.class);
-            assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+            assertThat(result).isFalse();
             ctx.completeNow();
         })));
     }

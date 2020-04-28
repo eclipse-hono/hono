@@ -183,9 +183,10 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.succeeding(r -> {
+                .setHandler(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
+                        assertThat(result).isTrue();
                         verify(span).finish();
                     });
                     ctx.completeNow();
@@ -332,6 +333,34 @@ public class DeviceConnectionClientImplTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that a client invocation of the <em>remove-cmd-handling-adapter-instance</em> operation
+     * returns a <em>Boolean.FALSE</em> value if a <em>NOT_FOUND</em> response was returned.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testRemoveCommandHandlingAdapterInstanceForNotFoundEntry(final VertxTestContext ctx) {
+
+        // WHEN removing the command handling adapter instance
+        client.removeCommandHandlingAdapterInstance("deviceId", "gatewayId", span.context())
+                .setHandler(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        // THEN the response has been handled and the span is finished
+                        assertThat(result).isFalse();
+                        verify(span).finish();
+                    });
+                    ctx.completeNow();
+                }));
+
+        final Message sentMessage = verifySenderSend();
+        final Message response = ProtonHelper.message();
+        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NOT_FOUND);
+        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        response.setCorrelationId(sentMessage.getMessageId());
+        client.handleResponse(mock(ProtonDelivery.class), response);
     }
 
     /**

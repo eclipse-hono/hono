@@ -122,7 +122,7 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
     }
 
     @Override
-    public Future<Void> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
+    public Future<Boolean> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
             final SpanContext context) {
         return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, context);
     }

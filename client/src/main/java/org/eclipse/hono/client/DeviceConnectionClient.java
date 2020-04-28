@@ -95,13 +95,14 @@ public interface DeviceConnectionClient extends RequestResponseClient {
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *            An implementation should use this as the parent for any span it creates for tracing
      *            the execution of this operation.
-     * @return A future indicating the outcome of the operation.
+     * @return A future indicating the outcome of the operation, with its value indicating whether the protocol
+     *         adapter instance value was removed or not.
      *         <p>
-     *         The future will be succeeded if the entry was successfully removed.
-     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if there
+     *         was an error removing the value.
      * @throws NullPointerException if device id or adapter instance id is {@code null}.
      */
-    Future<Void> removeCommandHandlingAdapterInstance(String deviceId, String adapterInstanceId, SpanContext context);
+    Future<Boolean> removeCommandHandlingAdapterInstance(String deviceId, String adapterInstanceId, SpanContext context);
 
     /**
      * Gets information about the adapter instances that can handle a command for the given device.

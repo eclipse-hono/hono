@@ -187,8 +187,8 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that a request to remove the command-handling adapter instance for a device fails if no
-     * adapter is registered for the device.
+     * Verifies that a request to remove the command-handling adapter instance for a device succeeds with
+     * a <em>false</em> value if no adapter is registered for the device.
      *
      * @param ctx The vert.x test context.
      */
@@ -200,8 +200,8 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         getClient(Constants.DEFAULT_TENANT)
             .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, "", null))
-            .setHandler(ctx.failing(t -> {
-                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+            .setHandler(ctx.succeeding(result -> {
+                ctx.verify(() -> assertThat(result).isFalse());
                 ctx.completeNow();
             }));
     }
