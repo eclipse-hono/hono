@@ -13,6 +13,7 @@
 package org.eclipse.hono.adapter.amqp.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -38,7 +39,9 @@ import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.messaging.Target;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
@@ -65,6 +68,7 @@ import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.limiting.ConnectionLimitManager;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -135,6 +139,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     private AmqpAdapterProperties config;
     private AmqpAdapterMetrics metrics;
     private ResourceLimitChecks resourceLimitChecks;
+    private ConnectionLimitManager connectionLimitManager;    
     private Vertx vertx;
     private Context context;
 
@@ -181,7 +186,13 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
         commandTargetMapper = mock(CommandTargetMapper.class);
 
+        connectionLimitManager = mock(ConnectionLimitManager.class);
+
         resourceLimitChecks = mock(ResourceLimitChecks.class);
+        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
+        when(resourceLimitChecks.isConnectionDurationLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.FALSE));
         when(resourceLimitChecks.isMessageLimitReached(any(TenantObject.class), anyLong(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture(Boolean.FALSE));
 
@@ -1096,6 +1107,93 @@ public class VertxBasedAmqpProtocolAdapterTest {
         verify(commandConsumer).close(any());
     }
 
+    /**
+     * Verifies that the connection is rejected as the connection limit for 
+     * the given tenant is exceeded.
+     */
+    @Test
+    public void testConnectionFailsIfTenantLevelConnectionLimitIsExceeded() {
+        // GIVEN an AMQP adapter that requires devices to authenticate
+        config.setAuthenticationRequired(true);
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        // WHEN the connection limit for the given tenant exceeds
+        when(resourceLimitChecks.isConnectionLimitReached(any(TenantObject.class), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(Boolean.TRUE));
+        // WHEN a device connects
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        adapter.onConnectRequest(deviceConnection);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor
+                .forClass(Handler.class);
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+        // THEN the adapter does not accept the incoming connection request. 
+        final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
+        verify(deviceConnection).setCondition(errorConditionCaptor.capture());
+        assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+    }
+
+    /**
+     * Verifies that the connection is rejected as the adapter is disabled.
+     */
+    @Test
+    public void testConnectionFailsIfAdapterIsDisabled() {
+        // GIVEN an AMQP adapter that requires devices to authenticate
+        config.setAuthenticationRequired(true);
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        // AND given a tenant for which the AMQP Adapter is disabled
+        givenAConfiguredTenant(TEST_TENANT_ID, false);
+        // WHEN a device connects
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        adapter.onConnectRequest(deviceConnection);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor
+                .forClass(Handler.class);
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+        // THEN the adapter does not accept the incoming connection request. 
+        final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
+        verify(deviceConnection).setCondition(errorConditionCaptor.capture());
+        assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+    }
+
+    /**
+     * Verifies that the connection is rejected as the connection limit for 
+     * the adapter is exceeded.
+     */
+    @Test
+    public void testConnectionFailsIfAdapterLevelConnectionLimitIsExceeded() {
+        // GIVEN an AMQP adapter that requires devices to authenticate
+        config.setAuthenticationRequired(true);
+        final VertxBasedAmqpProtocolAdapter adapter = givenAnAmqpAdapter();
+        // WHEN the adapter's connection limit exceeds
+        when(connectionLimitManager.isLimitExceeded()).thenReturn(true);
+        // WHEN a device connects
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        adapter.onConnectRequest(deviceConnection);
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = ArgumentCaptor
+                .forClass(Handler.class);
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+        // THEN the adapter does not accept the incoming connection request. 
+        final ArgumentCaptor<ErrorCondition> errorConditionCaptor = ArgumentCaptor.forClass(ErrorCondition.class);
+        verify(deviceConnection).setCondition(errorConditionCaptor.capture());
+        assertEquals(AmqpError.UNAUTHORIZED_ACCESS, errorConditionCaptor.getValue().getCondition());
+    }
+
     private String getCommandEndpoint() {
         return CommandConstants.COMMAND_ENDPOINT;
     }
@@ -1211,6 +1309,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         adapter.setCommandTargetMapper(commandTargetMapper);
         adapter.setMetrics(metrics);
         adapter.setResourceLimitChecks(resourceLimitChecks);
+        adapter.setConnectionLimitManager(connectionLimitManager);
         adapter.init(vertx, context);
         return adapter;
     }

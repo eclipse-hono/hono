@@ -25,6 +25,10 @@ title = "Release Notes"
   the name of the cache to store the data in.
 * When the connection to a device is closed or lost, a protocol adapter instance will now
   stop listening for commands targeted at the device.
+* The AMQP adapter before accepting any connections checks if the connection limit is exceeded 
+  or not and if the adapter is enabled or not. These checks are currently done inside the
+  `AmqpAdapterSaslAuthenticatorFactory`. Thereby, if any of these checks failed, the AMQP adapter
+  reported authentication failure instead of the actual reason. This has been fixed now.
 
 ### API Changes
 

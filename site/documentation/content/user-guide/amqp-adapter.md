@@ -38,11 +38,11 @@ When a device uses a client certificate for authentication, the TLS handshake is
 
 ## Connection Limits
 
-After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the AMQP adapter.  If the limit is exceeded then the connection request is not accepted.
+After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the AMQP adapter. If the limit has been already reached, then the connection request is rejected with the reason `amqp:unauthorized-access`.
 
 ## Connection Duration Limits
 
-Before accepting any connection requests from the devices, the AMQP adapter verifies that the configured [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) is not exceeded. If the limit has been already reached, then the connection request is not accepted.
+Before accepting any connection requests from the devices, the AMQP adapter verifies that the configured [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) is not exceeded. If the limit has been already reached, then the connection request is rejected with the reason `amqp:unauthorized-access`.
 
 ## Message Limits
 
