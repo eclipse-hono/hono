@@ -4,24 +4,37 @@ title = "Release Notes"
 
 ## 1.3.0 (not yet released)
 
+### New Features
+
+* The LoraWAN protocol adapter has been extended with support for the *ChirpStack* provider.
+* Hono's integration tests can now be run with a Jaeger back end in order to collect tracing
+  information.
+
 ### Fixes & Enhancements
 
 * An admin guide for the CoAP adapter has been added.
-* Prometheus resource limits checker configuration supports query timeout.
-  For more information refer to `HONO_RESOURCELIMITS_PROMETHEUSBASED_QUERY_TIMEOUT` [Resource Limits Checker Configuration]({{% doclink "/admin-guide/common-config/#resource-limits-checker-configuration" %}}).
+* The Prometheus based resource limits checker now supports configuring a query timeout.
+  Please refer to [Resource Limits Checker Configuration]({{% doclink "/admin-guide/common-config/#resource-limits-checker-configuration" %}})
+  for additional information.
 * When sending a command message to a device, the AMQP adapter now waits for a
-  configurable time period (default is 1 second) on the acknowledgement from the device.
-  If none is received, the AMQP link to the device is closed. Please refer to the
-  `sendMessageToDeviceTimeout` property description in the
-  [AMQP Adapter Configuration]({{% doclink "/admin-guide/amqp-adapter-config/" %}}) for more information.
-* The LoraWAN protocol adapter has been extended with support for the *ChirpStack* provider.
+  configurable period of time (default is 1 second) for the acknowledgement from the device.
+  If none is received, the AMQP link to the device for sending commands is being closed.
+  Please refer to the `sendMessageToDeviceTimeout` property description in the
+  AMQP Adapter admin guide for additional information.
+* The client for storing device connection information to a data grid now supports configuring
+  the name of the cache to store the data in.
+* When the connection to a device is closed or lost, a protocol adapter instance will now
+  stop listening for commands targeted at the device.
 
 ### API Changes
 
 * The `getRemoteContainer` method in `org.eclipse.hono.client.HonoConnection` has been
   renamed to `getRemoteContainerId`.
 * The `getName` method in `org.eclipse.hono.connection.ConnectionFactory` has been removed
-  and an additional `connect` method has been added.  
+  and an additional `connect` method has been added.
+* The *set command-handling protocol adapter instance* operation of the *Device Connection* API
+  has been extended to support an additional parameter which can be used to indicate the
+  maximum amount of time that the given information is to be considered valid.
 
 ## 1.2.2
 
