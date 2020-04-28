@@ -8,49 +8,86 @@ The AMQP protocol adapter allows clients (devices or gateway components) support
 
 ## Device Authentication
 
-By default, all Hono protocol adapters require clients (devices or gateway components) to authenticate during connection establishment. This is the preferred way for devices to publish data via protocol adapters. The AMQP adapter supports both the [SASL PLAIN](https://tools.ietf.org/html/rfc4616) and [SASL EXTERNAL](https://tools.ietf.org/html/rfc4422) authentication mechanisms. The former uses a *username* and *password* to authenticate to the adapter while the latter uses a client certificate.
+By default, all Hono protocol adapters require clients (devices or gateway components) to authenticate during connection establishment.
+This is the preferred way for devices to publish data via protocol adapters. The AMQP adapter supports both the
+[SASL PLAIN](https://tools.ietf.org/html/rfc4616) and [SASL EXTERNAL](https://tools.ietf.org/html/rfc4422) authentication mechanisms.
+The former uses a *username* and *password* to authenticate to the adapter while the latter uses an X.509 client certificate.
 
-In this guide, we will give examples for publishing telemetry and events for *authenticated* (using SASL PLAIN) and *unauthenticated* clients. 
+This guide provides examples for publishing telemetry and events for *authenticated* (using SASL PLAIN) and *unauthenticated* clients.
 
-**NB** The AMQP adapter can be configured to *allow* unauthenticated devices to connect by setting configuration variable `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
+**NB** The AMQP adapter can be configured to *allow* unauthenticated devices to connect by setting configuration variable
+`HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
 
 ### SASL PLAIN Authentication
 
-The AMQP adapter supports authenticating clients using a *username* and *password*. This means that clients need to provide a *username* and a *password* when connecting to the AMQP adapter. If the adapter is configured for multi-tenancy (i.e `HONO_AMQP_SINGLE_TENANT` is set to `false`), then the *username* must match the pattern [*auth-id@tenant*], e.g. `sensor1@DEFAULT_TENANT`. Otherwise the `DEFAULT_TENANT` is assumed and the tenant-id can be omitted from the username.
+The AMQP adapter supports authenticating clients using a *username* and *password*. This means that clients need to provide a *username* and a *password*
+when connecting to the AMQP adapter. If the adapter is configured for multi-tenancy (i.e `HONO_AMQP_SINGLE_TENANT` is set to `false`),
+then the *username* must match the pattern [*auth-id@tenant*], e.g. `sensor1@DEFAULT_TENANT`. Otherwise, the tenant-id can be omitted from the username
+and the client is assumed to belong to the `DEFAULT_TENANT`.
 
-The adapter verifies the credentials provided by the client against the credentials the [configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}}) has on record for the client. If the credentials match, then authentication is successful and the client device can proceed to publish messages to Hono.
+The adapter verifies the credentials provided by the client against the credentials that the
+[configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}}) has on record for the client.
+If the credentials match, the client device can proceed to publish messages to Hono.
 
-The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
+The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords.
+The example deployment as described in the [Deployment Guide]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its
+device registry component.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
+**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication.
+See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 
 ### SASL EXTERNAL Authentication
 
-When a device uses a client certificate for authentication, the TLS handshake is initiated during TCP connection establishment. If no trust anchor is configured for the AMQP adapter, the TLS handshake will succeed only if the certificate has not yet expired. Once the TLS handshake completes and a secure connection is established, the certificate's signature is checked during the SASL handshake. To complete the SASL handshake and authenticate the client, the adapter performs the following steps:
+When a device uses a client certificate for authentication, the TLS handshake is initiated during TCP connection establishment.
+If no trust anchor is configured for the AMQP adapter, the TLS handshake will succeed only if the certificate has not yet expired.
+Once the TLS handshake completes and a secure connection is established, the certificate's signature is checked during the SASL handshake.
+To complete the SASL handshake and authenticate the client, the adapter performs the following steps:
 
-* Adapter extracts the client certificate's *Issuer DN* and uses it to
-* us the Tenant service to look up the tenant that the client belongs to. In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/tenant#trusted-ca-format" >}}).
-* If the lookup succeeds, the Tenant service returns the tenant, thus implicitly establishing the tenant that the device belongs to.
-* Adapter validates the device’s client certificate using the registered trust anchor for the tenant.
-* Finally, adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter uses the client certificate’s *Subject DN* (as authentication identifier) and `x509-cert` (for the credentials type) in order to determine the device ID.
+1. The adapter extracts the client certificate's *Issuer DN* from the client certificate
+1. The adapter invokes the Tenant service to look up the tenant matching the DN.
+   In order for the lookup to succeed, the tenant’s trust anchor needs to be configured by means of registering the
+   [trusted certificate authority]({{< relref "/api/tenant#trusted-ca-format" >}}).
+1. If the lookup succeeds, the tenant returned by the Tenant service is the tenant that the device belongs to.
+1. The adapter verifies the device’s client certificate's signature using the trust anchor registered for the tenant.
+1. Finally, the adapter authenticates the client certificate using Hono's credentials API. In this step, the adapter
+   uses the client certificate’s *Subject DN* (as authentication identifier) and `x509-cert` (for the credentials type)
+   in order to determine the device ID.
 
 **NB** The AMQP adapter needs to be configured for TLS in order to support this mechanism.
 
-## Connection Limits
+## Resource Limit Checks
 
-After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the AMQP adapter. If the limit has been already reached, then the connection request is rejected with the reason `amqp:unauthorized-access`.
+The adapter performs additional checks regarding resource limits when a client tries to connect and/or send a message to the adapter.
 
-## Connection Duration Limits
+### Connection Limits
 
-Before accepting any connection requests from the devices, the AMQP adapter verifies that the configured [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) is not exceeded. If the limit has been already reached, then the connection request is rejected with the reason `amqp:unauthorized-access`.
+The adapter rejects a client's connection attempt with a `amqp:unauthorized-access` error if
+* the maximum number of connections per protocol adapter instance is reached, or
+* if the maximum number of simultaneously connected devices for the tenant is reached.
 
-## Message Limits
+Please refer to [resource-limits]({{< ref "/concepts/resource-limits.md" >}}) for details.
 
-Before accepting any telemetry or event or command messages, the AMQP adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+### Connection Duration Limits
+
+The adapter rejects a client's connection attempt with a `amqp:unauthorized-access` error if the
+[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for
+the client's tenant is exceeded.
+
+### Message Limits
+
+The adapter rejects any AMQP 1.0 message containing
+
+* telemetry data or an event uploaded by a client
+* a command sent by a north bound application
+
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
 
 ## Connection Event
 
-The AMQP Adapter can send a [Connection Event]({{< relref "/api/event#connection-event" >}}) once the connection with a device has been successfully established or ended. Note that this requires the [`HONO_CONNECTION_EVENTS_PRODUCER`]({{< relref "/admin-guide/mqtt-adapter-config#service-configuration" >}}) configuration property to be explicitly set to `events`.
+The AMQP Adapter can send a [Connection Event]({{< relref "/api/event#connection-event" >}}) once the connection with a device has
+been successfully established or ended.
+Note that this requires the [`HONO_CONNECTION_EVENTS_PRODUCER`]({{< relref "/admin-guide/amqp-adapter-config#service-configuration" >}})
+configuration property to be explicitly set to `events`.
 
 ## Link Establishment
 

@@ -29,7 +29,12 @@ Please refer to the [Credentials API]({{< relref "/api/credentials#standard-cred
 
 ## Message Limits
 
-Before accepting any telemetry or event or command messages, the HTTP adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. If the limit is exceeded then the incoming message is discarded with the status code `429 Too Many Requests`. 
+The adapter rejects
+
+* a client's request to upload data with status code `429 Too Many Requests` and
+* any AMQP 1.0 message containing a command sent by a north bound application
+
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
 
 ## Publish Telemetry Data (authenticated Device)
 

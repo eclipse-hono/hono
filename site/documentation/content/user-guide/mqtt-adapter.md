@@ -16,43 +16,73 @@ The MQTT adapter is **not** a general purpose MQTT broker. In particular the ada
 
 ## Authentication
 
-The MQTT adapter by default requires clients (devices or gateway components) to authenticate during connection establishment. The adapter supports both the authentication based on the username/password provided in an MQTT CONNECT packet as well as client certificate based authentication as part of a TLS handshake for that purpose.
+The MQTT adapter by default requires clients (devices or gateway components) to authenticate during connection establishment.
+The adapter supports both the authentication based on the username/password provided in an MQTT CONNECT packet as well as client
+certificate based authentication as part of a TLS handshake for that purpose.
 
 The adapter tries to authenticate the device using these mechanisms in the following order
 
 ### Client Certificate
 
-When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant that the device belongs to based on the *issuer DN* contained in the certificate.
-In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of registering the [trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}).
-The device's client certificate will then be validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to.
-In a second step, the adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the client certificate's *subject DN* as the *auth-id*, `x509-cert` as the *type* of secret and the MQTT client identifier as *client-id* in the request payload.
+When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant
+that the device belongs to based on the *issuer DN* contained in the certificate.
+In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of registering the
+[trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}). The device's client certificate will then be
+validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to.
+In a second step, the adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the client
+certificate's *subject DN* as the *auth-id*, `x509-cert` as the *type* of secret and the MQTT client identifier as *client-id* in the
+request payload.
 
 **NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) in order to support this mechanism.
 
 ### Username/Password
 
-When a device wants to authenticate using this mechanism, it needs to provide a *username* and a *password* in the MQTT *CONNECT* packet it sends in order to initiate the connection. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
-The adapter verifies the credentials provided by the client against the credentials that the [configured Credentials service]({{< relref "/admin-guide/common-config.md#credentials-service-connection-configuration" >}}) has on record for the client.
-The adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the *tenant* and *auth-id* provided by the client in the *username*, `hashed-password` as the *type* of secret and the MQTT client identifier as *client-id* in the request payload.
+When a device wants to authenticate using this mechanism, it needs to provide a *username* and a *password* in the MQTT *CONNECT* packet
+it sends in order to initiate the connection. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
+The adapter verifies the credentials provided by the client against the credentials that the
+[configured Credentials service]({{< relref "/admin-guide/common-config.md#credentials-service-connection-configuration" >}}) has on record for the client.
+The adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the *tenant* and *auth-id* provided
+by the client in the *username*, `hashed-password` as the *type* of secret and the MQTT client identifier as *client-id* in the request payload.
 
-The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
+The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT` using *auth-ids* `sensor1` and `gw1` and corresponding passwords.
+The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}}) comes pre-configured with the corresponding entities in its device registry component.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
+**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication.
+See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 
-## Connection Limits
+## Resource Limit Checks
 
-After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the MQTT adapter.  If the limit is exceeded then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+The adapter performs additional checks regarding resource limits when a client tries to connect and/or send a message to the adapter.
 
-## Connection Duration Limits
+### Connection Limits
 
-Before accepting any connection requests from the devices, the MQTT adapter verifies that the configured [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) is not exceeded. If the limit has been already reached, then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if
+* the maximum number of connections per protocol adapter instance is reached, or
+* if the maximum number of simultaneously connected devices for the tenant is reached.
 
-## Message Limits
+Please refer to [resource-limits]({{< ref "/concepts/resource-limits.md" >}}) for details.
 
-Before accepting any telemetry or event or command messages, the MQTT adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+### Connection Duration Limits
+
+The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if the
+[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for
+the client's tenant is exceeded.
+
+### Message Limits
+
+The adapter
+
+* discards any MQTT PUBLISH packet containing telemetry data or an event that is sent by a client and
+* rejects any AMQP 1.0 message containing a command sent by a north bound application
+
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
 
 ## Connection Event
-The MQTT Adapter can send a [Connection Event]({{< relref "/api/event#connection-event" >}}) once the connection with a device has been successfully established or ended. Note that this requires the [`HONO_CONNECTION_EVENTS_PRODUCER`]({{< relref "/admin-guide/mqtt-adapter-config#service-configuration" >}}) configuration property to be explicitly set to `events`.
+
+The MQTT Adapter can send a [Connection Event]({{< relref "/api/event#connection-event" >}}) once the connection with a device has
+been successfully established or ended.
+Note that this requires the [`HONO_CONNECTION_EVENTS_PRODUCER`]({{< relref "/admin-guide/mqtt-adapter-config#service-configuration" >}})
+configuration property to be explicitly set to `events`.
 
 ## Publishing Telemetry Data
 

@@ -36,8 +36,12 @@ types of secrets.
 
 ## Message Limits
 
-Before accepting any telemetry or event or command messages, the CoAP adapter verifies that the configured [message limit]({{< relref "/concepts/resource-limits#messages-limit" >}}) is not exceeded.
-For CoAP currently only the messages limit is verified, the connections limit is not available. If the limit is exceeded then the incoming message is discarded with the status code `429 Too Many Requests`. 
+The adapter rejects
+
+* a client's request to upload data with status code `429 Too Many Requests` and
+* any AMQP 1.0 message containing a command sent by a north bound application
+
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
 
 ## CoAP Content Format Codes
 

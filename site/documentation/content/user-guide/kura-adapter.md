@@ -10,17 +10,84 @@ The Kura protocol adapter exposes an MQTT topic hierarchy allowing Eclipse Kura&
 The Kura adapter is supposed to be used with gateways running Kura version 3.x. Gateways running Kura version 4 and later should connect to the MQTT adapter instead.
 {{% /note %}}
 
-The Kura adapter by default requires devices (gateways) to authenticate during connection establishment. In order to do so, gateways need to provide a *username* and a *password* in the MQTT *CONNECT* packet. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`. The adapter verifies the credentials provided by the gateway against the credentials the [configured Credentials service]({{< relref "/admin-guide/common-config.md#credentials-service-connection-configuration" >}}) has on record for the gateway. The adapter uses the Credentials API's *get* operation to retrieve the credentials-on-record with the *tenant* and *auth-id* provided by the device in the *username* and `hashed-password` as the *type* of secret as query parameters.
+## Authentication
 
-Please refer to the [Eclipse Kura documentation](http://eclipse.github.io/kura/config/cloud-services.html) on how to configure the gateway's cloud service connection accordingly. It is important to set the gateway's *topic.context.account-name* to the ID of the Hono tenant that the gateway has been registered with whereas the gateway's *client-id* needs to be set to the corresponding Hono device ID. The *auth-id* used as part of the gateway's *username* property needs to match the authentication identifier of a set of credentials registered for the device ID in Hono's Credentials service. In other words, the credentials configured on the gateway need to belong to the corresponding device ID.
+The Kura adapter by default requires devices (gateways) to authenticate during connection establishment.
+The adapter supports both the authentication based on the username/password provided in an MQTT CONNECT packet as well as client
+certificate based authentication as part of a TLS handshake for that purpose.
 
-After verifying the credentials, the number of existing connections and the overall amount of time that the devices have already been connected are checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the Kura adapter.  If the limit is exceeded then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+The adapter tries to authenticate the device using these mechanisms in the following order
 
-Once the gateway has established a connection to the Kura adapter, all *control* and *data* messages published by applications running on the gateway are sent to the adapter and mapped to Hono's Telemetry and Event API endpoints as follows:
+### Client Certificate
 
-1. The adapter treats all messages that are published to a topic starting with the configured `HONO_KURA_CONTROL_PREFIX` as control messages. All other messages are considered to be data messages.
-1. *control* messages with QoS 0 are forwarded to Hono's telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint. The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-control`.
-1. *data* messages with QoS 0 are forwarded to the telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint. The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-data`.
+When a device uses a client certificate for authentication during the TLS handshake, the adapter tries to determine the tenant
+that the device belongs to based on the *issuer DN* contained in the certificate.
+In order for the lookup to succeed, the tenant's trust anchor needs to be configured by means of registering the
+[trusted certificate authority]({{< relref "/api/tenant#tenant-information-format" >}}). The device's client certificate will then be
+validated using the registered trust anchor, thus implicitly establishing the tenant that the device belongs to.
+In a second step, the adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the client
+certificate's *subject DN* as the *auth-id*, `x509-cert` as the *type* of secret and the MQTT client identifier as *client-id* in the
+request payload.
+
+**NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication.md#mqtt-adapter" >}}) in order to support this mechanism.
+
+### Username/Password
+
+When a device wants to authenticate using this mechanism, it needs to provide a *username* and a *password* in the MQTT *CONNECT* packet
+it sends in order to initiate the connection. The *username* must have the form *auth-id@tenant*, e.g. `sensor1@DEFAULT_TENANT`.
+The adapter verifies the credentials provided by the client against the credentials that the
+[configured Credentials service]({{< relref "/admin-guide/common-config.md#credentials-service-connection-configuration" >}}) has on record for the client.
+The adapter uses the Credentials API's *get* operation to retrieve the credentials on record, including the *tenant* and *auth-id* provided
+by the client in the *username*, `hashed-password` as the *type* of secret and the MQTT client identifier as *client-id* in the request payload.
+
+Please refer to the [Eclipse Kura documentation](http://eclipse.github.io/kura/config/cloud-services.html) on how to configure the
+gateway's cloud service connection accordingly. It is important to set the gateway's *topic.context.account-name* to the ID of the
+Hono tenant that the gateway has been registered with whereas the gateway's *client-id* needs to be set to the corresponding Hono
+device ID. The *auth-id* used as part of the gateway's *username* property needs to match the authentication identifier of a set of
+credentials registered for the device ID in Hono's Credentials service. In other words, the credentials configured on the gateway
+need to belong to the corresponding device ID.
+
+**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication.
+See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
+
+## Resource Limit Checks
+
+The adapter performs additional checks regarding resource limits when a client tries to connect and/or send a message to the adapter.
+
+### Connection Limits
+
+The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if
+* the maximum number of connections per protocol adapter instance is reached, or
+* if the maximum number of simultaneously connected devices for the tenant is reached.
+
+Please refer to [resource-limits]({{< ref "/concepts/resource-limits.md" >}}) for details.
+
+### Connection Duration Limits
+
+The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if the
+[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for
+the client's tenant is exceeded.
+
+### Message Limits
+
+The adapter
+
+* discards any MQTT PUBLISH packet containing telemetry data or an event that is sent by a client and
+* rejects any AMQP 1.0 message containing a command sent by a north bound application
+
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
+
+## Publishing Data
+
+Once the gateway has established a connection to the Kura adapter, all *control* and *data* messages published by applications running on
+the gateway are sent to the adapter and mapped to Hono's Telemetry and Event API endpoints as follows:
+
+1. The adapter treats all messages that are published to a topic starting with the configured `HONO_KURA_CONTROL_PREFIX` as control messages.
+   All other messages are considered to be data messages.
+1. *control* messages with QoS 0 are forwarded to Hono's telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint.
+   The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-control`.
+1. *data* messages with QoS 0 are forwarded to the telemetry endpoint whereas messages with QoS 1 are forwarded to the event endpoint.
+   The corresponding AMQP 1.0 messages that are sent downstream have a content type of `application/vnd.eclipse.kura-data`.
 
 ## Downstream Meta Data
 
