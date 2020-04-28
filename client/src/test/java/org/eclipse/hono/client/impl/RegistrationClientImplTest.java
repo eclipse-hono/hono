@@ -106,25 +106,30 @@ public class RegistrationClientImplTest {
     @Test
     public void testAssertRegistrationAddsResponseToCacheOnCacheMiss(final VertxTestContext ctx) {
 
+        final JsonObject registrationAssertion = newRegistrationAssertionResult();
+
         // GIVEN an adapter with an empty cache
         client.setResponseCache(cache);
 
         // WHEN getting registration information
         client.assertRegistration("myDevice").setHandler(ctx.succeeding(result -> {
-            // THEN the registration information has been added to the cache
-            verify(cache).put(eq(TriTuple.of("assert", "myDevice", null)), any(RegistrationResult.class), any(Duration.class));
-            // and the span is finished
-            verify(span).finish();
+            ctx.verify(() -> {
+                // THEN the registration information has been added to the cache
+                assertThat(result).isEqualTo(registrationAssertion);
+                verify(cache).put(eq(TriTuple.of("assert", "myDevice", null)), any(RegistrationResult.class), any(Duration.class));
+                // and the span is finished
+                verify(span).finish();
+            });
             ctx.completeNow();
         }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
-        final JsonObject registrationAssertion = newRegistrationAssertionResult();
-        final Message response = ProtonHelper.message(registrationAssertion.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, registrationAssertion.toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
     }
@@ -140,17 +145,21 @@ public class RegistrationClientImplTest {
 
         // GIVEN an adapter with no cache configured
         final JsonObject registrationAssertion = newRegistrationAssertionResult();
-        final Message response = ProtonHelper.message(registrationAssertion.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, registrationAssertion.toBuffer());
 
         // WHEN getting registration information
         client.assertRegistration("device").setHandler(ctx.succeeding(result -> {
-            // THEN the registration information has been retrieved from the service
-            // and not been put to the cache
-            verify(cache, never()).put(any(), any(RegistrationResult.class), any(Duration.class));
-            // and the span is finished
-            verify(span).finish();
+            ctx.verify(() -> {
+                // THEN the registration information has been retrieved from the service
+                assertThat(result).isEqualTo(registrationAssertion);
+                // and not been put to the cache
+                verify(cache, never()).put(any(), any(RegistrationResult.class), any(Duration.class));
+                // and the span is finished
+                verify(span).finish();
+            });
             ctx.completeNow();
         }));
 

@@ -121,21 +121,26 @@ public class TenantClientImplTest {
         final JsonObject tenantResult = newTenantResult("tenant");
 
         // WHEN getting tenant information by ID
-        client.get("tenant").setHandler(ctx.succeeding(r -> {
-            // THEN the registration information has been retrieved from the service
-            // and not been put to the cache
-            verify(cache, never()).put(any(), any(TenantResult.class), any(Duration.class));
-            // and the span is finished
-            verify(span).finish();
+        client.get("tenant").setHandler(ctx.succeeding(tenant -> {
+            ctx.verify(() -> {
+                // THEN the registration information has been retrieved from the service
+                assertThat(tenant).isNotNull();
+                assertThat(tenant.getTenantId()).isEqualTo("tenant");
+                // and not been put to the cache
+                verify(cache, never()).put(any(), any(TenantResult.class), any(Duration.class));
+                // and the span is finished
+                verify(span).finish();
+            });
             ctx.completeNow();
         }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), any(Handler.class));
-        final Message response = ProtonHelper.message(tenantResult.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, tenantResult.toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
     }
@@ -156,19 +161,24 @@ public class TenantClientImplTest {
 
         // WHEN getting tenant information
         client.get("tenant").setHandler(ctx.succeeding(tenant -> {
-            // THEN the tenant result has been added to the cache
-            verify(cache).put(eq(TriTuple.of(TenantAction.get, "tenant", null)), any(TenantResult.class), any(Duration.class));
-            // and the span is finished
-            verify(span).finish();
+            ctx.verify(() -> {
+                // THEN the tenant result has been added to the cache
+                assertThat(tenant).isNotNull();
+                assertThat(tenant.getTenantId()).isEqualTo("tenant");
+                verify(cache).put(eq(TriTuple.of(TenantAction.get, "tenant", null)), any(TenantResult.class), any(Duration.class));
+                // and the span is finished
+                verify(span).finish();
+            });
             ctx.completeNow();
         }));
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
-        final Message response = ProtonHelper.message(tenantResult.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, tenantResult.toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         client.handleResponse(delivery, response);
     }

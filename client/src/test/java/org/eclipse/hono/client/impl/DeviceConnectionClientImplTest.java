@@ -107,20 +107,22 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting the last known gateway
         client.getLastKnownGatewayForDevice("deviceId", span.context())
-                .setHandler(ctx.succeeding(r -> {
+                .setHandler(ctx.succeeding(resultJson -> {
                     ctx.verify(() -> {
                         // THEN the last known gateway has been retrieved from the service and the span is finished
-                        assertThat(r.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID)).isEqualTo(gatewayId);
+                        assertThat(resultJson).isNotNull();
+                        assertThat(resultJson.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID)).isEqualTo(gatewayId);
                         verify(span).finish();
                     });
                     ctx.completeNow();
                 }));
 
         final Message sentMessage = verifySenderSend();
-        final Message response = ProtonHelper.message(getLastGatewayResult.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(sentMessage.getMessageId());
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, getLastGatewayResult.toBuffer());
         client.handleResponse(mock(ProtonDelivery.class), response);
     }
 
@@ -218,20 +220,21 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting the command handling adapter instances
         client.getCommandHandlingAdapterInstances(deviceId, Collections.emptyList(), span.context())
-                .setHandler(ctx.succeeding(result -> {
+                .setHandler(ctx.succeeding(resultJson -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
-                        assertThat(result).isEqualTo(adapterInstancesResult);
+                        assertThat(resultJson).isEqualTo(adapterInstancesResult);
                         verify(span).finish();
                     });
                     ctx.completeNow();
                 }));
 
         final Message sentMessage = verifySenderSend();
-        final Message response = ProtonHelper.message(adapterInstancesResult.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(sentMessage.getMessageId());
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, adapterInstancesResult.toBuffer());
         client.handleResponse(mock(ProtonDelivery.class), response);
     }
 
@@ -346,10 +349,10 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.succeeding(result -> {
+                .setHandler(ctx.succeeding(removed -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
-                        assertThat(result).isFalse();
+                        assertThat(removed).isFalse();
                         verify(span).finish();
                     });
                     ctx.completeNow();

@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -106,9 +107,10 @@ public class CredentialsClientImplTest {
         final String authId = "test-auth";
         final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
         final JsonObject credentialsObject = newCredentialsResult("device", authId);
-        final Message response = ProtonHelper.message(credentialsObject.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, credentialsObject.toBuffer());
 
         // WHEN getting credential information information
         final Future<CredentialsObject> getFuture = client.get(credentialsType, authId);
@@ -119,17 +121,21 @@ public class CredentialsClientImplTest {
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final Message sentMessage = messageCaptor.getValue();
 
-        getFuture.setHandler(ctx.succeeding(result -> {
-            // THEN the credentials has been retrieved from the service
-            // and not been put to the cache
-            verify(cache, never()).put(any(), any(CredentialsResult.class), any(Duration.class));
-            // and the span is finished
-            verify(span).finish();
+        getFuture.setHandler(ctx.succeeding(credentials -> {
+            ctx.verify(() -> {
+                // THEN the credentials has been retrieved from the service
+                assertNotNull(credentials);
+                assertEquals("device", credentials.getDeviceId());
+                // and not been put to the cache
+                verify(cache, never()).put(any(), any(CredentialsResult.class), any(Duration.class));
+                // and the span is finished
+                verify(span).finish();
 
-            assertEquals(sentMessage.getSubject(), CredentialsConstants.CredentialsAction.get.toString());
-            assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_TYPE),
-                    credentialsType);
-            assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_AUTH_ID), authId);
+                assertEquals(sentMessage.getSubject(), CredentialsConstants.CredentialsAction.get.toString());
+                assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_TYPE),
+                        credentialsType);
+                assertEquals(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_AUTH_ID), authId);
+            });
             ctx.completeNow();
         }));
 
@@ -156,24 +162,29 @@ public class CredentialsClientImplTest {
 
         // WHEN getting credentials information
         client.get(credentialsType, authId, clientContext)
-                .setHandler(ctx.succeeding(tenant -> {
-                    // THEN the credentials result has been added to the cache.
-                    verify(cache).put(
-                            eq(TriTuple.of(CredentialsConstants.CredentialsAction.get,
-                                    String.format("%s-%s", credentialsType, authId), clientContext.hashCode())),
-                            any(CredentialsResult.class), any(Duration.class));
-                    // and the span is finished
-                    verify(span).finish();
+                .setHandler(ctx.succeeding(credentials -> {
+                    ctx.verify(() -> {
+                        assertNotNull(credentials);
+                        assertEquals("device", credentials.getDeviceId());
+                        // THEN the credentials result has been added to the cache.
+                        verify(cache).put(
+                                eq(TriTuple.of(CredentialsConstants.CredentialsAction.get,
+                                        String.format("%s-%s", credentialsType, authId), clientContext.hashCode())),
+                                any(CredentialsResult.class), any(Duration.class));
+                        // and the span is finished
+                        verify(span).finish();
+                    });
                     ctx.completeNow();
                 }));
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         verify(client.sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
 
-        final Message response = ProtonHelper.message(credentialsObject.encode());
+        final Message response = ProtonHelper.message();
         MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
         MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(messageCaptor.getValue().getMessageId());
+        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, credentialsObject.toBuffer());
         client.handleResponse(delivery, response);
     }
 
