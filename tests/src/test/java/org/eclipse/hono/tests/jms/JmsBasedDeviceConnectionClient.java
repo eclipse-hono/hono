@@ -23,14 +23,14 @@ import java.util.Optional;
 import javax.jms.JMSException;
 import javax.jms.Message;
 
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DeviceConnectionClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAction;
+import org.eclipse.hono.util.DeviceConnectionResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
 
@@ -75,7 +75,7 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
             final JmsBasedDeviceConnectionClient client = new JmsBasedDeviceConnectionClient(connection, clientConfig, tenant);
             client.createLinks();
             return Future.succeededFuture(client);
-        } catch (JMSException e) {
+        } catch (final JMSException e) {
             return Future.failedFuture(e);
         }
     }
@@ -152,17 +152,39 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
      * {@inheritDoc}
      */
     @Override
-    public Future<Void> removeCommandHandlingAdapterInstance(
+    public Future<Boolean> removeCommandHandlingAdapterInstance(
             final String deviceId,
             final String adapterInstanceId,
             final SpanContext context) {
 
-        return sendRequest(
+        return createRequestMessage(
                 DeviceConnectionAction.REMOVE_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
                 Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
                         MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId),
                 null)
-                .mapEmpty();
+                .compose(this::send)
+                .recover(thr -> {
+                    if (thr instanceof ServiceInvocationException && ((ServiceInvocationException) thr)
+                            .getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+                        return Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+                    }
+                    return Future.failedFuture(thr);
+                }).compose(devConResult -> {
+                    final Promise<Boolean> result = Promise.promise();
+                    switch (devConResult.getStatus()) {
+                        case HttpURLConnection.HTTP_OK:
+                        case HttpURLConnection.HTTP_NO_CONTENT:
+                            result.complete(Boolean.TRUE);
+                            break;
+                        case HttpURLConnection.HTTP_NOT_FOUND:
+                            result.complete(Boolean.FALSE);
+                            break;
+                        default:
+                            result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                    "unsupported response status: " + devConResult.getStatus()));
+                    }
+                    return result.future();
+                });
     }
 
     /**
@@ -180,6 +202,36 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
             final Map<String, Object> applicationProperties,
             final Buffer payload) {
 
+        return createRequestMessage(operation, applicationProperties, payload)
+                .compose(this::send)
+                .compose(devConResult -> {
+                    final Promise<JsonObject> result = Promise.promise();
+                    switch (devConResult.getStatus()) {
+                        case HttpURLConnection.HTTP_OK:
+                        case HttpURLConnection.HTTP_NO_CONTENT:
+                            result.complete(devConResult.getPayload());
+                            break;
+                        default:
+                            result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                    "unsupported response status: " + devConResult.getStatus()));
+                    }
+                    return result.future();
+                });
+    }
+
+    /**
+     * Creates a request message for the given parameters.
+     *
+     * @param operation The name of the operation to invoke or {@code null} if the message
+     *                  should not have a subject.
+     * @param applicationProperties Application properties to set on the request message or
+     *                              {@code null} if no properties should be set.
+     * @param payload Payload to include or {@code null} if the message should have no body.
+     * @return A succeeded future containing the created message or a failed future if there was an exception
+     *         creating the message.
+     */
+    protected Future<Message> createRequestMessage(final String operation,
+            final Map<String, Object> applicationProperties, final Buffer payload) {
         try {
             final Message request = createMessage(payload);
 
@@ -188,7 +240,7 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
             }
 
             if (applicationProperties != null) {
-                for (Map.Entry<String, Object> entry : applicationProperties.entrySet()) {
+                for (final Map.Entry<String, Object> entry : applicationProperties.entrySet()) {
                     if (entry.getValue() instanceof String) {
                         request.setStringProperty(entry.getKey(), (String) entry.getValue());
                     } else {
@@ -196,24 +248,8 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
                     }
                 }
             }
-
-            return send(request)
-                    .compose(devConResult -> {
-                        final Promise<JsonObject> result = Promise.promise();
-                        switch (devConResult.getStatus()) {
-                        case HttpURLConnection.HTTP_OK:
-                        case HttpURLConnection.HTTP_NO_CONTENT:
-                            result.complete(devConResult.getPayload());
-                            break;
-                        case HttpURLConnection.HTTP_NOT_FOUND:
-                            result.fail(new ClientErrorException(devConResult.getStatus(), "no data found"));
-                            break;
-                        default:
-                            result.fail(StatusCodeMapper.from(devConResult));
-                        }
-                        return result.future();
-                    });
-        } catch (JMSException e) {
+            return Future.succeededFuture(request);
+        } catch (final JMSException e) {
             return Future.failedFuture(getServiceInvocationException(e));
         }
     }
@@ -230,7 +266,7 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
             try {
                 final JsonObject json = payload.toJsonObject();
                 return new RequestResponseResult<>(status, json, null, null);
-            } catch (DecodeException e) {
+            } catch (final DecodeException e) {
                 LOGGER.warn("Device Connection service returned malformed payload", e);
                 throw new ServiceInvocationException(
                         HttpURLConnection.HTTP_INTERNAL_ERROR,

@@ -232,7 +232,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
     }
 
     @Override
-    public Future<Void> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId, final SpanContext context) {
+    public Future<Boolean> removeCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId, final SpanContext context) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
@@ -252,7 +252,9 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
         return mapResultAndFinishSpan(resultTracker.future(), result -> {
             switch (result.getStatus()) {
                 case HttpURLConnection.HTTP_NO_CONTENT:
-                    return null;
+                    return Boolean.TRUE;
+                case HttpURLConnection.HTTP_NOT_FOUND:
+                    return Boolean.FALSE;
                 default:
                     throw StatusCodeMapper.from(result);
             }
