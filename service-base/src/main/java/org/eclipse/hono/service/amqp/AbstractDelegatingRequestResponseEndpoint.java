@@ -67,7 +67,7 @@ public abstract class AbstractDelegatingRequestResponseEndpoint<S, T extends Ser
      * {@inheritDoc}
      * <p>
      * This implementation checks if the service instance implements {@link Lifecycle}
-     * and if so, invokes its {@linkplain start method Lifecycle#start()}.
+     * and if so, invokes its {@linkplain Lifecycle#start() start method}.
      */
     @Override
     protected void doStart(final Promise<Void> startPromise) {
@@ -82,7 +82,7 @@ public abstract class AbstractDelegatingRequestResponseEndpoint<S, T extends Ser
      * {@inheritDoc}
      * <p>
      * This implementation checks if the service instance implements {@link Lifecycle}
-     * and if so, invokes its {@linkplain stop method Lifecycle#stop()}.
+     * and if so, invokes its {@linkplain Lifecycle#stop() stop method}.
      */
     @Override
     protected void doStop(final Promise<Void> stopPromise) {

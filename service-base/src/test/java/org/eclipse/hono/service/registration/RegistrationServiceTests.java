@@ -803,7 +803,7 @@ public abstract class RegistrationServiceTests {
     }
 
     /**
-     * Creates a device for {@link TENANT}.
+     * Creates a device for {@link #TENANT}.
      * 
      * @param deviceId The device identifier.
      * @param device The device data.

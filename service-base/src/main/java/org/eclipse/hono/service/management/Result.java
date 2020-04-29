@@ -137,7 +137,7 @@ public class Result<T> {
     }
 
     /**
-     * {@link #toString()} method implemented based on {@link #toStringHelper()}.
+     * {@code toString} method implemented based on {@link #toStringHelper()}.
      */
     @Override
     public String toString() {

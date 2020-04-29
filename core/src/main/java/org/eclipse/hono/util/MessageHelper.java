@@ -1131,7 +1131,7 @@ public final class MessageHelper {
      *               address is used to determine if the message represents an event or not.
      *               Determining this information from the <em>to</em> property
      *               requires additional parsing which can be prevented by passing in the
-     *               target address as a {@code ResoruceIdentifier} instead.
+     *               target address as a {@code ResourceIdentifier} instead.
      * @param defaults The default properties (device and tenant level) to set or {@code null}
      *                 if no default properties are defined for the device that the message originates from.
      * @param maxTtl The maximum time-to-live (in seconds) that should be used for limiting a default TTL.
