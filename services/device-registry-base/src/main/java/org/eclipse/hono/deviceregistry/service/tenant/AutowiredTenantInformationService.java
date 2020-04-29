@@ -22,8 +22,6 @@ import org.eclipse.hono.service.tenant.TenantService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -31,7 +29,6 @@ import io.vertx.core.Future;
 /**
  * A default implementation of {@link TenantInformationService} that uses embedded {@link TenantService} to verify if tenant exists.
  */
-@Component
 public class AutowiredTenantInformationService implements TenantInformationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AutowiredTenantInformationService.class);
@@ -63,7 +60,6 @@ public class AutowiredTenantInformationService implements TenantInformationServi
      * @throws NullPointerException if service is {@code null}.
      */
     @Autowired
-    @Qualifier("backend")
     public final void setService(final TenantService service) {
         Objects.requireNonNull(service);
         LOG.debug("using service instance: {}", service);
