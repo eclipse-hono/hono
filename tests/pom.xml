@@ -841,7 +841,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java.options} ${coap.java.options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>hono-adapter-lora</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>hono-adapter-coap</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
                       <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
                       <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
