@@ -35,7 +35,7 @@ import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -205,7 +205,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
 
         final Duration lifespan = Duration.ofSeconds(10);
-        final Future<MessageConsumer> commandConsumerFuture = commandConsumerFactory.createCommandConsumer(tenantId,
+        final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture = commandConsumerFactory.createCommandConsumer(tenantId,
                 deviceId, commandHandler, lifespan, null);
         commandConsumerFuture.setHandler(ctx.succeeding(consumer -> {
             ctx.verify(() -> {
@@ -213,7 +213,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                         eq(false), any());
                 verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), eq(false), any());
                 // verify closing the consumer is successful
-                consumer.close(ctx.succeeding(v -> {
+                consumer.close(any()).onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         // verify command handling adapter instance has been explicitly removed (since lifespan hasn't elapsed yet)
                         verify(devConClient).removeCommandHandlingAdapterInstance(eq(deviceId), anyString(), any());

@@ -37,7 +37,7 @@ import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -229,14 +229,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         }).when(tenantClient).get(anyString());
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
 
-        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> resultHandler = invocation.getArgument(0);
-            if (resultHandler != null) {
-                resultHandler.handle(Future.succeededFuture());
-            }
-            return null;
-        }).when(commandConsumer).close(any(Handler.class));
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any())).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
@@ -489,7 +483,8 @@ public class VertxBasedHttpProtocolAdapterTest {
         final Message msg = newMockMessage("DEFAULT_TENANT", "device_1", "doThis");
         final Command pendingCommand = Command.from(msg, "DEFAULT_TENANT", "device_1");
         final CommandContext commandContext = CommandContext.from(pendingCommand, mock(ProtonDelivery.class), mock(Span.class));
-        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(Handler.class), any(), any()))
                 .thenAnswer(invocation -> {
                     final Handler<CommandContext> consumer = invocation.getArgument(2);

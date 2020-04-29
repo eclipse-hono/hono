@@ -38,7 +38,7 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
@@ -927,7 +927,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      * @return Result of the receiver creation.
      */
-    protected final Future<MessageConsumer> createCommandConsumer(
+    protected final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
             final Handler<CommandContext> commandConsumer,

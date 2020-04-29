@@ -61,7 +61,7 @@ import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -467,7 +467,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final ProtonConnection deviceConnection = mock(ProtonConnection.class);
         when(deviceConnection.attachments()).thenReturn(mock(Record.class));
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
-            .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
+            .thenReturn(Future.succeededFuture(mock(ProtocolAdapterCommandConsumer.class)));
         final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, TEST_DEVICE);
         final ProtonSender sender = getSender(sourceAddress);
 
@@ -498,7 +498,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final DownstreamSender eventSender = givenAnEventSender(outcome);
 
         // and a device that wants to receive commands
-        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = String.format("%s", getCommandEndpoint());
@@ -598,7 +599,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         connectHandler.getValue().handle(deviceConnection);
 
         // that wants to receive commands
-        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), any(Handler.class), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
         final String sourceAddress = getCommandEndpoint();
@@ -784,7 +786,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
-        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         adapter.onCommandReceived(tenantObject, deviceLink, commandConsumer, context);
         // and the device settles it
         final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
@@ -1089,7 +1092,8 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Message message = getFakeMessage(commandAddress, payload, "commandToExecute");
         final Command command = Command.from(message, TEST_TENANT_ID, TEST_DEVICE);
         final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
-        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
 
         // AND no delivery update is received from the device after sometime
         doAnswer(invocation -> {

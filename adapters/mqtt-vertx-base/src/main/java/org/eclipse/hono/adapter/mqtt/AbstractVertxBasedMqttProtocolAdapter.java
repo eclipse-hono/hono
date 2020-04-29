@@ -34,7 +34,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -654,10 +654,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private Span newSpan(final String operationName, final MqttEndpoint endpoint, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
-        final Span span = tracer.buildSpan(operationName)
-                .ignoreActiveSpan()
+        final Span span = newChildSpan(null, operationName, endpoint, authenticatedDevice);
+        traceSamplingPriority.ifPresent(prio -> TracingHelper.setTraceSamplingPriority(span, prio));
+        return span;
+    }
+
+    private Span newChildSpan(final SpanContext spanContext, final String operationName, final MqttEndpoint endpoint,
+            final Device authenticatedDevice) {
+        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, operationName, getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
                 .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                 .start();
@@ -666,9 +671,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
             span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
         }
-        traceSamplingPriority.ifPresent(prio -> {
-            TracingHelper.setTraceSamplingPriority(span, prio);
-        });
         return span;
     }
 
@@ -703,6 +705,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         final Span span = newSpan("UNSUBSCRIBE", endpoint, authenticatedDevice, traceSamplingPriority);
 
+        @SuppressWarnings("rawtypes")
+        final List<Future> removalDoneFutures = new ArrayList<>(unsubscribeMsg.topics().size());
         unsubscribeMsg.topics().forEach(topic -> {
             final CommandSubscription cmdSub = CommandSubscription.fromTopic(topic, authenticatedDevice);
             if (cmdSub == null) {
@@ -720,21 +724,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 span.log(items);
                 log.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         tenantId, deviceId, topic);
-                cmdHandler.removeSubscription(topic, (tenant, device) -> {
-                    final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice,
-                            traceSamplingPriority);
-                    sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, span.context())
-                            .setHandler(sendAttempt -> closeHandlerSpan.finish());
-                });
+                final Future<Void> removalDone = cmdHandler.removeSubscription(topic, (tenant, device) -> {
+                    final Span sendEventSpan = newChildSpan(span.context(), "Send Disconnected Event", endpoint,
+                            authenticatedDevice);
+                    return sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, sendEventSpan.context())
+                            .onComplete(r -> sendEventSpan.finish()).mapEmpty();
+                }, span.context());
+                removalDoneFutures.add(removalDone);
             }
         });
         if (endpoint.isConnected()) {
             endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId());
         }
-        span.finish();
+        CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
     }
 
-    private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint,
+    private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(final MqttEndpoint mqttEndpoint,
             final CommandSubscription sub, final CommandHandler<T> cmdHandler, final Span span) {
 
         final Handler<CommandContext> commandHandler = commandContext -> {
@@ -1196,12 +1201,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         final Span span = newSpan("CLOSE", endpoint, authenticatedDevice, traceSamplingPriority);
         onClose(endpoint);
-        cmdHandler.removeAllSubscriptions((tenant, device) -> {
-            final Span closeHandlerSpan = newSpan("Send Disconnected Event", endpoint, authenticatedDevice,
-                    traceSamplingPriority);
-            sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, span.context())
-                    .setHandler(sendAttempt -> closeHandlerSpan.finish());
-        });
+        final CompositeFuture removalDoneFuture = cmdHandler.removeAllSubscriptions((tenant, device) -> {
+            final Span sendEventSpan = newChildSpan(span.context(), "Send Disconnected Event", endpoint,
+                    authenticatedDevice);
+            return sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, sendEventSpan.context())
+                    .onComplete(r -> sendEventSpan.finish()).mapEmpty();
+        }, span.context());
         sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
         if (authenticatedDevice == null) {
             log.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
@@ -1217,7 +1222,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         } else {
             log.trace("client has already closed connection");
         }
-        span.finish();
+        removalDoneFuture.onComplete(r -> span.finish());
     }
 
     /**

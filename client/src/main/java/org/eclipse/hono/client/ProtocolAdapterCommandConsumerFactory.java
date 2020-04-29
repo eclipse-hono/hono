@@ -15,7 +15,6 @@ package org.eclipse.hono.client;
 
 import java.time.Duration;
 
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.impl.ProtocolAdapterCommandConsumerFactoryImpl;
 
 import io.opentracing.SpanContext;
@@ -58,7 +57,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * with the same parameters will each time overwrite the previous entry.
      * <p>
      * It is the responsibility of the calling code to properly close a consumer
-     * once it is no longer needed by invoking its {@link CommandConsumer#close(Handler)}
+     * once it is no longer needed by invoking its {@link ProtocolAdapterCommandConsumer#close(SpanContext)}
      * method.
      * <p>
      * Note that {@link #initialize(CommandTargetMapper, BasicDeviceConnectionClientFactory)} has to have been called
@@ -84,7 +83,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      *         the cause of the failure.
      * @throws NullPointerException if any of tenant, device ID or command handler is {@code null}.
      */
-    Future<MessageConsumer> createCommandConsumer(
+    Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
             Handler<CommandContext> commandHandler,
@@ -98,7 +97,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * with the same parameters will each time overwrite the previous entry.
      * <p>
      * It is the responsibility of the calling code to properly close a consumer
-     * once it is no longer needed by invoking its {@link CommandConsumer#close(Handler)}
+     * once it is no longer needed by invoking its {@link ProtocolAdapterCommandConsumer#close(SpanContext)}
      * method.
      * <p>
      * Note that {@link #initialize(CommandTargetMapper, BasicDeviceConnectionClientFactory)} has to have been called
@@ -125,7 +124,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      *         the cause of the failure.
      * @throws NullPointerException if any of tenant, device ID, gateway ID or command handler is {@code null}.
      */
-    Future<MessageConsumer> createCommandConsumer(
+    Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
             String gatewayId,

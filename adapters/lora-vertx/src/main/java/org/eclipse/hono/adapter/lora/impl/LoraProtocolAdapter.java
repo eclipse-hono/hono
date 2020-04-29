@@ -36,7 +36,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.auth.device.HonoClientBasedAuthProvider;
 import org.eclipse.hono.service.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.service.auth.device.TenantServiceBasedX509Authentication;
@@ -329,7 +329,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         });
     }
 
-    private Future<MessageConsumer> startLoraCommandConsumer(final String tenantId) {
+    private Future<ProtocolAdapterCommandConsumer> startLoraCommandConsumer(final String tenantId) {
 
         return getCommandConsumerFactory().createCommandConsumer(
                 tenantId,

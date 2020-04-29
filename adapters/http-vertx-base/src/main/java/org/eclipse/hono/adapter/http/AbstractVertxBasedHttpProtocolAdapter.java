@@ -31,7 +31,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
@@ -673,7 +673,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         return effectiveTtd;
                     });
                 });
-        final Future<MessageConsumer> commandConsumerTracker = ttdTracker
+        final Future<ProtocolAdapterCommandConsumer> commandConsumerTracker = ttdTracker
                 .compose(ttd -> createCommandConsumer(
                         ttd,
                         tenantTracker.result(),
@@ -753,11 +753,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             payloadSize,
                             getTtdStatus(ctx),
                             getMicrometerSample(ctx));
-                    currentSpan.finish();
-                    // the command consumer is used for a single request only
-                    // we can close the consumer only AFTER we have accepted a
-                    // potential command
-                    Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                    // Before Hono 1.2, closing the consumer needed to be done AFTER having accepted a command (consumer used for single request only);
+                    // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
+                    Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
+                            consumer -> consumer.close(currentSpan.context())
+                                    .onComplete(res -> currentSpan.finish()),
+                            currentSpan::finish);
                 });
                 ctx.response().exceptionHandler(t -> {
                     log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
@@ -776,11 +777,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     }
                     currentSpan.log("failed to send HTTP response to device");
                     TracingHelper.logError(currentSpan, t);
-                    currentSpan.finish();
-                    // the command consumer is used for a single request only
-                    // we can close the consumer only AFTER we have released a
-                    // potential command
-                    Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                    // Before Hono 1.2, closing the consumer needed to be done AFTER having released a command (consumer used for single request only);
+                    // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
+                    Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
+                            consumer -> consumer.close(currentSpan.context())
+                                    .onComplete(res -> currentSpan.finish()),
+                            currentSpan::finish);
                 });
                 ctx.response().end();
             }
@@ -797,11 +799,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (commandContext != null) {
                 commandContext.release();
             }
-            // the command consumer is used for a single request only
-            // we can close the consumer only AFTER we have released a
-            // potential command
-            Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
-
             final ProcessingOutcome outcome;
             if (ClientErrorException.class.isInstance(t)) {
                 outcome = ProcessingOutcome.UNPROCESSABLE;
@@ -825,7 +822,12 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     getTtdStatus(ctx),
                     getMicrometerSample(ctx));
             TracingHelper.logError(currentSpan, t);
-            currentSpan.finish();
+            // Before Hono 1.2, closing the consumer needed to be done AFTER having released a command (consumer used for single request only);
+            // now however, this isn't needed anymore (consumer.close() doesn't actually close the link anymore). So, this could be changed here to close the consumer earlier already.
+            Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
+                    consumer -> consumer.close(currentSpan.context())
+                            .onComplete(res -> currentSpan.finish()),
+                    currentSpan::finish);
             return Future.failedFuture(t);
         });
     }
@@ -869,7 +871,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      */
     private void setTtdRequestConnectionCloseHandler(
             final RoutingContext ctx,
-            final MessageConsumer messageConsumer,
+            final ProtocolAdapterCommandConsumer messageConsumer,
             final String tenantId,
             final String deviceId,
             final Span currentSpan) {
@@ -879,11 +881,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 log.debug("device [tenant: {}, device-id: {}] closed connection before response could be sent",
                         tenantId, deviceId);
                 currentSpan.log("device closed connection, stop waiting for command");
-                currentSpan.finish();
-                logResponseGettingClosedPrematurely(ctx);
-                ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
                 cancelCommandReceptionTimer(ctx);
-                messageConsumer.close(null);
+                // close command consumer
+                messageConsumer.close(currentSpan.context())
+                        .onComplete(r -> {
+                            currentSpan.finish();
+                            logResponseGettingClosedPrematurely(ctx);
+                            ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
+                        });
             });
         }
     }
@@ -966,7 +971,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *         message consumer could not be created.
      * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
      */
-    protected final Future<MessageConsumer> createCommandConsumer(
+    protected final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final Integer ttdSecs,
             final TenantObject tenantObject,
             final String deviceId,
@@ -1050,7 +1055,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             // only per HTTP request
         };
 
-        final Future<MessageConsumer> commandConsumerFuture;
+        final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
         if (gatewayId != null) {
             // gateway scenario
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(

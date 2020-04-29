@@ -52,7 +52,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -715,7 +715,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             return effectiveTtd;
                         });
                     });
-            final Future<MessageConsumer> commandConsumerTracker = ttdTracker
+            final Future<ProtocolAdapterCommandConsumer> commandConsumerTracker = ttdTracker
                     .compose(ttd -> createCommandConsumer(
                             ttd,
                             tenantTracker.result(),
@@ -789,15 +789,16 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         payload.length(),
                         getTtdStatus(context),
                         context.getTimer());
-                currentSpan.finish();
                 final Promise<ResponseCode> result = Promise.promise();
-                final Handler<AsyncResult<Void>> closed = res -> {
+                final Handler<AsyncResult<Void>> onClosedHandler = res -> {
                     context.getExchange().respond(response);
                     result.complete(response.getCode());
-                    };
+                    currentSpan.finish();
+                };
                 Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
-                        consumer -> consumer.close(closed),
-                        () -> closed.handle(Future.succeededFuture()));
+                        consumer -> consumer.close(currentSpan.context())
+                                .onComplete(onClosedHandler),
+                        () -> onClosedHandler.handle(Future.succeededFuture()));
                 return result.future();
 
             }).otherwise(t -> {
@@ -814,8 +815,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         getTtdStatus(context),
                         context.getTimer());
                 TracingHelper.logError(currentSpan, t);
-                currentSpan.finish();
-                Optional.ofNullable(commandConsumerTracker.result()).ifPresent(consumer -> consumer.close(null));
+                Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
+                        consumer -> consumer.close(currentSpan.context())
+                                .onComplete(res -> currentSpan.finish()),
+                        currentSpan::finish);
                 return CoapErrorResponse.respond(context.getExchange(), t);
             });
         }
@@ -892,7 +895,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      *         created.
      * @throws NullPointerException if any of the parameters other than TTD or gatewayId is {@code null}.
      */
-    protected final Future<MessageConsumer> createCommandConsumer(
+    protected final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final Integer ttdSecs,
             final TenantObject tenantObject,
             final String deviceId,
@@ -975,7 +978,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             // only per HTTP request
         };
 
-        final Future<MessageConsumer> commandConsumerFuture;
+        final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture;
         if (gatewayId != null) {
             // gateway scenario
             commandConsumerFuture = getCommandConsumerFactory().createCommandConsumer(
