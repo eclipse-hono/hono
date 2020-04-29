@@ -163,5 +163,7 @@ The producer being used by the adapter can be configured as follows:
 
 | Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
 | :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_CONNECTIONEVENTS_PRODUCER`<br>`--hono.connection-events.producer` | no | `logging` | The type of connection event producer to use for reporting the establishment/termination of device connections.<br>If not set explicitly, all information is written to the log file only. Setting this variable to `events` causes the information to be sent downstream as a [Connection Event]({{< relref "/api/event#connection-event" >}}) instead. |
+| `HONO_CONNECTIONEVENTS_PRODUCER`<br>`--hono.connectionEvents.producer` | no | `logging` | The type of connection event producer to use for reporting the establishment/termination of device connections. Supported values are<br>`none` - No information is reported at all.<br>`logging` - All information is reported at *INFO* level via the logging framework.<br>`events` - All information is being sent downstream as [Connection Events]({{< relref "/api/event#connection-event" >}}). |
+| `HONO_CONNECTIONEVENTS_LOGLEVEL`<br>`--hono.connectionEvents.logLevel` | no | `info`    | The level to log connection information at. Supported values are `debug` and `info`. |
+
  

@@ -29,6 +29,12 @@ title = "Release Notes"
   or not and if the adapter is enabled or not. These checks are currently done inside the
   `AmqpAdapterSaslAuthenticatorFactory`. Thereby, if any of these checks failed, the AMQP adapter
   reported authentication failure instead of the actual reason. This has been fixed now.
+* The AMQP adapter did not consider the `HONO_CONNECTIONEVENTS_PRODUCER` configuration variable
+  to set a Connection Event producer. This has been fixed.
+* The *logging* Connection Event producer now supports configuring the level
+  at which information should be logged. The producer type *none* has been added to explicitly
+  turn off connection event reporting altogether.
+  Please refer to the *Common Configuration* admin guide for details.
 
 ### API Changes
 

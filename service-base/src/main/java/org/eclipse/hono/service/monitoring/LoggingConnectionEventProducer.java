@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,6 +11,8 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
+
+import java.util.Objects;
 
 import org.eclipse.hono.auth.Device;
 import org.slf4j.Logger;
@@ -24,24 +26,60 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * This implementation only create log messages as <em>events</em>. It will log everything on {@code INFO} level.
  */
-public class LoggingConnectionEventProducer implements ConnectionEventProducer {
+public final class LoggingConnectionEventProducer implements ConnectionEventProducer {
 
-    private static final Logger logger = LoggerFactory.getLogger(LoggingConnectionEventProducer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(LoggingConnectionEventProducer.class);
 
-    @Override
-    public Future<?> connected(final Context context, final String remoteId, final String protocolAdapter,
-            final Device authenticatedDevice, final JsonObject data) {
-        logger.info("   Connected - ID: {}, Protocol Adapter: {}, Device: {}, Data: {}", remoteId, protocolAdapter,
-                authenticatedDevice, data);
-        return Future.succeededFuture();
+    private final ConnectionEventProducerConfig config;
+
+    /**
+     * Creates a producer for a set of configuration properties.
+     * 
+     * @param config The properties.
+     * @throws NullPointerException if properties is {@code null}.
+     */
+    public LoggingConnectionEventProducer(final ConnectionEventProducerConfig config) {
+        this.config = Objects.requireNonNull(config);
     }
 
     @Override
-    public Future<?> disconnected(final Context context, final String remoteId, final String protocolAdapter,
-            final Device authenticatedDevice, final JsonObject data) {
-        logger.info("Disconnected - ID: {}, Protocol Adapter: {}, Device: {}, Data: {}", remoteId, protocolAdapter,
-                authenticatedDevice, data);
+    public Future<?> connected(
+            final Context context,
+            final String remoteId,
+            final String protocolAdapter,
+            final Device authenticatedDevice,
+            final JsonObject data) {
+
+        return log(String.format("   Connected - ID: %s, Protocol Adapter: %s, Device: %s, Data: %s",
+                remoteId, protocolAdapter, authenticatedDevice, data));
+    }
+
+    @Override
+    public Future<?> disconnected(
+            final Context context,
+            final String remoteId,
+            final String protocolAdapter,
+            final Device authenticatedDevice,
+            final JsonObject data) {
+
+        return log(String.format("Disconnected - ID: %s, Protocol Adapter: %s, Device: %s, Data: %s",
+                remoteId, protocolAdapter, authenticatedDevice, data));
+    }
+
+    private Future<?> log(final String msg) {
+        if (config.isDebugLogLevel()) {
+            LOG.debug(msg);
+        } else {
+            LOG.info(msg);
+        }
         return Future.succeededFuture();
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return String.format("Log4j based implementation logging at %s level", config.getLogLevel());
+    }
 }

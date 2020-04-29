@@ -2,6 +2,9 @@ hono:
   app:
     maxInstances: 1
     startupTimeout: 120
+  connectionEvents:
+    producer: logging
+    logLevel: debug
   healthCheck:
     insecurePortBindAddress: 0.0.0.0
     insecurePort: ${vertx.health.port}

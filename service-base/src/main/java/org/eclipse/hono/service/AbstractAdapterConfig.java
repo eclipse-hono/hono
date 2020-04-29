@@ -32,6 +32,7 @@ import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
 import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecks;
@@ -97,27 +98,33 @@ public abstract class AbstractAdapterConfig {
     }
 
     /**
-     * Configure the connection events producer based on the logging backend.
-     * <p>
-     * This is the default implementation.
+     * Creates properties for configuring the Connection Event producer.
      * 
-     * @return The connection event producer based on {@link LoggingConnectionEventProducer}.
+     * @return The properties.
      */
     @Bean
-    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "logging", matchIfMissing = true)
-    public ConnectionEventProducer connectionEventProducerLogging() {
-        return new LoggingConnectionEventProducer();
+    @ConfigurationProperties("hono.connection-events")
+    public ConnectionEventProducerConfig connectionEventProducerConfig() {
+        return new ConnectionEventProducerConfig();
     }
 
     /**
-     * Configure the connection events producer based on the events backend.
+     * Configures the Connection Event producer that the adapter should use for reporting
+     * devices connecting/disconnecting to/from the adapter.
      * 
-     * @return The connection event producer based on {@link HonoEventConnectionEventProducer}.
+     * @param config The configuration properties for the producer.
+     * @return The producer or {@code null} if the configured producer type is none or unsupported.
      */
     @Bean
-    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "events")
-    public ConnectionEventProducer connectionEventProducerEvents() {
-        return new HonoEventConnectionEventProducer();
+    public ConnectionEventProducer connectionEventProducer(final ConnectionEventProducerConfig config) {
+        switch (config.getType()) {
+        case logging:
+            return new LoggingConnectionEventProducer(config);
+        case events:
+            return new HonoEventConnectionEventProducer();
+        default:
+            return null;
+        }
     }
 
     /**

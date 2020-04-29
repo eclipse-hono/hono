@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,12 +17,20 @@ import org.eclipse.hono.client.DownstreamSenderFactory;
 /**
  * A connection event producer based on the Hono <em>Event API</em>.
  */
-public class HonoEventConnectionEventProducer extends AbstractMessageSenderConnectionEventProducer {
+public final class HonoEventConnectionEventProducer extends AbstractMessageSenderConnectionEventProducer {
 
     /**
      * Create a new <em>connection event producer</em> based on the Hono <em>Event API</em>.
      */
     public HonoEventConnectionEventProducer() {
         super(DownstreamSenderFactory::getOrCreateEventSender);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return "Hono Event API based implementation";
     }
 }

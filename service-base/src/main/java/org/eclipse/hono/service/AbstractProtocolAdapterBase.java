@@ -314,7 +314,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Autowired(required = false)
     public void setConnectionEventProducer(final ConnectionEventProducer connectionEventProducer) {
         this.connectionEventProducer = Objects.requireNonNull(connectionEventProducer);
-        log.info("using [{}] for emitting connection events, if applicable for device protocol", connectionEventProducer.getClass().getName());
+        log.info("using [{}] for reporting connection events, if applicable for device protocol", connectionEventProducer);
     }
 
     /**
