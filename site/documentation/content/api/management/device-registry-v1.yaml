@@ -880,10 +880,6 @@ components:
             - $ref: '#/components/schemas/CommonSecret'
 
       PasswordSecret:
-         description: |
-                      Password based secret definition <br>
-                      __NOTE__: Defining password secrets with user provided password hash, function and salt is deprecated and will be removed
-                      in the upcoming versions. You should use `pwd-plain` property only going forward.
          additionalProperties: false
          allOf:
             - $ref: '#/components/schemas/CommonSecret'
