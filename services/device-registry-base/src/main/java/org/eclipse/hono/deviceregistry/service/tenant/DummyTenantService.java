@@ -19,9 +19,6 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
@@ -31,9 +28,6 @@ import io.vertx.core.json.JsonObject;
 /**
  * Dummy tenant implementation.
  */
-@Service
-@Qualifier("backend")
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
 public class DummyTenantService implements TenantService {
 
     @Override

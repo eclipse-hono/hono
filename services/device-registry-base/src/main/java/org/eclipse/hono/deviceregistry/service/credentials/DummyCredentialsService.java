@@ -23,9 +23,6 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -34,9 +31,6 @@ import io.vertx.core.json.JsonObject;
 /**
  * Dummy credentials service.
  */
-@Service
-@Qualifier("backend")
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
 public final class DummyCredentialsService implements CredentialsService {
 
     private static final String PWD_HASH = getBase64EncodedSha256HashForPassword("hono-secret");

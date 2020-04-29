@@ -32,8 +32,6 @@ import org.eclipse.hono.util.DeviceConnectionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Repository;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
@@ -46,8 +44,6 @@ import io.vertx.core.json.JsonObject;
 /**
  * A device connection service that keeps all data in memory.
  */
-@Repository
-@Qualifier("backend")
 public class MapBasedDeviceConnectionService implements DeviceConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(MapBasedDeviceConnectionService.class);

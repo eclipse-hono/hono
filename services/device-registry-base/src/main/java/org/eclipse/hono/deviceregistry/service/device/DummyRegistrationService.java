@@ -17,9 +17,6 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.RegistrationResult;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -30,9 +27,6 @@ import io.vertx.core.json.JsonObject;
  * Dummy implementation of the registration service which successfully
  * asserts the registration status of all devices.
  */
-@Service
-@Qualifier("backend")
-@ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
 public final class DummyRegistrationService extends AbstractRegistrationService {
 
     @Override
