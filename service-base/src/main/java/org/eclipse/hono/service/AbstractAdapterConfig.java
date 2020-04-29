@@ -31,6 +31,9 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.service.cache.SpringCacheProvider;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
+import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecks;
 import org.eclipse.hono.service.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
@@ -91,6 +94,30 @@ public abstract class AbstractAdapterConfig {
     @Bean
     public Vertx vertx() {
         return Vertx.vertx(vertxProperties().configureVertx(new VertxOptions()));
+    }
+
+    /**
+     * Configure the connection events producer based on the logging backend.
+     * <p>
+     * This is the default implementation.
+     * 
+     * @return The connection event producer based on {@link LoggingConnectionEventProducer}.
+     */
+    @Bean
+    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "logging", matchIfMissing = true)
+    public ConnectionEventProducer connectionEventProducerLogging() {
+        return new LoggingConnectionEventProducer();
+    }
+
+    /**
+     * Configure the connection events producer based on the events backend.
+     * 
+     * @return The connection event producer based on {@link HonoEventConnectionEventProducer}.
+     */
+    @Bean
+    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "events")
+    public ConnectionEventProducer connectionEventProducerEvents() {
+        return new HonoEventConnectionEventProducer();
     }
 
     /**

@@ -77,6 +77,14 @@ The adapter
 
 if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
 
+## Connection Events
+
+The adapter can emit [Connection Events]({{< relref "/api/event#connection-event" >}}) for client connections being established and/or terminated.
+Please refer to the [common configuration options]({{< relref "/admin-guide/common-config.md#connection-event-producer-configuration" >}})
+for details regarding how to enable this behavior.
+
+The adapter includes the *client identifier* from the client's MQTT CONNECT packet as the Connection Event's *remote-id*.
+
 ## Publishing Data
 
 Once the gateway has established a connection to the Kura adapter, all *control* and *data* messages published by applications running on

@@ -302,13 +302,19 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the producer for connections events.
-     *
+     * <p>
+     * Note that subclasses are not required to actually emit connection events.
+     * In particular, adapters for connection-less protocols like e.g. HTTP will
+     * most likely not emit such events.
+     * 
      * @param connectionEventProducer The instance which will handle the production of connection events. Depending on
      *            the setup this could be a simple log message or an event using the Hono Event API.
+     * @throws NullPointerException if the producer is {@code null}.
      */
     @Autowired(required = false)
     public void setConnectionEventProducer(final ConnectionEventProducer connectionEventProducer) {
-        this.connectionEventProducer = connectionEventProducer;
+        this.connectionEventProducer = Objects.requireNonNull(connectionEventProducer);
+        log.info("using [{}] for emitting connection events, if applicable for device protocol", connectionEventProducer.getClass().getName());
     }
 
     /**

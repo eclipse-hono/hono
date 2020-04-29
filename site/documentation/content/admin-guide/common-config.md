@@ -153,3 +153,15 @@ the Prometheus server requires the client to use TLS and/or provide credentials 
 * `HONO_RESOURCELIMITS_PROMETHEUSBASED_TRUSTSTOREPATH`
 * `HONO_RESOURCELIMITS_PROMETHEUSBASED_TRUSTSTOREPASSWORD`
 * `HONO_RESOURCELIMITS_PROMETHEUSBASED_USERNAME`
+
+### Connection Event Producer Configuration
+
+Some of the protocol adapters report the establishment and termination of a connection with a device by means of a
+[Connection Event Producer]({{< relref "/concepts/connection-events.md" >}}).
+
+The producer being used by the adapter can be configured as follows:
+
+| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
+| :------------------------------------------ | :-------: | :------------ | :------------|
+| `HONO_CONNECTIONEVENTS_PRODUCER`<br>`--hono.connection-events.producer` | no | `logging` | The type of connection event producer to use for reporting the establishment/termination of device connections.<br>If not set explicitly, all information is written to the log file only. Setting this variable to `events` causes the information to be sent downstream as a [Connection Event]({{< relref "/api/event#connection-event" >}}) instead. |
+ 

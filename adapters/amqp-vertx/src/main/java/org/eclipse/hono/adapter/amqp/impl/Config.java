@@ -17,8 +17,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
-import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -106,18 +104,6 @@ public class Config extends AbstractAdapterConfig {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER);
         return factory;
-    }
-
-    /**
-     * Exposes the connection event producer implementation.
-     * <p>
-     * This defaults to a {@link LoggingConnectionEventProducer} which logs to the default level.
-     * 
-     * @return The connection event producer.
-     */
-    @Bean
-    public ConnectionEventProducer connectionEventProducer() {
-        return new LoggingConnectionEventProducer();
     }
 
     /**

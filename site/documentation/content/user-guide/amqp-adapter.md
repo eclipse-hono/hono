@@ -82,12 +82,13 @@ The adapter rejects any AMQP 1.0 message containing
 
 if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
 
-## Connection Event
+## Connection Events
 
-The AMQP Adapter can send a [Connection Event]({{< relref "/api/event#connection-event" >}}) once the connection with a device has
-been successfully established or ended.
-Note that this requires the [`HONO_CONNECTION_EVENTS_PRODUCER`]({{< relref "/admin-guide/amqp-adapter-config#service-configuration" >}})
-configuration property to be explicitly set to `events`.
+The adapter can emit [Connection Events]({{< relref "/api/event#connection-event" >}}) for client connections being established and/or terminated.
+Please refer to the [common configuration options]({{< relref "/admin-guide/common-config.md#connection-event-producer-configuration" >}})
+for details regarding how to enable this behavior.
+
+The adapter includes the client's AMQP *container-id* as the Connection Event's *remote-id*.
 
 ## Link Establishment
 

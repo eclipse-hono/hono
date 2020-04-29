@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,13 +18,9 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.AbstractAdapterConfig;
 import org.eclipse.hono.service.metric.MetricsTags;
-import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
-import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
-import org.eclipse.hono.service.monitoring.LoggingConnectionEventProducer;
 import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -125,29 +121,5 @@ public class Config extends AbstractAdapterConfig {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER);
         return factory;
-    }
-
-    /**
-     * Configure the connection events producer based on the logging backend.
-     * <p>
-     * This is the default implementation.
-     * 
-     * @return The connection event producer based on {@link LoggingConnectionEventProducer}.
-     */
-    @Bean
-    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "logging", matchIfMissing = true)
-    public ConnectionEventProducer connectionEventProducerLogging() {
-        return new LoggingConnectionEventProducer();
-    }
-
-    /**
-     * Configure the connection events producer based on the events backend.
-     * 
-     * @return The connection event producer based on {@link HonoEventConnectionEventProducer}.
-     */
-    @Bean
-    @ConditionalOnProperty(value = "hono.connection-events.producer", havingValue = "events")
-    public ConnectionEventProducer connectionEventProducerEvents() {
-        return new HonoEventConnectionEventProducer();
     }
 }
