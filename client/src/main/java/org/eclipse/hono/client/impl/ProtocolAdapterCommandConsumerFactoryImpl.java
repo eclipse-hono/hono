@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 import org.eclipse.hono.client.BasicDeviceConnectionClientFactory;
 import org.eclipse.hono.client.CommandContext;
@@ -27,6 +27,7 @@ import org.eclipse.hono.client.CommandResponseSender;
 import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.CommandConstants;
@@ -124,7 +125,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      * {@inheritDoc}
      */
     @Override
-    public final Future<MessageConsumer> createCommandConsumer(final String tenantId, final String deviceId,
+    public final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(final String tenantId, final String deviceId,
             final Handler<CommandContext> commandHandler, final Duration lifespan, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -136,9 +137,9 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
      * {@inheritDoc}
      */
     @Override
-    public final Future<MessageConsumer> createCommandConsumer(final String tenantId, final String deviceId,
-            final String gatewayId, final Handler<CommandContext> commandHandler, final Duration lifespan,
-            final SpanContext context) {
+    public final Future<ProtocolAdapterCommandConsumer> createCommandConsumer(final String tenantId,
+            final String deviceId, final String gatewayId, final Handler<CommandContext> commandHandler,
+            final Duration lifespan, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
@@ -146,7 +147,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
         return doCreateCommandConsumer(tenantId, deviceId, gatewayId, commandHandler, lifespan, context);
     }
 
-    private Future<MessageConsumer> doCreateCommandConsumer(final String tenantId, final String deviceId,
+    private Future<ProtocolAdapterCommandConsumer> doCreateCommandConsumer(final String tenantId, final String deviceId,
             final String gatewayId, final Handler<CommandContext> commandHandler, final Duration lifespan,
             final SpanContext context) {
         if (!initialized.get()) {
@@ -171,9 +172,9 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                         return setCommandHandlingAdapterInstance(tenantId, deviceId, sanitizedLifespan, context);
                     })
                     .map(res -> {
-                        final Supplier<Future<Void>> onCloseAction = () -> removeCommandConsumer(tenantId, deviceId,
-                                sanitizedLifespan, context);
-                        return (MessageConsumer) new DeviceSpecificCommandConsumer(onCloseAction);
+                        final Function<SpanContext, Future<Void>> onCloseAction = onCloseSpanContext -> removeCommandConsumer(tenantId, deviceId,
+                                onCloseSpanContext);
+                        return (ProtocolAdapterCommandConsumer) new ProtocolAdapterCommandConsumerImpl(onCloseAction);
                     })
                     .setHandler(result);
         });
@@ -193,18 +194,14 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                 });
     }
 
-    private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId, final Duration lifespan,
-            final SpanContext createCommandConsumerSpanContext) {
+    private Future<Void> removeCommandConsumer(final String tenantId, final String deviceId,
+            final SpanContext onCloseSpanContext) {
         log.trace("remove command consumer [tenant-id: {}, device-id: {}]", tenantId, deviceId);
         adapterInstanceCommandHandler.removeDeviceSpecificCommandHandler(tenantId, deviceId);
 
         return deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(tenantId)
-                .compose(client -> {
-                    // The given span context from the createCommandConsumer invocation is only used here if a non-unlimited lifespan is set
-                    // meaning creating and removing the consumer will probably happen in a timespan short enough for one overall trace.
-                    final SpanContext context = !lifespan.isNegative() ? createCommandConsumerSpanContext : null;
-                    return client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, context);
-                })
+                .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId,
+                        onCloseSpanContext))
                 .recover(thr -> {
                     log.warn("error removing command handling adapter instance [tenant: {}, device: {}]", tenantId,
                             deviceId, thr);

@@ -19,7 +19,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,7 +39,7 @@ import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -111,7 +110,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private CommandTargetMapper           commandTargetMapper;
-    private MessageConsumer               commandConsumer;
+    private ProtocolAdapterCommandConsumer commandConsumer;
     private Vertx                         vertx;
     private Context                       context;
     private HttpAdapterMetrics            metrics;
@@ -164,14 +163,8 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
-        commandConsumer = mock(MessageConsumer.class);
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> resultHandler = invocation.getArgument(0);
-            if (resultHandler != null) {
-                resultHandler.handle(Future.succeededFuture());
-            }
-            return null;
-        }).when(commandConsumer).close(any(Handler.class));
+        commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         commandConsumerFactory = mock(ProtocolAdapterCommandConsumerFactory.class);
         when(commandConsumerFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
@@ -741,7 +734,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
         when(downstreamSenderFactory.getOrCreateTelemetrySender(anyString())).thenReturn(Future.failedFuture(
                 new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected")));
         // and the creation of the command consumer completes at a later point
-        final Promise<MessageConsumer> commandConsumerPromise = Promise.promise();
+        final Promise<ProtocolAdapterCommandConsumer> commandConsumerPromise = Promise.promise();
         when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(Handler.class), any(), any()))
                 .thenReturn(commandConsumerPromise.future());
 

@@ -14,22 +14,28 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.CommandContext;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 
 /**
@@ -39,7 +45,7 @@ import io.vertx.core.Vertx;
  */
 public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
     private static final Logger LOG = LoggerFactory.getLogger(CommandHandler.class);
-    private final Map<String, TriTuple<CommandSubscription, MessageConsumer, Object>> subscriptions = new ConcurrentHashMap<>();
+    private final Map<String, TriTuple<CommandSubscription, ProtocolAdapterCommandConsumer, Object>> subscriptions = new ConcurrentHashMap<>();
     private final Map<Integer, PendingCommandRequest> waitingForAcknowledgement = new ConcurrentHashMap<>();
     private final Vertx vertx;
     private final T config;
@@ -128,7 +134,7 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public void addSubscription(final CommandSubscription subscription,
-            final MessageConsumer commandConsumer) {
+            final ProtocolAdapterCommandConsumer commandConsumer) {
         Objects.requireNonNull(subscription);
         Objects.requireNonNull(commandConsumer);
         subscriptions.put(subscription.getTopic(), TriTuple.of(subscription, commandConsumer, null));
@@ -138,27 +144,46 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      * Closes the command consumer and removes the subscription entry for the given topic.
      *
      * @param topic The topic string to unsubscribe.
-     * @param consumer The consumer to be invoked if not {@code null} during removal of a subscription.
+     * @param onConsumerRemovedFunction The function to be invoked if not {@code null} during removal of a subscription.
+     *                                  The first parameter is the tenant id, the second parameter the device id.
+     *                                  To be returned is a future indicating the outcome of the function.
+     * @param spanContext The span context (may be {@code null}).
      * @throws NullPointerException if topic is {@code null}.
+     * @return A future indicating the outcome of the operation.
      **/
-    public void removeSubscription(final String topic, final BiConsumer<String, String> consumer) {
+    public Future<Void> removeSubscription(final String topic,
+            final BiFunction<String, String, Future<Void>> onConsumerRemovedFunction, final SpanContext spanContext) {
         Objects.requireNonNull(topic);
-        Optional.ofNullable(subscriptions.remove(topic)).ifPresent(value -> {
-            final CommandSubscription subscription = value.one();
-            if (consumer != null) {
-                consumer.accept(subscription.getTenant(), subscription.getDeviceId());
-            }
-            closeCommandConsumer(subscription, value.two());
-        });
+
+        final TriTuple<CommandSubscription, ProtocolAdapterCommandConsumer, Object> removed = subscriptions.remove(topic);
+        if (removed != null) {
+            final CommandSubscription subscription = removed.one();
+            final Future<Void> functionFuture = onConsumerRemovedFunction != null
+                    ? onConsumerRemovedFunction.apply(subscription.getTenant(), subscription.getDeviceId())
+                    : Future.succeededFuture();
+            final ProtocolAdapterCommandConsumer commandConsumer = removed.two();
+            return CompositeFuture
+                    .join(functionFuture, closeCommandConsumer(subscription, commandConsumer, spanContext)).mapEmpty();
+        } else {
+            return Future.failedFuture(String.format("Cannot remove subscription; none registered for topic [%s]", topic));
+        }
     }
 
     /**
      * Closes the command consumers and removes all the subscription entries.
-     * 
-     * @param consumer The consumer to be invoked if not {@code null} during removal of a subscription.
+     *
+     * @param onConsumerRemovedFunction The function to be invoked if not {@code null} during removal of a subscription.
+     *                                  The first parameter is the tenant id, the second parameter the device id.
+     *                                  To be returned is a future indicating the outcome of the function.
+     * @param spanContext The span context (may be {@code null}).
+     * @return A future indicating the outcome of the operation.            
      **/
-    public void removeAllSubscriptions(final BiConsumer<String, String> consumer) {
-        subscriptions.keySet().forEach(topic -> removeSubscription(topic, consumer));
+    public CompositeFuture removeAllSubscriptions(
+            final BiFunction<String, String, Future<Void>> onConsumerRemovedFunction, final SpanContext spanContext) {
+        @SuppressWarnings("rawtypes")
+        final List<Future> removalFutures = subscriptions.keySet().stream()
+                .map(topic -> removeSubscription(topic, onConsumerRemovedFunction, spanContext)).collect(Collectors.toList());
+        return CompositeFuture.join(removalFutures);
     }
 
     /**
@@ -166,18 +191,21 @@ public final class CommandHandler<T extends MqttProtocolAdapterProperties> {
      *
      * @param subscription The device's command subscription.
      * @param commandConsumer A client for consuming messages.
+     * @param spanContext The span context (may be {@code null}).
+     * @return A future indicating the outcome of the operation.
      */
-    private void closeCommandConsumer(final CommandSubscription subscription,
-            final MessageConsumer commandConsumer) {
-        commandConsumer.close(cls -> {
-            if (cls.succeeded()) {
-                LOG.trace("Command consumer closed [tenant-it: {}, device-id :{}]", subscription.getTenant(),
-                        subscription.getDeviceId());
-            } else {
-                LOG.debug("Error closing command consumer [tenant-it: {}, device-id :{}]", subscription.getTenant(),
-                        subscription.getDeviceId(), cls.cause());
-            }
-        });
+    private Future<Void> closeCommandConsumer(final CommandSubscription subscription,
+            final ProtocolAdapterCommandConsumer commandConsumer, final SpanContext spanContext) {
+        return commandConsumer.close(spanContext)
+                .map(v -> {
+                    LOG.trace("Command consumer closed [tenant-it: {}, device-id :{}]", subscription.getTenant(),
+                            subscription.getDeviceId());
+                    return v;
+                }).recover(thr -> {
+                    LOG.debug("Error closing command consumer [tenant-it: {}, device-id :{}]",
+                            subscription.getTenant(), subscription.getDeviceId(), thr);
+                    return Future.failedFuture(thr);
+                });
     }
 
     private long startTimer(final Integer msgId) {

@@ -43,7 +43,7 @@ import org.eclipse.hono.client.Command;
 import org.eclipse.hono.client.CommandContext;
 import org.eclipse.hono.client.CommandResponse;
 import org.eclipse.hono.client.DownstreamSender;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
@@ -734,8 +734,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                     if (sendAttempt.failed()) {
                                         TracingHelper.logError(connectionLostSpan, sendAttempt.cause());
                                     }
-                                    connectionLostSpan.finish();
-                                    consumer.close(null);
+                                    consumer.close(connectionLostSpan.context())
+                                            .onComplete(v -> connectionLostSpan.finish());
                                 });
                             });
                             return consumer;
@@ -788,7 +788,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return span;
     }
 
-    private Future<MessageConsumer> openCommandSenderLink(
+    private Future<ProtocolAdapterCommandConsumer> openCommandSenderLink(
             final ProtonSender sender,
             final ResourceIdentifier address,
             final Device authenticatedDevice,
@@ -807,9 +807,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 final Span detachHandlerSpan = newSpan("detach Command receiver", authenticatedDevice,
                         traceSamplingPriority);
                 sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, detachHandlerSpan.context());
-                consumer.close(null);
                 onLinkDetach(sender);
-                detachHandlerSpan.finish();
+                consumer.close(detachHandlerSpan.context())
+                        .onComplete(v -> detachHandlerSpan.finish());
             };
             HonoProtonHelper.setCloseHandler(sender, detachHandler);
             HonoProtonHelper.setDetachHandler(sender, detachHandler);
@@ -821,18 +821,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
             sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
             return consumer;
-        }).otherwise(t -> {
-            throw new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer");
-        });
+        }).recover(t -> Future.failedFuture(
+                new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer")));
     }
 
-    private Future<MessageConsumer> createCommandConsumer(
+    private Future<ProtocolAdapterCommandConsumer> createCommandConsumer(
             final ProtonSender sender,
             final ResourceIdentifier sourceAddress,
             final Device authenticatedDevice,
             final Span span) {
 
-        final AtomicReference<MessageConsumer> commandConsumerRef = new AtomicReference<>();
+        final AtomicReference<ProtocolAdapterCommandConsumer> commandConsumerRef = new AtomicReference<>();
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             final Sample timer = metrics.startTimer();
@@ -873,7 +872,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return null;
             });
         };
-        final Future<MessageConsumer> commandConsumer;
+        final Future<ProtocolAdapterCommandConsumer> commandConsumer;
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
             commandConsumer = getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
@@ -902,7 +901,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected void onCommandReceived(final TenantObject tenantObject, final ProtonSender sender,
-            final MessageConsumer commandConsumer, final CommandContext commandContext) {
+            final ProtocolAdapterCommandConsumer commandConsumer, final CommandContext commandContext) {
 
         Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(sender);
@@ -928,10 +927,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     if (isCommandSettled.compareAndSet(false, true)) {
                         final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                 "timeout waiting for delivery update");
+                        // timeout reached -> close link with device, close consumer and release command
                         closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
-                        // timeout expired -> release command
-                        commandContext.release();
-                        commandConsumer.close(null);
+                        commandConsumer.close(commandContext.getCurrentSpan().context())
+                                .onComplete(v -> commandContext.release());
                     } else {
                         log.trace("command is already settled and downstream application notified");
                     }

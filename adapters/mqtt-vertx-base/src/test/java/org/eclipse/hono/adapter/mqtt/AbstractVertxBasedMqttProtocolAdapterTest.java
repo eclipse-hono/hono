@@ -46,7 +46,7 @@ import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
@@ -914,7 +914,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(endpoint.keepAliveTimeSeconds()).thenReturn(10); // 10 seconds
 
         // WHEN a device subscribes to commands
-        final MessageConsumer commandConsumer = mock(MessageConsumer.class);
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(Handler.class), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
@@ -965,8 +966,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         subscriptions.add(newMockTopicSubscription("bumlux/+/+/#", MqttQoS.AT_MOST_ONCE));
         // and for subscribing to commands
+        final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(Handler.class), any(), any()))
-                        .thenReturn(Future.succeededFuture(mock(MessageConsumer.class)));
+                        .thenReturn(Future.succeededFuture(commandConsumer));
         subscriptions.add(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-A"), MqttQoS.AT_MOST_ONCE));
         subscriptions.add(
