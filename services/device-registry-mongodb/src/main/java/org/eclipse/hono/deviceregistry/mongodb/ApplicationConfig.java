@@ -25,7 +25,6 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
-import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
@@ -453,7 +452,6 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint tenantHttpEndpoint() {
-        final MongoDbBasedTenantBackend service = new MongoDbBasedTenantBackend(tenantService());
-        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx(), service);
+        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx(), tenantService());
     }
 }

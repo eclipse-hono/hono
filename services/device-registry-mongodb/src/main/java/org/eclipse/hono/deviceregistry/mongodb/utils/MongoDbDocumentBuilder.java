@@ -27,6 +27,10 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MongoDbDocumentBuilder {
 
+    public static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
+            RegistryManagementConstants.FIELD_TENANT,
+            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+            AuthenticationConstants.FIELD_SUBJECT_DN);
     private final JsonObject document;
 
     private MongoDbDocumentBuilder() {
@@ -89,12 +93,7 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withCa(final String SubjectDn) {
-        document.put(
-                String.format("%s.%s.%s",
-                        RegistryManagementConstants.FIELD_TENANT,
-                        RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                        AuthenticationConstants.FIELD_SUBJECT_DN),
-                new JsonObject().put("$eq", SubjectDn));
+        document.put(TENANT_TRUSTED_CA_SUBJECT_PATH, new JsonObject().put("$eq", SubjectDn));
         return this;
     }
 
