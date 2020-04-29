@@ -343,7 +343,7 @@ public abstract class AbstractTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_CREATED, ok.getStatus());
             });
             // WHEN retrieving the tenant using the Tenant API
-            return getTenantService().get("tenant", null);
+            return getTenantService().get("tenant", NoopSpan.INSTANCE);
         })
         .onComplete(ctx.succeeding(response -> {
             // THEN the properties of the originally registered tenant
@@ -458,7 +458,7 @@ public abstract class AbstractTenantServiceTest {
 
         addTenant("tenant", tenant)
                 .map(ok -> {
-                    getTenantService().get(unknownSubjectDn, null)
+                    getTenantService().get(unknownSubjectDn, NoopSpan.INSTANCE)
                             .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
                                 assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
                                 ctx.completeNow();
@@ -510,7 +510,7 @@ public abstract class AbstractTenantServiceTest {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
             });
-            return getTenantService().get("tenant", null);
+            return getTenantService().get("tenant", NoopSpan.INSTANCE);
         }).onComplete(ctx.succeeding(getResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_OK, getResult.getStatus());
@@ -548,7 +548,7 @@ public abstract class AbstractTenantServiceTest {
             return getTenantManagementService().updateTenant(
                     "tenantTwo",
                     tenantTwo,
-                    null,
+                    Optional.empty(),
                     NoopSpan.INSTANCE);
         })
         .onComplete(ctx.succeeding(s -> {
