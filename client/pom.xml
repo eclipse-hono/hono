@@ -137,11 +137,8 @@
             <Include-Resource>
               META-INF=${project.build.outputDirectory}/META-INF
             </Include-Resource>
-            <Export-Package>
-              {local-packages}
-            </Export-Package>
             <Require-Capability>
-              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${java.level}))"
+              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${maven.compiler.target}))"
             </Require-Capability>
           </instructions>
         </configuration>
