@@ -59,7 +59,7 @@ public interface ConnectionEventProducer {
          * 
          * @return The tenant client instance. This client has to be initialized and started.
          */
-        TenantClientFactory getTenantClient();
+        TenantClientFactory getTenantClientFactory();
 
     }
 

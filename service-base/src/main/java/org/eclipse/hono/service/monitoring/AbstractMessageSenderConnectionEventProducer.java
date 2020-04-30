@@ -12,14 +12,17 @@
  *******************************************************************************/
 package org.eclipse.hono.service.monitoring;
 
-import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.function.BiFunction;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -82,28 +85,39 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
             return Future.succeededFuture();
         }
 
-        return context.getTenantClient().getOrCreateTenantClient()
+        return context.getTenantClientFactory().getOrCreateTenantClient()
                 .map(tenantClient -> tenantClient.get(authenticatedDevice.getTenantId()))
-                .map(tenantObject -> {
+                .map(tenantObjectFuture -> {
                     return getOrCreateSender(context.getMessageSenderClient(), authenticatedDevice.getTenantId())
                             .compose(sender -> {
 
                                 final JsonObject payload = new JsonObject();
                                 payload.put("cause", cause);
                                 payload.put("remote-id", remoteId);
+                                // TODO: can this be removed in favour of 'orig_dapter'?
                                 payload.put("source", protocolAdapter);
 
                                 if (data != null) {
                                     payload.put("data", data);
                                 }
 
-                                final Long maxTtl = tenantObject.result().getResourceLimits().getMaxTtl();
-                                return sender.send(
-                                        maxTtl,
-                                        authenticatedDevice.getDeviceId(),
-                                        null,
-                                        payload.encode().getBytes(StandardCharsets.UTF_8),
-                                        EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE);
+                                final String tenantId = authenticatedDevice.getTenantId();
+                                final String deviceId = authenticatedDevice.getDeviceId();
+                                final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenantId, deviceId);
+                                final Duration timeToLive = Duration.ofSeconds(tenantObjectFuture.result().getResourceLimits().getMaxTtl());
+
+                                // the 'orig_adapter' will be added to the message's application
+                                // properties to contain the name of the protocol adapter
+                                // forwarding this connection event
+                                final Message msg = MessageHelper.newMessage(
+                                        target, 
+                                        EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE, 
+                                        payload.toBuffer(), 
+                                        tenantObjectFuture.result(), 
+                                        timeToLive,
+                                        protocolAdapter);
+
+                                return sender.send(msg);
                             });
                 });
     }
@@ -111,4 +125,5 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
     private Future<DownstreamSender> getOrCreateSender(final DownstreamSenderFactory messageSenderClient, final String tenant) {
         return messageSenderSource.apply(messageSenderClient, tenant);
     }
+
 }

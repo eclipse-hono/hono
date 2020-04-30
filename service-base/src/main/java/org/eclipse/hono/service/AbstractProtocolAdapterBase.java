@@ -126,7 +126,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         }
 
         @Override
-        public TenantClientFactory getTenantClient() {
+        public TenantClientFactory getTenantClientFactory() {
             return AbstractProtocolAdapterBase.this.tenantClientFactory;
         }
 

@@ -15,7 +15,6 @@ package org.eclipse.hono.client.impl;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,7 +64,7 @@ public abstract class AbstractDownstreamSender extends AbstractSender implements
 
     @Override
     public final Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType) {
-        return send(null, deviceId, null, payload, contentType);
+        return send(deviceId, null, payload, contentType);
     }
 
     @Override
@@ -77,19 +76,16 @@ public abstract class AbstractDownstreamSender extends AbstractSender implements
     public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final String payload, final String contentType) {
         Objects.requireNonNull(payload);
         final Charset charset = getCharsetForContentType(Objects.requireNonNull(contentType));
-        return send(null, deviceId, properties, payload.getBytes(charset), contentType);
+        return send(deviceId, properties, payload.getBytes(charset), contentType);
     }
 
     @Override
-    public final Future<ProtonDelivery> send(final Long maxTtl, final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
+    public final Future<ProtonDelivery> send(final String deviceId, final Map<String, ?> properties, final byte[] payload, final String contentType) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
         Objects.requireNonNull(contentType);
 
         final Message msg = ProtonHelper.message();
-        if (maxTtl != null) {
-            MessageHelper.setTimeToLive(msg, Duration.ofSeconds(maxTtl));
-        }
         msg.setAddress(getTo(deviceId));
         MessageHelper.setPayload(msg, contentType, payload);
         setApplicationProperties(msg, properties);
