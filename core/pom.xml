@@ -186,22 +186,8 @@
             <Include-Resource>
               META-INF=${project.build.outputDirectory}/META-INF
             </Include-Resource>
-            <!--
-              The OpenTracing API artifact is not a bundle, so we inline
-              and export its packages.
-            -->
-            <Export-Package>
-              io.opentracing*;version=${opentracing.version},
-              org.springframework.security.crypto*;version=${spring-security-crypto.version},
-              {local-packages}
-            </Export-Package>
-            <Embed-Dependency>
-              opentracing-api;inline=true,
-              opentracing-noop;inline=true,
-              spring-security-crypto;inline=true
-            </Embed-Dependency>
             <Require-Capability>
-              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${java.level}))"
+              osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${maven.compiler.target}))"
             </Require-Capability>
           </instructions>
         </configuration>
@@ -212,4 +198,38 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>embed-dependencies</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <extensions>true</extensions>
+            <configuration>
+              <instructions>
+                <!--
+                  The OpenTracing API and Spring Crypto artifacts are not an
+                  OSGi bundle, so we inline and export its packages.
+                -->
+                <Export-Package>
+                  io.opentracing*;version=${opentracing.version},
+                  org.springframework.security.crypto*;version=${spring-security-crypto.version},
+                  {local-packages}
+                </Export-Package>
+                <Embed-Dependency>
+                  opentracing-api;inline=true,
+                  opentracing-noop;inline=true,
+                  spring-security-crypto;inline=true
+                </Embed-Dependency>
+              </instructions>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>

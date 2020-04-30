@@ -45,6 +45,11 @@ title = "Release Notes"
 * The *set command-handling protocol adapter instance* operation of the *Device Connection* API
   has been extended to support an additional parameter which can be used to indicate the
   maximum amount of time that the given information is to be considered valid.
+* The `hono-core` module no longer embeds any external classes by default.
+  This includes the *OpenTracing API* and *Spring Crypto* classes. You can still
+  embed the classes, as in Hono versions 1.2.x and before, by enabling the
+  Maven profile `embed-dependencies` (e.g using the command line switch
+  `-Pembed-dependencies`). By default this profile is not active.
 
 ## 1.2.2
 
