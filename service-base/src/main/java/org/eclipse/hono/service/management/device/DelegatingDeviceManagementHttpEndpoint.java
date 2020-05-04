@@ -121,15 +121,21 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
+
+        // NOTE that the remaining code would be executed in any case, i.e.
+        // even if any of the parameters retrieved from the RoutingContext were null
+        // However, this will not happen because of the way the routes are set up,
+        // i.e. a request for a URI that doesn't contain a device ID will result
+        // in a 404 response.
 
         final HttpServerResponse response = ctx.response();
 
-        logger.debug("retrieving device [{}] of tenant [{}]", deviceId, tenantId);
+        logger.debug("retrieving device [tenant: {}, device-id: {}]", tenantId, deviceId);
         getService()
                 .readDevice(tenantId, deviceId, span)
-                .setHandler(handler -> {
+                .onComplete(handler -> {
                     final OperationResult<Device> operationResult = handler.result();
                     final int status = operationResult.getStatus();
                     response.setStatusCode(status);
@@ -158,6 +164,12 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
         final String deviceId = getRequestParam(PARAM_DEVICE_ID, ctx, span, true);
 
+        // NOTE that the remaining code would be executed in any case, i.e.
+        // even if any of the parameters retrieved from the RoutingContext were null
+        // However, this will not happen because of the way the routes are set up,
+        // i.e. a request for a URI that doesn't contain a device ID will result
+        // in a 404 response.
+
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
         if (payload == null) {
             final String msg = "Missing request body";
@@ -168,13 +180,12 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
             return;
         }
 
-        logger.debug("creating device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId,
-                payload);
+        logger.debug("creating device [tenant: {}, device-id: {}]", tenantId, deviceId);
 
         final Device device = fromPayload(payload);
         getService()
                 .createDevice(tenantId, Optional.ofNullable(deviceId), device, span)
-                .setHandler(handler -> {
+                .onComplete(handler -> {
                     final OperationResult<Id> operationResult = handler.result();
                     final String createdDeviceId = Optional.ofNullable(operationResult.getPayload())
                             .map(Id::getId)
@@ -199,22 +210,28 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
+        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
         final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
+
+        // NOTE that the remaining code would be executed in any case, i.e.
+        // even if any of the parameters retrieved from the RoutingContext were null
+        // However, this will not happen because of the way the routes are set up,
+        // i.e. a request for a URI that doesn't contain a device ID will result
+        // in a 404 response.
+
         final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
         if (payload != null) {
             payload.remove(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
         }
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
 
-        logger.debug("updating device [tenant: {}, device: {}, payload: {}]", tenantId, deviceId,
-                payload);
+        logger.debug("updating device [tenant: {}, device-id: {}]", tenantId, deviceId);
 
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
         final Device device = fromPayload(payload);
 
         getService().updateDevice(tenantId, deviceId, device, resourceVersion, span)
-                .setHandler(handler -> writeOperationResponse(ctx, handler.result(), null, span));
+                .onComplete(handler -> writeOperationResponse(ctx, handler.result(), null, span));
     }
 
     private void doDeleteDevice(final RoutingContext ctx) {
@@ -226,10 +243,16 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
         final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
 
-        logger.debug("removing device [tenant: {}, device: {}]", tenantId, deviceId);
+        // NOTE that the remaining code would be executed in any case, i.e.
+        // even if any of the parameters retrieved from the RoutingContext were null
+        // However, this will not happen because of the way the routes are set up,
+        // i.e. a request for a URI that doesn't contain a device ID will result
+        // in a 404 response.
+
+        logger.debug("removing device [tenant: {}, device-id: {}]", tenantId, deviceId);
 
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
