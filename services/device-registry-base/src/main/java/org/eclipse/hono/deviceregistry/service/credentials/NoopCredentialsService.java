@@ -31,7 +31,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Dummy credentials service.
  */
-public final class DummyCredentialsService implements CredentialsService {
+public final class NoopCredentialsService implements CredentialsService {
 
     private static final String PWD_HASH = getBase64EncodedSha256HashForPassword("hono-secret");
 

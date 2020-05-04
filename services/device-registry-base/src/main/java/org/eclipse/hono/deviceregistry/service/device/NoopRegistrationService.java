@@ -27,7 +27,7 @@ import io.vertx.core.json.JsonObject;
  * Dummy implementation of the registration service which successfully
  * asserts the registration status of all devices.
  */
-public final class DummyRegistrationService extends AbstractRegistrationService {
+public final class NoopRegistrationService extends AbstractRegistrationService {
 
     @Override
     public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final Span span) {

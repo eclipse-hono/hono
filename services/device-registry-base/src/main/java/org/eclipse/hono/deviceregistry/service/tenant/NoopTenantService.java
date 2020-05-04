@@ -28,7 +28,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * Dummy tenant implementation.
  */
-public class DummyTenantService implements TenantService {
+public class NoopTenantService implements TenantService {
 
     @Override
     public Future<TenantResult<JsonObject>> get(final String tenantId, final Span span) {
