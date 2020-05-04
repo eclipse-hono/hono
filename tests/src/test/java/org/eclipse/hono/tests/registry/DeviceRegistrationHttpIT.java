@@ -246,6 +246,22 @@ public class DeviceRegistrationHttpIT {
     }
 
     /**
+     * Verifies that a request for registration information fails for
+     * a request that does not contain a device ID.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
+
+        registry.getRegistrationInfo(TENANT, null)
+        .setHandler(ctx.failing(t -> {
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+            ctx.completeNow();
+        }));
+    }
+
+    /**
      * Verifies that the registration information provided when updating
      * a device replaces the existing information.
      * 
@@ -291,6 +307,21 @@ public class DeviceRegistrationHttpIT {
     }
 
     /**
+     * Verifies that an update request fails if it doesn't contain a device ID.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUpdateDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
+
+        registry.updateDevice(TENANT, null, new JsonObject())
+        .setHandler(ctx.failing(t -> {
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+            ctx.completeNow();
+        }));
+    }
+
+    /**
      * Verifies that an update request fails if it contains no content type.
      * 
      * @param context The vert.x test context.
@@ -331,6 +362,21 @@ public class DeviceRegistrationHttpIT {
                 ctx.completeNow();
             }
         });
+    }
+
+    /**
+     * Verifies that a request to deregister a device fails if it doesn't contain a device ID.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeregisterDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
+
+        registry.deregisterDevice(TENANT, null)
+        .setHandler(ctx.failing(t -> {
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+            ctx.completeNow();
+        }));
     }
 
     /**
