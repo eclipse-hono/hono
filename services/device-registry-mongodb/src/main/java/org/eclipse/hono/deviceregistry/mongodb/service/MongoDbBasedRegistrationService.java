@@ -119,8 +119,11 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     @Override
-    public Future<OperationResult<Id>> createDevice(final String tenantId, final Optional<String> deviceId,
-            final Device device, final Span span) {
+    public Future<OperationResult<Id>> createDevice(
+            final String tenantId,
+            final Optional<String> deviceId,
+            final Device device,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -129,7 +132,10 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         return MongoDbDeviceRegistryUtils.isAllowedToModify(config)
                 .compose(ok -> isMaxDevicesLimitReached(tenantId))
                 .compose(ok -> processCreateDevice(
-                        new DeviceDto(tenantId, deviceId.orElse(DeviceRegistryUtils.getUniqueIdentifier()), device,
+                        new DeviceDto(
+                                tenantId,
+                                deviceId.orElse(DeviceRegistryUtils.getUniqueIdentifier()),
+                                device,
                                 new Versioned<>(device).getVersion()),
                         span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
@@ -185,7 +191,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         return findDeviceDocument(deviceKey.getTenantId(), deviceKey.getDeviceId())
                 .map(result -> Optional.ofNullable(result)
-                        .map(ok -> getRegistrationResult(deviceKey.getDeviceId(),
+                        .map(ok -> getRegistrationResult(
+                                deviceKey.getDeviceId(),
                                 result.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)))
                         .orElse(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
@@ -205,8 +212,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .compose(result -> Optional.ofNullable(result)
                         .map(ok -> result.mapTo(DeviceDto.class))
                         .map(Future::succeededFuture)
-                        .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                                String.format("Device [%s] not found.", deviceId)))));
+                        .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
     }
 
     private Future<JsonObject> findDeviceDocument(final String tenantId, final String deviceId) {
@@ -236,13 +242,18 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     private Future<OperationResult<Id>> processCreateDevice(final DeviceDto device, final Span span) {
+
+        // the DTO contains either the device ID provided by the client
+        // or a newly created random ID
+        TracingHelper.TAG_DEVICE_ID.set(span, device.getDeviceId());
+
         final Promise<String> addDevicePromise = Promise.promise();
 
         mongoClient.insert(config.getCollectionName(), JsonObject.mapFrom(device), addDevicePromise);
 
         return addDevicePromise.future()
                 .map(success -> {
-                    span.log(String.format("successfully registered device [%s]", device.getDeviceId()));
+                    span.log("successfully registered device");
                     return OperationResult.ok(
                             HttpURLConnection.HTTP_CREATED,
                             Id.of(device.getDeviceId()),
@@ -251,24 +262,25 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 })
                 .recover(error -> {
                     if (isDuplicateKeyError(error)) {
-                        LOG.debug("Device [{}] already exists for the tenant [{}]", device.getDeviceId(),
+                        LOG.debug("device [{}] already exists for tenant [{}]", device.getDeviceId(),
                                 device.getTenantId(), error);
-                        TracingHelper.logError(span, String.format("Device [%s] already exists for the tenant [%s]",
-                                device.getDeviceId(), device.getTenantId()));
+                        TracingHelper.logError(span, "device already exists");
                         return Future.succeededFuture(
                                 OperationResult.empty(HttpURLConnection.HTTP_CONFLICT));
                     } else {
-                        LOG.error("Error adding device [{}] for the tenant [{}]", device.getDeviceId(),
+                        LOG.error("error adding device [{}] for tenant [{}]", device.getDeviceId(),
                                 device.getTenantId(), error);
-                        TracingHelper.logError(span, String.format("Error adding device [%s] for the tenant [%s]",
-                                device.getDeviceId(), device.getTenantId()), error);
+                        TracingHelper.logError(span, "error adding device", error);
                         return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR));
                     }
                 });
     }
 
-    private Future<Result<Void>> processDeleteDevice(final String tenantId, final String deviceId,
-            final Optional<String> resourceVersion, final Span span) {
+    private Future<Result<Void>> processDeleteDevice(
+            final String tenantId,
+            final String deviceId,
+            final Optional<String> resourceVersion,
+            final Span span) {
 
         final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
                 .withTenantId(tenantId)
@@ -281,7 +293,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         return deleteDevicePromise.future()
                 .compose(result -> Optional.ofNullable(result)
                         .map(deleted -> {
-                            span.log(String.format("successfully deleted device [%s]", deviceId));
+                            span.log("successfully deleted device");
                             return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
                         })
                         .orElse(MongoDbDeviceRegistryUtils
@@ -301,13 +313,13 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                 Optional.ofNullable(deviceDto.getVersion()))));
     }
 
-    private Future<JsonArray> processResolveGroupMembers(final String tenantId, final JsonArray viaGroups,
+    private Future<JsonArray> processResolveGroupMembers(
+            final String tenantId,
+            final JsonArray viaGroups,
             final Span span) {
+
         final JsonObject resolveGroupMembersQuery = MongoDbDocumentBuilder.forTenantId(tenantId).document()
-                .put(PROPERTY_DEVICE_MEMBEROF,
-                        new JsonObject()
-                                .put("$exists", true)
-                                .put("$in", viaGroups));
+                .put(PROPERTY_DEVICE_MEMBEROF, new JsonObject().put("$exists", true).put("$in", viaGroups));
         //Retrieve only the deviceId instead of the whole document.
         final FindOptions findOptionsForDeviceId = new FindOptions()
                 .setFields(new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
@@ -328,8 +340,13 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 });
     }
 
-    private Future<OperationResult<Id>> processUpdateDevice(final String tenantId, final String deviceId,
-            final Device device, final Optional<String> resourceVersion, final Span span) {
+    private Future<OperationResult<Id>> processUpdateDevice(
+            final String tenantId,
+            final String deviceId,
+            final Device device,
+            final Optional<String> resourceVersion,
+            final Span span) {
+
         final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
@@ -343,7 +360,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         return updateDevicePromise.future()
                 .compose(result -> Optional.ofNullable(result)
                         .map(updated -> {
-                            span.log(String.format("successfully updated device [%s]", deviceId));
+                            span.log("successfully updated device");
                             return Future.succeededFuture(OperationResult.ok(
                                     HttpURLConnection.HTTP_NO_CONTENT,
                                     Id.of(deviceId),
