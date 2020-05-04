@@ -135,7 +135,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
         when(deviceConnectionClientFactory.getOrCreateDeviceConnectionClient(anyString()))
                 .thenReturn(Future.succeededFuture(devConClient));
-        when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), any(), any()))
+        when(devConClient.setCommandHandlingAdapterInstance(anyString(), anyString(), any(), anyBoolean(), any()))
                 .thenReturn(Future.succeededFuture());
         when(devConClient.removeCommandHandlingAdapterInstance(anyString(), anyString(), any()))
                 .thenReturn(Future.succeededFuture(Boolean.TRUE));
@@ -187,7 +187,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                 ctx.verify(() -> {
                     verify(connection).createReceiver(eq(tenantCommandAddress), eq(ProtonQoS.AT_LEAST_ONCE), any(), anyInt(),
                             eq(false), any());
-                    verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), any());
+                    verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), eq(false), any());
                 });
                 ctx.completeNow();
             }));
@@ -211,7 +211,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
             ctx.verify(() -> {
                 verify(connection).createReceiver(eq(tenantCommandAddress), eq(ProtonQoS.AT_LEAST_ONCE), any(), anyInt(),
                         eq(false), any());
-                verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), any());
+                verify(devConClient).setCommandHandlingAdapterInstance(eq(deviceId), anyString(), any(), eq(false), any());
                 // verify closing the consumer is successful
                 consumer.close(ctx.succeeding(v -> {
                     ctx.verify(() -> {

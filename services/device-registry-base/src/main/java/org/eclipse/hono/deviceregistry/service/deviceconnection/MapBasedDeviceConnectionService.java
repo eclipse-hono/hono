@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Predicate;
 
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -113,7 +114,8 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
 
     @Override
     public final Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId,
-            final String deviceId, final String protocolAdapterInstanceId, final Duration lifespan, final Span span) {
+            final String deviceId, final String protocolAdapterInstanceId, final Duration lifespan,
+            final boolean updateOnly, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(protocolAdapterInstanceId);
@@ -124,9 +126,19 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
         final int currentMapSize = adapterInstancesForTenantMap.size();
         if (currentMapSize < getConfig().getMaxDevicesPerTenant()
                 || (currentMapSize == getConfig().getMaxDevicesPerTenant() && adapterInstancesForTenantMap.containsKey(deviceId))) {
-            adapterInstancesForTenantMap.put(deviceId,
-                    new ExpiringValue<>(createAdapterInstanceIdJson(protocolAdapterInstanceId), getLifespanNanos(lifespan)));
-            result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+            final ExpiringValue<JsonObject> newValue = new ExpiringValue<>(
+                    createAdapterInstanceIdJson(protocolAdapterInstanceId), getLifespanNanos(lifespan));
+            if (updateOnly) {
+                if (replaceIfMatching(adapterInstancesForTenantMap, deviceId, newValue,
+                        v -> protocolAdapterInstanceId.equals(getAdapterInstanceIdFromJson(v.getValue())))) {
+                    result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+                } else {
+                    result = DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED);
+                }
+            } else {
+                adapterInstancesForTenantMap.put(deviceId, newValue);
+                result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
+            }
         } else {
             log.debug("cannot set protocol adapter instance for handling commands of device [{}], tenant [{}]: max number of entries per tenant reached ({})",
                     deviceId, tenantId, getConfig().getMaxDevicesPerTenant());
@@ -155,13 +167,13 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
                     @Override
                     public long expireAfterUpdate(final String key, final ExpiringValue<JsonObject> value,
                             final long currentTime, final long currentDuration) {
-                        return Long.MAX_VALUE;
+                        return value.getLifespanNanos();
                     }
 
                     @Override
                     public long expireAfterRead(final String key, final ExpiringValue<JsonObject> value,
                             final long currentTime, final long currentDuration) {
-                        return Long.MAX_VALUE;
+                        return currentDuration;
                     }
                 })
                 .build().asMap();
@@ -297,6 +309,22 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
     }
 
     /**
+     * Replaces the entry for a key only if evaluating the given predicate on the current value returns {@code true}.
+     */
+    private static <V, K> boolean replaceIfMatching(final ConcurrentMap<K, V> map, final K key, final V newValue,
+            final Predicate<? super V> matchingPredicate) {
+        for (V oldValue; (oldValue = map.get(key)) != null;) {
+            if (!matchingPredicate.test(oldValue)) {
+                return false;
+            }
+            if (map.replace(key, oldValue, newValue)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Keeps a value along with a lifespan.
      *
      * @param <T> The type of value.
@@ -312,11 +340,11 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
          * @param value The value.
          * @param lifespanNanos The lifespan in nanoseconds. To indicate no expiration an excessively
          *                      long period may be given, such as {@code Long#MAX_VALUE}.
-         * @throws NullPointerException if any of the parameters is {@code null}.
+         * @throws NullPointerException if value is {@code null}.
          */
         ExpiringValue(final T value, final long lifespanNanos) {
             this.value = Objects.requireNonNull(value);
-            this.lifespanNanos = Objects.requireNonNull(lifespanNanos);
+            this.lifespanNanos = lifespanNanos;
         }
 
         /**

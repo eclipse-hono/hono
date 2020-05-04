@@ -76,6 +76,8 @@ public interface DeviceConnectionInfo {
      * @param adapterInstanceId The protocol adapter instance id.
      * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
      *                 interpreted as an unlimited lifespan.
+     * @param updateOnly If {@code true}, this operation will only update an existing mapping entry with the given
+     *                   lifespan, provided such an entry with the given device id and adapter instance id exists.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *            Implementing classes should use this as the parent for any span they create for tracing
      *            the execution of this operation.
@@ -86,7 +88,7 @@ public interface DeviceConnectionInfo {
      * @throws NullPointerException if any of the parameters except context is {@code null}.
      */
     Future<Void> setCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId,
-            Duration lifespan, SpanContext context);
+            Duration lifespan, boolean updateOnly, SpanContext context);
 
     /**
      * Removes the mapping information that associates the given device with the given protocol adapter instance

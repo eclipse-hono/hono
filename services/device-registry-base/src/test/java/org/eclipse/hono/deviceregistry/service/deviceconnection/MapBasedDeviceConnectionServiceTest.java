@@ -169,7 +169,7 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testSetCommandHandlingAdapterInstanceSucceeds(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
                     ctx.completeNow();
@@ -187,17 +187,70 @@ public class MapBasedDeviceConnectionServiceTest {
         props.setMaxDevicesPerTenant(1);
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     // set another entry
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice2",
-                            adapterInstance, null, span);
+                            adapterInstance, null, false, span);
                 }).setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_FORBIDDEN, deviceConnectionResult.getStatus());
                     assertNull(deviceConnectionResult.getPayload());
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the <em>setCommandHandlingAdapterInstance</em> operation with <em>updateOnly</em> set to
+     * {@code true} succeeds.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testSetCommandHandlingAdapterInstanceWithUpdateOnlyTrueSucceeds(final VertxTestContext ctx) {
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+        // first invocation initially adds the entry
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
+                .compose(deviceConnectionResult -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
+                    });
+                    // now update the entry
+                    return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance,
+                            null, true, span);
+                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the <em>setCommandHandlingAdapterInstance</em> operation with <em>updateOnly</em> set to
+     * {@code true} fails with a PRECON_FAILED status if the given adapter instance parameter doesn't match the one of
+     * the entry registered for the given device.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testSetCommandHandlingAdapterInstanceWithUpdateOnlyTrueFails(final VertxTestContext ctx) {
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+        // first invocation initially adds the entry
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
+                .compose(deviceConnectionResult -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
+                    });
+                    // now try to update the entry, but with another adapter instance
+                    return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
+                            "otherAdapterInstance", null, true, span);
+                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
+                    assertNull(result.getPayload());
                     ctx.completeNow();
                 })));
     }
@@ -212,7 +265,7 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testRemoveCommandHandlingAdapterInstanceSucceeds(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -236,7 +289,7 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testRemoveCommandHandlingAdapterInstanceFailsForOtherDevice(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -260,7 +313,7 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testRemoveCommandHandlingAdapterInstanceFailsForOtherAdapterInstance(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -287,7 +340,7 @@ public class MapBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final Duration lifespan = Duration.ofMillis(1);
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, lifespan, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, lifespan, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -300,10 +353,10 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return instancesPromise.future();
                 }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
-            assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
-            assertNull(result.getPayload());
-            ctx.completeNow();
-        })));
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                    assertNull(result.getPayload());
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -316,7 +369,7 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testGetCommandHandlingAdapterInstancesForDevice(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -344,8 +397,48 @@ public class MapBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         final Duration lifespan = Duration.ofMillis(1);
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, lifespan, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, lifespan, false, span)
                 .compose(deviceConnectionResult -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
+                    });
+                    final Promise<DeviceConnectionResult> instancesPromise = Promise.promise();
+                    // wait 2ms so that the lifespan has elapsed
+                    vertx.setTimer(2, tid -> {
+                        svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
+                                Collections.emptyList(), span)
+                                .setHandler(instancesPromise.future());
+                    });
+                    return instancesPromise.future();
+                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails if the adapter instance
+     * entry has expired after having been updated with a short lifespan.
+     *
+     * @param vertx The vert.x instance.
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testGetCommandHandlingAdapterInstancesForUpdatedExpiredEntry(final Vertx vertx, final VertxTestContext ctx) {
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+        final Duration firstLongLifespan = Duration.ofSeconds(300);
+        final Duration secondShortLifespan = Duration.ofMillis(1);
+        // create entry with a long lifespan first
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, firstLongLifespan, false, span)
+                .compose(deviceConnectionResult -> {
+                    ctx.verify(() -> {
+                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
+                    });
+                    // now invoke with "updateOnly" and use the short lifespan
+                    return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance,
+                            secondShortLifespan, true, span);
+                }).compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
@@ -395,14 +488,14 @@ public class MapBasedDeviceConnectionServiceTest {
         final String otherGatewayId = "gw-2";
         final List<String> viaGateways = List.of(gatewayId, otherGatewayId);
         // set command handling adapter instance for gateway
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     // set command handling adapter instance for other gateway
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId,
-                            otherAdapterInstance, null, span);
+                            otherAdapterInstance, null, false, span);
                 }).compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -443,14 +536,14 @@ public class MapBasedDeviceConnectionServiceTest {
         final String gatewayIdNotInVia = "gw-old";
         final List<String> viaGateways = List.of(gatewayId, otherGatewayId);
         // set command handling adapter instance for gateway
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     // set command handling adapter instance for other gateway
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId,
-                            otherAdapterInstance, null, span);
+                            otherAdapterInstance, null, false, span);
                 }).compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -492,14 +585,14 @@ public class MapBasedDeviceConnectionServiceTest {
         final String gatewayWithNoAdapterInstance = "gw-other";
         final List<String> viaGateways = List.of(gatewayId, otherGatewayId, gatewayWithNoAdapterInstance);
         // set command handling adapter instance for gateway
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     // set command handling adapter instance for other gateway
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId,
-                            otherAdapterInstance, null, span);
+                            otherAdapterInstance, null, false, span);
                 }).compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -537,7 +630,7 @@ public class MapBasedDeviceConnectionServiceTest {
         final String gatewayId = "gw-1";
         final List<String> viaGateways = Collections.singletonList("otherGatewayId");
         // set command handling adapter instance for gateway
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -571,14 +664,14 @@ public class MapBasedDeviceConnectionServiceTest {
         final String gatewayId = "gw-1";
         final List<String> viaGateways = List.of(gatewayId);
         // set command handling adapter instance for device
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     // set command handling adapter instance for other gateway
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId,
-                            otherAdapterInstance, null, span);
+                            otherAdapterInstance, null, false, span);
                 }).compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -616,14 +709,14 @@ public class MapBasedDeviceConnectionServiceTest {
         final String gatewayId = "gw-1";
         final List<String> viaGateways = List.of(gatewayId);
         // set command handling adapter instance for device
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     // set command handling adapter instance for other gateway
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId,
-                            otherAdapterInstance, null, span);
+                            otherAdapterInstance, null, false, span);
                 }).compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -654,7 +747,7 @@ public class MapBasedDeviceConnectionServiceTest {
         final String otherGatewayId = "gw-2";
         final List<String> viaGateways = List.of(gatewayId, otherGatewayId);
         // set command handling adapter instance for gateway
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -685,14 +778,14 @@ public class MapBasedDeviceConnectionServiceTest {
         final String otherGatewayId = "gw-2";
         final List<String> viaGateways = List.of(gatewayId, otherGatewayId);
         // set command handling adapter instance for gateway
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, gatewayId, adapterInstance, null, false, span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     // set command handling adapter instance for other gateway
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId,
-                            otherAdapterInstance, null, span);
+                            otherAdapterInstance, null, false, span);
                 }).compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
@@ -741,7 +834,8 @@ public class MapBasedDeviceConnectionServiceTest {
         final String otherGatewayId = "gw-2";
         final List<String> viaGateways = List.of(gatewayId);
         // set command handling adapter instance for other gateway
-        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, adapterInstance, null, span)
+        svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, otherGatewayId, adapterInstance, null, false,
+                span)
                 .compose(deviceConnectionResult -> {
                     ctx.verify(() -> {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
