@@ -25,7 +25,6 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsSe
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -35,6 +34,7 @@ import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
 import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HttpEndpoint;
+import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
@@ -46,7 +46,6 @@ import org.eclipse.hono.util.Constants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -313,8 +312,8 @@ public class ApplicationConfig {
     @Qualifier(Constants.QUALIFIER_REST)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.http")
-    public ServiceConfigProperties httpServerProperties() {
-        return new ServiceConfigProperties();
+    public HttpServiceConfigProperties httpServerProperties() {
+        return new HttpServiceConfigProperties();
     }
 
     /**
@@ -343,22 +342,28 @@ public class ApplicationConfig {
 
     /**
      * Creates a new instance of an auth handler to provide basic authentication for the 
-     * Hono's Device Registry Management APIs.
+     * HTTP based Device Registry Management endpoint.
      * <p>
      * This creates an instance of the {@link HonoBasicAuthHandler} with an auth provider of type
-     * {@link MongoAuth} to verify the credentials.
+     * {@link MongoAuth} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
+     * is set to {@code true}.
      *
-     * @return The auth handler.
+     * @param httpServiceConfigProperties The properties for configuring the HTTP based device registry
+     *                                    management endpoint.
+     * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()} 
+     *         is {@code true} or {@code null} otherwise.
      * @see <a href="https://vertx.io/docs/vertx-auth-mongo/java/">Mongo auth provider docs</a>
      */
     @Bean
     @Scope("prototype")
-    @ConditionalOnProperty(name = "hono.registry.http.authenticationRequired", havingValue = "true", matchIfMissing = true)
-    public AuthHandler createAuthHandler() {
-        return new HonoBasicAuthHandler(
-                MongoAuth.create(mongoClient(), new JsonObject()),
-                MongoDbDeviceRegistryUtils.DEFAULT_REALM,
-                getTracer());
+    public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
+        if (httpServiceConfigProperties != null && httpServiceConfigProperties.isAuthenticationRequired()) {
+            return new HonoBasicAuthHandler(
+                    MongoAuth.create(mongoClient(), new JsonObject()),
+                    httpServerProperties().getRealm(),
+                    getTracer());
+        }
+        return null;
     }
 
     /**
