@@ -87,22 +87,22 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
                 getClass().getSimpleName()
         ).start();
 
+        TracingHelper.setDeviceTags(span, tenantId, deviceId);
+
         final Future<Message> resultFuture;
         if (tenantId == null || deviceId == null) {
             TracingHelper.logError(span, "missing tenant and/or device");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
-            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
 
             final Future<RegistrationResult> result;
             if (gatewayId == null) {
-                log.debug("asserting registration of device [{}] with tenant [{}]", deviceId, tenantId);
+                log.debug("asserting registration of device [tenant: {}, device-id: {}]", tenantId, deviceId);
                 result = getService().assertRegistration(tenantId, deviceId, span);
             } else {
                 TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
-                log.debug("asserting registration of device [{}] with tenant [{}] for gateway [{}]",
-                        deviceId, tenantId, gatewayId);
+                log.debug("asserting registration of device [tenant: {}, device-id: {}] for gateway [{}]",
+                        tenantId, deviceId, gatewayId);
                 result = getService().assertRegistration(tenantId, deviceId, gatewayId, span);
             }
             resultFuture = result.map(res -> RegistrationConstants.getAmqpReply(
