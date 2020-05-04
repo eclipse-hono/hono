@@ -126,7 +126,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isAllowedToModify(config, tenantId)
+        return MongoDbDeviceRegistryUtils.isAllowedToModify(config)
                 .compose(ok -> isMaxDevicesLimitReached(tenantId))
                 .compose(ok -> processCreateDevice(
                         new DeviceDto(tenantId, deviceId.orElse(DeviceRegistryUtils.getUniqueIdentifier()), device,
@@ -155,7 +155,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isAllowedToModify(config, tenantId)
+        return MongoDbDeviceRegistryUtils.isAllowedToModify(config)
                 .compose(deviceDto -> processUpdateDevice(tenantId, deviceId, device, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -169,7 +169,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isAllowedToModify(config, tenantId)
+        return MongoDbDeviceRegistryUtils.isAllowedToModify(config)
                 .compose(ok -> processDeleteDevice(tenantId, deviceId, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }

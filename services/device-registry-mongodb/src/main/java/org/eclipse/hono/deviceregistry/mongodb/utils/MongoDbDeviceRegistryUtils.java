@@ -57,23 +57,22 @@ public final class MongoDbDeviceRegistryUtils {
      * Checks whether this registry allows the creation, modification and removal of entries.
      *
      * @param config the config properties
-     * @param tenantId The tenant identifier.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if write operation is allowed.
-     *         Otherwise the future will fail with a {@link ServiceInvocationException}.
+     *         Otherwise the future will fail with a {@link ClientErrorException} with
+     *         error code {@value HttpURLConnection#HTTP_FORBIDDEN}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static Future<Void> isAllowedToModify(final AbstractMongoDbBasedRegistryConfigProperties config,
-            final String tenantId) {
+    public static Future<Void> isAllowedToModify(final AbstractMongoDbBasedRegistryConfigProperties config) {
         Objects.requireNonNull(config);
-        Objects.requireNonNull(tenantId);
 
         if (config.isModificationEnabled()) {
             return Future.succeededFuture();
+        } else {
+            return Future.failedFuture(
+                    new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "modification is disabled"));
         }
-        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
-                String.format("Modification is disabled for tenant [%s]", tenantId)));
     }
 
     /**
@@ -116,8 +115,11 @@ public final class MongoDbDeviceRegistryUtils {
      *         <li><em>500 Internal Server Error</em> if the reason is not any of the above.</li>
      *         </ul>
      */
-    public static <T> Future<T> checkForVersionMismatchAndFail(final String resourceId,
-            final Optional<String> versionFromRequest, final Future<? extends BaseDto> resourceSupplierFuture) {
+    public static <T> Future<T> checkForVersionMismatchAndFail(
+            final String resourceId,
+            final Optional<String> versionFromRequest,
+            final Future<? extends BaseDto> resourceSupplierFuture) {
+
         Objects.requireNonNull(resourceId);
         Objects.requireNonNull(versionFromRequest);
         Objects.requireNonNull(resourceSupplierFuture);
