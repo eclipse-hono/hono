@@ -24,7 +24,6 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -178,17 +177,6 @@ public class ApplicationConfig {
         return MongoClient.createShared(vertx(), mongoDbConfigProperties().getMongoClientConfig());
     }
 
-    /**
-     * Gets a {@link MongoDbCallExecutor} instance containing helper methods for mongodb interaction.
-     *
-     * @return An instance of the helper class {@link MongoDbCallExecutor}.
-     */
-    @Bean
-    @Scope("prototype")
-    public MongoDbCallExecutor mongoDBCallExecutor() {
-        return new MongoDbCallExecutor(vertx(), mongoClient());
-    }
-
     //
     //
     // Service properties
@@ -204,7 +192,7 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.svc")
-    public MongoDbBasedRegistrationConfigProperties serviceProperties() {
+    public MongoDbBasedRegistrationConfigProperties registrationServiceProperties() {
         return new MongoDbBasedRegistrationConfigProperties();
     }
 
@@ -258,7 +246,10 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedRegistrationService registrationService() {
-        return new MongoDbBasedRegistrationService();
+        return new MongoDbBasedRegistrationService(
+                vertx(),
+                mongoClient(),
+                registrationServiceProperties());
     }
 
     /**

@@ -28,8 +28,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistrationResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -49,15 +47,14 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
     private final MongoDbBasedCredentialsService credentialsService;
 
     /**
-     * Create a new instance.
+     * Creates a new instance.
      * 
      * @param registrationService an implementation of registration service.
      * @param credentialsService an implementation of credentials service.
      */
-    @Autowired
     public MongoDbBasedDeviceBackend(
-            @Qualifier("serviceImpl") final MongoDbBasedRegistrationService registrationService,
-            @Qualifier("serviceImpl") final MongoDbBasedCredentialsService credentialsService) {
+            final MongoDbBasedRegistrationService registrationService,
+            final MongoDbBasedCredentialsService credentialsService) {
         this.registrationService = registrationService;
         this.credentialsService = credentialsService;
     }

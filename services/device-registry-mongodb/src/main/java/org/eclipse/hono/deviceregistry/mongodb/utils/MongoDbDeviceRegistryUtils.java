@@ -54,17 +54,17 @@ public final class MongoDbDeviceRegistryUtils {
     }
 
     /**
-     * Checks whether this registry allows the creation, modification and removal of entries.
+     * Checks whether a registry component supports modification of persistent data.
      *
-     * @param config the config properties
+     * @param config The configuration properties of the affected registry component.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will succeed if write operation is allowed.
-     *         Otherwise the future will fail with a {@link ClientErrorException} with
+     *         The future will be succeeded if modification is supported.
+     *         Otherwise the future will be failed with a {@link ClientErrorException} with
      *         error code {@value HttpURLConnection#HTTP_FORBIDDEN}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static Future<Void> isAllowedToModify(final AbstractMongoDbBasedRegistryConfigProperties config) {
+    public static Future<Void> isModificationEnabled(final AbstractMongoDbBasedRegistryConfigProperties config) {
         Objects.requireNonNull(config);
 
         if (config.isModificationEnabled()) {

@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.registration.RegistrationServiceTests;
@@ -35,6 +34,7 @@ import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.ext.mongo.MongoClient;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -46,9 +46,11 @@ import io.vertx.junit5.VertxTestContext;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTests {
+
     //The documentation suggests to make the MongodStarter instance static. 
     // For more info https://github.com/flapdoodle-oss/de.flapdoodle.embed.mongo
     private static final MongodStarter MONGOD_STARTER = MongodStarter.getDefaultInstance();
+
     private MongoDbBasedRegistrationService registrationService;
     private Vertx vertx;
     private MongodExecutable mongodExecutable;
@@ -62,24 +64,21 @@ public class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTest
      */
     @BeforeAll
     public void setup(final VertxTestContext testContext) throws IOException {
-        final String mongoDbHost = "localhost";
+        final String mongoDbHost = "127.0.0.1";
         final int mongoDbPort = Network.getFreeServerPort();
 
         startEmbeddedMongoDb(mongoDbHost, mongoDbPort);
 
         vertx = Vertx.vertx();
-
-        registrationService = new MongoDbBasedRegistrationService();
-        registrationService.setConfig(new MongoDbBasedRegistrationConfigProperties());
-
-        final MongoClient mongoClient = MongoClient.createShared(vertx, new MongoDbConfigProperties()
+        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
                 .setHost(mongoDbHost)
                 .setPort(mongoDbPort)
-                .setDbName("mongoDBTestDeviceRegistry")
-                .getMongoClientConfig());
-        registrationService.setMongoClient(mongoClient);
-        registrationService.setExecutor(new MongoDbCallExecutor(vertx, mongoClient));
-
+                .setDbName("mongoDBTestDeviceRegistry");
+        final MongoClient mongoClient = MongoClient.createShared(vertx, mongoDbConfig.getMongoClientConfig());
+        registrationService = new MongoDbBasedRegistrationService(
+                vertx,
+                mongoClient,
+                new MongoDbBasedRegistrationConfigProperties());
         registrationService.start().onComplete(testContext.completing());
     }
 
@@ -90,9 +89,11 @@ public class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTest
      */
     @AfterAll
     public void finishTest(final VertxTestContext testContext) {
-        registrationService.stop().onComplete(testContext.completing());
-        vertx.close(testContext.completing());
+        final Checkpoint shutdown = testContext.checkpoint(3);
+        registrationService.stop().onComplete(s -> shutdown.flag());
+        vertx.close(s -> shutdown.flag());
         stopEmbeddedMongoDb();
+        shutdown.flag();
     }
 
     @Override

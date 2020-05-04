@@ -40,7 +40,6 @@ import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
@@ -48,6 +47,7 @@ import com.mongodb.MongoException;
 import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
@@ -72,40 +72,29 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             RegistryManagementConstants.FIELD_MEMBER_OF);
     private static final int INDEX_CREATION_MAX_RETRIES = 3;
 
-    private MongoClient mongoClient;
-    private MongoDbBasedRegistrationConfigProperties config;
-    private MongoDbCallExecutor mongoDbCallExecutor;
+    private final MongoClient mongoClient;
+    private final MongoDbBasedRegistrationConfigProperties config;
+    private final MongoDbCallExecutor mongoDbCallExecutor;
 
     /**
-     * Creates an instance of the {@link MongoDbCallExecutor}.
-     *
-     * @param mongoDbCallExecutor An instance of the mongoDbCallExecutor.
-     * @throws NullPointerException if the mongoDbCallExecutor is {@code null}.
+     * Creates a new service for configuration properties.
+     * 
+     * @param vertx The vert.x instance to run on.
+     * @param mongoClient The client for accessing the Mongo DB instance.
+     * @param config The properties for configuring this service.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    @Autowired
-    public void setExecutor(final MongoDbCallExecutor mongoDbCallExecutor) {
-        this.mongoDbCallExecutor = Objects.requireNonNull(mongoDbCallExecutor);
-    }
+    public MongoDbBasedRegistrationService(
+            final Vertx vertx,
+            final MongoClient mongoClient,
+            final MongoDbBasedRegistrationConfigProperties config) {
 
-    /**
-     * Sets an instance of the {@link MongoClient}.
-     *
-     * @param mongoClient An instance of the mongo client.
-     * @throws NullPointerException if the mongoClient is {@code null}.
-     */
-    @Autowired
-    public void setMongoClient(final MongoClient mongoClient) {
-        this.mongoClient = Objects.requireNonNull(mongoClient);
-    }
+        Objects.requireNonNull(vertx);
+        Objects.requireNonNull(mongoClient);
+        Objects.requireNonNull(config);
 
-    /**
-     * Sets the configuration properties for this service.
-     *
-     * @param config The configuration properties.
-     * @throws NullPointerException if the config is {@code null}.
-     */
-    @Autowired
-    public void setConfig(final MongoDbBasedRegistrationConfigProperties config) {
+        this.mongoClient = mongoClient;
+        this.mongoDbCallExecutor = new MongoDbCallExecutor(vertx, mongoClient);
         this.config = Objects.requireNonNull(config);
     }
 
@@ -113,12 +102,13 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     public Future<Void> start() {
 
         final Promise<Void> startPromise = Promise.promise();
-        mongoDbCallExecutor
-                .createCollectionIndex(config.getCollectionName(),
-                        new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, 1)
-                                .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
-                        new IndexOptions().unique(true), INDEX_CREATION_MAX_RETRIES)
-                .onComplete(startPromise);
+        mongoDbCallExecutor.createCollectionIndex(
+                config.getCollectionName(),
+                new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                        .put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, 1),
+                new IndexOptions().unique(true),
+                INDEX_CREATION_MAX_RETRIES)
+        .onComplete(startPromise);
         return startPromise.future();
     }
 
@@ -139,7 +129,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isAllowedToModify(config)
+        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
                 .compose(ok -> isMaxDevicesLimitReached(tenantId))
                 .compose(ok -> processCreateDevice(
                         new DeviceDto(
@@ -171,7 +161,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isAllowedToModify(config)
+        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
                 .compose(deviceDto -> processUpdateDevice(tenantId, deviceId, device, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -185,7 +175,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isAllowedToModify(config)
+        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
                 .compose(ok -> processDeleteDevice(tenantId, deviceId, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -296,6 +286,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
+
         final Promise<JsonObject> deleteDevicePromise = Promise.promise();
 
         mongoClient.findOneAndDelete(config.getCollectionName(), deleteDeviceQuery, deleteDevicePromise);
@@ -306,9 +297,10 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             span.log("successfully deleted device");
                             return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
                         })
-                        .orElse(MongoDbDeviceRegistryUtils
-                                .checkForVersionMismatchAndFail(deviceId, resourceVersion,
-                                        findDevice(tenantId, deviceId))));
+                        .orElse(MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                                deviceId,
+                                resourceVersion,
+                                findDevice(tenantId, deviceId))));
     }
 
     private Future<OperationResult<Device>> processReadDevice(final String tenantId, final String deviceId) {
@@ -333,6 +325,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         //Retrieve only the deviceId instead of the whole document.
         final FindOptions findOptionsForDeviceId = new FindOptions()
                 .setFields(new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
+
         final Promise<List<JsonObject>> resolveGroupMembersPromise = Promise.promise();
 
         mongoClient.findWithOptions(config.getCollectionName(), resolveGroupMembersQuery, findOptionsForDeviceId,
@@ -345,7 +338,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                     .map(json -> json.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID))
                                     .collect(Collectors.collectingAndThen(Collectors.toList(), JsonArray::new)))
                             .orElse(new JsonArray());
-                    span.log("successfully resolved group members.");
+                    span.log("successfully resolved group members");
                     return deviceIds;
                 });
     }
@@ -361,6 +354,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
+
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
         mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(), updateDeviceQuery,
@@ -377,9 +371,10 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                     Optional.empty(),
                                     Optional.of(result.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))));
                         })
-                        .orElse(MongoDbDeviceRegistryUtils
-                                .checkForVersionMismatchAndFail(deviceId, resourceVersion,
-                                        findDevice(tenantId, deviceId))));
+                        .orElse(MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                                deviceId,
+                                resourceVersion,
+                                findDevice(tenantId, deviceId))));
     }
 
     private <T> Future<T> isMaxDevicesLimitReached(final String tenantId) {
@@ -387,6 +382,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         if (config.getMaxDevicesPerTenant() == MongoDbBasedRegistrationConfigProperties.UNLIMITED_DEVICES_PER_TENANT) {
             return Future.succeededFuture();
         }
+
         final Promise<Long> findExistingNoOfDevicesPromise = Promise.promise();
         mongoClient.count(config.getCollectionName(), MongoDbDocumentBuilder.forTenantId(tenantId).document(),
                 findExistingNoOfDevicesPromise);

@@ -49,31 +49,36 @@ public final class MongoDbCallExecutor {
     }
 
     /**
-     * Creates an index for the given mongodb collection.
+     * Creates an index on a collection.
      *
-     * @param collectionName The name of the mongodb collection.
+     * @param collectionName The name of the collection.
      * @param keys The keys to be indexed.
-     * @param options The options used to configure index, which is optional.
-     * @param noOfRetries Then number of retries in case the index creation fails.
+     * @param options The options for configuring the index (may be {@code null}).
+     * @param noOfRetries The number of retries in case the index creation fails.
      * @return A future indicating the outcome of the index creation operation.
+     * @throws NullPointerException if any of the parameters except options are {@code null}.
      */
-    public Future<Void> createCollectionIndex(final String collectionName, final JsonObject keys,
-            final IndexOptions options, final int noOfRetries) {
+    public Future<Void> createCollectionIndex(
+            final String collectionName,
+            final JsonObject keys,
+            final IndexOptions options,
+            final int noOfRetries) {
+
         final Promise<Void> indexCreationPromise = Promise.promise();
-        LOG.debug("Creating an index for the collection [{}]", collectionName);
+        LOG.debug("creating index [collection: {}]", collectionName);
 
         mongoClient.createIndexWithOptions(collectionName, keys, options, res -> {
             if (res.succeeded()) {
-                LOG.debug("Successfully created an index for the collection[{}]", collectionName);
+                LOG.debug("successfully created index [collection: {}]", collectionName);
                 indexCreationPromise.complete();
             } else {
                 if (noOfRetries > 0) {
-                    LOG.error("Failed creating an index for the collection [{}], retry creating index.", collectionName,
-                            res.cause());
+                    LOG.error("failed to create index [collection: {}], scheduling new attempt to create index",
+                            collectionName, res.cause());
                     vertx.setTimer(INDEX_CREATION_RETRY_INTERVAL_IN_MS,
                             id -> createCollectionIndex(collectionName, keys, options, noOfRetries - 1));
                 } else {
-                    LOG.error("Failed creating an index for the collection [{}]", collectionName, res.cause());
+                    LOG.error("failed to create index [collection: {}]", collectionName, res.cause());
                     indexCreationPromise.fail(res.cause());
                 }
             }
