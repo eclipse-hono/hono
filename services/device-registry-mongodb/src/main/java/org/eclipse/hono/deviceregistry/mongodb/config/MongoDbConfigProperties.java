@@ -14,8 +14,14 @@
 package org.eclipse.hono.deviceregistry.mongodb.config;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.util.PortConfigurationHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 
 /**
  * A POJO for configuring mongodb properties used by the
@@ -24,6 +30,7 @@ import org.eclipse.hono.util.PortConfigurationHelper;
 public final class MongoDbConfigProperties {
 
     private static final int DEFAULT_PORT = 27017;
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbConfigProperties.class);
 
     private String host = "localhost";
     private int port = DEFAULT_PORT;
@@ -227,5 +234,32 @@ public final class MongoDbConfigProperties {
         }
         this.connectionTimeoutInMs = connectionTimeoutInMs;
         return this;
+    }
+
+    /**
+     * Returns the mongodb properties as a json object suited to instantiate a #{@link MongoClient}. 
+     * <p>
+     * If the connectionString is set, it will override all the other connection settings.
+     *
+     * @return The mongodb client configuration as a json object.
+     */
+    public JsonObject getMongoClientConfig() {
+        final JsonObject configJson = new JsonObject();
+        if (connectionString != null) {
+            configJson.put("connection_string", connectionString);
+            LOG.warn("Since connection string is set, the other connection properties if any set, will be ignored");
+        } else {
+            configJson.put("host", host)
+                    .put("port", port)
+                    .put("db_name", dbName)
+                    .put("username", username)
+                    .put("password", password);
+
+            Optional.ofNullable(getServerSelectionTimeout())
+                    .ifPresent(timeout -> configJson.put("serverSelectionTimeoutMS", timeout));
+            Optional.ofNullable(getConnectTimeout())
+                    .ifPresent(timeout -> configJson.put("connectTimeoutMS", timeout));
+        }
+        return configJson;
     }
 }

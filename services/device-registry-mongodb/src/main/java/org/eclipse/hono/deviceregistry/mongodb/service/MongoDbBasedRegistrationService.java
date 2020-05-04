@@ -85,7 +85,17 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     @Autowired
     public void setExecutor(final MongoDbCallExecutor mongoDbCallExecutor) {
         this.mongoDbCallExecutor = Objects.requireNonNull(mongoDbCallExecutor);
-        this.mongoClient = this.mongoDbCallExecutor.getMongoClient();
+    }
+
+    /**
+     * Sets an instance of the {@link MongoClient}.
+     *
+     * @param mongoClient An instance of the mongo client.
+     * @throws NullPointerException if the mongoClient is {@code null}.
+     */
+    @Autowired
+    public void setMongoClient(final MongoClient mongoClient) {
+        this.mongoClient = Objects.requireNonNull(mongoClient);
     }
 
     /**

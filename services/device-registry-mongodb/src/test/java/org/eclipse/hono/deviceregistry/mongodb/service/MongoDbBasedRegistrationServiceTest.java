@@ -34,6 +34,7 @@ import de.flapdoodle.embed.mongo.config.Net;
 import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -70,11 +71,15 @@ public class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTest
 
         registrationService = new MongoDbBasedRegistrationService();
         registrationService.setConfig(new MongoDbBasedRegistrationConfigProperties());
-        registrationService.setExecutor(new MongoDbCallExecutor(vertx,
-                new MongoDbConfigProperties()
-                        .setHost(mongoDbHost)
-                        .setPort(mongoDbPort)
-                        .setDbName("mongoDBTestDeviceRegistry")));
+
+        final MongoClient mongoClient = MongoClient.createShared(vertx, new MongoDbConfigProperties()
+                .setHost(mongoDbHost)
+                .setPort(mongoDbPort)
+                .setDbName("mongoDBTestDeviceRegistry")
+                .getMongoClientConfig());
+        registrationService.setMongoClient(mongoClient);
+        registrationService.setExecutor(new MongoDbCallExecutor(vertx, mongoClient));
+
         registrationService.start().onComplete(testContext.completing());
     }
 

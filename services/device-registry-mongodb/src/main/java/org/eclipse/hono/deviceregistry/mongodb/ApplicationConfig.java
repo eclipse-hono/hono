@@ -60,6 +60,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.handler.AuthHandler;
 
 /**
@@ -168,6 +169,17 @@ public class ApplicationConfig {
     }
 
     /**
+     * Gets a {@link MongoClient} instance for MongoDB interaction.
+     *
+     * @return An instance of the {@link MongoClient}.
+     */
+    @Bean
+    @Scope("prototype")
+    public MongoClient mongoClient() {
+        return MongoClient.createShared(vertx(), mongoDbConfigProperties().getMongoClientConfig());
+    }
+
+    /**
      * Gets a {@link MongoDbCallExecutor} instance containing helper methods for mongodb interaction.
      *
      * @return An instance of the helper class {@link MongoDbCallExecutor}.
@@ -175,7 +187,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbCallExecutor mongoDBCallExecutor() {
-        return new MongoDbCallExecutor(vertx(), mongoDbConfigProperties());
+        return new MongoDbCallExecutor(vertx(), mongoClient());
     }
 
     //
@@ -344,7 +356,7 @@ public class ApplicationConfig {
     @ConditionalOnProperty(name = "hono.registry.http.authenticationRequired", havingValue = "true", matchIfMissing = true)
     public AuthHandler createAuthHandler() {
         return new HonoBasicAuthHandler(
-                MongoAuth.create(mongoDBCallExecutor().getMongoClient(), new JsonObject()),
+                MongoAuth.create(mongoClient(), new JsonObject()),
                 MongoDbDeviceRegistryUtils.DEFAULT_REALM,
                 getTracer());
     }

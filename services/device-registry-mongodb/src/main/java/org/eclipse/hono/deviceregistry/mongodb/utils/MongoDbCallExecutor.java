@@ -14,9 +14,7 @@
 package org.eclipse.hono.deviceregistry.mongodb.utils;
 
 import java.util.Objects;
-import java.util.Optional;
 
-import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,10 +30,9 @@ import io.vertx.ext.mongo.MongoClient;
  */
 public final class MongoDbCallExecutor {
 
-    private static final Logger log = LoggerFactory.getLogger(MongoDbCallExecutor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbCallExecutor.class);
     private static final int INDEX_CREATION_RETRY_INTERVAL_IN_MS = 3000;
 
-    private final MongoDbConfigProperties config;
     private final MongoClient mongoClient;
     private final Vertx vertx;
 
@@ -43,22 +40,12 @@ public final class MongoDbCallExecutor {
      * Creates an instance of the {@link MongoDbCallExecutor}.
      *
      * @param vertx The Vert.x instance to use.
-     * @param config The mongodb configuration properties to use.
+     * @param mongoClient The mongo client instance to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public MongoDbCallExecutor(final Vertx vertx, final MongoDbConfigProperties config) {
+    public MongoDbCallExecutor(final Vertx vertx, final MongoClient mongoClient) {
         this.vertx = Objects.requireNonNull(vertx);
-        this.config = Objects.requireNonNull(config);
-        this.mongoClient = MongoClient.createShared(vertx, getMongoClientConfigAsJson());
-    }
-
-    /**
-     * Gets the mongo client.
-     *
-     * @return The mongo client.
-     */
-    public MongoClient getMongoClient() {
-        return mongoClient;
+        this.mongoClient = Objects.requireNonNull(mongoClient);
     }
 
     /**
@@ -73,51 +60,24 @@ public final class MongoDbCallExecutor {
     public Future<Void> createCollectionIndex(final String collectionName, final JsonObject keys,
             final IndexOptions options, final int noOfRetries) {
         final Promise<Void> indexCreationPromise = Promise.promise();
-        log.debug("Creating an index for the collection [{}]", collectionName);
+        LOG.debug("Creating an index for the collection [{}]", collectionName);
 
         mongoClient.createIndexWithOptions(collectionName, keys, options, res -> {
             if (res.succeeded()) {
-                log.debug("Successfully created an index for the collection[{}]", collectionName);
+                LOG.debug("Successfully created an index for the collection[{}]", collectionName);
                 indexCreationPromise.complete();
             } else {
                 if (noOfRetries > 0) {
-                    log.error("Failed creating an index for the collection [{}], retry creating index.", collectionName,
+                    LOG.error("Failed creating an index for the collection [{}], retry creating index.", collectionName,
                             res.cause());
                     vertx.setTimer(INDEX_CREATION_RETRY_INTERVAL_IN_MS,
                             id -> createCollectionIndex(collectionName, keys, options, noOfRetries - 1));
                 } else {
-                    log.error("Failed creating an index for the collection [{}]", collectionName, res.cause());
+                    LOG.error("Failed creating an index for the collection [{}]", collectionName, res.cause());
                     indexCreationPromise.fail(res.cause());
                 }
             }
         });
         return indexCreationPromise.future();
-    }
-
-    /**
-     * Returns the mongodb properties as a json object suited to instantiate a #{@link MongoClient}. 
-     * <p>
-     * If the connectionString is set, it will override all the other connection settings.
-     *
-     * @return The mongodb client configuration as a json object.
-     */
-    private JsonObject getMongoClientConfigAsJson() {
-        final JsonObject configJson = new JsonObject();
-        if (config.getConnectionString() != null) {
-            configJson.put("connection_string", config.getConnectionString());
-            log.warn("Since connection string is set, the other connection properties if any set, will be ignored");
-        } else {
-            configJson.put("host", config.getHost())
-                    .put("port", config.getPort())
-                    .put("db_name", config.getDbName())
-                    .put("username", config.getUsername())
-                    .put("password", config.getPassword());
-
-            Optional.ofNullable(config.getServerSelectionTimeout())
-                    .ifPresent(timeout -> configJson.put("serverSelectionTimeoutMS", timeout));
-            Optional.ofNullable(config.getConnectTimeout())
-                    .ifPresent(timeout -> configJson.put("connectTimeoutMS", timeout));
-        }
-        return configJson;
     }
 }
