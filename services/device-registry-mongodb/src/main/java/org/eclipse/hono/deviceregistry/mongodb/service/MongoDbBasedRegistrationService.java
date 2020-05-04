@@ -65,7 +65,13 @@ import io.vertx.ext.mongo.UpdateOptions;
 public final class MongoDbBasedRegistrationService extends AbstractRegistrationService implements DeviceManagementService, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationService.class);
+    /**
+     * The property that contains the group IDs that a (gateway) device is a member of.
+     */
+    private static final String PROPERTY_DEVICE_MEMBEROF = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_DEVICE,
+            RegistryManagementConstants.FIELD_MEMBER_OF);
     private static final int INDEX_CREATION_MAX_RETRIES = 3;
+
     private MongoClient mongoClient;
     private MongoDbBasedRegistrationConfigProperties config;
     private MongoDbCallExecutor mongoDbCallExecutor;
@@ -204,8 +210,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     private Future<JsonObject> findDeviceDocument(final String tenantId, final String deviceId) {
-        final JsonObject findDeviceQuery = new MongoDbDocumentBuilder()
-                .withTenantId(tenantId)
+        final JsonObject findDeviceQuery = MongoDbDocumentBuilder.forTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
         final Promise<JsonObject> readDevicePromise = Promise.promise();
@@ -264,9 +269,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
     private Future<Result<Void>> processDeleteDevice(final String tenantId, final String deviceId,
             final Optional<String> resourceVersion, final Span span) {
-        final JsonObject deleteDeviceQuery = resourceVersion
-                .map(version -> new MongoDbDocumentBuilder().withVersion(version))
-                .orElse(new MongoDbDocumentBuilder())
+
+        final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
@@ -299,10 +303,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
     private Future<JsonArray> processResolveGroupMembers(final String tenantId, final JsonArray viaGroups,
             final Span span) {
-        final JsonObject resolveGroupMembersQuery = new MongoDbDocumentBuilder()
-                .withTenantId(tenantId).document()
-                .put(String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_DEVICE,
-                        RegistryManagementConstants.FIELD_MEMBER_OF),
+        final JsonObject resolveGroupMembersQuery = MongoDbDocumentBuilder.forTenantId(tenantId).document()
+                .put(PROPERTY_DEVICE_MEMBEROF,
                         new JsonObject()
                                 .put("$exists", true)
                                 .put("$in", viaGroups));
@@ -328,9 +330,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
     private Future<OperationResult<Id>> processUpdateDevice(final String tenantId, final String deviceId,
             final Device device, final Optional<String> resourceVersion, final Span span) {
-        final JsonObject updateDeviceQuery = resourceVersion
-                .map(version -> new MongoDbDocumentBuilder().withVersion(version))
-                .orElse(new MongoDbDocumentBuilder())
+        final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
@@ -361,7 +361,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             return Future.succeededFuture();
         }
         final Promise<Long> findExistingNoOfDevicesPromise = Promise.promise();
-        mongoClient.count(config.getCollectionName(), new MongoDbDocumentBuilder().withTenantId(tenantId).document(),
+        mongoClient.count(config.getCollectionName(), MongoDbDocumentBuilder.forTenantId(tenantId).document(),
                 findExistingNoOfDevicesPromise);
 
         return findExistingNoOfDevicesPromise.future()

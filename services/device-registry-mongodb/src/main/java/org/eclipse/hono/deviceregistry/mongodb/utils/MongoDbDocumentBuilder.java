@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.utils;
 
+import java.util.Objects;
+import java.util.Optional;
+
 import org.eclipse.hono.util.RegistrationConstants;
 
 import io.vertx.core.json.JsonObject;
@@ -22,7 +25,38 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MongoDbDocumentBuilder {
 
-    private final JsonObject document = new JsonObject();
+    private final JsonObject document;
+
+    private MongoDbDocumentBuilder() {
+        this.document = new JsonObject();
+    }
+
+    /**
+     * Creates a new builder for a given tenant.
+     * 
+     * @param tenant The tenant to add to the document (may be empty).
+     * @return The new document builder.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public static MongoDbDocumentBuilder forTenantId(final String tenant) {
+        Objects.requireNonNull(tenant);
+        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
+        return builder.withTenantId(tenant);
+    }
+
+    /**
+     * Creates a new builder for a given version.
+     * 
+     * @param version The version to add to the document (may be empty).
+     * @return The new document builder.
+     * @throws NullPointerException if version is {@code null}.
+     */
+    public static MongoDbDocumentBuilder forVersion(final Optional<String> version) {
+        Objects.requireNonNull(version);
+        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
+        version.ifPresent(v -> builder.withVersion(v));
+        return builder;
+    }
 
     /**
      * Sets the json object with the given tenant id.
