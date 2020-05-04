@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.Collections;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -160,7 +161,7 @@ public class DeviceConnectionClientImplTest {
     public void testSetCommandHandlingAdapterInstance(final VertxTestContext ctx) {
 
         // WHEN setting the command handling adapter instance
-        client.setCommandHandlingAdapterInstance("deviceId", "gatewayId", null, span.context())
+        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, false, span.context())
                 .setHandler(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
@@ -184,7 +185,7 @@ public class DeviceConnectionClientImplTest {
     public void testRemoveCommandHandlingAdapterInstance(final VertxTestContext ctx) {
 
         // WHEN removing the command handling adapter instance
-        client.removeCommandHandlingAdapterInstance("deviceId", "gatewayId", span.context())
+        client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
                 .setHandler(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
@@ -301,7 +302,7 @@ public class DeviceConnectionClientImplTest {
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN setting the command handling adapter instance
-        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context())
+        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, false, span.context())
                 .setHandler(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
@@ -477,7 +478,7 @@ public class DeviceConnectionClientImplTest {
         });
 
         // WHEN setting the command handling adapter instance
-        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, span.context())
+        client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, false, span.context())
                 .setHandler(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
@@ -584,13 +585,17 @@ public class DeviceConnectionClientImplTest {
     public void testSetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest() {
 
         final String deviceId = "deviceId";
+        final String gatewayId = "gatewayId";
 
         // WHEN setting last known gateway information
-        client.setLastKnownGatewayForDevice(deviceId, "gatewayId", span.context());
+        client.setLastKnownGatewayForDevice(deviceId, gatewayId, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
+                        .isEqualTo(gatewayId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -606,11 +611,51 @@ public class DeviceConnectionClientImplTest {
         final String deviceId = "deviceId";
 
         // WHEN setting the command handling adapter instance
-        client.setCommandHandlingAdapterInstance(deviceId, "adapterInstanceId", null, span.context());
+        client.setCommandHandlingAdapterInstance(deviceId, "adapterInstanceId", null, false, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
+                        .isEqualTo("adapterInstanceId");
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class))
+                        .isEqualTo(Integer.valueOf(-1));
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_UPDATE_ONLY, Boolean.class))
+                        .isFalse();
+        assertThat(sentMessage.getMessageId()).isNotNull();
+        assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject());
+        assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
+    }
+
+    /**
+     * Verifies that the client includes the required information in the <em>set-cmd-handling-adapter-instance</em> operation
+     * request message sent to the device connection service, including the lifespan parameter.
+     */
+    @Test
+    public void testSetCommandHandlingAdapterInstanceWithLifespanIncludesRequiredInformationInRequest() {
+
+        final String deviceId = "deviceId";
+        final int lifespanSeconds = 20;
+
+        // WHEN setting the command handling adapter instance
+        client.setCommandHandlingAdapterInstance(deviceId, "adapterInstanceId",
+                Duration.ofSeconds(lifespanSeconds), true, span.context());
+
+        // THEN the message being sent contains the device ID in its properties
+        final Message sentMessage = verifySenderSend();
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
+                .isEqualTo("adapterInstanceId");
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class))
+                .isEqualTo(lifespanSeconds);
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_UPDATE_ONLY, Boolean.class))
+                .isTrue();
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -624,13 +669,17 @@ public class DeviceConnectionClientImplTest {
     public void testRemoveCommandHandlingAdapterInstanceIncludesRequiredInformationInRequest() {
 
         final String deviceId = "deviceId";
+        final String adapterInstanceId = "adapterInstanceId";
 
         // WHEN removing the command handling adapter instance
-        client.removeCommandHandlingAdapterInstance(deviceId, "adapterInstanceId", span.context());
+        client.removeCommandHandlingAdapterInstance(deviceId, adapterInstanceId, span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = verifySenderSend();
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
+                        .isEqualTo(adapterInstanceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(DeviceConnectionConstants.DeviceConnectionAction.REMOVE_CMD_HANDLING_ADAPTER_INSTANCE.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();

@@ -115,6 +115,7 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
             final String deviceId,
             final String adapterInstanceId,
             final Duration lifespan,
+            final boolean updateOnly,
             final SpanContext context) {
 
         final int lifespanSeconds = lifespan != null && lifespan.getSeconds() <= Integer.MAX_VALUE ? (int) lifespan.getSeconds() : -1;
@@ -122,7 +123,8 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
                 DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
                 Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
                         MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId,
-                        MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds),
+                        MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds,
+                        MessageHelper.APP_PROPERTY_UPDATE_ONLY, updateOnly),
                 null)
                 .onSuccess(payload -> LOGGER.debug("successfully set command-handling adapter instance"))
                 .onFailure(t -> LOGGER.error("failed to set command-handling adapter instance", t))

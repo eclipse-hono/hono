@@ -200,9 +200,12 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
      * @return A succeeded future containing the previous value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be stored in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Override
     public Future<V> put(final K key, final V value) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
 
         return withCache(cache -> cache.putAsync(key, value));
 
@@ -218,11 +221,39 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
      * @return A succeeded future containing the previous value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be stored in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Override
     public Future<V> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        Objects.requireNonNull(lifespanUnit);
 
         return withCache(cache -> cache.putAsync(key, value, lifespan, lifespanUnit));
+
+    }
+
+    /**
+     * Replaces the entry for a key only if currently mapped to a given value.
+     *
+     * @param key The key.
+     * @param oldValue The value to overwrite.
+     * @param newValue The value to store.
+     * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
+     * @param lifespanUnit The time unit for the lifespan.
+     * @return A succeeded future containing a boolean, indicating whether the value was replaced or not.
+     *         A failed future if the value could not be stored in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    @Override
+    public Future<Boolean> replace(final K key, final V oldValue, final V newValue, final long lifespan,
+            final TimeUnit lifespanUnit) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(oldValue);
+        Objects.requireNonNull(newValue);
+        Objects.requireNonNull(lifespanUnit);
+
+        return withCache(cache -> cache.replaceAsync(key, oldValue, newValue, lifespan, lifespanUnit));
 
     }
 
@@ -233,9 +264,12 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
      * @param value The value.
      * @return {@code true} if the key was mapped to the value, {@code false}
      *         otherwise.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Override
     public Future<Boolean> remove(final K key, final V value) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
 
         return withCache(cache -> cache.removeAsync(key, value));
 
@@ -248,9 +282,11 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
      * @return A succeeded future containing the value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be read from the cache.
+     * @throws NullPointerException if key is {@code null}.
      */
     @Override
     public Future<V> get(final K key) {
+        Objects.requireNonNull(key);
 
         return withCache(cache -> cache.getAsync(key));
 
@@ -261,9 +297,11 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
      *
      * @param keys The keys.
      * @return A succeeded future containing a map with key/value pairs.
+     * @throws NullPointerException if keys is {@code null}.
      */
     @Override
     public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
+        Objects.requireNonNull(keys);
 
         return withCache(cache -> cache.getAllAsync(keys));
 

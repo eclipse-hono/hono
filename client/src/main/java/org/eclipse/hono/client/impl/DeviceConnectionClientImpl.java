@@ -263,7 +263,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String deviceId, final String adapterInstanceId,
-            final Duration lifespan, final SpanContext context) {
+            final Duration lifespan, final boolean updateOnly, final SpanContext context) {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
 
@@ -271,6 +271,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
         final Map<String, Object> properties = createDeviceIdProperties(deviceId);
         properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
         properties.put(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
+        properties.put(MessageHelper.APP_PROPERTY_UPDATE_ONLY, updateOnly);
 
         final Span currentSpan = newChildSpan(context, "set command handling adapter instance");
         final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
