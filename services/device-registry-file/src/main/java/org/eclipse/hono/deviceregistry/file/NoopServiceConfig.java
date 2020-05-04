@@ -14,9 +14,9 @@
 
 package org.eclipse.hono.deviceregistry.file;
 
-import org.eclipse.hono.deviceregistry.service.credentials.DummyCredentialsService;
-import org.eclipse.hono.deviceregistry.service.device.DummyRegistrationService;
-import org.eclipse.hono.deviceregistry.service.tenant.DummyTenantService;
+import org.eclipse.hono.deviceregistry.service.credentials.NoopCredentialsService;
+import org.eclipse.hono.deviceregistry.service.device.NoopRegistrationService;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantService;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.TenantService;
@@ -31,7 +31,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @ConditionalOnProperty(name = "hono.app.type", havingValue = "dummy")
-public class DummyServiceConfig {
+public class NoopServiceConfig {
 
     /**
      * Creates an instance of the dummy service for managing tenant information.
@@ -40,7 +40,7 @@ public class DummyServiceConfig {
      */
     @Bean
     public TenantService tenantService() {
-        return new DummyTenantService();
+        return new NoopTenantService();
     }
 
     /**
@@ -50,7 +50,7 @@ public class DummyServiceConfig {
      */
     @Bean
     public RegistrationService registrationService() {
-        return new DummyRegistrationService();
+        return new NoopRegistrationService();
     }
 
     /**
@@ -60,6 +60,6 @@ public class DummyServiceConfig {
      */
     @Bean
     public CredentialsService credentialsService() {
-        return new DummyCredentialsService();
+        return new NoopCredentialsService();
     }
 }
