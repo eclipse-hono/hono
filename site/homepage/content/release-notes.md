@@ -35,6 +35,11 @@ title = "Release Notes"
   at which information should be logged. The producer type *none* has been added to explicitly
   turn off connection event reporting altogether.
   Please refer to the *Common Configuration* admin guide for details.
+* The packages `org.eclipse.hono.service.credentials`, `org.eclipse.hono.service.management`,
+  `org.eclipse.hono.service.management.credentials`, `org.eclipse.hono.service.management.device`,
+  `org.eclipse.hono.service.management.tenant`, `org.eclipse.hono.service.registration` and
+  `org.eclipse.hono.service.tenant` have been moved from the *service-base* to the
+  *device-registry-base* module.
 
 ### API Changes
 

@@ -19,9 +19,9 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractDelegatingHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -49,7 +49,7 @@ import io.vertx.ext.web.handler.BodyHandler;
  *
  * @param <S> The type of service this endpoint delegates to.
  */
-public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementService> extends AbstractDelegatingHttpEndpoint<S, ServiceConfigProperties> {
+public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementService> extends AbstractDelegatingRegistryHttpEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant from management API";
     private static final String SPAN_NAME_CREATE_TENANT = "create Tenant from management API";
