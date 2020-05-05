@@ -11,11 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.tenant;
+package org.eclipse.hono.util;
 
 import java.util.Objects;
-
-import org.eclipse.hono.util.TenantObject;
 
 /**
  * Class that keeps a TenantObject and an auth-id.

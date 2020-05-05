@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,10 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.tenant;
-
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.util.ExecutionContext;
+package org.eclipse.hono.util;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -35,10 +32,9 @@ public interface ExecutionContextTenantAndAuthIdProvider<T extends ExecutionCont
      *         <p>
      *         The future will fail if tenant and auth-id information could not be retrieved from the ExecutionContext
      *         or if there was an error obtaining the tenant object. In the latter case the future will be failed with a
-     *         {@link ServiceInvocationException}.
+     *         {@code org.eclipse.hono.client.ServiceInvocationException}.
      *         <p>
      *         Otherwise the future will contain the created <em>TenantObjectWithAuthId</em>.
      */
     Future<TenantObjectWithAuthId> get(T context, SpanContext spanContext);
-
 }

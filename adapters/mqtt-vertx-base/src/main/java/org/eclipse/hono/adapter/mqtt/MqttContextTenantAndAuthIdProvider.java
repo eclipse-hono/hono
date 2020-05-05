@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,9 +17,8 @@ import javax.net.ssl.SSLSession;
 
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.tenant.BaseExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.TenantObjectWithAuthId;
+import org.eclipse.hono.service.BaseExecutionContextTenantAndAuthIdProvider;
+import org.eclipse.hono.util.TenantObjectWithAuthId;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -28,8 +27,7 @@ import io.vertx.mqtt.MqttAuth;
 /**
  * Provides a method to determine the tenant and auth-id of a HTTP request from the given HttpContext.
  */
-public class MqttContextTenantAndAuthIdProvider extends BaseExecutionContextTenantAndAuthIdProvider
-        implements ExecutionContextTenantAndAuthIdProvider<MqttContext> {
+public class MqttContextTenantAndAuthIdProvider extends BaseExecutionContextTenantAndAuthIdProvider<MqttContext> {
 
     /**
      * Creates a new HttpContextTenantAndAuthIdProvider.

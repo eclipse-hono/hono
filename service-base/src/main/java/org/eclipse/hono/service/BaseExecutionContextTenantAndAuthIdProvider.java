@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.tenant;
+package org.eclipse.hono.service;
 
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -24,6 +24,9 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
+import org.eclipse.hono.util.TenantObjectWithAuthId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,8 +35,10 @@ import io.vertx.core.Future;
 
 /**
  * A base class for {@link ExecutionContextTenantAndAuthIdProvider} implementations.
+ * 
+ * @param <T> The type of excecution context this provider supports.
  */
-public class BaseExecutionContextTenantAndAuthIdProvider {
+public abstract class BaseExecutionContextTenantAndAuthIdProvider<T extends ExecutionContext> implements ExecutionContextTenantAndAuthIdProvider<T> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BaseExecutionContextTenantAndAuthIdProvider.class);
 
@@ -173,4 +178,9 @@ public class BaseExecutionContextTenantAndAuthIdProvider {
                 .map(tenantObject -> new TenantObjectWithAuthId(tenantObject, authId));
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract Future<TenantObjectWithAuthId> get(T context, SpanContext spanContext);
 }

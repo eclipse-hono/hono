@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,13 +18,11 @@ import java.security.cert.X509Certificate;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.amqp.SaslResponseContext;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.tenant.BaseExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.TenantObjectWithAuthId;
+import org.eclipse.hono.service.BaseExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.AuthenticationConstants;
+import org.eclipse.hono.util.TenantObjectWithAuthId;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -32,8 +30,7 @@ import io.vertx.core.Future;
 /**
  * Provides methods to determine the tenant and auth-id from a AMQP SASL handshake or an AMQP message.
  */
-public class AmqpContextTenantAndAuthIdProvider extends BaseExecutionContextTenantAndAuthIdProvider
-        implements ExecutionContextTenantAndAuthIdProvider<AmqpContext> {
+public class AmqpContextTenantAndAuthIdProvider extends BaseExecutionContextTenantAndAuthIdProvider<AmqpContext> {
 
     /**
      * Creates a new BaseExecutionContextTenantAndAuthIdProvider for the given config and tenantClientFactory.
@@ -65,7 +62,7 @@ public class AmqpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
      *         <p>
      *         The future will fail if tenant and auth-id information could not be retrieved from the ExecutionContext
      *         or if there was an error obtaining the tenant object. In the latter case the future will be failed with a
-     *         {@link ServiceInvocationException}.
+     *         {@link org.eclipse.hono.client.ServiceInvocationException}.
      *         <p>
      *         Otherwise the future will contain the created <em>TenantObjectWithAuthId</em>.
      * @throws NullPointerException if context is {@code null}.

@@ -34,9 +34,9 @@ import org.eclipse.hono.service.http.HttpContextTenantAndAuthIdProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
 import org.eclipse.hono.service.http.X509AuthHandler;
-import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;

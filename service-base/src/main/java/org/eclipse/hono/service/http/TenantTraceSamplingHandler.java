@@ -15,8 +15,8 @@ package org.eclipse.hono.service.http;
 
 import java.util.Objects;
 
-import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.TenantTraceSamplingHelper;
+import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
+import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;

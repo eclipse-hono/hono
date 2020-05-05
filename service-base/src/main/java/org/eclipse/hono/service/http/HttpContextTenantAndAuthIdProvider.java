@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +18,10 @@ import java.util.Objects;
 
 import javax.net.ssl.SSLSession;
 
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.tenant.BaseExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.TenantObjectWithAuthId;
+import org.eclipse.hono.service.BaseExecutionContextTenantAndAuthIdProvider;
+import org.eclipse.hono.util.TenantObjectWithAuthId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +33,7 @@ import io.vertx.ext.web.RoutingContext;
 /**
  * Provides a method to determine the tenant and auth-id of a HTTP request from the given HttpContext.
  */
-public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTenantAndAuthIdProvider
-        implements ExecutionContextTenantAndAuthIdProvider<HttpContext> {
+public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTenantAndAuthIdProvider<HttpContext> {
 
     private static final Logger LOG = LoggerFactory.getLogger(HttpContextTenantAndAuthIdProvider.class);
 
@@ -106,7 +103,7 @@ public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
      *         <p>
      *         The future will fail if tenant and auth-id information could not be retrieved from the given request
      *         or if there was an error obtaining the tenant object. In the latter case the future will be failed with a
-     *         {@link ServiceInvocationException}.
+     *         {@link org.eclipse.hono.client.ServiceInvocationException}.
      *         <p>
      *         Otherwise the future will contain the created <em>TenantObjectWithAuthId</em>.
      */
@@ -128,7 +125,7 @@ public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
      *         <p>
      *         The future will fail if tenant and auth-id information could not be retrieved from the header
      *         or if there was an error obtaining the tenant object. In the latter case the future will be failed with a
-     *         {@link ServiceInvocationException}.
+     *         {@link org.eclipse.hono.client.ServiceInvocationException}.
      *         <p>
      *         Otherwise the future will contain the created <em>TenantObjectWithAuthId</em>.
      */

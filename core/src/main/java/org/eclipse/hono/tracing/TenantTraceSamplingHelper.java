@@ -11,13 +11,13 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.tenant;
+package org.eclipse.hono.tracing;
 
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 
-import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.TenantObjectWithAuthId;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

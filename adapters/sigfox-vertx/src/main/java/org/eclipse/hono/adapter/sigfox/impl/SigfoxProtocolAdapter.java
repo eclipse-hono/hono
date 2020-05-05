@@ -32,11 +32,11 @@ import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpContextTenantAndAuthIdProvider;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TenantTraceSamplingHandler;
-import org.eclipse.hono.service.tenant.ExecutionContextTenantAndAuthIdProvider;
-import org.eclipse.hono.service.tenant.TenantObjectWithAuthId;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.ExecutionContextTenantAndAuthIdProvider;
+import org.eclipse.hono.util.TenantObjectWithAuthId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

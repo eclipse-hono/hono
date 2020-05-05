@@ -55,7 +55,7 @@ import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
-import org.eclipse.hono.service.tenant.TenantTraceSamplingHelper;
+import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
