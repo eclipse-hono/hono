@@ -21,9 +21,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.AbstractDelegatingHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -51,7 +51,7 @@ import io.vertx.ext.web.handler.BodyHandler;
  *
  * @param <S> The type of service this endpoint delegates to.
  */
-public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsManagementService> extends AbstractDelegatingHttpEndpoint<S, ServiceConfigProperties> {
+public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsManagementService> extends AbstractDelegatingRegistryHttpEndpoint<S, ServiceConfigProperties> {
 
 
     private static final String SPAN_NAME_GET_CREDENTIALS = "get Credentials from management API";
