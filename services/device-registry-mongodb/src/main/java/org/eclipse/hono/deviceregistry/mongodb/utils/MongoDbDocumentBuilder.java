@@ -51,6 +51,19 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
+     * Creates a new builder for a given subject DN.
+     *
+     * @param SubjectDn The subject DN to add to the document.
+     * @return The new document builder.
+     * @throws NullPointerException if SubjectDn is {@code null}.
+     */
+    public static MongoDbDocumentBuilder forSubjectDN(final String SubjectDn) {
+        Objects.requireNonNull(SubjectDn);
+        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
+        return builder.withCa(SubjectDn);
+    }
+
+    /**
      * Creates a new builder for a given version.
      * 
      * @param version The version to add to the document (may be empty).

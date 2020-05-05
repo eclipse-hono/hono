@@ -305,7 +305,7 @@ public class ApplicationConfig {
         return new MongoDbBasedTenantService(
                 vertx(),
                 mongoClient(),
-                registrationServiceProperties()
+                tenantsServiceProperties()
         );
     }
 
