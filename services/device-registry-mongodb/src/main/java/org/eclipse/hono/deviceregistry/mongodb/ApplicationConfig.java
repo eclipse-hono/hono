@@ -32,7 +32,9 @@ import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
+import org.eclipse.hono.service.http.HonoBasicAuthHandler;
 import org.eclipse.hono.service.http.HttpEndpoint;
+import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
@@ -55,6 +57,10 @@ import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.mongo.MongoClient;
+import io.vertx.ext.web.handler.AuthHandler;
 
 /**
  * Spring Boot configuration for the mongodb based device registry application.
@@ -162,6 +168,17 @@ public class ApplicationConfig {
     }
 
     /**
+     * Gets a {@link MongoClient} instance for MongoDB interaction.
+     *
+     * @return An instance of the {@link MongoClient}.
+     */
+    @Bean
+    @Scope("prototype")
+    public MongoClient mongoClient() {
+        return MongoClient.createShared(vertx(), mongoDbConfigProperties().getMongoClientConfig());
+    }
+
+    /**
      * Gets a {@link MongoDbCallExecutor} instance containing helper methods for mongodb interaction.
      *
      * @return An instance of the helper class {@link MongoDbCallExecutor}.
@@ -169,7 +186,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbCallExecutor mongoDBCallExecutor() {
-        return new MongoDbCallExecutor(vertx(), mongoDbConfigProperties());
+        return new MongoDbCallExecutor(vertx(), mongoClient());
     }
 
     //
@@ -295,8 +312,8 @@ public class ApplicationConfig {
     @Qualifier(Constants.QUALIFIER_REST)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.http")
-    public ServiceConfigProperties httpServerProperties() {
-        return new ServiceConfigProperties();
+    public HttpServiceConfigProperties httpServerProperties() {
+        return new HttpServiceConfigProperties();
     }
 
     /**
@@ -321,6 +338,32 @@ public class ApplicationConfig {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_HTTP_SERVER);
         return factory;
+    }
+
+    /**
+     * Creates a new instance of an auth handler to provide basic authentication for the 
+     * HTTP based Device Registry Management endpoint.
+     * <p>
+     * This creates an instance of the {@link HonoBasicAuthHandler} with an auth provider of type
+     * {@link MongoAuth} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
+     * is set to {@code true}.
+     *
+     * @param httpServiceConfigProperties The properties for configuring the HTTP based device registry
+     *                                    management endpoint.
+     * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()} 
+     *         is {@code true} or {@code null} otherwise.
+     * @see <a href="https://vertx.io/docs/vertx-auth-mongo/java/">Mongo auth provider docs</a>
+     */
+    @Bean
+    @Scope("prototype")
+    public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
+        if (httpServiceConfigProperties != null && httpServiceConfigProperties.isAuthenticationRequired()) {
+            return new HonoBasicAuthHandler(
+                    MongoAuth.create(mongoClient(), new JsonObject()),
+                    httpServerProperties().getRealm(),
+                    getTracer());
+        }
+        return null;
     }
 
     /**
