@@ -163,7 +163,6 @@ public class AbstractConfigTest {
         other.setKeyStorePath("keystore/path");
         other.setKeyStorePassword("pwd");
         other.setPathSeparator("::");
-        Collections.singletonList("TLS1.2");
         other.setSecureProtocols(protocols);
         other.setTrustStoreFormat(FileFormat.PKCS12);
         other.setTrustStorePassword("tpwd");

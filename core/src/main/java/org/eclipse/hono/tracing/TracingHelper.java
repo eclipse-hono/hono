@@ -202,7 +202,7 @@ public final class TracingHelper {
     public static void logError(final Span span, final String message, final Throwable error) {
         if (span != null) {
             if (message == null && error == null) {
-                throw new NullPointerException("Atleast message or error must not be null");
+                throw new NullPointerException("Either message or error must not be null");
             }
             final Map<String, Object> items = new HashMap<>(3);
             items.put(Fields.EVENT, Tags.ERROR.getKey());

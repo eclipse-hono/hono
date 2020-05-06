@@ -203,7 +203,6 @@ public abstract class JwtHelper {
         try {
             Jwts.parser().setSigningKeyResolver(new SigningKeyResolverAdapter() {
 
-                @SuppressWarnings("rawtypes")
                 @Override
                 public Key resolveSigningKey(final JwsHeader header, final Claims claims) {
                     final Date exp = claims.getExpiration();

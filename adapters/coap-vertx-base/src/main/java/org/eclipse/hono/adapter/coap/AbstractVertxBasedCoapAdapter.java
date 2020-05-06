@@ -570,7 +570,6 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Promise<ExtendedDevice> result = Promise.promise();
         final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
         if (peerIdentity instanceof ExtensiblePrincipal) {
-            @SuppressWarnings("unchecked")
             final ExtensiblePrincipal<? extends Principal> extPrincipal = (ExtensiblePrincipal<? extends Principal>) peerIdentity;
             final Device authenticatedDevice = extPrincipal.getExtendedInfo().get("hono-device", Device.class);
             if (authenticatedDevice != null) {
