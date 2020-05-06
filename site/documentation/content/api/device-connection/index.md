@@ -181,10 +181,9 @@ The response message's *status* property may contain the following codes:
 | :---- | :---------- |
 | *204* | OK, the adapter instance mapping information for the device has been removed. |
 | *400* | Bad Request, the request message does not contain all required properties. |
-| *404* | Not Found, there is no matching command-handling adapter instance assigned to the device. |
+| *412* | Precondition failed, the adapter instance for the device has not been removed because there is no matching command-handling adapter instance assigned to the device. |
 
 Implementors of this API may return a *404* status code in order to indicate that no device with the given identifier exists for the given tenant. However, performing such a check is optional.
-In case the currently mapped adapter instance doesn't match the given adapter instance id, a *412* status code may also be returned instead of *404*.
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 

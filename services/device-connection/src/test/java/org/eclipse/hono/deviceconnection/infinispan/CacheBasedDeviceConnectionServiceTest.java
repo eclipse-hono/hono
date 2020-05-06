@@ -52,7 +52,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
-public class RemoteCacheBasedDeviceConnectionServiceTest {
+public class CacheBasedDeviceConnectionServiceTest {
 
     private CacheBasedDeviceConnectionService svc;
     private Span span;
@@ -171,5 +171,57 @@ public class RemoteCacheBasedDeviceConnectionServiceTest {
             });
             ctx.completeNow();
         }));
+    }
+
+    /**
+     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation succeeds, invokes the
+     * corresponding method on the {@link DeviceConnectionInfo} instance, and returns the correct status code.
+     * This test uses a {@code true} return value of <em>removeCommandHandlingAdapterInstance</em>.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testRemoveCommandHandlingAdapterInstanceReturningTrue(final VertxTestContext ctx) {
+
+        final String deviceId = "testDevice";
+        final String adapterInstanceId = "adapterInstanceId";
+        when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(true));
+
+        givenAStartedService()
+                .compose(ok -> svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
+                .setHandler(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
+                        verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the <em>removeCommandHandlingAdapterInstance</em> operation succeeds, invokes the
+     * corresponding method on the {@link DeviceConnectionInfo} instance, and returns the correct status code.
+     * This test uses a {@code false} return value of <em>removeCommandHandlingAdapterInstance</em>.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testRemoveCommandHandlingAdapterInstanceReturningFalse(final VertxTestContext ctx) {
+
+        final String deviceId = "testDevice";
+        final String adapterInstanceId = "adapterInstanceId";
+        when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(SpanContext.class)))
+                .thenReturn(Future.succeededFuture(false));
+
+        givenAStartedService()
+                .compose(ok -> svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
+                .setHandler(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
+                        verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));
+                    });
+                    ctx.completeNow();
+                }));
     }
 }
