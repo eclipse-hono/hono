@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Device;
@@ -38,6 +39,7 @@ import org.eclipse.hono.client.CommandTargetMapper;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.client.DeviceConnectionClientFactory;
 import org.eclipse.hono.client.DisconnectListener;
+import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumerFactory;
@@ -45,9 +47,12 @@ import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.RegistrationClientFactory;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.TenantClient;
 import org.eclipse.hono.client.TenantClientFactory;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
+import org.eclipse.hono.service.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.service.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.service.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -90,13 +95,14 @@ public class AbstractProtocolAdapterBaseTest {
     private ProtocolAdapterProperties properties;
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> adapter;
     private RegistrationClient registrationClient;
-    private TenantClientFactory tenantService;
+    private TenantClientFactory tenantClientFactory;
     private RegistrationClientFactory registrationClientFactory;
     private CredentialsClientFactory credentialsClientFactory;
     private DownstreamSenderFactory downstreamSenderFactory;
     private ProtocolAdapterCommandConsumerFactory commandConsumerFactory;
     private DeviceConnectionClientFactory deviceConnectionClientFactory;
     private CommandTargetMapper commandTargetMapper;
+    private ConnectionEventProducer.Context connectionEventProducerContext;
 
     /**
      * Sets up the fixture.
@@ -105,8 +111,8 @@ public class AbstractProtocolAdapterBaseTest {
     @BeforeEach
     public void setup() {
 
-        tenantService = mock(TenantClientFactory.class);
-        when(tenantService.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
+        tenantClientFactory = mock(TenantClientFactory.class);
+        when(tenantClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
         registrationClientFactory = mock(RegistrationClientFactory.class);
         when(registrationClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
@@ -126,11 +132,15 @@ public class AbstractProtocolAdapterBaseTest {
         deviceConnectionClientFactory = mock(DeviceConnectionClientFactory.class);
         when(deviceConnectionClientFactory.connect()).thenReturn(Future.succeededFuture(mock(HonoConnection.class)));
 
+        connectionEventProducerContext = mock(ConnectionEventProducer.Context.class);
+        when(connectionEventProducerContext.getMessageSenderClient()).thenReturn(downstreamSenderFactory);
+        when(connectionEventProducerContext.getTenantClientFactory()).thenReturn(tenantClientFactory);
+
         commandTargetMapper = mock(CommandTargetMapper.class);
 
         properties = new ProtocolAdapterProperties();
         adapter = newProtocolAdapter(properties);
-        adapter.setTenantClientFactory(tenantService);
+        adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
@@ -160,7 +170,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter that does not define a type name
         adapter = newProtocolAdapter(properties, null);
-        adapter.setTenantClientFactory(tenantService);
+        adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
@@ -196,7 +206,7 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN starting the adapter
         adapter.startInternal().onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
             // THEN the service clients have connected
-            verify(tenantService).connect();
+            verify(tenantClientFactory).connect();
             verify(registrationClientFactory).connect();
             verify(downstreamSenderFactory).connect();
             verify(credentialsClientFactory).connect();
@@ -256,7 +266,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCredentialsClientFactory(credentialsClientFactory);
         adapter.setDownstreamSenderFactory(downstreamSenderFactory);
         adapter.setRegistrationClientFactory(registrationClientFactory);
-        adapter.setTenantClientFactory(tenantService);
+        adapter.setTenantClientFactory(tenantClientFactory);
         adapter.setCommandConsumerFactory(commandConsumerFactory);
         adapter.setDeviceConnectionClientFactory(deviceConnectionClientFactory);
         adapter.setCommandTargetMapper(commandTargetMapper);
@@ -684,6 +694,44 @@ public class AbstractProtocolAdapterBaseTest {
                             is(HttpURLConnection.HTTP_FORBIDDEN)));
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the (default) ConnectionEvent API configured for a protocol adapter
+     * sets the connection event message's TTL header value before forwarding the message
+     * to downstream applications.
+     * 
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testForwardedConnectionEventMessageHasTtlHeaderSet(final VertxTestContext ctx) {
+
+        // GIVEN a protocol adapter configured to send connection events
+        final ConnectionEventProducer connectionEventProducer = new HonoEventConnectionEventProducer();
+        adapter.setConnectionEventProducer(connectionEventProducer);
+        final DownstreamSender connectionEventSender = mock(DownstreamSender.class);
+        when(connectionEventSender.send(any(Message.class))).thenReturn(Future.succeededFuture());
+        when(downstreamSenderFactory.getOrCreateEventSender(Constants.DEFAULT_TENANT)).thenReturn(Future.succeededFuture(connectionEventSender));
+
+        // WHEN a device, belonging to a tenant for which a max TTL is configured, connects to such an adapter
+        final Device authenticatedDevice = new Device(Constants.DEFAULT_TENANT, "4711");
+        final TenantClient tenantClient = mock(TenantClient.class);
+        when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final ResourceLimits tenantLimits = new ResourceLimits();
+        tenantLimits.setMaxTtl(5L);
+        tenantObject.setResourceLimits(tenantLimits);
+        when(tenantClient.get(Constants.DEFAULT_TENANT)).thenReturn(Future.succeededFuture(tenantObject));
+
+        // THEN the adapter forwards the connection event message downstream
+        adapter.sendConnectedEvent("remote-id", authenticatedDevice).setHandler(ctx.succeeding(result -> {
+            final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+            verify(connectionEventSender).send(messageCaptor.capture());
+
+            // AND the forwarded connection event message contains the TTL value (in milliseconds) in its header
+            ctx.verify(() -> assertThat(messageCaptor.getValue().getTtl(), is(Duration.ofSeconds(5L).toMillis())));
+            ctx.completeNow();
+        }));
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(final ProtocolAdapterProperties props) {

@@ -15,6 +15,7 @@ package org.eclipse.hono.service.monitoring;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.DownstreamSenderFactory;
+import org.eclipse.hono.client.TenantClientFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -52,6 +53,14 @@ public interface ConnectionEventProducer {
          *         use. This client has to be initialized and started.
          */
         DownstreamSenderFactory getMessageSenderClient();
+        /**
+         * Provides the tenant client which the {@link ConnectionEventProducer} should use to lookup the tenant
+         * that the device connecting to a protocol adapter belongs to.
+         * 
+         * @return The tenant client instance. This client has to be initialized and started.
+         */
+        TenantClientFactory getTenantClientFactory();
+
     }
 
     /**

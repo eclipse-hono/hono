@@ -62,7 +62,6 @@ public abstract class AbstractDownstreamSender extends AbstractSender implements
         super(connection, sender, tenantId, targetAddress);
     }
 
-
     @Override
     public final Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType) {
         return send(deviceId, null, payload, contentType);
@@ -90,12 +89,8 @@ public abstract class AbstractDownstreamSender extends AbstractSender implements
         msg.setAddress(getTo(deviceId));
         MessageHelper.setPayload(msg, contentType, payload);
         setApplicationProperties(msg, properties);
-        addProperties(msg, deviceId);
-        return send(msg);
-    }
-
-    private void addProperties(final Message msg, final String deviceId) {
         MessageHelper.addDeviceId(msg, deviceId);
+        return send(msg);
     }
 
     private Charset getCharsetForContentType(final String contentType) {

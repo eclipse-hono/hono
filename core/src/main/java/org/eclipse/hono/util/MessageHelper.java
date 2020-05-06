@@ -561,10 +561,10 @@ public final class MessageHelper {
     }
 
     /**
-     * Sets the <em>time-to-live</em> of the AMQP 1.0 message.
+     * Sets the <em>time-to-live</em> for the given AMQP 1.0 message.
      *
-     * @param message the message for that the <em>time-to-live</em> is set.
-     * @param timeToLive The <em>time-to-live</em> duration to be set in the message.
+     * @param message The message whose <em>time-to-live</em> is to be set.
+     * @param timeToLive The <em>time-to-live</em> duration to be set on the message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static void setTimeToLive(final Message message, final Duration timeToLive) {
@@ -924,6 +924,37 @@ public final class MessageHelper {
     }
 
     /**
+     * Creates an AMQP 1.0 message.
+     * <p>
+     * This method simply calls
+     * {@link #newMessage(ResourceIdentifier, String, String, Buffer, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}
+     * to create the AMQP 1.0 message.
+     * 
+     * @param target       The target address of the message or {@code null} if the message's
+     *                     <em>to</em> property contains the target address.
+     * @param contentType  The content type describing the message's payload or {@code null} if no content type
+     *                     should be set.
+     * @param payload      The message payload or {@code null} if the message has no payload.
+     * @param tenant       The information registered for the tenant that the device belongs to or {@code null}
+     *                     if no information about the tenant is available.
+     * @param timeToLive   The message's <em>time-to-live</em> as provided by the device or {@code null} if the
+     *                     device did not provide any TTL.
+     * @param adapterName  The type name of the protocol adapter that the message has been published to.
+     * 
+     * @return  The AMQP 1.0 message.
+     */
+    public static Message newMessage(
+            final ResourceIdentifier target,
+            final String contentType,
+            final Buffer payload,
+            final TenantObject tenant,
+            final Duration timeToLive,
+            final String adapterName) {
+
+        return MessageHelper.newMessage(target, null, contentType, payload, tenant, null, null, timeToLive, adapterName, false,
+                false);
+    }
+    /**
      * Creates a new AMQP 1.0 message.
      * <p>
      * This method creates a new {@code Message} and sets
@@ -1139,7 +1170,7 @@ public final class MessageHelper {
             addJmsVendorProperties(message);
         }
 
-        // make sure that device provided TLL is capped at max TTL (if set)
+        // make sure that device provided TTL is capped at max TTL (if set)
         // AMQP spec defines TTL as milliseconds
         final long maxTtlMillis = maxTtl * 1000L;
         if (target.hasEventEndpoint() && maxTtl != TenantConstants.UNLIMITED_TTL) {
