@@ -699,12 +699,12 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Verifies that the (default) ConnectionEvent API configured for a protocol adapter
      * sets the connection event message's TTL header value before forwarding the message
-     * to downstream aoplications.
+     * to downstream applications.
      * 
      * @param ctx The vert.x test context.
      */
     @Test
-    public void tesForwardedConnectionEventMessageHasTtlHeaderSet(final VertxTestContext ctx) {
+    public void testForwardedConnectionEventMessageHasTtlHeaderSet(final VertxTestContext ctx) {
 
         // GIVEN a protocol adapter configured to send connection events
         final ConnectionEventProducer connectionEventProducer = new HonoEventConnectionEventProducer();
@@ -718,8 +718,8 @@ public class AbstractProtocolAdapterBaseTest {
         final TenantClient tenantClient = mock(TenantClient.class);
         when(tenantClientFactory.getOrCreateTenantClient()).thenReturn(Future.succeededFuture(tenantClient));
         final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, true);
-        final ResourceLimits tenantLimits = mock(ResourceLimits.class);
-        when(tenantLimits.getMaxTtl()).thenReturn(5L);
+        final ResourceLimits tenantLimits = new ResourceLimits();
+        tenantLimits.setMaxTtl(5L);
         tenantObject.setResourceLimits(tenantLimits);
         when(tenantClient.get(Constants.DEFAULT_TENANT)).thenReturn(Future.succeededFuture(tenantObject));
 
