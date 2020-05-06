@@ -724,7 +724,7 @@ public class AbstractProtocolAdapterBaseTest {
         when(tenantClient.get(Constants.DEFAULT_TENANT)).thenReturn(Future.succeededFuture(tenantObject));
 
         // THEN the adapter forwards the connection event message downstream
-        adapter.sendConnectedEvent("remote-id", authenticatedDevice).setHandler(ctx.succeeding(result -> {
+        adapter.sendConnectedEvent("remote-id", authenticatedDevice).onComplete(ctx.succeeding(result -> {
             final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
             verify(connectionEventSender).send(messageCaptor.capture());
 
