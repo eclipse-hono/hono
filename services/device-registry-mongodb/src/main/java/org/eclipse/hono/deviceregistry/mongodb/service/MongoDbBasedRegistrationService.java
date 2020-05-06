@@ -68,8 +68,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     /**
      * The property that contains the group IDs that a (gateway) device is a member of.
      */
-    private static final String PROPERTY_DEVICE_MEMBEROF = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_DEVICE,
-            RegistryManagementConstants.FIELD_MEMBER_OF);
+    private static final String PROPERTY_DEVICE_MEMBER_OF = String.format("%s.%s",
+            MongoDbDeviceRegistryUtils.FIELD_DEVICE, RegistryManagementConstants.FIELD_MEMBER_OF);
     private static final int INDEX_CREATION_MAX_RETRIES = 3;
 
     private final MongoClient mongoClient;
@@ -95,7 +95,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         this.mongoClient = mongoClient;
         this.mongoDbCallExecutor = new MongoDbCallExecutor(vertx, mongoClient);
-        this.config = Objects.requireNonNull(config);
+        this.config = config;
     }
 
     @Override
@@ -321,7 +321,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             final Span span) {
 
         final JsonObject resolveGroupMembersQuery = MongoDbDocumentBuilder.forTenantId(tenantId).document()
-                .put(PROPERTY_DEVICE_MEMBEROF, new JsonObject().put("$exists", true).put("$in", viaGroups));
+                .put(PROPERTY_DEVICE_MEMBER_OF, new JsonObject().put("$exists", true).put("$in", viaGroups));
         //Retrieve only the deviceId instead of the whole document.
         final FindOptions findOptionsForDeviceId = new FindOptions()
                 .setFields(new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
