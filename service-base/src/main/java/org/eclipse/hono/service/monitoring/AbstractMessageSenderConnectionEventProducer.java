@@ -94,7 +94,6 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                                 final JsonObject payload = new JsonObject();
                                 payload.put("cause", cause);
                                 payload.put("remote-id", remoteId);
-                                // TODO: can this be removed in favour of 'orig_dapter'?
                                 payload.put("source", protocolAdapter);
 
                                 if (data != null) {
@@ -106,9 +105,6 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                                 final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenantId, deviceId);
                                 final Duration timeToLive = Duration.ofSeconds(tenantObjectFuture.result().getResourceLimits().getMaxTtl());
 
-                                // the 'orig_adapter' will be added to the message's application
-                                // properties to contain the name of the protocol adapter
-                                // forwarding this connection event
                                 final Message msg = MessageHelper.newMessage(
                                         target, 
                                         EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE, 
