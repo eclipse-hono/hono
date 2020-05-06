@@ -26,7 +26,7 @@ public interface ProtocolAdapterCommandConsumer {
      * Closes the consumer.
      *
      * @param spanContext The span context (may be {@code null}).
-     * @return @return A future indicating the outcome of the operation.
+     * @return A future indicating the outcome of the operation.
      */
     Future<Void> close(SpanContext spanContext);
 
