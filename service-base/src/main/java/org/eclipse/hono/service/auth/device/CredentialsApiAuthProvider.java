@@ -52,7 +52,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * A logger to be used by subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    private final CredentialsClientFactory credentialsServiceClient;
+    private final CredentialsClientFactory credentialsClientFactory;
     private final Tracer tracer;
 
     /**
@@ -63,7 +63,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * @throws NullPointerException if the factory or the tracer are {@code null}
      */
     public CredentialsApiAuthProvider(final CredentialsClientFactory credentialsClientFactory, final Tracer tracer) {
-        this.credentialsServiceClient = Objects.requireNonNull(credentialsClientFactory);
+        this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
         this.tracer = Objects.requireNonNull(tracer);
     }
 
@@ -74,11 +74,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * @return A future containing the client.
      */
     protected final Future<CredentialsClient> getCredentialsClient(final String tenantId) {
-        if (credentialsServiceClient == null) {
-            return Future.failedFuture(new IllegalStateException("no credentials client set"));
-        } else {
-            return credentialsServiceClient.getOrCreateCredentialsClient(tenantId);
-        }
+        return credentialsClientFactory.getOrCreateCredentialsClient(tenantId);
     }
 
     /**
@@ -94,12 +90,9 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             final SpanContext spanContext) {
 
         Objects.requireNonNull(deviceCredentials);
-        if (credentialsServiceClient == null) {
-            return Future.failedFuture(new IllegalStateException("Credentials API client is not set"));
-        } else {
-            return getCredentialsClient(deviceCredentials.getTenantId()).compose(client ->
-                client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(), deviceCredentials.getClientContext(), spanContext));
-        }
+        return getCredentialsClient(deviceCredentials.getTenantId())
+                .compose(client -> client.get(deviceCredentials.getType(), deviceCredentials.getAuthId(),
+                        deviceCredentials.getClientContext(), spanContext));
     }
 
     @Override

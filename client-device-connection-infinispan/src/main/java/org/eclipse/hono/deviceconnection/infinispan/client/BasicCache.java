@@ -125,9 +125,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
 
         vertx.executeBlocking(r -> {
             try {
-                if (cacheManager != null) {
-                    cacheManager.stop();
-                }
+                cacheManager.stop();
                 r.complete();
             } catch (final Throwable t) {
                 r.fail(t);

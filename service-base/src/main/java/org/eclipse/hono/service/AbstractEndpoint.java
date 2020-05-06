@@ -36,7 +36,7 @@ public abstract class AbstractEndpoint implements Endpoint {
     /**
      * The Vert.x instance this endpoint is running on.
      */
-    protected final Vertx  vertx;
+    protected final Vertx vertx;
     /**
      * A logger to be used by subclasses.
      */
@@ -75,11 +75,7 @@ public abstract class AbstractEndpoint implements Endpoint {
     @Override
     public final Future<Void> start() {
         final Promise<Void> result = Promise.promise();
-        if (vertx == null) {
-            result.fail(new IllegalStateException("Vert.x instance must be set"));
-        } else {
-            doStart(result);
-        }
+        doStart(result);
         return result.future();
     }
 

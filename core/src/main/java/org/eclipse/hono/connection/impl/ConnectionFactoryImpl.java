@@ -131,12 +131,6 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             final Handler<ProtonConnection> disconnectHandler,
             final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
 
-        if (vertx == null) {
-            throw new IllegalStateException("Vert.x instance must be set");
-        } else if (config == null) {
-            throw new IllegalStateException("Client configuration must be set");
-        }
-
         Objects.requireNonNull(connectionResultHandler);
         final ProtonClientOptions clientOptions = options != null ? options : createClientOptions();
         final String effectiveUsername = username == null ? config.getUsername() : username;
