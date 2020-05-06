@@ -329,7 +329,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
 
         final Promise<JsonObject> result = Promise.promise();
 
-        if (!isStarted()) {
+        if (isStarted()) {
             final Instant start = Instant.now();
             put(connectionCheckKey, connectionCheckValue)
                     .setHandler(r -> {
