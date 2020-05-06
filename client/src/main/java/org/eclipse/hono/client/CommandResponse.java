@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,8 +45,8 @@ public final class CommandResponse {
         message = ProtonHelper.message();
         message.setCorrelationId(correlationId);
         MessageHelper.setCreationTime(message);
-        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        MessageHelper.addTenantId(message, tenantId);
+        MessageHelper.addDeviceId(message, deviceId);
         MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_STATUS, status);
         MessageHelper.setPayload(message, contentType, payload);
         this.replyToId = replyToId;
@@ -134,8 +134,8 @@ public final class CommandResponse {
         } else {
             try {
                 final ResourceIdentifier resource = ResourceIdentifier.fromString(message.getAddress());
-                MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_TENANT_ID, resource.getTenantId());
-                MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_DEVICE_ID, resource.getResourceId());
+                MessageHelper.addTenantId(message, resource.getTenantId());
+                MessageHelper.addDeviceId(message, resource.getResourceId());
 
                 final String deviceId = resource.getResourceId();
                 final String pathWithoutBase = resource.getPathWithoutBase();

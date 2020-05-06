@@ -349,8 +349,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Device authenticatedDevice = getAuthenticatedDevice(con);
         TracingHelper.TAG_AUTHENTICATED.set(span, authenticatedDevice != null);
         if (authenticatedDevice != null) {
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+            TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
         }
 
         final Promise<Void> connectAuthorizationCheck = Promise.promise();
@@ -779,8 +778,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 .start();
 
         if (authenticatedDevice != null) {
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+            TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
         }
         traceSamplingPriority.ifPresent(prio -> {
             TracingHelper.setTraceSamplingPriority(span, prio);

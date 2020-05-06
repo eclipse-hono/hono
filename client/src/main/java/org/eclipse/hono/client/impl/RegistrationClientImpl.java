@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RegistrationClient;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -247,9 +248,8 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
         final TriTuple<String, String, String> key = TriTuple.of(RegistrationConstants.ACTION_ASSERT, deviceId, gatewayId);
         final Span span = newChildSpan(parent, "assert Device Registration");
-        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, getTenantId());
-        span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
+        TracingHelper.setDeviceTags(span, getTenantId(), deviceId);
+        TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
 
         final Future<RegistrationResult> resultTracker = getResponseFromCache(key, span)
                 .recover(t -> {

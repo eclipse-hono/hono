@@ -494,16 +494,20 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
     }
 
-    private Span createSpan(final String operationName, final String tenantId, final String deviceId,
-            final String adapterInstanceId, final SpanContext spanContext) {
+    private Span createSpan(
+            final String operationName,
+            final String tenantId,
+            final String deviceId,
+            final String adapterInstanceId,
+            final SpanContext spanContext) {
+
         final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName, getClass().getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId);
         if (adapterInstanceId != null) {
             spanBuilder.withTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
         }
         return spanBuilder.start();
     }
-
 }

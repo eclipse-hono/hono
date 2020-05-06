@@ -199,14 +199,14 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         if (ctx.user() instanceof Device) {
             final Device gatewayDevice = (Device) ctx.user();
             final JsonObject loraMessage = ctx.getBodyAsJson();
-            currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, gatewayDevice.getTenantId());
+            currentSpan.setTag(TracingHelper.TAG_TENANT_ID, gatewayDevice.getTenantId());
 
             LoraMessageType type = LoraMessageType.UNKNOWN;
             try {
                 type = provider.extractMessageType(loraMessage);
                 final String deviceId = provider.extractDeviceId(loraMessage);
                 currentSpan.setTag(TAG_LORA_DEVICE_ID, deviceId);
-                currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+                currentSpan.setTag(TracingHelper.TAG_DEVICE_ID, deviceId);
 
                 if (LoraMessageType.UPLINK.equals(type)) {
                     final String payload = provider.extractPayload(loraMessage);
@@ -362,10 +362,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             // org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter.createCommandConsumer
             receivedCommandContext.accept();
 
+            final String loraDeviceId = MessageHelper.getDeviceId(command.getCommandMessage());
             if (isValidLoraCommand(command)) {
-
-                final String loraDeviceId = (String) command.getApplicationProperties()
-                        .get(MessageHelper.APP_PROPERTY_DEVICE_ID);
                 receivedCommandContext.getCurrentSpan().setTag(TAG_LORA_DEVICE_ID, loraDeviceId);
                 commandData.setTargetDeviceId(loraDeviceId);
                 LOG.debug("Got valid command {} for an actual lora device [{}]", command, loraDeviceId);
@@ -440,8 +438,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
                 return Future.succeededFuture();
             } else {
-                LOG.debug("Got invalid command {} for actual lora device '{}'", command,
-                        command.getApplicationProperties().get(MessageHelper.APP_PROPERTY_DEVICE_ID));
+                LOG.debug("Got invalid command {} for actual lora device '{}'", command, loraDeviceId);
                 return Future.failedFuture("Malformed command message.");
             }
         }).otherwise(validationException -> {
@@ -465,7 +462,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             return false;
         }
 
-        final Object loraDeviceIdObject = command.getApplicationProperties().get(MessageHelper.APP_PROPERTY_DEVICE_ID);
+        final Object loraDeviceIdObject = MessageHelper.getDeviceId(command.getCommandMessage());
         if (!(loraDeviceIdObject instanceof String)) {
             return false;
         }
@@ -506,9 +503,9 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant())
+                .withTag(TracingHelper.TAG_TENANT_ID, command.getTenant())
                 .withTag(TAG_LORA_DEVICE_ID, loraDeviceId)
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getDeviceId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, command.getDeviceId())
                 .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, response.statusCode())
                 .withTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId()).start();
 

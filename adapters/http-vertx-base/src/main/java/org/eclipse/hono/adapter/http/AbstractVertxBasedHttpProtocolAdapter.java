@@ -639,8 +639,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx),
                         "upload " + endpoint.getCanonicalName(), getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenant)
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                 .withTag(Constants.HEADER_QOS_LEVEL, qos.asTag().getValue())
                 .start();
@@ -1179,8 +1179,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx),
                         "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenant)
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenant)
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, responseStatus)
                 .withTag(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)

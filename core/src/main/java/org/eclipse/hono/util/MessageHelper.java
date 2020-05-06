@@ -234,10 +234,21 @@ public final class MessageHelper {
      *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
      */
     public static String getDeviceId(final Message msg) {
         Objects.requireNonNull(msg);
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_ID, String.class);
+        return getDeviceId(msg.getApplicationProperties());
+    }
+
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} application property.
+     *
+     * @param properties The message's application properties.
+     * @return The property value or {@code null} if not set.
+     */
+    public static String getDeviceId(final ApplicationProperties properties) {
+        return getApplicationProperty(properties, APP_PROPERTY_DEVICE_ID, String.class);
     }
 
     /**
@@ -245,10 +256,21 @@ public final class MessageHelper {
      *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
      */
     public static String getTenantId(final Message msg) {
         Objects.requireNonNull(msg);
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID, String.class);
+        return getTenantId(msg.getApplicationProperties());
+    }
+
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} application property.
+     *
+     * @param properties The message's application properties.
+     * @return The property value or {@code null} if not set.
+     */
+    public static String getTenantId(final ApplicationProperties properties) {
+        return getApplicationProperty(properties, APP_PROPERTY_TENANT_ID, String.class);
     }
 
     /**
@@ -256,10 +278,21 @@ public final class MessageHelper {
      *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
      */
     public static String getGatewayId(final Message msg) {
         Objects.requireNonNull(msg);
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_GATEWAY_ID, String.class);
+        return getGatewayId(msg.getApplicationProperties());
+    }
+
+    /**
+     * Gets the value of a message's {@link #APP_PROPERTY_GATEWAY_ID} application property.
+     *
+     * @param properties The message's application properties.
+     * @return The property value or {@code null} if not set.
+     */
+    public static String getGatewayId(final ApplicationProperties properties) {
+        return getApplicationProperty(properties, APP_PROPERTY_GATEWAY_ID, String.class);
     }
 
     /**

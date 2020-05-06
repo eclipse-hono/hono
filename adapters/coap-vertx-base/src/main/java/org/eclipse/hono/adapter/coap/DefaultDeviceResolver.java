@@ -36,10 +36,9 @@ import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.CredentialsClientFactory;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -133,28 +132,24 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
         if (clientIdentity instanceof PreSharedKeyIdentity) {
             final Span span = newSpan("PSK-getDeviceIdentityInfo");
             final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(span, clientIdentity.getName());
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, deviceIdentity.getTenantId())
-                .setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdentity.getAuthId());
+            TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
+            span.log(Map.of(CredentialsConstants.FIELD_AUTH_ID, deviceIdentity.getAuthId()));
             final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
             context.runOnContext(go -> {
-                credentialsClientFactory
-                .getOrCreateCredentialsClient(deviceIdentity.getTenantId())
-                .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, deviceIdentity.getAuthId(), new JsonObject(), span.context()))
-                .setHandler(attempt -> {
-                    if (attempt.succeeded()) {
-                        credentialsResult.complete(attempt.result());
-                    } else {
-                        credentialsResult.completeExceptionally(attempt.cause());
-                    }
-                });
+                credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId())
+                    .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, deviceIdentity.getAuthId(), new JsonObject(), span.context()))
+                    .onSuccess(credentials -> credentialsResult.complete(credentials))
+                    .onFailure(t -> credentialsResult.completeExceptionally(t));
             });
             try {
                 // client will only wait a limited period of time,
                 // so no need to use get(Long, TimeUnit) here
                 final CredentialsObject credentials = credentialsResult.join();
                 result.put("hono-device", new Device(deviceIdentity.getTenantId(), credentials.getDeviceId()));
-                span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, credentials.getDeviceId());
+                span.log("successfully resolved device identity");
+                TracingHelper.TAG_DEVICE_ID.set(span, credentials.getDeviceId());
             } catch (final CompletionException e) {
+                TracingHelper.logError(span, "could not resolve auhenticated principal", e);
                 LOG.debug("could not resolve authenticated principal [type: {}, tenant-id: {}, auth-id: {}]",
                         clientIdentity.getClass(), deviceIdentity.getTenantId(), deviceIdentity.getAuthId(), e);
             }
@@ -174,33 +169,28 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
             span.finish();
             return null;
         }
-        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, handshakeIdentity.getTenantId())
-            .setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, handshakeIdentity.getAuthId());
+        TracingHelper.TAG_TENANT_ID.set(span, handshakeIdentity.getTenantId());
+        span.log(Map.of(CredentialsConstants.FIELD_AUTH_ID, handshakeIdentity.getAuthId()));
 
         final CompletableFuture<SecretKey> secret = new CompletableFuture<>();
         context.runOnContext((v) -> {
             LOG.debug("getting PSK secret for identity [{}]", handshakeIdentity.getAuthId());
             getSharedKeyForDevice(handshakeIdentity, span.context())
-            .setHandler((getAttempt) -> {
-                if (getAttempt.succeeded()) {
-                    secret.complete(getAttempt.result());
-                } else {
-                    secret.completeExceptionally(getAttempt.cause());
-                }
-            });
+                .onSuccess(key -> secret.complete(key))
+                .onFailure(t -> secret.completeExceptionally(t));
         });
-        SecretKey key;
         try {
             // credentials client will wait limited time only
-            key = secret.join();
-            span.log("secret key available.");
+            final SecretKey key = secret.join();
+            span.log("successfully retrieved PSK for device");
+            return key;
         } catch (final CompletionException e) {
+            TracingHelper.logError(span, "could not find PSK for device", e);
             LOG.debug("error retrieving credentials for PSK identity [{}]", handshakeIdentity.getAuthId());
-            key = null;
-            span.log("no secret key available!");
+            return null;
+        } finally {
+            span.finish();
         }
-        span.finish();
-        return key;
     }
 
     /**

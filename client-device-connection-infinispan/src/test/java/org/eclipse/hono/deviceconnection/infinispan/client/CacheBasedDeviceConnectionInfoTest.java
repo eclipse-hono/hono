@@ -48,6 +48,7 @@ import org.mockito.Mockito;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.tag.Tag;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -95,6 +96,7 @@ class CacheBasedDeviceConnectionInfoTest {
     /**
      * Sets up the fixture.
      */
+    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp(final Vertx vertx, final VertxTestContext testContext) {
 
@@ -112,6 +114,7 @@ class CacheBasedDeviceConnectionInfoTest {
         when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), (String) any())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
+        when(spanBuilder.withTag(any(Tag.class), any())).thenReturn(spanBuilder);
         when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
         when(spanBuilder.start()).thenReturn(span);
         tracer = mock(Tracer.class);

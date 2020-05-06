@@ -81,8 +81,8 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
                 .buildChildSpan(tracer, context, "get target gateway and adapter instance",
                         CommandTargetMapper.class.getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId)
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
 
         return registrationClientFactory.getOrCreateRegistrationClient(tenantId)

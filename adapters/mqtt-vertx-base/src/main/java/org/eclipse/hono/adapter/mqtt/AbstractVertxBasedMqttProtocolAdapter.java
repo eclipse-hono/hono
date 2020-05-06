@@ -427,8 +427,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             // we NEVER maintain session state
                             endpoint.accept(false);
                             if (authenticatedDevice != null) {
-                                currentSpan.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticationAttempt.result().getTenantId());
-                                currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticationAttempt.result().getDeviceId());
+                                TracingHelper.setDeviceTags(
+                                        currentSpan,
+                                        authenticationAttempt.result().getTenantId(),
+                                        authenticationAttempt.result().getDeviceId());
                             }
                             currentSpan.log("connection accepted");
                         } else {
@@ -668,8 +670,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 .start();
 
         if (authenticatedDevice != null) {
-            span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, authenticatedDevice.getTenantId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, authenticatedDevice.getDeviceId());
+            TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
         }
         return span;
     }
@@ -1055,8 +1056,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final Span currentSpan = TracingHelper
                 .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, targetAddress.getTenantId())
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, targetAddress.getResourceId())
+                .withTag(TracingHelper.TAG_TENANT_ID, targetAddress.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, targetAddress.getResourceId())
                 .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, status)
                 .withTag(Constants.HEADER_COMMAND_REQUEST_ID, reqId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
@@ -1122,8 +1123,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final Span currentSpan = TracingHelper.buildChildSpan(tracer, ctx.getTracingContext(),
                 "upload " + endpoint, getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantObject.getTenantId())
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 

@@ -13,6 +13,7 @@
 package org.eclipse.hono.service.credentials;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -158,6 +159,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
         log.debug("getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId);
         TracingHelper.TAG_CREDENTIALS_TYPE.set(span, type);
         TracingHelper.TAG_AUTH_ID.set(span, authId);
+        span.log(Map.of(CredentialsConstants.FIELD_TYPE, type, CredentialsConstants.FIELD_AUTH_ID, authId));
 
         return getService().get(tenantId, type, authId, payload, span)
                 .map(res -> {
@@ -166,7 +168,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
                                     CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))
                             .orElse(null);
                     if (deviceIdFromPayload != null) {
-                        span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceIdFromPayload);
+                        TracingHelper.TAG_DEVICE_ID.set(span, deviceIdFromPayload);
                     }
                     return CredentialsConstants.getAmqpReply(
                             CredentialsConstants.CREDENTIALS_ENDPOINT,

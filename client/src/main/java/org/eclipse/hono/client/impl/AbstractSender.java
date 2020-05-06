@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -154,8 +154,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
         final Span span = startSpan(parent, rawMessage);
         Tags.MESSAGE_BUS_DESTINATION.set(span, targetAddress);
-        span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, MessageHelper.getDeviceId(rawMessage));
+        TracingHelper.setDeviceTags(span, tenantId, MessageHelper.getDeviceId(rawMessage));
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), rawMessage);
 
         return connection.executeOnContext(result -> {

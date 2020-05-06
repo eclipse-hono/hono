@@ -29,6 +29,7 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
 import io.opentracing.noop.NoopTracerFactory;
+import io.opentracing.tag.Tag;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -104,12 +105,14 @@ public final class HonoClientUnitTestHelper {
      *                     returned builder should produce.
      * @return The builder.
      */
+    @SuppressWarnings("unchecked")
     public static SpanBuilder mockSpanBuilder(final Span spanToCreate) {
         final SpanBuilder spanBuilder = mock(SpanBuilder.class, Mockito.RETURNS_SMART_NULLS);
         when(spanBuilder.addReference(anyString(), any())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), anyBoolean())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), (String) any())).thenReturn(spanBuilder);
         when(spanBuilder.withTag(anyString(), (Number) any())).thenReturn(spanBuilder);
+        when(spanBuilder.withTag(any(Tag.class), any())).thenReturn(spanBuilder);
         when(spanBuilder.ignoreActiveSpan()).thenReturn(spanBuilder);
         when(spanBuilder.start()).thenReturn(spanToCreate);
         return spanBuilder;

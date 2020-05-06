@@ -570,6 +570,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Promise<ExtendedDevice> result = Promise.promise();
         final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
         if (peerIdentity instanceof ExtensiblePrincipal) {
+            @SuppressWarnings("unchecked")
             final ExtensiblePrincipal<? extends Principal> extPrincipal = (ExtensiblePrincipal<? extends Principal>) peerIdentity;
             final Device authenticatedDevice = extPrincipal.getExtendedInfo().get("hono-device", Device.class);
             if (authenticatedDevice != null) {
@@ -684,8 +685,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     .buildChildSpan(tracer, context.getTracingContext(),
                             "upload " + endpoint.getCanonicalName(), getTypeName())
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                    .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, device.getTenantId())
-                    .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId())
+                    .withTag(TracingHelper.TAG_TENANT_ID, device.getTenantId())
+                    .withTag(TracingHelper.TAG_DEVICE_ID, device.getDeviceId())
                     .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                     .start();
 
@@ -1113,8 +1114,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         final Span currentSpan = TracingHelper
                 .buildChildSpan(tracer, context.getTracingContext(), "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(MessageHelper.APP_PROPERTY_TENANT_ID, device.getTenantId())
-                .withTag(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId())
+                .withTag(TracingHelper.TAG_TENANT_ID, device.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, device.getDeviceId())
                 .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, responseStatus)
                 .withTag(Constants.HEADER_COMMAND_REQUEST_ID, commandRequestId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)

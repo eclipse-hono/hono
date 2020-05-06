@@ -189,10 +189,10 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant());
         if (command.isTargetedAtGateway()) {
             MessageHelper.addProperty(delegatedCommandMessage, MessageHelper.APP_PROPERTY_CMD_VIA, command.getDeviceId());
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getOriginalDeviceId());
-            span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, command.getDeviceId());
+            TracingHelper.TAG_DEVICE_ID.set(span, command.getOriginalDeviceId());
+            TracingHelper.TAG_GATEWAY_ID.set(span, command.getDeviceId());
         } else {
-            span.setTag(MessageHelper.APP_PROPERTY_DEVICE_ID, command.getDeviceId());
+            TracingHelper.TAG_DEVICE_ID.set(span, command.getDeviceId());
         }
         TracingHelper.injectSpanContext(connection.getTracer(), span.context(), delegatedCommandMessage);
 
