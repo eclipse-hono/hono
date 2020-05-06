@@ -9,6 +9,8 @@ title = "Release Notes"
 * The LoraWAN protocol adapter has been extended with support for the *ChirpStack* provider.
 * Hono's integration tests can now be run with a Jaeger back end in order to collect tracing
   information.
+* The AMQP 1.0 event message based Connection Event producer now sets a TTL on the event messages
+  it produces. The TTL is the *max TTL* configured at the tenant level.
 
 ### Fixes & Enhancements
 
