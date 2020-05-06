@@ -166,19 +166,21 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
                 null)
                 .compose(this::send)
                 .recover(thr -> {
-                    if (thr instanceof ServiceInvocationException && ((ServiceInvocationException) thr)
-                            .getErrorCode() == HttpURLConnection.HTTP_NOT_FOUND) {
-                        return Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+                    if (thr instanceof ServiceInvocationException) {
+                        final int errorCode = ((ServiceInvocationException) thr).getErrorCode();
+                        if (errorCode == HttpURLConnection.HTTP_NOT_FOUND || errorCode == HttpURLConnection.HTTP_PRECON_FAILED) {
+                            return Future.succeededFuture(DeviceConnectionResult.from(errorCode));
+                        }
                     }
                     return Future.failedFuture(thr);
                 }).compose(devConResult -> {
                     final Promise<Boolean> result = Promise.promise();
                     switch (devConResult.getStatus()) {
-                        case HttpURLConnection.HTTP_OK:
                         case HttpURLConnection.HTTP_NO_CONTENT:
                             result.complete(Boolean.TRUE);
                             break;
                         case HttpURLConnection.HTTP_NOT_FOUND:
+                        case HttpURLConnection.HTTP_PRECON_FAILED:
                             result.complete(Boolean.FALSE);
                             break;
                         default:

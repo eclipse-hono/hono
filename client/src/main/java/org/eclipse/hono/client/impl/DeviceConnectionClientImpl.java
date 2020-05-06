@@ -254,6 +254,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
                 case HttpURLConnection.HTTP_NO_CONTENT:
                     return Boolean.TRUE;
                 case HttpURLConnection.HTTP_NOT_FOUND:
+                case HttpURLConnection.HTTP_PRECON_FAILED:
                     return Boolean.FALSE;
                 default:
                     throw StatusCodeMapper.from(result);

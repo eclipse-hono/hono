@@ -297,7 +297,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     return svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice",
                             adapterInstance, span);
                 }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
                 })));
@@ -353,7 +353,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return instancesPromise.future();
                 }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
+                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
                 })));

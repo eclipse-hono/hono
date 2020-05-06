@@ -203,7 +203,7 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
                 resultFuture = Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED));
             }
         } else {
-            resultFuture = Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+            resultFuture = Future.succeededFuture(DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED));
         }
         return resultFuture;
     }
