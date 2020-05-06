@@ -165,7 +165,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         .thenReturn(Future.failedFuture(ex));
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, null)
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
                 ctx.completeNow();
             }));
@@ -183,7 +183,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
 
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, null)
-            .setHandler(ctx.succeeding(c -> {
+            .onComplete(ctx.succeeding(c -> {
                 ctx.verify(() -> {
                     verify(connection).createReceiver(eq(tenantCommandAddress), eq(ProtonQoS.AT_LEAST_ONCE), any(), anyInt(),
                             eq(false), any());
@@ -207,7 +207,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         final Duration lifespan = Duration.ofSeconds(10);
         final Future<ProtocolAdapterCommandConsumer> commandConsumerFuture = commandConsumerFactory.createCommandConsumer(tenantId,
                 deviceId, commandHandler, lifespan, null);
-        commandConsumerFuture.setHandler(ctx.succeeding(consumer -> {
+        commandConsumerFuture.onComplete(ctx.succeeding(consumer -> {
             ctx.verify(() -> {
                 verify(connection).createReceiver(eq(tenantCommandAddress), eq(ProtonQoS.AT_LEAST_ONCE), any(), anyInt(),
                         eq(false), any());

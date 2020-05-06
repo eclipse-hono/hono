@@ -143,7 +143,7 @@ public class MappingAndDelegatingCommandHandler {
         final Future<JsonObject> commandTargetFuture = commandTargetMapper.getTargetGatewayAndAdapterInstance(tenantId,
                 originalDeviceId, originalCommandContext.getTracingContext());
 
-        commandTargetFuture.setHandler(commandTargetResult -> {
+        commandTargetFuture.onComplete(commandTargetResult -> {
             if (commandTargetResult.succeeded()) {
                 final String targetDeviceId = commandTargetResult.result().getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID);
                 final String targetAdapterInstance = commandTargetResult.result().getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID);
@@ -251,7 +251,7 @@ public class MappingAndDelegatingCommandHandler {
         LOG.trace("delegate command to target adapter instance '{}' [command: {}]", targetAdapterInstance, commandContext.getCommand());
         getOrCreateDelegatedCommandSender(targetAdapterInstance)
                 .compose(sender -> sender.sendCommandMessage(commandContext.getCommand(), commandContext.getTracingContext()))
-                .setHandler(ar -> {
+                .onComplete(ar -> {
                     if (ar.succeeded()) {
                         final ProtonDelivery delegatedMsgDelivery = ar.result();
                         LOG.trace("command [{}] sent to downstream peer; remote state of delivery: {}",

@@ -76,7 +76,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .registerDevice(Constants.DEFAULT_TENANT, deviceId, device)
                 .compose(r -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.assertRegistration(deviceId))
-                .setHandler(ctx.succeeding(resp -> {
+                .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
                         assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
                         assertThat(resp.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS))
@@ -110,7 +110,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                         deviceId, device))
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId))
-                .setHandler(ctx.succeeding(resp -> {
+                .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
                         assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
                         assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactlyElementsOf(via);
@@ -147,7 +147,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                         deviceId, device))
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId))
-                .setHandler(ctx.succeeding(resp -> {
+                .onComplete(ctx.succeeding(resp -> {
                     ctx.verify(() -> {
                         assertThat(resp.getString(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
                         assertThat(resp.getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactly(gatewayId);
@@ -168,7 +168,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         getClient(Constants.DEFAULT_TENANT)
         .compose(client -> client.assertRegistration(NON_EXISTING_DEVICE_ID))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
@@ -190,7 +190,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         .registerDevice(Constants.DEFAULT_TENANT, deviceId)
         .compose(r -> getClient(Constants.DEFAULT_TENANT))
         .compose(client -> client.assertRegistration(deviceId, NON_EXISTING_GATEWAY_ID))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN));
             ctx.completeNow();
         }));
@@ -222,7 +222,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                         Constants.DEFAULT_TENANT, deviceId, device))
                 .compose(r -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.assertRegistration(deviceId, gatewayId))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
                     ctx.completeNow();
                 }));
@@ -254,7 +254,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .compose(ok -> getHelper().registry.registerDevice(Constants.DEFAULT_TENANT, deviceId, device))
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.assertRegistration(deviceId, unauthorizedGateway))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
                     ctx.completeNow();
                 }));
@@ -278,7 +278,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
                 .registerDevice(Constants.DEFAULT_TENANT, deviceId, device)
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.assertRegistration(deviceId))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
                 }));

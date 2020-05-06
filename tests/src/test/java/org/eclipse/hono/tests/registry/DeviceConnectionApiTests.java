@@ -77,7 +77,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         getClient(Constants.DEFAULT_TENANT)
             .compose(client -> client.setLastKnownGatewayForDevice(deviceId, gwId, null).map(client))
             .compose(client -> client.getLastKnownGatewayForDevice(deviceId, null))
-            .setHandler(ctx.succeeding(r -> {
+            .onComplete(ctx.succeeding(r -> {
                 ctx.verify(() -> {
                     assertThat(r.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID)).isEqualTo(gwId);
                 });
@@ -99,7 +99,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         getClient(Constants.DEFAULT_TENANT)
             .compose(client -> client.getLastKnownGatewayForDevice(deviceId, null))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
             }));
@@ -121,7 +121,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
             .compose(client -> client
                     .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, false, null).map(client))
             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
-            .setHandler(ctx.succeeding(r -> {
+            .onComplete(ctx.succeeding(r -> {
                 ctx.verify(() -> {
                     final JsonArray instanceList = r.getJsonArray(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES);
                     assertThat(instanceList).hasSize(1);
@@ -157,11 +157,11 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                     // wait 1s to make sure that entry has expired after that
                     vertx.setTimer(1002, tid -> {
                         client.getCommandHandlingAdapterInstances(deviceId, List.of(), null)
-                                .setHandler(instancesPromise.future());
+                                .onComplete(instancesPromise.future());
                     });
                     return instancesPromise.future();
                 })
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
                 }));
@@ -187,7 +187,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                 .compose(client -> client
                         .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, true, null).map(client))
                 .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
-                .setHandler(ctx.succeeding(r -> {
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         final JsonArray instanceList = r.getJsonArray(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES);
                         assertThat(instanceList).hasSize(1);
@@ -221,7 +221,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                 // now try to update the entry, but with another adapter instance
                 .compose(client -> client
                         .setCommandHandlingAdapterInstance(deviceId, "otherAdapterInstance", lifespan, true, null))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_PRECON_FAILED));
                     ctx.completeNow();
                 }));
@@ -241,7 +241,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         getClient(Constants.DEFAULT_TENANT)
             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
             }));
@@ -267,7 +267,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                         .map(client))
                 // then remove it
                 .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstance, null))
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> assertThat(result).isTrue());
                     ctx.completeNow();
                 }));
@@ -287,7 +287,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         getClient(Constants.DEFAULT_TENANT)
             .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, "", null))
-            .setHandler(ctx.succeeding(result -> {
+            .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> assertThat(result).isFalse());
                 ctx.completeNow();
             }));

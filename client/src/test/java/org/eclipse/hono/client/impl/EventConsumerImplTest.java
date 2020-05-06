@@ -96,7 +96,7 @@ public class EventConsumerImplTest {
                 eventConsumer,
                 remoteDetach -> {})
 
-            .setHandler(ctx.succeeding(c -> {
+            .onComplete(ctx.succeeding(c -> {
 
                 final ArgumentCaptor<ProtonMessageHandler> messageHandler = ArgumentCaptor.forClass(ProtonMessageHandler.class);
                 ctx.verify(() -> verify(connection).createReceiver(

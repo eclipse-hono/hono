@@ -75,7 +75,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                 .add(Constants.HEADER_QOS_LEVEL, "1");
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-                .setHandler(setup.completing());
+                .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -123,7 +123,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                         .recover(HttpProtocolException::transformInto);
 
             })
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
 
                 // THEN the message gets rejected by the HTTP adapter with a 413
                 ctx.verify(() ->  HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_ENTITY_TOO_LARGE, t));

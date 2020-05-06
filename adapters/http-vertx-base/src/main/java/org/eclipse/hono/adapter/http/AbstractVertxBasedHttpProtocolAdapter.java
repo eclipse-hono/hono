@@ -199,7 +199,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     return Future.failedFuture(e);
                 }
             })
-            .setHandler(startPromise);
+            .onComplete(startPromise);
     }
 
     private Sample getMicrometerSample(final RoutingContext ctx) {
@@ -492,7 +492,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         CompositeFuture.all(serverStopTracker.future(), insecureServerStopTracker.future())
         .compose(v -> postShutdown())
-        .setHandler(stopPromise);
+        .onComplete(stopPromise);
     }
 
     /**
@@ -1006,7 +1006,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
                 if (requestProcessed.compareAndSet(false, true)) {
                     checkMessageLimit(tenantObject, command.getPayloadSize(), currentSpan.context())
-                    .setHandler(result -> {
+                    .onComplete(result -> {
                         if (result.succeeded()) {
                             addMicrometerSample(commandContext, commandSample);
                             // put command context to routing context and notify

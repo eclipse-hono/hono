@@ -145,7 +145,7 @@ public abstract class AbstractCredentialsServiceTest {
         assertGetMissing(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                 () -> getDeviceManagementService()
                         .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> assertGet(ctx, tenantId, deviceId, authId,
+                        .onComplete(ctx.succeeding(s -> assertGet(ctx, tenantId, deviceId, authId,
                                 CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                                 r -> {
                                     assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
@@ -315,7 +315,7 @@ public abstract class AbstractCredentialsServiceTest {
             final ExecutionBlock whenComplete) {
 
         getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s3 -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(s3 -> ctx.verify(() -> {
 
                     // assert a few basics, optionals may be empty
                     // but must not be null
@@ -329,7 +329,7 @@ public abstract class AbstractCredentialsServiceTest {
                             type,
                             authId,
                             CLIENT_CONTEXT)
-                            .setHandler(ctx.succeeding(s4 -> ctx.verify(() -> {
+                            .onComplete(ctx.succeeding(s4 -> ctx.verify(() -> {
 
                                 adapterValidation.accept(s4);
 
@@ -357,7 +357,7 @@ public abstract class AbstractCredentialsServiceTest {
                 () -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
                                 Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s2 -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s2 -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
                             assertResourceVersion(s2);
@@ -394,7 +394,7 @@ public abstract class AbstractCredentialsServiceTest {
                 () -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
                                 Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s2 -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s2 -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
                             assertResourceVersion(s2);
@@ -462,7 +462,7 @@ public abstract class AbstractCredentialsServiceTest {
 
             getCredentialsManagementService().updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
                     Optional.empty(), NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s2 -> ctx.verify(() -> {
+                    .onComplete(ctx.succeeding(s2 -> ctx.verify(() -> {
 
                         assertResourceVersion(s2);
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s2.getStatus());
@@ -483,14 +483,14 @@ public abstract class AbstractCredentialsServiceTest {
 
         // phase 2 - try to update
 
-        phase1.future().setHandler(ctx.succeeding(v -> {
+        phase1.future().onComplete(ctx.succeeding(v -> {
 
             final var newSecret = createPasswordCredential(authId, "baz");
 
             getCredentialsManagementService().updateCredentials(tenantId, deviceId,
                     Collections.singletonList(newSecret), Optional.empty(),
                     NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus());
 
@@ -527,7 +527,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s2 -> {
+                .onComplete(ctx.succeeding(s2 -> {
                     checkpoint.flag();
                     phase1.complete();
                 }));
@@ -536,12 +536,12 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase2 = Promise.promise();
 
-        phase1.future().setHandler(ctx.succeeding(s1 -> {
+        phase1.future().onComplete(ctx.succeeding(s1 -> {
 
                 getCredentialsManagementService().updateCredentials(tenantId, deviceId,
                         Collections.singletonList(secret), Optional.empty(),
                         NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s2 -> {
+                        .onComplete(ctx.succeeding(s2 -> {
 
                             checkpoint.flag();
 
@@ -556,11 +556,11 @@ public abstract class AbstractCredentialsServiceTest {
 
         // phase 3 - update with wrong version
 
-        phase2.future().setHandler(ctx.succeeding(v -> getCredentialsManagementService()
+        phase2.future().onComplete(ctx.succeeding(v -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, Collections.singletonList(secret),
                         Optional.of(UUID.randomUUID().toString()),
                         NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                     assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus());
                     checkpoint.flag();
@@ -594,12 +594,12 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase2 = Promise.promise();
 
-        phase1.future().setHandler(ctx.succeeding(s1 -> {
+        phase1.future().onComplete(ctx.succeeding(s1 -> {
 
             checkpoint.flag();
             getDeviceManagementService()
                     .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s2 -> {
+                    .onComplete(ctx.succeeding(s2 -> {
                         checkpoint.flag();
                         phase2.complete();
                     }));
@@ -610,13 +610,13 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase3 = Promise.promise();
 
-        phase2.future().setHandler(ctx.succeeding(s1 -> {
+        phase2.future().onComplete(ctx.succeeding(s1 -> {
 
             assertGetEmpty(ctx, tenantId, deviceId, authId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                     () -> getCredentialsManagementService().updateCredentials(tenantId, deviceId,
                             Collections.singletonList(secret), Optional.empty(),
                             NoopSpan.INSTANCE)
-                            .setHandler(ctx.succeeding(s2 -> {
+                            .onComplete(ctx.succeeding(s2 -> {
 
                                 checkpoint.flag();
 
@@ -647,10 +647,10 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase4 = Promise.promise();
 
-        phase3.future().setHandler(ctx.succeeding(
+        phase3.future().onComplete(ctx.succeeding(
                 v -> getDeviceManagementService()
                         .deleteDevice(tenantId, deviceId, Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(
+                        .onComplete(
                                 ctx.succeeding(s -> ctx.verify(() -> assertGetMissing(ctx, tenantId, deviceId, authId,
                                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, () -> {
                                             checkpoint.flag();
@@ -659,7 +659,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // complete
 
-        phase4.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase4.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
 
     }
 
@@ -687,18 +687,18 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // validate credentials - enabled
 
         final Promise<?> phase2 = Promise.promise();
 
         phase1.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -715,9 +715,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         final Promise<?> phase3 = Promise.promise();
 
-        phase2.future().setHandler(ctx.succeeding(n -> {
+        phase2.future().onComplete(ctx.succeeding(n -> {
             getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, authId)
-                    .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
 
@@ -727,7 +727,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase3.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase3.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**
@@ -752,17 +752,17 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // validate credentials - contains an ID.
 
         final Promise<?> phase2 = Promise.promise();
 
-        phase1.future().setHandler(ctx.succeeding(n -> {
+        phase1.future().onComplete(ctx.succeeding(n -> {
             getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                    .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -780,7 +780,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase2.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase2.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**
@@ -805,9 +805,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // re-set credentials with wrong ID
         final Promise<?> phase2 = Promise.promise();
@@ -816,10 +816,10 @@ public abstract class AbstractCredentialsServiceTest {
         final CommonCredential newCredential = createPasswordCredential(authId, "foo");
         ((PasswordCredential) newCredential).getSecrets().get(0).setId("randomId");
 
-        phase1.future().setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+        phase1.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, Collections.singletonList(newCredential), Optional.empty(),
                         NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                    .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                         assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, s.getStatus());
                         phase2.complete();
@@ -827,7 +827,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase2.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase2.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**
@@ -853,17 +853,17 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // validate credentials - do not contain the secret details.
 
         final Promise<?> phase2 = Promise.promise();
 
-        phase1.future().setHandler(ctx.succeeding(n ->
+        phase1.future().onComplete(ctx.succeeding(n ->
                 getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -884,7 +884,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase2.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase2.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**
@@ -913,11 +913,11 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, Collections.singletonList(credential),
                                 Optional.empty(),
                                 NoopSpan.INSTANCE)
-                            .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                            .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // Retrieve credentials IDs
 
@@ -925,9 +925,9 @@ public abstract class AbstractCredentialsServiceTest {
         final List<String> secretIDs = new ArrayList<>();
 
         phase1.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -958,10 +958,10 @@ public abstract class AbstractCredentialsServiceTest {
 
         credentialWithOnlyId.setSecrets(Collections.singletonList(secretWithOnlyId));
 
-        phase2.future().setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+        phase2.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithOnlyId),
                         Optional.empty(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> phase3.complete()))));
+                .onComplete(ctx.succeeding(s -> phase3.complete()))));
 
 
         // Retrieve credentials again, one should be deleted.
@@ -969,9 +969,9 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase4 = Promise.promise();
 
         phase3.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -990,7 +990,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase4.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase4.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**
@@ -1014,9 +1014,9 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase1 = Promise.promise();
 
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // Retrieve credentials IDs
 
@@ -1024,9 +1024,9 @@ public abstract class AbstractCredentialsServiceTest {
         final List<String> secretIDs = new ArrayList<>();
 
         phase1.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -1051,10 +1051,10 @@ public abstract class AbstractCredentialsServiceTest {
         final CommonCredential newCredential = createPasswordCredential(authId, "foo");
         ((PasswordCredential) newCredential).getSecrets().get(0).setId(secretIDs.get(0));
 
-        phase2.future().setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+        phase2.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, Collections.singletonList(newCredential), Optional.empty(),
                         NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> phase3.complete()))));
+                .onComplete(ctx.succeeding(s -> phase3.complete()))));
 
 
         // Retrieve credentials again, the ID should have changed.
@@ -1062,9 +1062,9 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase4 = Promise.promise();
 
         phase3.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -1083,7 +1083,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase4.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase4.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**
@@ -1108,9 +1108,9 @@ public abstract class AbstractCredentialsServiceTest {
 
         getDeviceManagementService()
                 .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // Retrieve credential ID
 
@@ -1118,9 +1118,9 @@ public abstract class AbstractCredentialsServiceTest {
         final List<String> secretIDs = new ArrayList<>();
 
         phase1.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -1152,10 +1152,10 @@ public abstract class AbstractCredentialsServiceTest {
 
         credentialWithMetadataUpdate.setSecrets(Collections.singletonList(secretWithOnlyIdAndMetadata));
 
-        phase2.future().setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+        phase2.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithMetadataUpdate),
                         Optional.empty(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> phase3.complete()))));
+                .onComplete(ctx.succeeding(s -> phase3.complete()))));
 
 
         // Retrieve credentials again, the ID should not have changed.
@@ -1163,9 +1163,9 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase4 = Promise.promise();
 
         phase3.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -1188,7 +1188,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase4.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase4.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
 
@@ -1214,9 +1214,9 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase1 = Promise.promise();
 
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                         .updateCredentials(tenantId, deviceId, credentials, Optional.empty(), NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> phase1.complete()))));
+                        .onComplete(ctx.succeeding(s -> phase1.complete()))));
 
         // Retrieve credential ID
 
@@ -1224,9 +1224,9 @@ public abstract class AbstractCredentialsServiceTest {
         final List<String> secretIDs = new ArrayList<>();
 
         phase1.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -1261,10 +1261,10 @@ public abstract class AbstractCredentialsServiceTest {
         credentialWithMetadataUpdate.setSecrets(Collections.singletonList(secretWithOnlyIdAndMetadata));
 
 
-        phase2.future().setHandler(ctx.succeeding(n -> getCredentialsManagementService()
+        phase2.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
                 .updateCredentials(tenantId, deviceId, Collections.singletonList(credentialWithMetadataUpdate),
                         Optional.empty(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> phase3.complete()))));
+                .onComplete(ctx.succeeding(s -> phase3.complete()))));
 
 
         // Retrieve credentials again, both metadata should be there
@@ -1272,9 +1272,9 @@ public abstract class AbstractCredentialsServiceTest {
         final Promise<?> phase4 = Promise.promise();
 
         phase3.future()
-                .setHandler(ctx.succeeding(n -> getCredentialsService()
+                .onComplete(ctx.succeeding(n -> getCredentialsService()
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId)
-                        .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                        .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
 
@@ -1301,7 +1301,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         // finally complete
 
-        phase4.future().setHandler(ctx.succeeding(s -> ctx.completeNow()));
+        phase4.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
     /**

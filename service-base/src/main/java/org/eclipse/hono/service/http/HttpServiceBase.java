@@ -382,7 +382,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
                 log.info("starting endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
                 endpointFutures.add(ep.start());
             }
-            CompositeFuture.all(endpointFutures).setHandler(startup -> {
+            CompositeFuture.all(endpointFutures).onComplete(startup -> {
                 if (startup.succeeded()) {
                     startPromise.complete(router);
                 } else {
@@ -403,7 +403,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             log.info("stopping endpoint [name: {}, class: {}]", ep.getName(), ep.getClass().getName());
             endpointFutures.add(ep.stop());
         }
-        CompositeFuture.all(endpointFutures).setHandler(shutdown -> {
+        CompositeFuture.all(endpointFutures).onComplete(shutdown -> {
             if (shutdown.succeeded()) {
                 stopPromise.complete();
             } else {

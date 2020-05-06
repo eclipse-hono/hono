@@ -84,7 +84,7 @@ abstract class AbstractBasicCacheTest {
         when(grid.getAsync(anyString())).thenReturn(CompletableFuture.completedFuture("value"));
         cache.connect()
             .compose(c -> c.get("key"))
-            .setHandler(ctx.succeeding(v -> {
+            .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
                     verify(grid).getAsync("key");
                     assertThat(v).isEqualTo("value");
@@ -105,7 +105,7 @@ abstract class AbstractBasicCacheTest {
         when(grid.getAsync(anyString())).thenThrow(new IllegalStateException());
         cache.connect()
             .compose(c -> c.get("key"))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(grid).getAsync("key");
                     assertThat(t).isInstanceOf(IllegalStateException.class);
@@ -126,7 +126,7 @@ abstract class AbstractBasicCacheTest {
         when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
         cache.connect()
             .compose(c -> c.put("key", "value"))
-            .setHandler(ctx.succeeding(v -> {
+            .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
                     verify(grid).putAsync("key", "value");
                     assertThat(v).isEqualTo("oldValue");
@@ -148,7 +148,7 @@ abstract class AbstractBasicCacheTest {
                 .thenReturn(CompletableFuture.completedFuture("oldValue"));
         cache.connect()
                 .compose(c -> c.put("key", "value", 1, TimeUnit.SECONDS))
-                .setHandler(ctx.succeeding(v -> {
+                .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verify(grid).putAsync("key", "value", 1, TimeUnit.SECONDS);
                         assertThat(v).isEqualTo("oldValue");
@@ -169,7 +169,7 @@ abstract class AbstractBasicCacheTest {
         when(grid.putAsync(anyString(), anyString())).thenThrow(new IllegalStateException());
         cache.connect()
             .compose(c -> c.put("key", "value"))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(grid).putAsync("key", "value");
                     assertThat(t).isInstanceOf(IllegalStateException.class);
@@ -190,7 +190,7 @@ abstract class AbstractBasicCacheTest {
         when(grid.removeAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(true));
         cache.connect()
                 .compose(c -> c.remove("key", "value"))
-                .setHandler(ctx.succeeding(v -> {
+                .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verify(grid).removeAsync("key", "value");
                         assertThat(v).isTrue();
@@ -211,7 +211,7 @@ abstract class AbstractBasicCacheTest {
         when(grid.removeAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(false));
         cache.connect()
                 .compose(c -> c.remove("key", "value"))
-                .setHandler(ctx.succeeding(v -> {
+                .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verify(grid).removeAsync("key", "value");
                         assertThat(v).isFalse();
@@ -234,7 +234,7 @@ abstract class AbstractBasicCacheTest {
         final Set<String> keys = Set.of("key");
         cache.connect()
                 .compose(c -> c.getAll(keys))
-                .setHandler(ctx.succeeding(v -> {
+                .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verify(grid).getAllAsync(keys);
                         assertThat(v).isEqualTo(mapValue);
@@ -256,7 +256,7 @@ abstract class AbstractBasicCacheTest {
         final Set<String> keys = Set.of("key");
         cache.connect()
                 .compose(c -> c.getAll(keys))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         verify(grid).getAllAsync(keys);
                         assertThat(t).isInstanceOf(IllegalStateException.class);

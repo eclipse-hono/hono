@@ -82,7 +82,7 @@ public class DeviceRegistrationHttpIT {
     @AfterEach
     public void removeDevice(final VertxTestContext ctx) {
         registry.deregisterDevice(TENANT, deviceId)
-        .setHandler(s -> ctx.completeNow());
+        .onComplete(s -> ctx.completeNow());
     }
 
     /**
@@ -106,7 +106,7 @@ public class DeviceRegistrationHttpIT {
         final Device device = new Device();
         device.putExtension("test", "test");
 
-        registry.registerDevice(TENANT, deviceId, device).setHandler(ctx.completing());
+        registry.registerDevice(TENANT, deviceId, device).onComplete(ctx.completing());
     }
 
     /**
@@ -118,7 +118,7 @@ public class DeviceRegistrationHttpIT {
     public void testAddDeviceWithoutPayloadSucceeds(final VertxTestContext ctx) {
 
         registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED)
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -133,7 +133,7 @@ public class DeviceRegistrationHttpIT {
         device.putExtension("test", "test");
 
         registry.registerDevice(TENANT, null, device)
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         final List<String> locations = s.getAll("location");
                         assertThat(locations).isNotNull();
@@ -161,7 +161,7 @@ public class DeviceRegistrationHttpIT {
             // now try to add the device again
             return registry.registerDevice(TENANT, deviceId, device, HttpURLConnection.HTTP_CONFLICT);
         })
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -179,7 +179,7 @@ public class DeviceRegistrationHttpIT {
                 .registerDevice(
                         TENANT, deviceId, device, null,
                         HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -191,7 +191,7 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testAddDeviceSucceedsForEmptyBody(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.completing());
+        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
     }
 
     /**
@@ -203,7 +203,7 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testAddDeviceSucceedsForEmptyBodyAndContentType(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED).setHandler(ctx.completing());
+        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
     }
 
     /**
@@ -226,7 +226,7 @@ public class DeviceRegistrationHttpIT {
             .compose(info -> {
                     assertRegistrationInformation(ctx, info.toJsonObject().mapTo(Device.class), deviceId, device);
                 return Future.succeededFuture();
-            }).setHandler(ctx.completing());
+            }).onComplete(ctx.completing());
     }
 
     /**
@@ -239,7 +239,7 @@ public class DeviceRegistrationHttpIT {
     public void testGetDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         registry.getRegistrationInfo(TENANT, "non-existing-device")
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
@@ -255,7 +255,7 @@ public class DeviceRegistrationHttpIT {
     public void testGetDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
         registry.getRegistrationInfo(TENANT, null)
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
@@ -287,7 +287,7 @@ public class DeviceRegistrationHttpIT {
                     assertRegistrationInformation(ctx, info.toJsonObject().mapTo(Device.class), deviceId,
                             updatedData.mapTo(Device.class));
                 return Future.succeededFuture();
-            }).setHandler(ctx.completing());
+            }).onComplete(ctx.completing());
     }
 
     /**
@@ -299,7 +299,7 @@ public class DeviceRegistrationHttpIT {
     public void testUpdateDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         registry.updateDevice(TENANT, "non-existing-device", new JsonObject().put("ext", new JsonObject().put("test", "test")))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
@@ -315,7 +315,7 @@ public class DeviceRegistrationHttpIT {
     public void testUpdateDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
         registry.updateDevice(TENANT, null, new JsonObject())
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
@@ -337,7 +337,7 @@ public class DeviceRegistrationHttpIT {
                                     .put("test", "testUpdateDeviceFailsForMissingContentType")
                                     .put("newKey1", "newValue1"));
                 return registry.updateDevice(TENANT, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
-            }).setHandler(context.completing());
+            }).onComplete(context.completing());
     }
 
     /**
@@ -352,7 +352,7 @@ public class DeviceRegistrationHttpIT {
         registry.registerDevice(TENANT, deviceId, new Device())
         .compose(ok -> registry.deregisterDevice(TENANT, deviceId))
         .compose(ok -> registry.getRegistrationInfo(TENANT, deviceId))
-        .setHandler(getAttempt -> {
+        .onComplete(getAttempt -> {
             if (getAttempt.succeeded()) {
                 ctx.failNow(new AssertionError("should not have found registration"));
             } else {
@@ -373,7 +373,7 @@ public class DeviceRegistrationHttpIT {
     public void testDeregisterDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
         registry.deregisterDevice(TENANT, null)
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
@@ -387,7 +387,7 @@ public class DeviceRegistrationHttpIT {
     @Test
     public void testDeregisterDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        registry.deregisterDevice(TENANT, "non-existing-device").setHandler(ctx.failing(t -> {
+        registry.deregisterDevice(TENANT, "non-existing-device").onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));

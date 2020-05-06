@@ -199,7 +199,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.completing());
+        startupTracker.future().onComplete(ctx.completing());
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has been invoked
@@ -223,7 +223,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(s -> {
+        startupTracker.future().onComplete(ctx.succeeding(s -> {
             // THEN the resources have been registered with the server
             final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
             ctx.verify(() -> {
@@ -277,7 +277,7 @@ public class AbstractVertxBasedCoapAdapterTest {
                 // THEN the resource's handler has been run on the adapter's vert.x event loop
                 return resourceInvocation.future();
             })
-            .setHandler(ctx.completing());
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -300,7 +300,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         adapter.start(startupTracker);
 
         // THEN startup has failed
-        startupTracker.future().setHandler(ctx.failing(t -> {
+        startupTracker.future().onComplete(ctx.failing(t -> {
             // and the onStartupSuccess method has not been invoked
             ctx.verify(() -> verify(successHandler, never()).handle(any()));
             ctx.completeNow();
@@ -326,7 +326,7 @@ public class AbstractVertxBasedCoapAdapterTest {
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
         // THEN the onStartupSuccess method has not been invoked, see ctx.fail
-        startupTracker.future().setHandler(ctx.failing(s -> {
+        startupTracker.future().onComplete(ctx.failing(s -> {
             ctx.completeNow();
         }));
     }

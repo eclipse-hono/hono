@@ -135,7 +135,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
 
         // WHEN starting the service
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+        startupTracker.future().onComplete(ctx.succeeding(started -> ctx.verify(() -> {
             // THEN the file gets created
             verify(fileSystem).createFile(eq(FILE_NAME), any(Handler.class));
             ctx.completeNow();
@@ -165,7 +165,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
             return null;
         }).when(fileSystem).createFile(eq(props.getFilename()), any(Handler.class));
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.failing(started -> {
+        startupTracker.future().onComplete(ctx.failing(started -> {
             ctx.completeNow();
         }));
         svc.start().onComplete(startupTracker);
@@ -195,7 +195,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
 
         // WHEN starting the service
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.completing(
+        startupTracker.future().onComplete(ctx.completing(
             // THEN startup succeeds
         ));
         svc.start().onComplete(startupTracker);
@@ -237,7 +237,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
             });
             return getResult;
         })
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
 
         svc.start().onComplete(startupTracker);
     }
@@ -258,7 +258,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
 
         // WHEN the service is started
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        startupTracker.future().onComplete(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the credentials from the file are loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
@@ -314,7 +314,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         // and the loaded tenants can be retrieved from the service 
         .compose(ok -> assertTenantExists(svc, Constants.DEFAULT_TENANT))
         .compose(ok -> assertTenantExists(svc, "OTHER_TENANT"))
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -335,7 +335,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 Optional.of("fancy-new-tenant"),
                 new Tenant(),
                 NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         // THEN the request succeeds
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
@@ -361,7 +361,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 "tenant",
                 Optional.empty(),
                 NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         // THEN the update fails
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
@@ -388,7 +388,7 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
                 new Tenant(),
                 null,
                 NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         // THEN the update fails
                         assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
@@ -468,14 +468,14 @@ public class FileBasedTenantServiceTest extends AbstractTenantServiceTest {
         informationService.setService(svc);
 
         informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(t -> {
+                .onComplete(ctx.succeeding(t -> {
                                 ctx.verify(() -> assertThat(t.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                             }));
 
         addTenant(Constants.DEFAULT_TENANT)
                 .map(ok -> {
                     informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
-                            .setHandler(ctx.succeeding(s -> {
+                            .onComplete(ctx.succeeding(s -> {
                                 ctx.verify(() -> {
                                     assertThat(s.getPayload().getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
                                     ctx.completeNow();

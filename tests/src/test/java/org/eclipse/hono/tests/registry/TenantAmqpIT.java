@@ -71,7 +71,7 @@ public class TenantAmqpIT extends TenantApiTests {
         allTenantClientFactory
         .connect()
         .compose(c -> allTenantClientFactory.getOrCreateTenantClient())
-        .setHandler(ctx.succeeding(r -> {
+        .onComplete(ctx.succeeding(r -> {
             allTenantClient = r;
             connections.flag();
         }));
@@ -86,7 +86,7 @@ public class TenantAmqpIT extends TenantApiTests {
         defaultTenantClientFactory
         .connect()
         .compose(c -> defaultTenantClientFactory.getOrCreateTenantClient())
-        .setHandler(ctx.succeeding(r -> {
+        .onComplete(ctx.succeeding(r -> {
             defaultTenantClient = r;
             connections.flag();
         }));

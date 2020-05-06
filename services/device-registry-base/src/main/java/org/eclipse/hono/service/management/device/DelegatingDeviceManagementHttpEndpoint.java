@@ -257,7 +257,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
         getService().deleteDevice(tenantId, deviceId, resourceVersion, span)
-                .setHandler(handler -> writeResponse(ctx, handler.result(), null, span));
+                .onComplete(handler -> writeResponse(ctx, handler.result(), null, span));
     }
 
     private static Device fromPayload(final JsonObject payload) throws ClientErrorException {

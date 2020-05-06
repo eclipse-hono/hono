@@ -148,7 +148,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             sender = s;
             return s;
         })
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -195,7 +195,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             this.connection = con;
             return createProducer(targetAddress);
         })
-        .setHandler(context.failing(t -> {
+        .onComplete(context.failing(t -> {
             log.info("failed to open sender", t);
             context.completeNow();
         }));
@@ -217,7 +217,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         setupProtocolAdapter(tenantId, deviceId, false)
-        .setHandler(setup.succeeding(s -> {
+        .onComplete(setup.succeeding(s -> {
             sender = s;
             setup.completeNow();
         }));
@@ -255,7 +255,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         })
         .compose(ok -> connectToAdapter(deviceCert))
         .compose(con -> createProducer(null))
-        .setHandler(setup.succeeding(s -> {
+        .onComplete(setup.succeeding(s -> {
             sender = s;
             setup.completeNow();
         }));
@@ -350,7 +350,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 log.info("messages received: {}", msgNo);
             }
         })
-        .setHandler(receiverCreation.completing());
+        .onComplete(receiverCreation.completing());
 
         assertThat(receiverCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         assertThat(receiverCreation.failed()).isFalse();
@@ -366,7 +366,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
                 final CountDownLatch msgSent = new CountDownLatch(1);
 
-                sender.apply(payload).setHandler(sendAttempt -> {
+                sender.apply(payload).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         if (sendAttempt.cause() instanceof ServerErrorException &&
                                 ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
@@ -470,7 +470,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         }
 
         CompositeFuture.join(connectionTracker.future(), senderTracker.future(), receiverTracker.future())
-        .setHandler(c -> {
+        .onComplete(c -> {
            context = null;
            ctx.completeNow();
         });

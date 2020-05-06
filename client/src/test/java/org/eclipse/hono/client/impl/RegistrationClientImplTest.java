@@ -112,7 +112,7 @@ public class RegistrationClientImplTest {
         client.setResponseCache(cache);
 
         // WHEN getting registration information
-        client.assertRegistration("myDevice").setHandler(ctx.succeeding(result -> {
+        client.assertRegistration("myDevice").onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 // THEN the registration information has been added to the cache
                 assertThat(result).isEqualTo(registrationAssertion);
@@ -151,7 +151,7 @@ public class RegistrationClientImplTest {
         MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, registrationAssertion.toBuffer());
 
         // WHEN getting registration information
-        client.assertRegistration("device").setHandler(ctx.succeeding(result -> {
+        client.assertRegistration("device").onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 // THEN the registration information has been retrieved from the service
                 assertThat(result).isEqualTo(registrationAssertion);
@@ -186,7 +186,7 @@ public class RegistrationClientImplTest {
         when(cache.get(eq(TriTuple.of("assert", "device", "gateway")))).thenReturn(regResult);
 
         // WHEN getting registration information
-        client.assertRegistration("device", "gateway").setHandler(ctx.succeeding(result -> {
+        client.assertRegistration("device", "gateway").onComplete(ctx.succeeding(result -> {
             // THEN the registration information is read from the cache
             assertEquals(registrationAssertion, result);
             // and no request message is sent to the service

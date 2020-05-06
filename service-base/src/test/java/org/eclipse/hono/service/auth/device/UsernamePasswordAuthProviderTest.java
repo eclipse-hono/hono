@@ -117,7 +117,7 @@ public class UsernamePasswordAuthProviderTest {
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.succeeding(device -> {
+        result.future().onComplete(ctx.succeeding(device -> {
             ctx.verify(() -> {
                 assertThat(device.getDeviceId()).isEqualTo("4711");
                 assertThat(device.getTenantId()).isEqualTo("DEFAULT_TENANT");
@@ -141,7 +141,7 @@ public class UsernamePasswordAuthProviderTest {
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.failing(e -> {
+        result.future().onComplete(ctx.failing(e -> {
             ctx.verify(() -> assertThat(((ClientErrorException) e).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
             ctx.completeNow();
         }));
@@ -161,7 +161,7 @@ public class UsernamePasswordAuthProviderTest {
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.failing(t -> {
+        result.future().onComplete(ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
             ctx.completeNow();
@@ -182,7 +182,7 @@ public class UsernamePasswordAuthProviderTest {
         vertx.runOnContext(go -> {
             provider.authenticate(deviceCredentials, null, result);
         });
-        result.future().setHandler(ctx.failing(t -> {
+        result.future().onComplete(ctx.failing(t -> {
             // THEN authentication fails with a 401 client error
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
             ctx.completeNow();

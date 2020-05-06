@@ -84,7 +84,7 @@ public class AmqpExampleDevice {
     private void connect() {
         final HonoConnection connection = HonoConnection.newConnection(VERTX, config);
         connection.connect()
-                .setHandler(ar -> {
+                .onComplete(ar -> {
                     if (ar.succeeded()) {
                         startDevice(ar.result());
                     } else {
@@ -116,7 +116,7 @@ public class AmqpExampleDevice {
         factory.getOrCreateTelemetrySender()
                 .compose(telemetrySender -> telemetrySender.send(DEVICE_ID, payload.getBytes(), "text/plain",
                         customApplicationProperties))
-                .setHandler(ar -> {
+                .onComplete(ar -> {
                     if (ar.succeeded()) {
                         System.out.println("Telemetry message with QoS 'AT_MOST_ONCE' sent: " + payload);
                     } else {
@@ -130,7 +130,7 @@ public class AmqpExampleDevice {
         factory.getOrCreateTelemetrySender()
                 .compose(telemetrySender -> telemetrySender.sendAndWaitForOutcome(DEVICE_ID,
                         payload.toBuffer().getBytes(), "application/json", customApplicationProperties))
-                .setHandler(ar -> {
+                .onComplete(ar -> {
                     if (ar.succeeded()) {
                         System.out.println("Telemetry message with QoS 'AT_LEAST_ONCE' sent: " + payload);
                     } else {
@@ -152,7 +152,7 @@ public class AmqpExampleDevice {
                 .compose(
                         eventSender -> eventSender.send(DEVICE_ID, payload.toBuffer().getBytes(), "application/json",
                                 customApplicationProperties))
-                .setHandler(ar -> {
+                .onComplete(ar -> {
                     if (ar.succeeded()) {
                         System.out.println("Event sent: " + payload);
                     } else {
@@ -182,7 +182,7 @@ public class AmqpExampleDevice {
                 .compose(commandResponder -> commandResponder.sendCommandResponse(DEVICE_ID, command.getReplyTo(),
                         command.getCorrelationId().toString(), 200, payload.toBuffer().getBytes(), "application/json",
                         customApplicationProperties))
-                .setHandler(ar -> {
+                .onComplete(ar -> {
                     if (ar.succeeded()) {
                         System.out.println("Command response sent: " + payload);
                     } else {

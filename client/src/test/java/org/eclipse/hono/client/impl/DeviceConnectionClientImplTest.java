@@ -108,7 +108,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting the last known gateway
         client.getLastKnownGatewayForDevice("deviceId", span.context())
-                .setHandler(ctx.succeeding(resultJson -> {
+                .onComplete(ctx.succeeding(resultJson -> {
                     ctx.verify(() -> {
                         // THEN the last known gateway has been retrieved from the service and the span is finished
                         assertThat(resultJson).isNotNull();
@@ -138,7 +138,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN setting the last known gateway
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.succeeding(r -> {
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
                         verify(span).finish();
@@ -162,7 +162,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN setting the command handling adapter instance
         client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, false, span.context())
-                .setHandler(ctx.succeeding(r -> {
+                .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
                         verify(span).finish();
@@ -186,7 +186,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
                         assertThat(result).isTrue();
@@ -221,7 +221,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting the command handling adapter instances
         client.getCommandHandlingAdapterInstances(deviceId, Collections.emptyList(), span.context())
-                .setHandler(ctx.succeeding(resultJson -> {
+                .onComplete(ctx.succeeding(resultJson -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
                         assertThat(resultJson).isEqualTo(adapterInstancesResult);
@@ -253,7 +253,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting last known gateway information
         client.getLastKnownGatewayForDevice("deviceId", span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
@@ -278,7 +278,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN setting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
@@ -303,7 +303,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN setting the command handling adapter instance
         client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, false, span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
@@ -328,7 +328,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
@@ -350,7 +350,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.succeeding(removed -> {
+                .onComplete(ctx.succeeding(removed -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
                         assertThat(removed).isFalse();
@@ -381,7 +381,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting the command handling adapter instances
         client.getCommandHandlingAdapterInstances("deviceId", Collections.emptyList(), span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
@@ -413,7 +413,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting last known gateway information
         client.getLastKnownGatewayForDevice("deviceId", span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
@@ -446,7 +446,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN setting last known gateway information
         client.setLastKnownGatewayForDevice("deviceId", "gatewayId", span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                         // THEN the invocation fails and the span is marked as erroneous
@@ -479,7 +479,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN setting the command handling adapter instance
         client.setCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", null, false, span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
@@ -512,7 +512,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN removing the command handling adapter instance
         client.removeCommandHandlingAdapterInstance("deviceId", "adapterInstanceId", span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous
@@ -545,7 +545,7 @@ public class DeviceConnectionClientImplTest {
 
         // WHEN getting the command handling adapter instances
         client.getCommandHandlingAdapterInstances("deviceId", Collections.emptyList(), span.context())
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                     ctx.verify(() -> {
                         // THEN the invocation fails and the span is marked as erroneous

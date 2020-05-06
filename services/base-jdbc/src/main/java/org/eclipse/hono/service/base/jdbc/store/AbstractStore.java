@@ -75,7 +75,7 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
             this.checkSql
                     .query(this.client)
                     .map(Status.OK())
-                    .setHandler(p);
+                    .onComplete(p);
         });
     }
 

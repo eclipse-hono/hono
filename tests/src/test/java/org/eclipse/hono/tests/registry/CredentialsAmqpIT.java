@@ -56,7 +56,7 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
                                 IntegrationTestSupport.HONO_USER,
                                 IntegrationTestSupport.HONO_PWD)));
 
-        client.connect().setHandler(ctx.completing());
+        client.connect().onComplete(ctx.completing());
     }
 
     /**

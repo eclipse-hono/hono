@@ -150,7 +150,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         // use anonymous sender
         .compose(con -> createProducer(null))
         .compose(sender -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId, commandConsumerFactory.apply(sender)))
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -305,7 +305,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 null);
         final Future<AsyncCommandClient> asyncCommandClient = helper.applicationClientFactory.getOrCreateAsyncCommandClient(tenantId);
 
-        CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).setHandler(setup.completing());
+        CompositeFuture.all(asyncResponseConsumer, asyncCommandClient).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -327,7 +327,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         correlationId,
                         replyId,
                         null)
-                .setHandler(sendAttempt -> {
+                .onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         log.debug("error sending command {}", correlationId, sendAttempt.cause());
                     }
@@ -421,7 +421,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer payload = Buffer.buffer("value: " + currentMessage);
-                commandSender.apply(payload).setHandler(sendAttempt -> {
+                commandSender.apply(payload).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         log.debug("error sending command {}", currentMessage, sendAttempt.cause());
                     } else {
@@ -500,7 +500,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             preconditions.flag();
             return s;
         })
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -514,7 +514,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         messageWithoutSubject.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutSubject).setHandler(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutSubject).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             expectedFailures.flag();
         }));
@@ -524,7 +524,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         messageWithoutId.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutId).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             expectedFailures.flag();
         }));
@@ -559,7 +559,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
         final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
-                .setHandler(ctx.succeeding(c -> {
+                .onComplete(ctx.succeeding(c -> {
                     c.setRequestTimeout(300);
                     commandClientCreation.completeNow();
                 }));
@@ -575,7 +575,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
                 final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand(commandTargetDeviceId, "setValue", "text/plain",
                         msg, null);
-                sendCmdFuture.setHandler(sendAttempt -> {
+                sendCmdFuture.onComplete(sendAttempt -> {
                     if (sendAttempt.succeeded()) {
                         log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
                     } else {
@@ -650,7 +650,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
         final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
-                .setHandler(ctx.succeeding(c -> {
+                .onComplete(ctx.succeeding(c -> {
                     c.setRequestTimeout(1300); // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
                     commandClientCreation.completeNow();
                 }));
@@ -666,7 +666,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
                 final Future<BufferResult> sendCmdFuture = commandClient.result().sendCommand(commandTargetDeviceId, "setValue", "text/plain",
                         msg, null);
-                sendCmdFuture.setHandler(sendAttempt -> {
+                sendCmdFuture.onComplete(sendAttempt -> {
                     if (sendAttempt.succeeded()) {
                         log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
                     } else {

@@ -52,7 +52,7 @@ class VertxBasedHealthCheckServerTest {
     void cleanup(final VertxTestContext ctx) {
         if (server != null) {
             final Checkpoint checkpoint = ctx.checkpoint();
-            server.stop().setHandler(r -> checkpoint.flag());
+            server.stop().onComplete(r -> checkpoint.flag());
         }
     }
 
@@ -70,7 +70,7 @@ class VertxBasedHealthCheckServerTest {
         server = new VertxBasedHealthCheckServer(vertx, config);
         registerHealthChecks(ctx, server, 1);
 
-        server.start().setHandler(ctx.failing(error -> ctx.completeNow()));
+        server.start().onComplete(ctx.failing(error -> ctx.completeNow()));
     }
 
 
@@ -98,7 +98,7 @@ class VertxBasedHealthCheckServerTest {
             .map(ok -> getWebClient(vertx, server, false))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-            .setHandler(ctx.completing());
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -127,7 +127,7 @@ class VertxBasedHealthCheckServerTest {
             .map(ok -> getWebClient(vertx, server, true))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-            .setHandler(ctx.completing());
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -157,7 +157,7 @@ class VertxBasedHealthCheckServerTest {
             .compose(result -> Future.succeededFuture(getWebClient(vertx, server, false)))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/liveness"))
             .compose(httpClient -> checkHealth(ctx, httpClient, "/readiness"))
-            .setHandler(ctx.completing());
+            .onComplete(ctx.completing());
     }
 
     private void registerHealthChecks(final VertxTestContext ctx, final VertxBasedHealthCheckServer server,

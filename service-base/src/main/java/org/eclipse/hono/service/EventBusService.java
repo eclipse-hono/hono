@@ -89,7 +89,7 @@ public abstract class EventBusService extends AbstractVerticle {
             log.info("service started successfully");
             return ok;
         })
-        .setHandler(startPromise);
+        .onComplete(startPromise);
 
         registerConsumer();
         doStart(localStart);
@@ -130,7 +130,7 @@ public abstract class EventBusService extends AbstractVerticle {
             log.info("service stopped successfully");
             return ok;
         })
-        .setHandler(stopPromise);
+        .onComplete(stopPromise);
 
         if (requestConsumer != null) {
             requestConsumer.unregister();

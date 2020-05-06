@@ -61,7 +61,7 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
                 IntegrationTestSupport.HONO_PWD);
 
         connection = JmsBasedHonoConnection.newConnection(props);
-        connection.connect().setHandler(ctx.completing());
+        connection.connect().onComplete(ctx.completing());
     }
 
     /**
@@ -117,7 +117,7 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
                     DeviceConnectionAction.GET_CMD_HANDLING_ADAPTER_INSTANCES.getSubject(),
                     Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, "deviceId"),
                     Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 }))) // no JSON
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
                 ctx.completeNow();
             }));
@@ -138,7 +138,7 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
                 null,
                 Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, "deviceId"),
                 null))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));
@@ -159,7 +159,7 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
                 "unsupported-operation",
                 Map.of(MessageHelper.APP_PROPERTY_DEVICE_ID, "deviceId"),
                 null))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));

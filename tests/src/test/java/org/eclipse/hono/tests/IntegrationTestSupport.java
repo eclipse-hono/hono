@@ -572,7 +572,7 @@ public final class IntegrationTestSupport {
             devicesToDelete.forEach((tenantId, devices) -> {
                 final Checkpoint deviceDeletion = ctx.checkpoint(devices.size());
                 devices.forEach(deviceId -> {
-                    registry.deregisterDevice(tenantId, deviceId).setHandler(ok -> deviceDeletion.flag());
+                    registry.deregisterDevice(tenantId, deviceId).onComplete(ok -> deviceDeletion.flag());
                 });
                 LOGGER.debug("deleted {} devices from tenant {}", devicesToDelete.size(), tenantId);
             });
@@ -582,7 +582,7 @@ public final class IntegrationTestSupport {
         if (!tenantsToDelete.isEmpty()) {
             final Checkpoint tenantDeletion = ctx.checkpoint(tenantsToDelete.size());
             tenantsToDelete.forEach(tenantId -> {
-                registry.removeTenant(tenantId).setHandler(ok -> tenantDeletion.flag());
+                registry.removeTenant(tenantId).onComplete(ok -> tenantDeletion.flag());
             });
             LOGGER.debug("deleted {} tenants", tenantsToDelete.size());
             tenantsToDelete.clear();
@@ -649,7 +649,7 @@ public final class IntegrationTestSupport {
         final CompletableFuture<String> result = new CompletableFuture<>();
 
         setupGatewayDevice(tenantId, gatewayId)
-        .setHandler(attempt -> {
+        .onComplete(attempt -> {
             if (attempt.succeeded()) {
                 result.complete(attempt.result());
             } else {
@@ -680,7 +680,7 @@ public final class IntegrationTestSupport {
         final Device newDevice = new Device().setVia(List.of(gatewayId));
         registry.addDeviceToTenant(tenantId, newDeviceId, newDevice, "pwd")
                 .map(ok -> newDeviceId)
-                .setHandler(result);
+                .onComplete(result);
         return result.future();
     }
 
@@ -748,7 +748,7 @@ public final class IntegrationTestSupport {
                 }).recover(t -> {
                     LOGGER.debug("could not send command or did not receive a response: {}", t.getMessage());
                     return Future.failedFuture(t);
-                }).setHandler(result);
+                }).onComplete(result);
             };
             if (commandClient.getCredit() == 0) {
                 commandClient.sendQueueDrainHandler(send);
@@ -822,7 +822,7 @@ public final class IntegrationTestSupport {
                 }).recover(t -> {
                     LOGGER.debug("could not send one-way command: {}", t.getMessage());
                     return Future.failedFuture(t);
-                }).setHandler(result);
+                }).onComplete(result);
             };
             if (commandClient.getCredit() == 0) {
                 commandClient.sendQueueDrainHandler(send);

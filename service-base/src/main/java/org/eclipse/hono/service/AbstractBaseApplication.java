@@ -151,7 +151,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
         deployVerticles()
         .compose(s -> postRegisterServiceVerticles())
         .compose(s -> healthCheckServer.start())
-        .setHandler(result -> {
+        .onComplete(result -> {
             if (result.failed()) {
                 started.completeExceptionally(result.cause());
             } else {
@@ -216,7 +216,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
             preShutdown();
             final CountDownLatch latch = new CountDownLatch(1);
 
-            stopHealthCheckServer().setHandler(result -> {
+            stopHealthCheckServer().onComplete(result -> {
 
                 if (vertx != null) {
                     log.info("closing vert.x instance ...");

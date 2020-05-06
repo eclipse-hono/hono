@@ -202,7 +202,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
 
         // WHEN starting the service
         final Promise<?> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+        startupTracker.future().onComplete(ctx.succeeding(started -> ctx.verify(() -> {
             // THEN the file gets created
             verify(fileSystem).createFile(eq(credentialsConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
@@ -234,7 +234,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         }).when(fileSystem).createFile(eq(credentialsConfig.getFilename()), any(Handler.class));
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.failing(started -> {
+        startupTracker.future().onComplete(ctx.failing(started -> {
             ctx.completeNow();
         }));
         start(startupTracker);
@@ -270,7 +270,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
 
         // WHEN starting the service
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(started -> {
+        startupTracker.future().onComplete(ctx.succeeding(started -> {
             // THEN startup succeeds
             ctx.completeNow();
         }));
@@ -320,7 +320,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                                 throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
                             }
                         }))
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
 
         start(startTracker);
     }
@@ -345,7 +345,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
 
         // WHEN the service is started
         final Promise<Void> startTracker = Promise.promise();
-        startTracker.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        startTracker.future().onComplete(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the credentials from the file are not loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
@@ -456,7 +456,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                                 "OTHER_TENANT",
                                 "bumlux",
                                 CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
-                        .setHandler(ctx.completing());
+                        .onComplete(ctx.completing());
     }
 
     /**
@@ -482,7 +482,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                             Optional.empty(),
                             NoopSpan.INSTANCE);
                 })
-                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
                     // THEN the update fails with a 403
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     ctx.completeNow();
@@ -540,7 +540,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                 Collections.singletonList(passwordCredential),
                 Optional.empty(),
                 NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
                     // THEN the update fails with a 400 BAD REQUEST
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -580,7 +580,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
                             new JsonObject().put("property-to-match", providedContextValue)
                     );
                 })
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     // THEN the request contains the expected status code
                     ctx.verify(() -> assertThat(s.getStatus()).isEqualTo(expectedStatusCode));
                     ctx.completeNow();

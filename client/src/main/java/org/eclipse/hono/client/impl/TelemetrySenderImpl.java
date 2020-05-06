@@ -144,7 +144,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
                 span.finish();
                 result.fail(e);
             } else {
-                sendMessageAndWaitForOutcome(rawMessage, span).setHandler(result);
+                sendMessageAndWaitForOutcome(rawMessage, span).onComplete(result);
             }
         });
     }

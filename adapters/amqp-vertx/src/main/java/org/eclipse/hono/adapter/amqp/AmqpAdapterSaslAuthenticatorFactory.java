@@ -185,7 +185,7 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
             buildSaslResponseContext(remoteMechanism, saslResponse)
                     .compose(saslResponseContext -> invokePreAuthenticationHandler(saslResponseContext, currentSpan))
                     .compose(saslResponseContext -> verify(saslResponseContext))
-                    .setHandler(outcome -> {
+                    .onComplete(outcome -> {
                         if (outcome.succeeded()) {
                             currentSpan.log("credentials verified successfully");
                             // add span to connection so that it can be used during the

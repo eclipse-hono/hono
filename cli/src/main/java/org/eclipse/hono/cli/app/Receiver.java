@@ -82,7 +82,7 @@ public class Receiver extends AbstractApplicationClient {
                     clientFactory.addReconnectListener(this::createConsumer);
                     return createConsumer(con);
                 })
-                .setHandler(this::handleCreateConsumerStatus);
+                .onComplete(this::handleCreateConsumerStatus);
     }
 
     private CompositeFuture createConsumer(final HonoConnection connection) {

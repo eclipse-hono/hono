@@ -97,7 +97,7 @@ public abstract class RegistrationServiceTests {
 
         createDevice(deviceId, device)
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId))
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk());
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
@@ -128,7 +128,7 @@ public abstract class RegistrationServiceTests {
 
         createDevices(devicesToCreate)
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId))
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk());
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
@@ -168,7 +168,7 @@ public abstract class RegistrationServiceTests {
 
         createDevices(devices)
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId, gatewayIdB))
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.isOk());
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
@@ -187,7 +187,7 @@ public abstract class RegistrationServiceTests {
     public void testAssertRegistrationFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         getRegistrationService().assertRegistration(TENANT, "non-existing-device")
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     assertThat(registrationResult.getPayload()).isNull();
@@ -209,7 +209,7 @@ public abstract class RegistrationServiceTests {
 
         createDevice(deviceId, device)
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId))
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     assertThat(registrationResult.getPayload()).isNull();
@@ -232,7 +232,7 @@ public abstract class RegistrationServiceTests {
 
         createDevice(deviceId, device)
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId, "non-existing-gateway"))
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     assertThat(registrationResult.getPayload()).isNull();
@@ -258,7 +258,7 @@ public abstract class RegistrationServiceTests {
 
         createDevices(Map.of(deviceId, device, gatewayId, gateway))
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId, gatewayId))
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     assertThat(registrationResult.getPayload()).isNull();
@@ -299,7 +299,7 @@ public abstract class RegistrationServiceTests {
 
         createDevices(devices)
             .compose(ok -> getRegistrationService().assertRegistration(TENANT, deviceId, gatewayIdB))
-            .setHandler(ctx.succeeding(registrationResult -> {
+            .onComplete(ctx.succeeding(registrationResult -> {
                 ctx.verify(() -> {
                     assertThat(registrationResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     assertThat(registrationResult.getPayload()).isNull();
@@ -327,7 +327,7 @@ public abstract class RegistrationServiceTests {
         createDevice(deviceId, new Device())
             .compose(ok -> getDeviceManagementService()
                     .createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE))
-            .setHandler(ctx.succeeding(response -> {
+            .onComplete(ctx.succeeding(response -> {
                 ctx.verify(() -> {
                     assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CONFLICT);
                 });
@@ -344,7 +344,7 @@ public abstract class RegistrationServiceTests {
     public void testCreateDeviceWithoutIdSucceeds(final VertxTestContext ctx) {
 
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                         assertThat(response.getResourceVersion().orElse(null)).isNotNull();
@@ -365,7 +365,7 @@ public abstract class RegistrationServiceTests {
         final String deviceId = randomDeviceId();
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                         assertThat(response.getResourceVersion().orElse(null)).isNotNull();
@@ -386,7 +386,7 @@ public abstract class RegistrationServiceTests {
     public void testReadDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         getDeviceManagementService().readDevice(TENANT, "non-existing-device-id", NoopSpan.INSTANCE)
-            .setHandler(ctx.succeeding(response -> ctx.verify(() -> {
+            .onComplete(ctx.succeeding(response -> ctx.verify(() -> {
                 assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 ctx.completeNow();
             })));
@@ -407,7 +407,7 @@ public abstract class RegistrationServiceTests {
 
         createDevices(Map.of(deviceId, device))
             .compose(ok -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
-            .setHandler(ctx.succeeding(s -> {
+            .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.isOk());
                     assertThat(s.getPayload()).isNotNull();
@@ -442,7 +442,7 @@ public abstract class RegistrationServiceTests {
                     return getDeviceManagementService()
                             .readDevice(TENANT, deviceId, NoopSpan.INSTANCE);
                 })
-                .setHandler(ctx.succeeding(secondGetResult -> {
+                .onComplete(ctx.succeeding(secondGetResult -> {
                     ctx.verify(() -> {
                         assertThat(secondGetResult.isOk());
                         assertThat(secondGetResult.getPayload().getExtensions()).isEmpty();
@@ -471,7 +471,7 @@ public abstract class RegistrationServiceTests {
                 ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
                 get.flag();
                 return getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE);
-            }).setHandler(ctx.succeeding(response -> {
+            }).onComplete(ctx.succeeding(response -> {
                 ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                 get.flag();
             }));
@@ -489,7 +489,7 @@ public abstract class RegistrationServiceTests {
 
         getDeviceManagementService()
                 .deleteDevice(TENANT, "non-existing-device", Optional.empty(), NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
                 }));
@@ -516,7 +516,7 @@ public abstract class RegistrationServiceTests {
                     final String resourceVersion = rr.getResourceVersion().orElse(null);
                     return getDeviceManagementService().deleteDevice(
                             TENANT, deviceId, Optional.of("not-" + resourceVersion), NoopSpan.INSTANCE);
-                }).setHandler(ctx.succeeding(response -> {
+                }).onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
                     });
@@ -542,7 +542,7 @@ public abstract class RegistrationServiceTests {
                     return response;
                 }).compose(rr -> getDeviceManagementService()
                         .deleteDevice(TENANT, deviceId, Optional.empty(), NoopSpan.INSTANCE))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                     });
@@ -571,7 +571,7 @@ public abstract class RegistrationServiceTests {
                     final String resourceVersion = rr.getResourceVersion().orElse(null);
                     return getDeviceManagementService()
                             .deleteDevice(TENANT, deviceId, Optional.of(resourceVersion), NoopSpan.INSTANCE);
-                }).setHandler(ctx.succeeding(response -> {
+                }).onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                     });
@@ -606,7 +606,7 @@ public abstract class RegistrationServiceTests {
                             new Device().putExtension("customKey", "customValue"),
                             Optional.of("not- " + resourceVersion),
                             NoopSpan.INSTANCE);
-                }).setHandler(ctx.succeeding(response -> {
+                }).onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
                     });
@@ -638,7 +638,7 @@ public abstract class RegistrationServiceTests {
                         new Device().putExtension("customKey", "customValue"),
                         Optional.empty(),
                         NoopSpan.INSTANCE))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                         assertThat(response.getResourceVersion().get()).isNotEqualTo(resourceVersion.get());
@@ -672,7 +672,7 @@ public abstract class RegistrationServiceTests {
                         new Device().putExtension("customKey", "customValue"),
                         Optional.of(resourceVersion.get()),
                         NoopSpan.INSTANCE))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                         assertThat(response.getResourceVersion().get()).isNotEqualTo(resourceVersion.get());

@@ -801,7 +801,7 @@ public class HonoConnectionImpl implements HonoConnection {
                             }
                         });
                 return senderPromise.future();
-            }).setHandler(result);
+            }).onComplete(result);
         });
     }
 
@@ -908,7 +908,7 @@ public class HonoConnectionImpl implements HonoConnection {
                             }
                         });
                 return receiverPromise.future();
-            }).setHandler(result);
+            }).onComplete(result);
         });
     }
 
@@ -1115,7 +1115,7 @@ public class HonoConnectionImpl implements HonoConnection {
                             connectionFactory.getPort(),
                             connectionFactory.getServerRole());
                     connectionToClose.close();
-                }).setHandler(handler);
+                }).onComplete(handler);
             } else {
                 log.info("connection to server [{}:{}, role: {}] already closed",
                         connectionFactory.getHost(),

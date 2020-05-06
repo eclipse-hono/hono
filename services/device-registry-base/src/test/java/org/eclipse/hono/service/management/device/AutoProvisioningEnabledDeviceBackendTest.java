@@ -86,7 +86,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);
 
         // THEN the device is created and credentials are set
-        result.setHandler(ctx.succeeding(ok -> {
+        result.onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 verify(underTest).createDevice(eq(TENANT_ID), any(), any(), any());
                 verify(underTest).updateCredentials(eq(TENANT_ID), eq(DEVICE_ID), any(), any(), any());
@@ -122,7 +122,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
         final Future<OperationResult<String>> result = underTest.provisionDevice(TENANT_ID, cert, NoopSpan.INSTANCE);
 
         // THEN the device is deleted
-        result.setHandler(ctx.succeeding(ok -> {
+        result.onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> verify(underTest).deleteDevice(eq(TENANT_ID), eq(DEVICE_ID), any(), any()));
             ctx.completeNow();
         }));

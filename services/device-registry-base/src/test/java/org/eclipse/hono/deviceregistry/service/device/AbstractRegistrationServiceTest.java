@@ -92,7 +92,7 @@ public class AbstractRegistrationServiceTest {
             .thenReturn(Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NOT_FOUND)));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", span)
-            .setHandler(ctx.succeeding(result -> {
+            .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
@@ -113,7 +113,7 @@ public class AbstractRegistrationServiceTest {
             .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", span)
-            .setHandler(ctx.succeeding(result -> {
+            .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
@@ -134,7 +134,7 @@ public class AbstractRegistrationServiceTest {
             .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK, PAYLOAD_DISABLED)));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", span)
-            .setHandler(ctx.succeeding(result -> {
+            .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
@@ -162,7 +162,7 @@ public class AbstractRegistrationServiceTest {
             });
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", "gw", span)
-            .setHandler(ctx.succeeding(result -> {
+            .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                 });
@@ -190,7 +190,7 @@ public class AbstractRegistrationServiceTest {
             });
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", "gw", span)
-            .setHandler(ctx.succeeding(result -> {
+            .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                 });

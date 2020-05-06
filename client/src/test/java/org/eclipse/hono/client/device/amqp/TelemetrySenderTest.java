@@ -79,7 +79,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
 
-        deliveryFuture.setHandler(ctx.succeeding(delivery -> {
+        deliveryFuture.onComplete(ctx.succeeding(delivery -> {
             // THEN the AMQP message conforms to the expectations of the AMQP protocol adapter
             ctx.verify(() -> assertMessageConformsAmqpAdapterSpec(ADDRESS));
             ctx.completeNow();
@@ -125,7 +125,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
 
-        deliveryFuture.setHandler(ctx.succeeding(delivery -> {
+        deliveryFuture.onComplete(ctx.succeeding(delivery -> {
             // THEN the given SpanContext is used
             ctx.verify(() -> {
                 verify(spanBuilder).addReference(any(), eq(spanContext));
@@ -150,7 +150,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
         final Future<ProtonDelivery> deliveryFuture = telemetrySender.sendAndWaitForOutcome(DEVICE_ID, PAYLOAD,
                 CONTENT_TYPE, APPLICATION_PROPERTIES);
 
-        deliveryFuture.setHandler(ctx.completing());
+        deliveryFuture.onComplete(ctx.completing());
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();

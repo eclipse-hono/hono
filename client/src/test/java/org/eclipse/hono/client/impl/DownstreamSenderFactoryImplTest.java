@@ -91,7 +91,7 @@ public class DownstreamSenderFactoryImplTest {
         assertThat(result.isComplete()).isFalse();
 
         // WHEN an additional, concurrent attempt is made to create a telemetry sender for "tenant"
-        factory.getOrCreateTelemetrySender("telemetry/tenant").setHandler(ctx.failing(t -> {
+        factory.getOrCreateTelemetrySender("telemetry/tenant").onComplete(ctx.failing(t -> {
             // THEN the concurrent attempt fails after having done the default number of retries.
             ctx.verify(() -> {
                 assertThat(t).isInstanceOf(ServerErrorException.class);

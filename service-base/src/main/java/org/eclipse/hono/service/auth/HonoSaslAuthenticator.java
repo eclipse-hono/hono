@@ -111,7 +111,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
                     chosenMechanism, sasl.getHostname(), sasl.getState().name());
 
             final Promise<HonoUser> authTracker = Promise.promise();
-            authTracker.future().setHandler(s -> {
+            authTracker.future().onComplete(s -> {
                 final SaslOutcome saslOutcome;
                 if (s.succeeded()) {
 

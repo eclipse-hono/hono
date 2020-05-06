@@ -107,7 +107,7 @@ public class HonoExampleApplicationBase {
         final Promise<MessageConsumer> consumerPromise = Promise.promise();
 
         consumerPromise.future()
-        .setHandler(result -> {
+        .onComplete(result -> {
             if (!result.succeeded()) {
                 LOG.error("clientFactory could not create downstream consumer for [{}:{}]",
                         HonoExampleConstants.HONO_AMQP_CONSUMER_HOST,
@@ -126,7 +126,7 @@ public class HonoExampleApplicationBase {
             });
             return createConsumer();
         })
-        .setHandler(consumerPromise);
+        .onComplete(consumerPromise);
 
         latch.await();
 

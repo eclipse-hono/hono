@@ -155,7 +155,7 @@ public abstract class HttpTestBase {
                 .setSsl(true);
 
         helper = new IntegrationTestSupport(VERTX);
-        helper.init().setHandler(ctx.completing());
+        helper.init().onComplete(ctx.completing());
     }
 
     /**
@@ -206,7 +206,7 @@ public abstract class HttpTestBase {
     @AfterAll
     public static void disconnect(final VertxTestContext ctx) {
 
-        helper.disconnect().setHandler(ctx.completing());
+        helper.disconnect().onComplete(ctx.completing());
     }
 
     /**
@@ -257,7 +257,7 @@ public abstract class HttpTestBase {
 
         helper.registry
         .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -297,7 +297,7 @@ public abstract class HttpTestBase {
         helper.registry.addDeviceForTenant(tenantId, tenant, gatewayOneId, PWD)
         .compose(ok -> helper.registry.addDeviceToTenant(tenantId, gatewayTwoId, PWD))
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, device))
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -352,7 +352,7 @@ public abstract class HttpTestBase {
             return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
 
         })
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -392,7 +392,7 @@ public abstract class HttpTestBase {
                     return helper.registry.addTenant(tenantId, tenant);
 
                 })
-                .setHandler(setup.completing());
+                .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -438,7 +438,7 @@ public abstract class HttpTestBase {
                             response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
                 })
                 // THEN the connection is refused
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(ServiceInvocationException.class);
                         assertThat(((ServiceInvocationException) t).getErrorCode())
@@ -512,7 +512,7 @@ public abstract class HttpTestBase {
             Optional.ofNullable(messageConsumer)
             .map(consumer -> consumer.apply(msg))
             .orElseGet(() -> Future.succeededFuture())
-            .setHandler(attempt -> {
+            .onComplete(attempt -> {
                 if (attempt.succeeded()) {
                     receivedMessageCount.incrementAndGet();
                     messageReceived.flag();
@@ -524,7 +524,7 @@ public abstract class HttpTestBase {
             if (receivedMessageCount.get() % 20 == 0) {
                 logger.info("messages received: {}", receivedMessageCount.get());
             }
-        }).setHandler(setup.completing());
+        }).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -543,7 +543,7 @@ public abstract class HttpTestBase {
             final CountDownLatch sending = new CountDownLatch(1);
             requestSender.apply(currentMessage)
             .compose(this::assertHttpResponse)
-            .setHandler(attempt -> {
+            .onComplete(attempt -> {
                 try {
                     if (attempt.succeeded()) {
                         logger.debug("sent message {}", currentMessage);
@@ -615,7 +615,7 @@ public abstract class HttpTestBase {
                     response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED);
         })
         // THEN the request fails with a 401
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 assertThat(t).isInstanceOf(ServiceInvocationException.class);
                 assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
@@ -655,7 +655,7 @@ public abstract class HttpTestBase {
                     .recover(HttpProtocolException::transformInto);
 
         })
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 403
             logger.info("could not publish message for disabled tenant [{}]: {}", tenantId, t.getMessage());
@@ -694,7 +694,7 @@ public abstract class HttpTestBase {
                     .recover(HttpProtocolException::transformInto);
 
         })
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 404
             logger.info("could not publish message for disabled device [tenant-id: {}, device-id: {}]: {}",
@@ -739,7 +739,7 @@ public abstract class HttpTestBase {
                     .recover(HttpProtocolException::transformInto);
 
         })
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 403
             logger.info("could not publish message for disabled gateway [tenant-id: {}, gateway-id: {}]: {}",
@@ -783,7 +783,7 @@ public abstract class HttpTestBase {
                     .recover(HttpProtocolException::transformInto);
 
         })
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
 
             // THEN the message gets rejected by the HTTP adapter with a 403
             logger.info("could not publish message for unauthorized gateway [tenant-id: {}, gateway-id: {}]: {}",
@@ -849,7 +849,7 @@ public abstract class HttpTestBase {
                     .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                     .add(Constants.HEADER_QOS_LEVEL, "1"),
                 response -> response.statusCode() >= 200 && response.statusCode() < 300);
-        }).setHandler(setup.completing());
+        }).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -903,7 +903,7 @@ public abstract class HttpTestBase {
 
         // THEN both requests succeed
         CompositeFuture.all(commandSent, firstRequest, secondRequest)
-        .setHandler(ctx.succeeding(ok -> {
+        .onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // and the response to the second request contains a command
                 assertThat(secondRequest.result().get(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
@@ -933,7 +933,7 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD).setHandler(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1011,7 +1011,7 @@ public abstract class HttpTestBase {
 
         helper.registry
         .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1127,7 +1127,7 @@ public abstract class HttpTestBase {
 
         helper.registry
         .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1217,7 +1217,7 @@ public abstract class HttpTestBase {
                         VERTX.setTimer(300, timerId -> {
                             logger.info("re-trying request, failure was: {}", t.getMessage());
                             sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId)
-                                .setHandler(retryResult);
+                                .onComplete(retryResult);
                         });
                         return retryResult.future();
                     } else {

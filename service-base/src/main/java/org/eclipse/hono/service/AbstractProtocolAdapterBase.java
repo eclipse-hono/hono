@@ -464,7 +464,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     "Command & Control",
                     this::onCommandConnectionLost,
                     this::onCommandConnectionEstablished)
-            .setHandler(c -> {
+            .onComplete(c -> {
                 if (c.succeeded()) {
                     onCommandConnectionEstablished(c.result());
                 }

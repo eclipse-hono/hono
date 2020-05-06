@@ -84,7 +84,7 @@ public class MapBasedDeviceConnectionServiceTest {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     return svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertEquals(gatewayId, result.getPayload().getString(DeviceConnectionConstants.FIELD_GATEWAY_ID));
@@ -103,7 +103,7 @@ public class MapBasedDeviceConnectionServiceTest {
     public void testGetLastKnownGatewayForDeviceNotFound(final VertxTestContext ctx) {
         final String deviceId = "testDevice";
         svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span)
-                .setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, deviceConnectionResult.getStatus());
                     assertNull(deviceConnectionResult.getPayload());
                     ctx.completeNow();
@@ -128,7 +128,7 @@ public class MapBasedDeviceConnectionServiceTest {
                         assertEquals(HttpURLConnection.HTTP_NO_CONTENT, deviceConnectionResult.getStatus());
                     });
                     return svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
@@ -153,7 +153,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     // set another entry
                     return svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "testDevice2", gatewayId, span);
-                }).setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_FORBIDDEN, deviceConnectionResult.getStatus());
                     assertNull(deviceConnectionResult.getPayload());
                     ctx.completeNow();
@@ -170,7 +170,7 @@ public class MapBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final String adapterInstance = "adapterInstance";
         svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false, span)
-                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
                     ctx.completeNow();
                 })));
@@ -195,7 +195,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     // set another entry
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice2",
                             adapterInstance, null, false, span);
-                }).setHandler(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(deviceConnectionResult -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_FORBIDDEN, deviceConnectionResult.getStatus());
                     assertNull(deviceConnectionResult.getPayload());
                     ctx.completeNow();
@@ -221,7 +221,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     // now update the entry
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance,
                             null, true, span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
@@ -248,7 +248,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     // now try to update the entry, but with another adapter instance
                     return svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
                             "otherAdapterInstance", null, true, span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
@@ -272,7 +272,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
@@ -296,7 +296,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice",
                             adapterInstance, span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
@@ -320,7 +320,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
                             "otherAdapterInstance", span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
@@ -349,10 +349,10 @@ public class MapBasedDeviceConnectionServiceTest {
                     // wait 2ms so that the lifespan has elapsed
                     vertx.setTimer(2, tid -> {
                         svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance,
-                                span).setHandler(instancesPromise.future());
+                                span).onComplete(instancesPromise.future());
                     });
                     return instancesPromise.future();
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
                     assertNull(result.getPayload());
                     ctx.completeNow();
@@ -376,7 +376,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
                             Collections.emptyList(), span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), deviceId, adapterInstance);
@@ -407,10 +407,10 @@ public class MapBasedDeviceConnectionServiceTest {
                     vertx.setTimer(2, tid -> {
                         svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
                                 Collections.emptyList(), span)
-                                .setHandler(instancesPromise.future());
+                                .onComplete(instancesPromise.future());
                     });
                     return instancesPromise.future();
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
                     ctx.completeNow();
                 })));
@@ -447,10 +447,10 @@ public class MapBasedDeviceConnectionServiceTest {
                     vertx.setTimer(2, tid -> {
                         svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
                                 Collections.emptyList(), span)
-                                .setHandler(instancesPromise.future());
+                                .onComplete(instancesPromise.future());
                     });
                     return instancesPromise.future();
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
                     ctx.completeNow();
                 })));
@@ -467,7 +467,7 @@ public class MapBasedDeviceConnectionServiceTest {
         final String deviceId = "testDevice";
         final List<String> viaGateways = Collections.emptyList();
         svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
-                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
                     ctx.completeNow();
                 })));
@@ -507,7 +507,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), gatewayId, adapterInstance);
@@ -556,7 +556,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), gatewayId, adapterInstance);
@@ -605,7 +605,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), gatewayId, adapterInstance);
@@ -642,7 +642,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
                     ctx.completeNow();
                 })));
@@ -683,7 +683,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), deviceId, adapterInstance);
@@ -723,7 +723,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), deviceId, adapterInstance);
@@ -754,7 +754,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), gatewayId, adapterInstance);
@@ -792,7 +792,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_OK, result.getStatus());
                     assertNotNull(result.getPayload());
                     assertGetInstancesResultMapping(result.getPayload(), gatewayId, adapterInstance);
@@ -814,7 +814,7 @@ public class MapBasedDeviceConnectionServiceTest {
         final String gatewayId = "gw-1";
         final List<String> viaGateways = List.of(gatewayId);
         svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
-                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
                     ctx.completeNow();
                 })));
@@ -842,7 +842,7 @@ public class MapBasedDeviceConnectionServiceTest {
                     });
                     return svc.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways,
                             span);
-                }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NOT_FOUND, result.getStatus());
                     ctx.completeNow();
                 })));

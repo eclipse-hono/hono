@@ -53,7 +53,7 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
                                 IntegrationTestSupport.HONO_USER,
                                 IntegrationTestSupport.HONO_PWD)));
 
-        client.connect().setHandler(ctx.completing());
+        client.connect().onComplete(ctx.completing());
     }
 
     /**

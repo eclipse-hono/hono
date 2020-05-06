@@ -79,7 +79,7 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.succeeding(headers -> {
+        .onComplete(ctx.succeeding(headers -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(headers, HttpMethod.POST);
                 assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_QOS_LEVEL);
@@ -104,7 +104,7 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.succeeding(headers -> {
+        .onComplete(ctx.succeeding(headers -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(headers, HttpMethod.PUT);
                 assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_QOS_LEVEL);
@@ -129,7 +129,7 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.succeeding(headers -> {
+        .onComplete(ctx.succeeding(headers -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(headers, HttpMethod.POST);
                 assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_TIME_TILL_DISCONNECT);
@@ -153,7 +153,7 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.succeeding(headers -> {
+        .onComplete(ctx.succeeding(headers -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(headers, HttpMethod.PUT);
                 assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS))
@@ -178,7 +178,7 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.succeeding(headers -> {
+        .onComplete(ctx.succeeding(headers -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(headers, HttpMethod.POST);
                 assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS);
@@ -202,7 +202,7 @@ public class CorsIT {
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.succeeding(headers -> {
+        .onComplete(ctx.succeeding(headers -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(headers, HttpMethod.PUT);
                 assertThat(headers.get(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS)).contains(Constants.HEADER_COMMAND_RESPONSE_STATUS);

@@ -116,7 +116,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         getHelper().registry
         .addTenant(tenantId, tenant)
         .compose(ok -> getAdminClient().get(tenantId))
-        .setHandler(ctx.succeeding(tenantObject -> {
+        .onComplete(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getDefaults()).isEqualTo(expectedTenantObject.getDefaults());
                 assertThat(tenantObject.getAdapters())
@@ -157,7 +157,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         getHelper().registry
         .addTenant(tenantId, tenant)
         .compose(r -> getRestrictedClient().get(tenantId))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
             ctx.completeNow();
         }));
@@ -175,7 +175,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
         getAdminClient()
         .get("non-existing-tenant")
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
         }));
@@ -199,7 +199,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         getHelper().registry
         .addTenant(tenantId, tenant)
         .compose(r -> getAdminClient().get(subjectDn))
-        .setHandler(ctx.succeeding(tenantObject -> {
+        .onComplete(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
                 assertThat(tenantObject.getTrustAnchors()).size().isEqualTo(1);
@@ -232,7 +232,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         getHelper().registry
         .addTenant(tenantId, tenant)
         .compose(r -> getRestrictedClient().get(subjectDn))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
             ctx.completeNow();
         }));

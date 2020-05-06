@@ -121,7 +121,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             return Future.failedFuture(t);
         }).compose(credentialsOnRecord -> validateCredentials(deviceCredentials, credentialsOnRecord, currentSpan.context()))
         .map(device -> new DeviceUser(device.getTenantId(), device.getDeviceId()))
-        .setHandler(authAttempt -> {
+        .onComplete(authAttempt -> {
             if (authAttempt.succeeded()) {
                 currentSpan.log("successfully authenticated device");
             } else {
@@ -170,7 +170,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
             currentSpan.log("credentials-on-record are disabled");
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED));
         } else {
-            doValidateCredentials(deviceCredentials, credentialsOnRecord).setHandler(result);
+            doValidateCredentials(deviceCredentials, credentialsOnRecord).onComplete(result);
         }
         return result.future()
                 .map(device -> {

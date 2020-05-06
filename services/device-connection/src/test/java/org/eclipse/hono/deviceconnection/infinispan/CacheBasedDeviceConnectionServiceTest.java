@@ -112,7 +112,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         givenAStartedService()
         .compose(ok -> svc.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, span))
-        .setHandler(ctx.succeeding(result -> {
+        .onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                 verify(cache).setLastKnownGatewayForDevice(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(gatewayId), any(SpanContext.class));
@@ -136,7 +136,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         givenAStartedService()
         .compose(ok -> svc.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, span))
-        .setHandler(ctx.succeeding(deviceConnectionResult -> {
+        .onComplete(ctx.succeeding(deviceConnectionResult -> {
             ctx.verify(() -> {
                 assertThat(deviceConnectionResult.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 assertThat(deviceConnectionResult.getPayload()).isNull();
@@ -163,7 +163,7 @@ public class CacheBasedDeviceConnectionServiceTest {
         givenAStartedService()
         .compose(ok -> svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, null,
                 updateOnly, span))
-        .setHandler(ctx.succeeding(result -> {
+        .onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                 verify(cache).setCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(),
@@ -190,7 +190,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         givenAStartedService()
                 .compose(ok -> svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                         verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));
@@ -216,7 +216,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         givenAStartedService()
                 .compose(ok -> svc.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, span))
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
                         verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));

@@ -140,7 +140,7 @@ public abstract class CoapTestBase {
     public static void init(final VertxTestContext ctx) {
 
         helper = new IntegrationTestSupport(VERTX);
-        helper.init().setHandler(ctx.completing());
+        helper.init().onComplete(ctx.completing());
     }
 
     /**
@@ -196,7 +196,7 @@ public abstract class CoapTestBase {
     @AfterAll
     public static void disconnect(final VertxTestContext ctx) {
 
-        helper.disconnect().setHandler(ctx.completing());
+        helper.disconnect().onComplete(ctx.completing());
     }
 
     /**
@@ -337,7 +337,7 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapClient();
@@ -365,7 +365,7 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
@@ -401,7 +401,7 @@ public abstract class CoapTestBase {
         helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayOneId, SECRET)
         .compose(ok -> helper.registry.addPskDeviceToTenant(tenantId, gatewayTwoId, SECRET))
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient gatewayOne = getCoapsClient(gatewayOneId, tenantId, SECRET);
@@ -495,7 +495,7 @@ public abstract class CoapTestBase {
             }
         })
         .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElse(Future.succeededFuture()))
-        .setHandler(setup.completing());
+        .onComplete(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final long start = System.currentTimeMillis();
@@ -505,7 +505,7 @@ public abstract class CoapTestBase {
 
             final CountDownLatch sending = new CountDownLatch(1);
             requestSender.apply(messageCount.getAndIncrement()).compose(this::assertCoapResponse)
-                    .setHandler(attempt -> {
+                    .onComplete(attempt -> {
                         if (attempt.succeeded()) {
                             logger.debug("sent message {}", messageCount.get());
                         } else {
@@ -556,7 +556,7 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the request fails because the DTLS handshake cannot be completed
             assertStatus(ctx, HttpURLConnection.HTTP_UNAVAILABLE, t);
             ctx.completeNow();
@@ -586,7 +586,7 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -612,7 +612,7 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result, ResponseCode.NOT_FOUND), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -643,7 +643,7 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
         })
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -673,7 +673,7 @@ public abstract class CoapTestBase {
                     createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
         })
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -702,7 +702,7 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).setHandler(setup.completing());
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
@@ -836,7 +836,7 @@ public abstract class CoapTestBase {
         final String expectedCommand = String.format("%s=%s", Constants.HEADER_COMMAND, COMMAND_TO_SEND);
 
         final VertxTestContext setup = new VertxTestContext();
-        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).setHandler(setup.completing());
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);

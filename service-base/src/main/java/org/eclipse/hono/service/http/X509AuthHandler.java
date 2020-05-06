@@ -76,7 +76,7 @@ public class X509AuthHandler extends AuthHandlerImpl {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
                 final SpanContext currentSpan = TracingHandler.serverSpanContext(context);
 
-                auth.validateClientCertificate(path, currentSpan).setHandler(handler);
+                auth.validateClientCertificate(path, currentSpan).onComplete(handler);
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
                 LOG.debug("could not retrieve client certificate from request: {}", e.getMessage());

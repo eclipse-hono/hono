@@ -218,7 +218,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
 
-        startupTracker.future().setHandler(ctx.succeeding(result -> {
+        startupTracker.future().onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 // THEN the client provided server is started
                 verify(server).connectHandler(any(Handler.class));
@@ -301,7 +301,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final String to = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE).toString();
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
-            .setHandler(ctx.succeeding(d -> {
+            .onComplete(ctx.succeeding(d -> {
                 ctx.verify(() -> {
                     // THEN the adapter has forwarded the message downstream
                     verify(telemetrySender).send(any(Message.class), (SpanContext) any());
@@ -389,7 +389,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the adapter does not send the message (regardless of the delivery mode).
                     verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
@@ -436,7 +436,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), gateway))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the adapter does not send the event
                     verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
@@ -584,7 +584,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final VertxBasedAmqpProtocolAdapter adapter = getAdapter(server);
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.completing());
+        startupTracker.future().onComplete(ctx.completing());
         adapter.start(startupTracker);
         assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
 
@@ -648,7 +648,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getCorrelationId()).thenReturn("correlation-id");
         when(message.getApplicationProperties()).thenReturn(props);
 
-        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).setHandler(ctx.succeeding(ok -> {
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // THEN the adapter forwards the command response message downstream
                 verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
@@ -693,7 +693,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getCorrelationId()).thenReturn("correlation-id");
         when(message.getApplicationProperties()).thenReturn(props);
 
-        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).setHandler(ctx.succeeding(ok -> {
+        adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // THEN the adapter forwards the command response message downstream
                 verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
@@ -949,7 +949,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the adapter does not send the message (regardless of the delivery mode).
                         verify(telemetrySender, never()).send(any(Message.class), (SpanContext) any());
@@ -996,7 +996,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final Buffer payload = Buffer.buffer("some payload");
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, getFakeMessage(to, payload), null))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the adapter does not send the message (regardless of the delivery mode).
                         verify(eventSender, never()).send(any(Message.class), (SpanContext) any());
@@ -1048,7 +1048,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         when(message.getApplicationProperties()).thenReturn(props);
 
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, null))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the adapter does not send the message (regardless of the delivery mode).
                         verify(responseSender, never()).send(any(Message.class), any());

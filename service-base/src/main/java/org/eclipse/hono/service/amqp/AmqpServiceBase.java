@@ -513,7 +513,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                     handleUnknownEndpoint(con, receiver, targetResource);
                 } else {
                     final HonoUser user = Constants.getClientPrincipal(con);
-                    getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).setHandler(authAttempt -> {
+                    getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).onComplete(authAttempt -> {
                         if (authAttempt.succeeded() && authAttempt.result()) {
                             Constants.copyProperties(con, receiver);
                             receiver.setSource(receiver.getRemoteSource());
@@ -551,7 +551,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
                 handleUnknownEndpoint(con, sender, targetResource);
             } else {
                 final HonoUser user = Constants.getClientPrincipal(con);
-                getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).setHandler(authAttempt -> {
+                getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).onComplete(authAttempt -> {
                     if (authAttempt.succeeded() && authAttempt.result()) {
                         Constants.copyProperties(con, sender);
                         sender.setSource(sender.getRemoteSource());

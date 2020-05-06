@@ -169,7 +169,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCommandTargetMapper(commandTargetMapper);
 
         // WHEN starting the adapter
-        adapter.startInternal().setHandler(ctx.failing(t -> ctx.verify(() -> {
+        adapter.startInternal().onComplete(ctx.failing(t -> ctx.verify(() -> {
             // THEN startup fails
             assertTrue(t instanceof IllegalStateException);
             ctx.completeNow();
@@ -194,7 +194,7 @@ public class AbstractProtocolAdapterBaseTest {
         final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
         givenAnAdapterConfiguredWithServiceClients(startupHandler, commandConnectionHandler, commandConnectionLostHandler);
         // WHEN starting the adapter
-        adapter.startInternal().setHandler(ctx.succeeding(ok -> ctx.verify(() -> {
+        adapter.startInternal().onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
             // THEN the service clients have connected
             verify(tenantService).connect();
             verify(registrationClientFactory).connect();
@@ -228,7 +228,7 @@ public class AbstractProtocolAdapterBaseTest {
         final Handler<Void> commandConnectionEstablishedHandler = mock(Handler.class);
         final Handler<Void> commandConnectionLostHandler = mock(Handler.class);
         givenAnAdapterConfiguredWithServiceClients(mock(Handler.class), commandConnectionEstablishedHandler, commandConnectionLostHandler);
-        adapter.startInternal().setHandler(ctx.succeeding(ok -> ctx.verify(() -> {
+        adapter.startInternal().onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
             final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(DisconnectListener.class);
             verify(commandConsumerFactory).addDisconnectListener(disconnectHandlerCaptor.capture());
             final ArgumentCaptor<ReconnectListener<HonoConnection>> reconnectHandlerCaptor = ArgumentCaptor.forClass(ReconnectListener.class);
@@ -350,13 +350,13 @@ public class AbstractProtocolAdapterBaseTest {
         final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for the device is retrieved
         adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the result contains the registration assertion
             assertEquals(assertionResult, result);
             assertion.flag();
         })));
         adapter.getRegistrationAssertion("tenant", "device", null, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+                .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             // THEN the result contains the registration assertion
             assertEquals(assertionResult, result);
             assertion.flag();
@@ -381,13 +381,13 @@ public class AbstractProtocolAdapterBaseTest {
         final Checkpoint assertion = ctx.checkpoint();
         // WHEN an assertion for a non-existing device is retrieved
         adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class))
-                .setHandler(ctx.failing(t -> ctx.verify(() -> {
+                .onComplete(ctx.failing(t -> ctx.verify(() -> {
             // THEN the request fails with a 404
             assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
             assertion.flag();
         })));
         adapter.getRegistrationAssertion("tenant", "non-existent", null, mock(SpanContext.class))
-                .setHandler(ctx.failing(t -> ctx.verify(() -> {
+                .onComplete(ctx.failing(t -> ctx.verify(() -> {
             // THEN the request fails with a 404
             assertEquals(HttpURLConnection.HTTP_NOT_FOUND, ((ServiceInvocationException) t).getErrorCode());
             assertion.flag();
@@ -411,7 +411,7 @@ public class AbstractProtocolAdapterBaseTest {
                 "tenant A",
                 "device",
                 new Device("tenant B", "gateway"),
-                mock(SpanContext.class)).setHandler(ctx.failing(t -> ctx.verify(() -> {
+                mock(SpanContext.class)).onComplete(ctx.failing(t -> ctx.verify(() -> {
                     // THEN the request fails with a 403 Forbidden error
                     assertEquals(HttpURLConnection.HTTP_FORBIDDEN, ((ClientErrorException) t).getErrorCode());
                     ctx.completeNow();
@@ -512,7 +512,7 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN an authenticated device publishes a message to an address that does not contain a tenant ID
         final Device authenticatedDevice = new Device("my-tenant", "4711");
         final ResourceIdentifier address = ResourceIdentifier.fromString(TelemetryConstants.TELEMETRY_ENDPOINT);
-        adapter.validateAddress(address, authenticatedDevice).setHandler(ctx.succeeding(r -> ctx.verify(() -> {
+        adapter.validateAddress(address, authenticatedDevice).onComplete(ctx.succeeding(r -> ctx.verify(() -> {
             // THEN the validated address contains the authenticated device's tenant and device ID
             assertEquals("my-tenant", r.getTenantId());
             assertEquals("4711", r.getResourceId());
@@ -532,7 +532,7 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN an authenticated device publishes a message to an address that does not contain a tenant ID
         final Device authenticatedDevice = new Device("my-tenant", "4711");
         final ResourceIdentifier address = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "", "4712");
-        adapter.validateAddress(address, authenticatedDevice).setHandler(ctx.succeeding(r -> ctx.verify(() -> {
+        adapter.validateAddress(address, authenticatedDevice).onComplete(ctx.succeeding(r -> ctx.verify(() -> {
             // THEN the validated address contains the authenticated device's tenant and device ID
             assertEquals("my-tenant", r.getTenantId());
             assertEquals("4712", r.getResourceId());
@@ -561,7 +561,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setResourceLimitChecks(checks);
 
         // WHEN a device tries to connect
-        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
+        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
             ctx.completeNow();
@@ -594,7 +594,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setResourceLimitChecks(checks);
 
         // WHEN a device sends a message with a payload size of 5000 bytes
-        adapter.checkMessageLimit(tenant, 5000, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
+        adapter.checkMessageLimit(tenant, 5000, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the payload size used for the message limit checks is calculated based on the minimum message size.
             // In this case it should be 8kb
             assertEquals(8 * 1024, payloadSizeCaptor.getValue());
@@ -625,7 +625,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setResourceLimitChecks(checks);
 
         // WHEN a device tries to connect
-        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
+        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
             ctx.completeNow();
@@ -652,7 +652,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setResourceLimitChecks(checks);
 
         // WHEN a device tries to connect
-        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).setHandler(ctx.failing(t -> {
+        adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
             ctx.verify(
                     () -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpURLConnection.HTTP_FORBIDDEN)));
@@ -678,7 +678,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         //When a device tries to connect
         adapter.checkConnectionDurationLimit(tenant, mock(SpanContext.class))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     //Then the connection duration limit check fails
                     ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode(),
                             is(HttpURLConnection.HTTP_FORBIDDEN)));

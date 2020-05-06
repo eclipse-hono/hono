@@ -332,7 +332,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
         if (isStarted()) {
             final Instant start = Instant.now();
             put(connectionCheckKey, connectionCheckValue)
-                    .setHandler(r -> {
+                    .onComplete(r -> {
                         if (r.succeeded()) {
                             final long requestDuration = Duration.between(start, Instant.now()).toMillis();
                             result.complete(new JsonObject().put("grid-response-time", requestDuration));

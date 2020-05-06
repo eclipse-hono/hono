@@ -55,7 +55,7 @@ public class Commander extends AbstractApplicationClient {
     @PostConstruct
     void start() {
         workerExecutor = vertx.createSharedWorkerExecutor("user-input-pool", 3, TimeUnit.HOURS.toNanos(1));
-        clientFactory.connect().setHandler(connectAttempt -> {
+        clientFactory.connect().onComplete(connectAttempt -> {
             if (connectAttempt.succeeded()) {
                 clientFactory.addReconnectListener(this::startCommandClient);
                 startCommandClient(connectAttempt.result());
@@ -68,7 +68,7 @@ public class Commander extends AbstractApplicationClient {
     private void startCommandClient(final HonoConnection connection) {
         getCommandFromUser()
         .compose(this::processCommand)
-        .setHandler(sendAttempt -> startCommandClient(connection));
+        .onComplete(sendAttempt -> startCommandClient(connection));
     }
 
     private Future<Void> processCommand(final Command command) {

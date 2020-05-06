@@ -79,7 +79,7 @@ abstract class DeviceRegistryTestBase {
         } else {
             clientTracker.complete();
         }
-        clientTracker.future().otherwiseEmpty().setHandler(ctx.succeeding(ok -> checkpoint.flag()));
+        clientTracker.future().otherwiseEmpty().onComplete(ctx.succeeding(ok -> checkpoint.flag()));
     }
 
 }

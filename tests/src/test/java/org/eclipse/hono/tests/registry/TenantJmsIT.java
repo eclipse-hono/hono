@@ -82,7 +82,7 @@ public class TenantJmsIT extends TenantApiTests {
             return con;
         })
         .compose(con -> JmsBasedTenantClient.create(con, allTenantConfig))
-        .setHandler(ctx.succeeding(client -> {
+        .onComplete(ctx.succeeding(client -> {
             allTenantClient = client;
             connections.flag();
         }));
@@ -96,7 +96,7 @@ public class TenantJmsIT extends TenantApiTests {
             return con;
         })
         .compose(con -> JmsBasedTenantClient.create(con, defaultTenantConfig))
-        .setHandler(ctx.succeeding(client -> {
+        .onComplete(ctx.succeeding(client -> {
             defaultTenantClient = client;
             connections.flag();
         }));
@@ -174,7 +174,7 @@ public class TenantJmsIT extends TenantApiTests {
         final JsonObject unsupportedSearchCriteria = new JsonObject().put("color", "blue");
         allTenantClient
         .get(unsupportedSearchCriteria.toBuffer())
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
             ctx.completeNow();
         }));
@@ -192,7 +192,7 @@ public class TenantJmsIT extends TenantApiTests {
 
         allTenantClient
         .get(Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 })) // not JSON
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
             ctx.completeNow();
         }));
@@ -210,7 +210,7 @@ public class TenantJmsIT extends TenantApiTests {
 
         allTenantClient
         .sendRequest(null, new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "tenant").toBuffer())
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
             });
@@ -232,7 +232,7 @@ public class TenantJmsIT extends TenantApiTests {
         .sendRequest(
                 "unsupported-operation",
                 new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, "tenant").toBuffer())
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
             });

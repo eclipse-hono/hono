@@ -176,7 +176,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                                 onCloseSpanContext);
                         return (ProtocolAdapterCommandConsumer) new ProtocolAdapterCommandConsumerImpl(onCloseAction);
                     })
-                    .setHandler(result);
+                    .onComplete(result);
         });
     }
 
@@ -295,7 +295,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
                                             getOrCreateMappingAndDelegatingCommandConsumer(tenantId));
                                 });
                         return CompositeFuture.join(consumerCreationFutures);
-                    }).setHandler(ar -> {
+                    }).onComplete(ar -> {
                         recreatingConsumers.set(false);
                         if (tryAgainRecreatingConsumers.compareAndSet(true, false) || ar.failed()) {
                             if (ar.succeeded()) {
@@ -343,7 +343,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(replyId);
         return connection.executeOnContext(result -> {
-            CommandResponseSenderImpl.create(connection, tenantId, replyId, onRemoteClose -> {}).setHandler(result);
+            CommandResponseSenderImpl.create(connection, tenantId, replyId, onRemoteClose -> {}).onComplete(result);
         });
     }
 

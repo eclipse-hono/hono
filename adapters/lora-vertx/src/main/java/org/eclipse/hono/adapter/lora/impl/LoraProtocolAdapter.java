@@ -480,7 +480,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             final LoraProvider provider = providerOptional.get();
             LOG.debug("Using LoraProvider [{}] to send command to gateway", provider.getProviderName());
             provider.sendDownlinkCommand(commandData.getGateway(), commandData.getGatewayCredentials(),
-                    commandData.getTargetDeviceId(), commandData.getCommand()).setHandler(r -> {
+                    commandData.getTargetDeviceId(), commandData.getCommand()).onComplete(r -> {
                         if (r.succeeded()) {
                             LOG.debug("Successfully sent message to lora provider");
                             responseHandler.complete(getHttpResponseWithCode(HttpURLConnection.HTTP_OK, "OK"));
@@ -521,7 +521,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                         command.getRequestId(), error);
                 TracingHelper.logError(currentSpan, error);
                 return null;
-            }).setHandler(c -> currentSpan.finish());
+            }).onComplete(c -> currentSpan.finish());
         } else {
             final String errorMsg = String.format("command-request-id [%s] or status code [%s] is missing/invalid",
                     command.getRequestId(), response.statusCode());

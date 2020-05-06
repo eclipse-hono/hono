@@ -140,7 +140,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits().setMaxConnections(10));
 
-        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).setHandler(
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).onComplete(
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
@@ -165,7 +165,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits().setMaxConnections(10));
 
-        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).setHandler(
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).onComplete(
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
@@ -189,7 +189,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits().setMaxConnections(10));
 
-        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).setHandler(
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).onComplete(
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
@@ -212,7 +212,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true)
                 .setResourceLimits(new ResourceLimits().setMaxConnections(10));
 
-        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).setHandler(
+        limitChecksImpl.isConnectionLimitReached(tenant, mock(SpanContext.class)).onComplete(
                 ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
@@ -244,7 +244,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
                         verify(request).send(any(Handler.class));
@@ -274,7 +274,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
                         verify(request).send(any(Handler.class));
@@ -305,7 +305,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, spanContext)
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         // THEN the limit is not exceeded
                         assertFalse(response);
@@ -412,7 +412,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         final TenantObject tenant = TenantObject.from("tenant", true);
 
         limitChecksImpl.isMessageLimitReached(tenant, 10, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
                         verify(request, never()).send(any(Handler.class));
@@ -442,7 +442,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, spanContext)
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
                         verify(request, never()).send(any(Handler.class));
@@ -473,7 +473,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, incomingMessageSize, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         verify(request).send(any(Handler.class));
                         verify(cacheProvider.getCache(any())).put(eq("tenant_bytes_consumed"), any(),
@@ -507,7 +507,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
         limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
                         verify(request).send(any(Handler.class));
@@ -536,7 +536,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
         limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertTrue(response);
                         verify(request).send(any(Handler.class));
@@ -565,7 +565,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setNoOfDays(30))));
 
         limitChecksImpl.isMessageLimitReached(tenant, 100L, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
                         verify(request).send(any(Handler.class));
@@ -594,7 +594,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
         limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         // THEN the limit is not exceeded
                         assertFalse(response);
@@ -626,7 +626,7 @@ public class PrometheusBasedResourceLimitChecksTest {
                                         .setMode("days")
                                         .setNoOfDays(30))));
         limitChecksImpl.isConnectionDurationLimitReached(tenant, mock(SpanContext.class))
-                .setHandler(ctx.succeeding(response -> {
+                .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         assertFalse(response);
                         verify(request).send(any(Handler.class));

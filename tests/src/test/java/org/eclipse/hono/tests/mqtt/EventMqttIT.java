@@ -109,7 +109,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         tenant.setDefaults(Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, 3)); // seconds
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret").setHandler(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret").onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -133,7 +133,7 @@ public class EventMqttIT extends MqttPublishTestBase {
                 LOGGER.info("opening event consumer for tenant [{}]", tenantId);
                 // THEN no messages can be consumed after the TTL has expired
                 createConsumer(tenantId, msg -> receivedMessageCount.incrementAndGet())
-                .setHandler(consumerCreated);
+                .onComplete(consumerCreated);
             });
             return consumerCreated.future();
         })
@@ -147,6 +147,6 @@ public class EventMqttIT extends MqttPublishTestBase {
                 }
             });
             return done.future();
-        }).setHandler(ctx.completing());
+        }).onComplete(ctx.completing());
     }
 }

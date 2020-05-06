@@ -95,7 +95,7 @@ public class TenantHttpIT {
 
         final Checkpoint deletion = ctx.checkpoint();
         registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT)
-        .setHandler(attempt -> deletion.flag());
+        .onComplete(attempt -> deletion.flag());
     }
 
     /**
@@ -118,7 +118,7 @@ public class TenantHttpIT {
     public void testAddTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenant = buildTenantPayload();
-        registry.addTenant(tenantId, tenant).setHandler(context.completing());
+        registry.addTenant(tenantId, tenant).onComplete(context.completing());
     }
 
     /**
@@ -135,7 +135,7 @@ public class TenantHttpIT {
         registry.addTenant(tenantId, payload).compose(ar -> {
             // now try to add the tenant again
             return registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
-        }).setHandler(context.completing());
+        }).onComplete(context.completing());
     }
 
     /**
@@ -150,7 +150,7 @@ public class TenantHttpIT {
         registry.addTenant(tenantId,
                 buildTenantPayload(),
                 "application/x-www-form-urlencoded",
-                HttpURLConnection.HTTP_BAD_REQUEST).setHandler(context.completing());
+                HttpURLConnection.HTTP_BAD_REQUEST).onComplete(context.completing());
     }
 
     /**
@@ -162,7 +162,7 @@ public class TenantHttpIT {
     public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
 
         registry.addTenant(tenantId, null, HttpURLConnection.HTTP_CREATED)
-        .setHandler(context.completing());
+        .onComplete(context.completing());
     }
 
     /**
@@ -174,7 +174,7 @@ public class TenantHttpIT {
     public void testAddTenantSucceedsWithNoRequestBody(final VertxTestContext context) {
 
         registry.addTenant(tenantId)
-                .setHandler(context.completing());
+                .onComplete(context.completing());
     }
 
     /**
@@ -194,7 +194,7 @@ public class TenantHttpIT {
                         tenantId = res.get("location");
                     });
                     return Future.succeededFuture();
-                }).setHandler(context.completing());
+                }).onComplete(context.completing());
     }
 
     /**
@@ -220,7 +220,7 @@ public class TenantHttpIT {
                     assertFalse(b.toJsonObject().getBoolean(TenantConstants.FIELD_ENABLED, Boolean.TRUE));
                 });
                 return Future.succeededFuture();
-            }).setHandler(context.completing());
+            }).onComplete(context.completing());
     }
 
     /**
@@ -234,7 +234,7 @@ public class TenantHttpIT {
         final Tenant altered = buildTenantPayload();
 
         registry.updateTenant(tenantId, altered, HttpURLConnection.HTTP_NOT_FOUND)
-            .setHandler(context.completing());
+            .onComplete(context.completing());
     }
 
 
@@ -249,7 +249,7 @@ public class TenantHttpIT {
         final Tenant tenantPayload = buildTenantPayload();
         registry.addTenant(tenantId, tenantPayload)
             .compose(ar -> registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
-            .setHandler(context.completing());
+            .onComplete(context.completing());
     }
 
 
@@ -262,7 +262,7 @@ public class TenantHttpIT {
     public void testRemoveTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
         registry.removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
-        .setHandler(context.completing());
+        .onComplete(context.completing());
     }
 
     /**
@@ -282,7 +282,7 @@ public class TenantHttpIT {
         LOG.debug("registering tenant using Management API: {}", JsonObject.mapFrom(requestBody).encodePrettily());
         registry.addTenant(tenantId, requestBody)
             .compose(ar -> registry.getTenant(tenantId))
-            .setHandler(context.succeeding(b -> {
+            .onComplete(context.succeeding(b -> {
                 final JsonObject json = b.toJsonObject();
                 LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
                 context.verify(() -> {
@@ -308,7 +308,7 @@ public class TenantHttpIT {
                 requestBody,
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-        .setHandler(context.completing());
+        .onComplete(context.completing());
     }
 
     /**

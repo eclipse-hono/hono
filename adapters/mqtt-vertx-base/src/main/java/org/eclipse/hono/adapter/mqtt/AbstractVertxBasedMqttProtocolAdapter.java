@@ -332,7 +332,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 }
                 return Future.succeededFuture((Void) null);
             })
-            .setHandler(startPromise);
+            .onComplete(startPromise);
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -363,7 +363,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         CompositeFuture.all(serverTracker.future(), insecureServerTracker.future())
             .map(ok -> (Void) null)
-            .setHandler(stopPromise);
+            .onComplete(stopPromise);
     }
 
     /**
@@ -392,7 +392,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         isConnected()
                 .compose(v -> handleConnectionRequest(endpoint, span))
-                .setHandler(result -> handleConnectionRequestResult(endpoint, span, result));
+                .onComplete(result -> handleConnectionRequestResult(endpoint, span, result));
 
     }
 
@@ -422,7 +422,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             TracingHelper.TAG_AUTHENTICATED.set(currentSpan, authenticatedDevice != null);
 
             sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
-                    .setHandler(sendAttempt -> {
+                    .onComplete(sendAttempt -> {
                         if (sendAttempt.succeeded()) {
                             // we NEVER maintain session state
                             endpoint.accept(false);
@@ -629,7 +629,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         });
 
         // wait for all futures to complete before sending SUBACK
-        CompositeFuture.join(new ArrayList<>(subscriptionOutcome.values())).setHandler(v -> {
+        CompositeFuture.join(new ArrayList<>(subscriptionOutcome.values())).onComplete(v -> {
 
             // return a status code for each topic filter contained in the SUBSCRIBE packet
             final List<MqttQoS> grantedQosLevels = subscriptionOutcome.entrySet().stream()
@@ -807,7 +807,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     return checkTopic(context);
                 })
                 .compose(ok -> onPublishedMessage(context))
-                .setHandler(processing -> {
+                .onComplete(processing -> {
                     if (processing.succeeded()) {
                         Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
                         onMessageSent(context);

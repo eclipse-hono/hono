@@ -126,7 +126,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
 
         // WHEN persisting a dirty registry
         registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE);
-        registrationService.saveToFile().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        registrationService.saveToFile().onComplete(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the file has been created
             verify(fileSystem).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
@@ -159,7 +159,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
 
         // WHEN starting the service
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(started -> ctx.verify(() -> {
+        startupTracker.future().onComplete(ctx.succeeding(started -> ctx.verify(() -> {
             // THEN the file gets created
             verify(fileSystem).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
             ctx.completeNow();
@@ -189,7 +189,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
         }).when(fileSystem).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.failing(started -> {
+        startupTracker.future().onComplete(ctx.failing(started -> {
             // THEN startup has failed
             ctx.completeNow();
         }));
@@ -218,7 +218,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
 
         // WHEN starting the service
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(started -> {
+        startupTracker.future().onComplete(ctx.succeeding(started -> {
             // THEN startup succeeds
             ctx.completeNow();
         }));
@@ -267,7 +267,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
                         r -> {
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                         })
-                .setHandler(ctx.succeeding(s -> ctx.completeNow())));
+                .onComplete(ctx.succeeding(s -> ctx.completeNow())));
 
         registrationService.start().onComplete(startupTracker);
 
@@ -359,7 +359,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
 
                 // complete
 
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
 
     }
 
@@ -379,7 +379,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
 
         // WHEN the service is started
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+        startupTracker.future().onComplete(ctx.succeeding(s -> ctx.verify(() -> {
             // THEN the device identities from the file are not loaded
             verify(fileSystem, never()).readFile(anyString(), any(Handler.class));
             ctx.completeNow();
@@ -474,7 +474,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
         }).when(fileSystem).readFile(eq(registrationConfig.getFilename()), any(Handler.class));
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(done -> ctx.verify(() -> {
+        startupTracker.future().onComplete(ctx.succeeding(done -> ctx.verify(() -> {
             verify(vertx, never()).setPeriodic(anyLong(), any(Handler.class));
             ctx.completeNow();
         })));
@@ -509,7 +509,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
                     registrationService.stop().onComplete(shutdownTracker);
             return shutdownTracker.future();
         })
-        .setHandler(ctx.succeeding(shutDown -> ctx.verify(() -> {
+        .onComplete(ctx.succeeding(shutDown -> ctx.verify(() -> {
             // THEN no data has been written to the file system
                     verify(fileSystem, never()).createFile(eq(registrationConfig.getFilename()), any(Handler.class));
             ctx.completeNow();

@@ -182,7 +182,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         })
         .compose(success -> CompositeFuture.all(bindSecureServer(), bindInsecureServer()))
         .map(ok -> (Void) null)
-        .setHandler(startPromise);
+        .onComplete(startPromise);
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -196,7 +196,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     protected void doStop(final Promise<Void> stopPromise) {
         CompositeFuture.all(stopSecureServer(), stopInsecureServer())
         .map(ok -> (Void) null)
-        .setHandler(stopPromise);
+        .onComplete(stopPromise);
     }
 
     private Future<Void> stopInsecureServer() {
@@ -377,7 +377,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             log.debug("{} is registered and enabled", authenticatedDevice);
                             span.log(String.format("device [%s] is registered and enabled", authenticatedDevice));
                             return (Void) null;
-                        }).setHandler(connectAuthorizationCheck);
+                        }).onComplete(connectAuthorizationCheck);
             }
 
         } else {
@@ -406,7 +406,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             con.close();
             TracingHelper.logError(span, t);
             return null;
-        }).setHandler(s -> span.finish());
+        }).onComplete(s -> span.finish());
     }
 
     /**
@@ -544,7 +544,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     ctx.setTimer(metrics.startTimer());
                     if (authenticatedDevice == null) {
                         deriveAndSetTenantTraceSamplingPriority(ctx)
-                                .setHandler(ar -> onMessageReceived(ctx));
+                                .onComplete(ar -> onMessageReceived(ctx));
                     } else {
                         ctx.setTraceSamplingPriority(traceSamplingPriority);
                         onMessageReceived(ctx);
@@ -729,7 +729,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                                         validAddress.getResourceId(),
                                         authenticatedDevice,
                                         connectionLostSpan.context())
-                                .setHandler(sendAttempt -> {
+                                .onComplete(sendAttempt -> {
                                     if (sendAttempt.failed()) {
                                         TracingHelper.logError(connectionLostSpan, sendAttempt.cause());
                                     }
@@ -757,7 +757,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             }
             return null;
         })
-        .setHandler(s -> {
+        .onComplete(s -> {
             span.finish();
         });
     }

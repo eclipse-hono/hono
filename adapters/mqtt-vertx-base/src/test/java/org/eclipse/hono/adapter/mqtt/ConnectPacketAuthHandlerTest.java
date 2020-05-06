@@ -77,7 +77,7 @@ public class ConnectPacketAuthHandlerTest {
         final MqttContext context = MqttContext.fromConnectPacket(endpoint);
         authHandler.parseCredentials(context)
             // THEN the auth info is correctly retrieved from the client certificate
-            .setHandler(ctx.succeeding(info -> {
+            .onComplete(ctx.succeeding(info -> {
                 ctx.verify(() -> {
                     assertThat(info.getString("username")).isEqualTo("sensor1@DEFAULT_TENANT");
                     assertThat(info.getString("password")).isEqualTo("secret");

@@ -151,7 +151,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.succeeding(ok -> {
+                .onComplete(context.succeeding(ok -> {
 
                     final JsonObject expectedBody = new JsonObject();
                     expectedBody.put("login", TEST_KERLINK_API_USER);
@@ -229,7 +229,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.failing(t -> {
+                .onComplete(context.failing(t -> {
                     context.completeNow();
                 }));
     }
@@ -256,11 +256,11 @@ public class KerlinkProviderTest {
                 final Promise<Void> secondResponse = Promise.promise();
                 vertx.setTimer(500, nextRequest -> {
                     provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                        .setHandler(secondResponse);
+                        .onComplete(secondResponse);
                 });
                 return secondResponse.future();
             })
-            .setHandler(context.succeeding(ok -> {
+            .onComplete(context.succeeding(ok -> {
                 context.verify(() -> kerlink.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
                 context.completeNow();
             }));
@@ -288,10 +288,10 @@ public class KerlinkProviderTest {
                 final Promise<Void> secondResponse = Promise.promise();
                 vertx.setTimer(250, nextRequest ->
                     provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                        .setHandler(secondResponse));
+                        .onComplete(secondResponse));
                 return secondResponse.future();
             })
-            .setHandler(context.succeeding(ok -> {
+            .onComplete(context.succeeding(ok -> {
                 context.verify(() -> kerlink.verify(1, postRequestedFor(urlEqualTo("/oss/application/login"))));
                 context.completeNow();
             }));
@@ -320,7 +320,7 @@ public class KerlinkProviderTest {
                 firstResponseFailure.flag();
                 return provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command);
             })
-            .setHandler(context.failing(t -> {
+            .onComplete(context.failing(t -> {
                 context.verify(() -> kerlink.verify(2, postRequestedFor(urlEqualTo("/oss/application/login"))));
                 context.completeNow();
             }));
@@ -343,7 +343,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.failing(t -> context.completeNow()));
+                .onComplete(context.failing(t -> context.completeNow()));
     }
 
     /**
@@ -363,7 +363,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.failing(t -> context.completeNow()));
+                .onComplete(context.failing(t -> context.completeNow()));
     }
 
     /**
@@ -384,7 +384,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.failing(t -> context.completeNow()));
+                .onComplete(context.failing(t -> context.completeNow()));
     }
 
     /**
@@ -405,7 +405,7 @@ public class KerlinkProviderTest {
         final Command command = getValidDownlinkCommand();
 
         provider.sendDownlinkCommand(loraGatewayDevice, gatewayCredential, targetDeviceId, command)
-                .setHandler(context.failing(t -> context.completeNow()));
+                .onComplete(context.failing(t -> context.completeNow()));
     }
 
     private CredentialsObject getValidGatewayCredential() {

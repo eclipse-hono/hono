@@ -66,7 +66,7 @@ public class HonoClientImplIT {
 
         clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
-        clientFactory.connect().setHandler(ctx.failing(t -> {
+        clientFactory.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
                 assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
@@ -94,7 +94,7 @@ public class HonoClientImplIT {
 
         clientFactory = IntegrationTestApplicationClientFactory.create(HonoConnection.newConnection(vertx, downstreamProps));
         // WHEN the client tries to connect
-        clientFactory.connect().setHandler(ctx.failing(t -> {
+        clientFactory.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
                 assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);

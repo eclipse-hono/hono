@@ -86,7 +86,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -106,7 +106,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     return helper.registry.addTenant(tenantId, tenant);
                 })
                 .compose(ok -> connectToAdapter(deviceCert))
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -131,7 +131,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                 // using a client certificate with the trust anchor 
                 // registered for the device's tenant
                 .compose(ok -> connectToAdapter(deviceCert))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused
                     ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
                     ctx.completeNow();
@@ -156,7 +156,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         .compose(ok ->
             // WHEN an unknown device tries to connect
             connectToAdapter(IntegrationTestSupport.getUsername("non-existing", tenantId), "secret"))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
             ctx.completeNow();
@@ -182,7 +182,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN the device tries to connect using a wrong password
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "wrong password"))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
             ctx.completeNow();
@@ -209,7 +209,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN a device that belongs to the tenant tries to connect to the adapter
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN));
             ctx.completeNow();
@@ -234,7 +234,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
             .compose(device -> helper.registry.deregisterDevice(tenantId, deviceId))
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 // THEN the connection is refused
                 ctx.completeNow();
             }));
@@ -258,7 +258,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN the device tries to connect using a malformed username
         .compose(ok -> connectToAdapter(deviceId, password))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the SASL handshake fails
             ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
             ctx.completeNow();
@@ -293,7 +293,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     // using the trust anchor registered for the device's tenant
                     return connectToAdapter(deviceCert);
                 })
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the connection is not established
                     ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
                     ctx.completeNow();

@@ -121,7 +121,7 @@ public class TenantClientImplTest {
         final JsonObject tenantResult = newTenantResult("tenant");
 
         // WHEN getting tenant information by ID
-        client.get("tenant").setHandler(ctx.succeeding(tenant -> {
+        client.get("tenant").onComplete(ctx.succeeding(tenant -> {
             ctx.verify(() -> {
                 // THEN the registration information has been retrieved from the service
                 assertThat(tenant).isNotNull();
@@ -160,7 +160,7 @@ public class TenantClientImplTest {
         final JsonObject tenantResult = newTenantResult("tenant");
 
         // WHEN getting tenant information
-        client.get("tenant").setHandler(ctx.succeeding(tenant -> {
+        client.get("tenant").onComplete(ctx.succeeding(tenant -> {
             ctx.verify(() -> {
                 // THEN the tenant result has been added to the cache
                 assertThat(tenant).isNotNull();
@@ -202,7 +202,7 @@ public class TenantClientImplTest {
         when(cache.get(any(TriTuple.class))).thenReturn(tenantResult);
 
         // WHEN getting tenant information
-        client.get("tenant").setHandler(ctx.succeeding(result -> {
+        client.get("tenant").onComplete(ctx.succeeding(result -> {
             // THEN the tenant information is read from the cache
             assertEquals(tenantResult.getPayload(), result);
             // and no request message is sent to the service
@@ -225,7 +225,7 @@ public class TenantClientImplTest {
         when(sender.sendQueueFull()).thenReturn(true);
 
         // WHEN getting tenant information
-        client.get("tenant").setHandler(ctx.failing(t -> {
+        client.get("tenant").onComplete(ctx.failing(t -> {
             // THEN the invocation fails and the span is marked as erroneous
             verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
             // and the span is finished
@@ -253,7 +253,7 @@ public class TenantClientImplTest {
         });
 
         // WHEN getting tenant information
-        client.get("tenant").setHandler(ctx.failing(t -> {
+        client.get("tenant").onComplete(ctx.failing(t -> {
             assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, ((ServiceInvocationException) t).getErrorCode());
             // THEN the invocation fails and the span is marked as erroneous
             verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));

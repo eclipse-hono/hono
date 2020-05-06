@@ -79,7 +79,7 @@ public abstract class AbstractTenantServiceTest {
                 .compose(ok -> getTenantManagementService()
                         .createTenant(Optional.of("tenant"), buildTenantPayload(), NoopSpan.INSTANCE))
                 .map(r -> ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CONFLICT, r.getStatus())))
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -95,7 +95,7 @@ public abstract class AbstractTenantServiceTest {
                 Optional.empty(),
                 buildTenantPayload(),
                 NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         final String id = s.getPayload().getId();
                         assertNotNull(id);
@@ -116,7 +116,7 @@ public abstract class AbstractTenantServiceTest {
                 Optional.of("tenant"),
                 buildTenantPayload(),
                 NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         final String id = s.getPayload().getId();
                         final String version = s.getResourceVersion().orElse(null);
@@ -142,7 +142,7 @@ public abstract class AbstractTenantServiceTest {
                     "tenant",
                     Optional.empty(),
                     NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> {
+                    .onComplete(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -166,7 +166,7 @@ public abstract class AbstractTenantServiceTest {
                     "tenant",
                     Optional.of(version),
                     NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> {
+                    .onComplete(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -190,7 +190,7 @@ public abstract class AbstractTenantServiceTest {
                     "tenant",
                     Optional.of(version + "abc"),
                     NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> {
+                    .onComplete(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -215,7 +215,7 @@ public abstract class AbstractTenantServiceTest {
                     buildTenantPayload(),
                     Optional.of(version + "abc"),
                     NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> {
+                    .onComplete(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -241,7 +241,7 @@ public abstract class AbstractTenantServiceTest {
                     buildTenantPayload(),
                     Optional.of(version),
                     NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> {
+                    .onComplete(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -264,7 +264,7 @@ public abstract class AbstractTenantServiceTest {
                     buildTenantPayload(),
                     Optional.empty(),
                     NoopSpan.INSTANCE)
-                    .setHandler(ctx.succeeding(s -> {
+                    .onComplete(ctx.succeeding(s -> {
                         ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
                         ctx.completeNow();
                     })
@@ -295,7 +295,7 @@ public abstract class AbstractTenantServiceTest {
                         Optional.of("newTenant"),
                         tenant,
                         NoopSpan.INSTANCE)
-                        .setHandler(ctx.succeeding(s -> {
+                        .onComplete(ctx.succeeding(s -> {
                             ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus()));
                             ctx.completeNow();
                         }));
@@ -314,7 +314,7 @@ public abstract class AbstractTenantServiceTest {
         getTenantService().get(
                 "notExistingTenant",
                 NoopSpan.INSTANCE)
-                .setHandler(ctx.succeeding(s -> {
+                .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus()));
                     ctx.completeNow();
                 }));
@@ -345,7 +345,7 @@ public abstract class AbstractTenantServiceTest {
             // WHEN retrieving the tenant using the Tenant API
             return getTenantService().get("tenant", null);
         })
-        .setHandler(ctx.succeeding(response -> {
+        .onComplete(ctx.succeeding(response -> {
             // THEN the properties of the originally registered tenant
             // all show up in the tenant retrieved using the Tenant API
             ctx.verify(() -> {
@@ -385,7 +385,7 @@ public abstract class AbstractTenantServiceTest {
         .map(ok -> {
             getTenantService().get(
                     "tenant")
-                    .setHandler(ctx.succeeding(s -> {
+                    .onComplete(ctx.succeeding(s -> {
                         ctx.verify(() -> {
                             assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                             assertEquals("tenant", s.getPayload().getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID));
@@ -425,7 +425,7 @@ public abstract class AbstractTenantServiceTest {
                     getTenantService().get(
                             subjectDn,
                             NoopSpan.INSTANCE)
-                            .setHandler(ctx.succeeding(s -> {
+                            .onComplete(ctx.succeeding(s -> {
                                 ctx.verify(() -> {
                                     assertEquals(HttpURLConnection.HTTP_OK, s.getStatus());
                                     final TenantObject obj = s.getPayload().mapTo(TenantObject.class);
@@ -459,7 +459,7 @@ public abstract class AbstractTenantServiceTest {
         addTenant("tenant", tenant)
                 .map(ok -> {
                     getTenantService().get(unknownSubjectDn, null)
-                            .setHandler(ctx.succeeding(s -> ctx.verify(() -> {
+                            .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
                                 assertEquals(HttpURLConnection.HTTP_NOT_FOUND, s.getStatus());
                                 ctx.completeNow();
                             })));
@@ -482,7 +482,7 @@ public abstract class AbstractTenantServiceTest {
             ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
             return assertTenantDoesNotExist(getTenantManagementService(), "tenant");
         })
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
 
     }
 
@@ -511,7 +511,7 @@ public abstract class AbstractTenantServiceTest {
                 assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
             });
             return getTenantService().get("tenant", null);
-        }).setHandler(ctx.succeeding(getResult -> {
+        }).onComplete(ctx.succeeding(getResult -> {
             ctx.verify(() -> {
                 assertEquals(HttpURLConnection.HTTP_OK, getResult.getStatus());
                 assertEquals(extensions, getResult.getPayload().getJsonObject(TenantConstants.FIELD_EXT));
@@ -551,7 +551,7 @@ public abstract class AbstractTenantServiceTest {
                     null,
                     NoopSpan.INSTANCE);
         })
-        .setHandler(ctx.succeeding(s -> {
+        .onComplete(ctx.succeeding(s -> {
             ctx.verify(() -> {
                 // THEN the update fails with a 409
                 assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());

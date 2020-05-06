@@ -102,7 +102,7 @@ public class ProtocolGateway {
      */
     @PreDestroy
     public void stop() {
-        server.stop().setHandler(r -> amqpAdapterClientFactory.disconnect());
+        server.stop().onComplete(r -> amqpAdapterClientFactory.disconnect());
     }
 
     void handleConnect(final NetSocket socket) {
@@ -206,7 +206,7 @@ public class ProtocolGateway {
                                     }
                                 })
                                 .map((Void) null)
-                                .setHandler(result);
+                                .onComplete(result);
                         }
                     },
                     () -> {
@@ -230,7 +230,7 @@ public class ProtocolGateway {
                             amqpAdapterClientFactory.getOrCreateEventSender()
                                 .compose(sender -> sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE, null))
                                 .map((Void) null)
-                                .setHandler(result);
+                                .onComplete(result);
                         }
                     },
                     () -> {
@@ -252,7 +252,7 @@ public class ProtocolGateway {
                             dictionary.put(KEY_COMMAND_CONSUMER, consumer);
                             return (Void) null;
                         })
-                        .setHandler(result);
+                        .onComplete(result);
                 },
                 () -> {
                     result.fail("device not logged in");
@@ -294,7 +294,7 @@ public class ProtocolGateway {
             } else {
                 LOG.debug("received command [name: {}]: {}", m.getSubject(), commandPayload);
                 if ("tellTime".equals(m.getSubject())) {
-                    respondWithTime(m).setHandler(sendAttempt -> {
+                    respondWithTime(m).onComplete(sendAttempt -> {
                         if (sendAttempt.succeeded()) {
                             LOG.debug("sent response to command [name: {}, outcome: {}]", m.getSubject(), sendAttempt.result().getRemoteState().getType());
                         } else {

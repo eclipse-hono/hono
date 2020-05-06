@@ -105,7 +105,7 @@ class AbstractApplicationTest {
         application.setApplicationConfiguration(props);
         application.addServiceFactories(Set.of(factory));
         application.deployVerticles()
-        .setHandler(ctx.succeeding(ok -> {
+        .onComplete(ctx.succeeding(ok -> {
             verify(factory, times(2)).getObject();
             verify(vertx, times(2)).deployVerticle(any(Verticle.class), any(Handler.class));
             ctx.completeNow();

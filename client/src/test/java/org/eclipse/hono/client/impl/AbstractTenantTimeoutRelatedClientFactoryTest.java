@@ -67,7 +67,7 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
 
         // GIVEN a client factory that manages a client with a tenant-scoped link
         final HonoConnection connection = createConnection();
-        getClientFuture(connection, tenantId).setHandler(ctx.succeeding(r -> {
+        getClientFuture(connection, tenantId).onComplete(ctx.succeeding(r -> {
 
             // WHEN a tenant timeout event occurs for this tenant
             connection.getVertx().eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
@@ -93,7 +93,7 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
 
         // GIVEN a client factory that manages a client with a tenant-scoped link
         final HonoConnection connection = createConnection();
-        getClientFuture(connection, tenantId).setHandler(ctx.succeeding(r -> {
+        getClientFuture(connection, tenantId).onComplete(ctx.succeeding(r -> {
 
             // WHEN a tenant timeout event occurs for another tenant
             connection.getVertx().eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, otherTenant);

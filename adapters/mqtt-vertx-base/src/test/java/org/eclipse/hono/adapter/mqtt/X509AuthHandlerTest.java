@@ -97,7 +97,7 @@ public class X509AuthHandlerTest {
         final MqttContext context = MqttContext.fromConnectPacket(endpoint);
         authHandler.parseCredentials(context)
             // THEN the auth info is correctly retrieved from the client certificate
-            .setHandler(ctx.succeeding(info -> {
+            .onComplete(ctx.succeeding(info -> {
                 ctx.verify(() -> {
                     assertThat(info.getString(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN)).isEqualTo("CN=device");
                     assertThat(info.getString(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("tenant");
@@ -134,7 +134,7 @@ public class X509AuthHandlerTest {
         final MqttContext context = MqttContext.fromConnectPacket(endpoint);
         authHandler.authenticateDevice(context)
             // THEN the request context is failed with the 503 error code
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     assertThat(t).isEqualTo(error);
                 });

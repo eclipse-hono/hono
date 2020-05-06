@@ -121,7 +121,7 @@ public class CredentialsClientImplTest {
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         final Message sentMessage = messageCaptor.getValue();
 
-        getFuture.setHandler(ctx.succeeding(credentials -> {
+        getFuture.onComplete(ctx.succeeding(credentials -> {
             ctx.verify(() -> {
                 // THEN the credentials has been retrieved from the service
                 assertNotNull(credentials);
@@ -162,7 +162,7 @@ public class CredentialsClientImplTest {
 
         // WHEN getting credentials information
         client.get(credentialsType, authId, clientContext)
-                .setHandler(ctx.succeeding(credentials -> {
+                .onComplete(ctx.succeeding(credentials -> {
                     ctx.verify(() -> {
                         assertNotNull(credentials);
                         assertEquals("device", credentials.getDeviceId());
@@ -209,7 +209,7 @@ public class CredentialsClientImplTest {
 
         // WHEN getting credentials
         client.get(credentialsType, authId)
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     // THEN the credentials is read from the cache
                     assertEquals(credentialsResult.getPayload(), result);
                     verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
@@ -233,7 +233,7 @@ public class CredentialsClientImplTest {
 
         // WHEN getting credentials
         client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "test-auth")
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the invocation fails and the span is marked as erroneous
                     verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                     // and the span is finished
@@ -262,7 +262,7 @@ public class CredentialsClientImplTest {
 
         // WHEN getting credentials
         client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "test-auth")
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
                             ((ServiceInvocationException) t).getErrorCode());
                     // THEN the invocation fails and the span is marked as erroneous

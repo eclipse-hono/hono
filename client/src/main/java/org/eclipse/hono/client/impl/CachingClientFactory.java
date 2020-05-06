@@ -174,7 +174,7 @@ class CachingClientFactory<T> extends ClientFactory<T> {
             log.debug("creating new client for [{}]", key);
 
             try {
-                clientInstanceSupplier.get().setHandler(creationAttempt -> {
+                clientInstanceSupplier.get().onComplete(creationAttempt -> {
                     creationRequests.remove(connectionFailureHandler);
                     if (creationLocks.remove(key, Boolean.TRUE)) {
                         if (creationAttempt.succeeded()) {

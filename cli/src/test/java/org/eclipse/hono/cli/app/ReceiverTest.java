@@ -78,7 +78,7 @@ public class ReceiverTest {
     public void testTelemetryStart(final VertxTestContext context) {
         receiver.messageType = "telemetry";
 
-        receiver.start().setHandler(
+        receiver.start().onComplete(
                 context.succeeding(result -> {
                    context.verify(() -> {
                        assertNotNull(result.list());
@@ -96,7 +96,7 @@ public class ReceiverTest {
     @Test
     public void testEventStart(final VertxTestContext context) {
         receiver.messageType = "event";
-        receiver.start().setHandler(
+        receiver.start().onComplete(
                 context.succeeding(result -> {
                     context.verify(() -> {
                         assertNotNull(result.list());
@@ -115,7 +115,7 @@ public class ReceiverTest {
     public void testDefaultStart(final VertxTestContext context) {
         receiver.messageType = "all";
 
-        receiver.start().setHandler(
+        receiver.start().onComplete(
                 context.succeeding(result -> {
                     context.verify(() -> {
                         assertNotNull(result.list());
@@ -133,7 +133,7 @@ public class ReceiverTest {
     @Test
     public void testInvalidTypeStart(final VertxTestContext context) {
         receiver.messageType = "xxxxx";
-        receiver.start().setHandler(
+        receiver.start().onComplete(
                 context.failing(result -> context.completeNow()));
     }
 }

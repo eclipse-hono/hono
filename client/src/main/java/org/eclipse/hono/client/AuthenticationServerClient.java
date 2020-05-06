@@ -101,7 +101,7 @@ public final class AuthenticationServerClient {
 
         connectAttempt.future()
         .compose(openCon -> getToken(openCon))
-        .setHandler(s -> {
+        .onComplete(s -> {
             if (s.succeeded()) {
                 authenticationResultHandler.handle(Future.succeededFuture(s.result()));
             } else {
@@ -165,7 +165,7 @@ public final class AuthenticationServerClient {
         };
 
         openReceiver(openCon, messageHandler)
-        .setHandler(attempt -> {
+        .onComplete(attempt -> {
             if (attempt.succeeded()) {
                 vertx.setTimer(5000, tid -> {
                     result.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,

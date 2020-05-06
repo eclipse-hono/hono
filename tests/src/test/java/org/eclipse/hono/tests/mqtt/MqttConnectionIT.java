@@ -81,7 +81,7 @@ public class MqttConnectionIT extends MqttTestBase {
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -98,7 +98,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
                 })
                 .compose(ok -> connectToAdapter(deviceCert))
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -115,7 +115,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.addTenant(tenantId, tenant);
                 })
                 .compose(ok -> connectToAdapter(deviceCert))
-                .setHandler(ctx.completing());
+                .onComplete(ctx.completing());
     }
 
     /**
@@ -138,7 +138,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 // WHEN a unknown device tries to connect to the adapter
                 // using a client certificate with the trust anchor registered for the device's tenant
                 .compose(ok -> connectToAdapter(deviceCert))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -161,7 +161,7 @@ public class MqttConnectionIT extends MqttTestBase {
         // GIVEN an adapter
         // WHEN an unknown device tries to connect
         connectToAdapter(IntegrationTestSupport.getUsername("non-existing", Constants.DEFAULT_TENANT), "secret")
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> {
                 assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -184,7 +184,7 @@ public class MqttConnectionIT extends MqttTestBase {
         // GIVEN an adapter
         // WHEN an unknown device tries to connect
         connectToAdapter(deviceCert)
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> {
                 assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -210,7 +210,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
         // WHEN the device tries to connect using a wrong password
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "wrong password"))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused
             ctx.verify(() -> {
                 assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -244,7 +244,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 })
                 // WHEN the device tries to connect using a client certificate with an unknown subject DN
                 .compose(ok -> connectToAdapter(deviceCert))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -270,7 +270,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
                 // WHEN a device that belongs to the tenant tries to connect to the adapter
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -297,7 +297,7 @@ public class MqttConnectionIT extends MqttTestBase {
         })
         // WHEN a device that belongs to the tenant tries to connect to the adapter
         .compose(ok -> connectToAdapter(deviceCert))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused with a NOT_AUTHORIZED code
             ctx.verify(() -> {
                 assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -330,7 +330,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 })
                 // WHEN a device connects using the correct credentials
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -365,7 +365,7 @@ public class MqttConnectionIT extends MqttTestBase {
                 })
                 // WHEN a device connects using the correct credentials
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     // THEN the connection is refused with a NOT_AUTHORIZED code
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -390,7 +390,7 @@ public class MqttConnectionIT extends MqttTestBase {
         helper.registry
             .addDeviceForTenant(tenantId, tenant, deviceId, password)
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 // THEN the connection is refused with a NOT_AUTHORIZED code
                 ctx.verify(() -> {
                     assertThat(t).isInstanceOf(MqttConnectionException.class);
@@ -417,7 +417,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
         })
         .compose(ok -> connectToAdapter(deviceCert))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             // THEN the connection is refused with a NOT_AUTHORIZED code
             ctx.verify(() -> {
                 assertThat(t).isInstanceOf(MqttConnectionException.class);

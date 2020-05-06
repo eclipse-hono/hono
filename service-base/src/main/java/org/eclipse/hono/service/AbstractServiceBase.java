@@ -88,7 +88,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
     @Override
     public final void start(final Promise<Void> startPromise) {
         healthCheckServer.registerHealthCheckResources(this);
-        startInternal().setHandler(startPromise);
+        startInternal().onComplete(startPromise);
     }
 
     /**
@@ -110,7 +110,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      */
     @Override
     public final void stop(final Promise<Void> stopPromise) {
-        stopInternal().setHandler(stopPromise);
+        stopInternal().onComplete(stopPromise);
     }
 
     /**

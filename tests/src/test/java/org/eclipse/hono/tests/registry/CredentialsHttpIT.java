@@ -107,7 +107,7 @@ public class CredentialsHttpIT {
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
         pskCredentials = newPskCredentials(authId);
         registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
-        .setHandler(ctx.completing());
+        .onComplete(ctx.completing());
     }
 
     /**
@@ -118,7 +118,7 @@ public class CredentialsHttpIT {
     @AfterEach
     public void removeCredentials(final VertxTestContext ctx) {
 
-        registry.deregisterDevice(TENANT, deviceId).setHandler(ctx.completing());
+        registry.deregisterDevice(TENANT, deviceId).onComplete(ctx.completing());
     }
 
     /**
@@ -142,7 +142,7 @@ public class CredentialsHttpIT {
         registry
                 .updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                         HttpURLConnection.HTTP_NO_CONTENT)
-                .setHandler(context.completing());
+                .onComplete(context.completing());
     }
 
     /**
@@ -155,7 +155,7 @@ public class CredentialsHttpIT {
 
         registry
                 .getCredentials(TENANT, deviceId)
-                .setHandler(context.succeeding(ok2 -> {
+                .onComplete(context.succeeding(ok2 -> {
                     context.verify(() -> {
                         final CommonCredential[] credentials = Json.decodeValue(ok2,
                                 CommonCredential[].class);
@@ -179,7 +179,7 @@ public class CredentialsHttpIT {
 
         registry.addCredentials(TENANT, deviceId, Collections.singleton(credential))
                 .compose(createAttempt -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.succeeding(b -> {
+                .onComplete(context.succeeding(b -> {
                     context.verify(() -> {
                         final JsonArray response = b.toJsonArray();
                         assertThat(response.size()).isEqualTo(1);
@@ -211,7 +211,7 @@ public class CredentialsHttpIT {
                         Collections.singleton(hashedPasswordCredential),
                         "application/x-www-form-urlencoded",
                         HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.completing());
+                .onComplete(context.completing());
 
     }
 
@@ -235,7 +235,7 @@ public class CredentialsHttpIT {
                     return registry.updateCredentialsWithVersion(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                             etag + 10, HttpURLConnection.HTTP_PRECON_FAILED);
                 })
-                .setHandler(context.completing());
+                .onComplete(context.completing());
 
     }
 
@@ -267,7 +267,7 @@ public class CredentialsHttpIT {
                         Collections.singleton(credential),
                         // THEN the request fails with 400
                         HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.completing());
+                .onComplete(context.completing());
     }
 
     /**
@@ -280,7 +280,7 @@ public class CredentialsHttpIT {
 
         registry.updateCredentialsRaw(TENANT, deviceId, null, CrudHttpClient.CONTENT_TYPE_JSON,
                 HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.completing());
+                .onComplete(context.completing());
 
     }
 
@@ -318,7 +318,7 @@ public class CredentialsHttpIT {
         registry
                 .updateCredentialsRaw(TENANT, deviceId, payload.toBuffer(),
                         CrudHttpClient.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.completing());
+                .onComplete(context.completing());
     }
 
     /**
@@ -339,7 +339,7 @@ public class CredentialsHttpIT {
                 .compose(ar -> registry.updateCredentials(TENANT, deviceId, Collections.singleton(altered),
                         HttpURLConnection.HTTP_NO_CONTENT))
             .compose(ur -> registry.getCredentials(TENANT, deviceId))
-            .setHandler(context.succeeding(gr -> {
+            .onComplete(context.succeeding(gr -> {
                 final JsonObject retrievedSecret = gr.toJsonArray().getJsonObject(0).getJsonArray("secrets").getJsonObject(0);
                 context.verify(() -> assertThat(retrievedSecret.getString("comment")).isEqualTo("test"));
                 context.completeNow();
@@ -360,7 +360,7 @@ public class CredentialsHttpIT {
         registry.addCredentials(TENANT, deviceId, Collections.<CommonCredential> singleton(hashedPasswordCredential))
                 .compose(ar -> registry.updateCredentials(TENANT, deviceId, secret))
                 .compose(ur -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.succeeding(gr -> {
+                .onComplete(context.succeeding(gr -> {
                     final CredentialsObject o = extractFirstCredential(gr.toJsonObject())
                             .mapTo(CredentialsObject.class);
                     context.verify(() -> {
@@ -387,7 +387,7 @@ public class CredentialsHttpIT {
                         Collections.singleton(hashedPasswordCredential),
                         "3",
                         HttpURLConnection.HTTP_PRECON_FAILED)
-                .setHandler(context.completing());
+                .onComplete(context.completing());
     }
 
     /**
@@ -402,7 +402,7 @@ public class CredentialsHttpIT {
         registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
                 .compose(ar -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.succeeding(b -> {
+                .onComplete(context.succeeding(b -> {
                     final PasswordCredential cred = b.toJsonArray().getJsonObject(0).mapTo(PasswordCredential.class);
                     cred.getSecrets().forEach(secret -> {
                         context.verify(() -> assertThat(secret.getId()).isNotNull());
@@ -423,7 +423,7 @@ public class CredentialsHttpIT {
         registry
                 .updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                         HttpURLConnection.HTTP_NO_CONTENT)
-                .setHandler(context.succeeding(res -> {
+                .onComplete(context.succeeding(res -> {
                     context.verify(() -> assertThat(res.get(HTTP_HEADER_ETAG)).as("etag header missing").isNotNull());
                     context.completeNow();
                 }));
@@ -446,7 +446,7 @@ public class CredentialsHttpIT {
                 .addCredentials(TENANT, deviceId, credentialsListToAdd)
 
                 .compose(ar -> registry.getCredentials(TENANT, deviceId))
-                .setHandler(context.succeeding(b -> {
+                .onComplete(context.succeeding(b -> {
                     assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
                     context.completeNow();
         }));
@@ -469,7 +469,7 @@ public class CredentialsHttpIT {
 
         registry.addCredentials(TENANT, deviceId, credentialsListToAdd)
             .compose(ar -> registry.getCredentials(TENANT, deviceId))
-            .setHandler(context.succeeding(b -> {
+            .onComplete(context.succeeding(b -> {
                 assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
                 context.completeNow();
             }));
@@ -502,7 +502,7 @@ public class CredentialsHttpIT {
 
         registry.addCredentials(TENANT, deviceId, credentialsToAdd)
             .compose(ar -> registry.getCredentials(TENANT, deviceId))
-            .setHandler(context.succeeding(b -> {
+            .onComplete(context.succeeding(b -> {
                 assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsToAdd);
                 context.completeNow();
             }));
@@ -519,7 +519,7 @@ public class CredentialsHttpIT {
         registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
             .compose(ar -> registry.getCredentials(TENANT, authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
-            .setHandler(context.completing());
+            .onComplete(context.completing());
     }
 
     /**
@@ -537,7 +537,7 @@ public class CredentialsHttpIT {
                     "wrong-auth-id",
                     CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                     HttpURLConnection.HTTP_NOT_FOUND))
-            .setHandler(context.completing());
+            .onComplete(context.completing());
     }
 
     private static void assertResponseBodyContainsAllCredentials(final VertxTestContext context, final JsonArray responseBody,

@@ -90,7 +90,7 @@ public class HonoCommander extends AbstractClient {
         final CompletableFuture<Void> result = new CompletableFuture<>();
         connect()
                 .compose(x -> createMessageConsumers())
-                .setHandler(connectionStatus -> {
+                .onComplete(connectionStatus -> {
                     if (connectionStatus.succeeded()) {
                         result.complete(null);
                     } else {
@@ -148,7 +148,7 @@ public class HonoCommander extends AbstractClient {
         clientTracker.future()
                 .compose(ok -> closeVertx())
                 .recover(error -> closeVertx())
-                .setHandler(result -> shutdownTracker.complete(null));
+                .onComplete(result -> shutdownTracker.complete(null));
         return shutdownTracker;
     }
 

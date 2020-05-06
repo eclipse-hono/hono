@@ -161,7 +161,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
             addNotPresentFieldsWithDefaultValuesForTenant(payload);
 
             getService().createTenant(Optional.ofNullable(tenantId), payload.mapTo(Tenant.class), span)
-                    .setHandler(handler -> {
+                    .onComplete(handler -> {
                         final OperationResult<Id> operationResult = handler.result();
 
                         final String createdTenantId = Optional.ofNullable(operationResult.getPayload()).map(Id::getId)
@@ -200,7 +200,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
 
         logger.debug("retrieving tenant [id: {}]", tenantId);
         getService().readTenant(tenantId, span)
-                .setHandler(handler -> {
+                .onComplete(handler -> {
                     final OperationResult<Tenant> operationResult = handler.result();
                     final int status = operationResult.getStatus();
                     response.setStatusCode(status);
@@ -241,7 +241,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
 
 
             getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span)
-                    .setHandler(handler -> writeOperationResponse(ctx, handler.result(), null, span));
+                    .onComplete(handler -> writeOperationResponse(ctx, handler.result(), null, span));
 
         } else {
             final String msg = "request contains malformed payload";
@@ -269,7 +269,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
         getService().deleteTenant(tenantId, resourceVersion, span)
-                .setHandler(handler -> writeResponse(ctx, handler.result(), null, span));
+                .onComplete(handler -> writeResponse(ctx, handler.result(), null, span));
     }
 
     private static String getTenantParamFromPayload(final JsonObject payload) {

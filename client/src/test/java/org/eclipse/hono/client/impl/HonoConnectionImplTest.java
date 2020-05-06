@@ -125,7 +125,7 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.failing(t -> {
+        honoConnection.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails
             ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
         }));
@@ -156,7 +156,7 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.failing(t -> {
+        honoConnection.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails
             ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
         }));
@@ -190,7 +190,7 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.failing(t -> {
+        honoConnection.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
         }));
@@ -214,7 +214,7 @@ public class HonoConnectionImplTest {
         final ProtonClientOptions options = new ProtonClientOptions()
                 .setReconnectAttempts(0);
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
-        honoConnection.connect(options).setHandler(ctx.succeeding());
+        honoConnection.connect(options).onComplete(ctx.succeeding());
         ctx.verify(() -> assertThat(connectionFactory.await()).isTrue());
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
@@ -250,7 +250,7 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN trying to connect
-        honoConnection.connect().setHandler(ctx.succeeding());
+        honoConnection.connect().onComplete(ctx.succeeding());
 
         ctx.verify(() -> {
             // THEN the client fails twice to connect
@@ -277,10 +277,10 @@ public class HonoConnectionImplTest {
         final DisconnectListener<HonoConnection> disconnectListener = mock(DisconnectListener.class);
         honoConnection.addDisconnectListener(disconnectListener);
         honoConnection.connect(new ProtonClientOptions().setReconnectAttempts(1))
-            .setHandler(connected);
+            .onComplete(connected);
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
-        connected.future().setHandler(ctx.succeeding(c -> {
+        connected.future().onComplete(ctx.succeeding(c -> {
             // WHEN the peer closes the connection
             connectionFactory.getCloseHandler().handle(Future.failedFuture("shutting down for maintenance"));
 
@@ -312,7 +312,7 @@ public class HonoConnectionImplTest {
             // WHEN the client tries to reconnect before shut down is complete
             return honoConnection.connect();
         })
-        .setHandler(ctx.failing(cause -> {
+        .onComplete(ctx.failing(cause -> {
             // THEN the connection attempt fails
             ctx.verify(() -> assertThat(((ClientErrorException) cause).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_CONFLICT));
             ctx.completeNow();
@@ -344,7 +344,7 @@ public class HonoConnectionImplTest {
                 return honoConnection.connect(new ProtonClientOptions());
             })
             // THEN the connection succeeds
-            .setHandler(ctx.completing());
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -396,7 +396,7 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
                 // THEN the "isConnected" futures succeed
                 .compose(v -> CompositeFuture.all(isConnected1FutureRef.get(), isConnected2FutureRef.get()))
-                .setHandler(ctx.succeeding());
+                .onComplete(ctx.succeeding());
 
         ctx.verify(() -> {
             // and the client fails twice to connect
@@ -450,7 +450,7 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
 
         // WHEN the client tries to connect
-        honoConnection.connect().setHandler(ctx.failing(t -> {
+        honoConnection.connect().onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 // THEN the connection attempt fails and the "isConnected" futures fail as well
                 assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
@@ -492,7 +492,7 @@ public class HonoConnectionImplTest {
         }).when(factory).connect(any(), any(), any(), anyString(), VertxMockSupport.anyHandler(),
                 VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
         honoConnection = new HonoConnectionImpl(vertx, factory, props);
-        honoConnection.connect().setHandler(ctx.failing(cause -> {
+        honoConnection.connect().onComplete(ctx.failing(cause -> {
                     // THEN three attempts have been made to connect
                     ctx.verify(() -> assertThat(connectAttempts.get()).isEqualTo(3));
                     ctx.completeNow();
@@ -555,7 +555,7 @@ public class HonoConnectionImplTest {
 
                 return r;
             })
-            .setHandler(ctx.succeeding(recv -> {
+            .onComplete(ctx.succeeding(recv -> {
 
                 // WHEN the peer sends a detach frame
                 handlerCaptor.accept(receiver, captor);
@@ -636,7 +636,7 @@ public class HonoConnectionImplTest {
             });
             return r;
         })
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 // THEN link establishment is failed after the configured amount of time
                 verify(vertx).setTimer(eq(props.getLinkEstablishmentTimeout()), VertxMockSupport.anyHandler());
@@ -667,7 +667,7 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
             .compose(c -> honoConnection.createReceiver(
                 "source", ProtonQoS.AT_LEAST_ONCE, (delivery, msg) -> {}, remoteCloseHook))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                     verify(receiver).open();
@@ -717,7 +717,7 @@ public class HonoConnectionImplTest {
                 return result;
             })
             // THEN the attempt is failed
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
                 ctx.completeNow();
             }));
@@ -787,7 +787,7 @@ public class HonoConnectionImplTest {
                 });
                 return s;
             })
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     assertThat(failureAssertion.test(t)).isTrue();
                     verify(remoteCloseHook, never()).handle(anyString());
@@ -815,7 +815,7 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
             .compose(c -> honoConnection.createSender(
                 "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                     verify(sender).open();
@@ -843,7 +843,7 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
             .compose(c -> honoConnection.createSender(
                 null, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the attempt fails
                     assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
@@ -886,7 +886,7 @@ public class HonoConnectionImplTest {
                 });
                 return s;
             })
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
 
                     // THEN the link does not get established
@@ -923,7 +923,7 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
             .compose(c -> honoConnection.createSender(
                 "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
-            .setHandler(ctx.succeeding(s -> {
+            .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s).isEqualTo(sender);
                         // sendQueueDrainHandler gets unset
@@ -968,7 +968,7 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
             .compose(c -> honoConnection.createSender(
                 "target", ProtonQoS.AT_LEAST_ONCE, remoteCloseHook))
-            .setHandler(ctx.succeeding(s -> {
+            .onComplete(ctx.succeeding(s -> {
                     ctx.verify(() -> {
                         assertThat(s).isEqualTo(sender);
                         // sendQueueDrainHandler gets unset
@@ -1017,7 +1017,7 @@ public class HonoConnectionImplTest {
                 return result;
             })
             // THEN the attempt is failed
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
                 ctx.completeNow();
             }));

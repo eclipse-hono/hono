@@ -283,7 +283,7 @@ public final class HonoProtonHelper {
                 // nothing to do
                 result.complete();
             }
-        }).setHandler(closeAttempt -> {
+        }).onComplete(closeAttempt -> {
             closeHandler.handle(null);
             link.free();
         });

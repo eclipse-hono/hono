@@ -90,7 +90,7 @@ public class HonoReceiver extends AbstractClient {
         final CompletableFuture<Void> result = new CompletableFuture<>();
         final String endpoint = sampler.getEndpoint();
         final String tenant = sampler.getTenant();
-        connect().compose(client -> createConsumer(endpoint, tenant)).setHandler(attempt -> {
+        connect().compose(client -> createConsumer(endpoint, tenant)).onComplete(attempt -> {
             if (attempt.succeeded()) {
                 LOGGER.debug("receiver active: {}/{} ({})", endpoint, tenant, Thread.currentThread().getName());
                 messageConsumer = attempt.result();
@@ -285,7 +285,7 @@ public class HonoReceiver extends AbstractClient {
         clientTracker.future()
         .otherwiseEmpty()
         .compose(ok -> closeVertx())
-        .setHandler(attempt -> result.complete(null));
+        .onComplete(attempt -> result.complete(null));
         return result;
     }
 }

@@ -75,7 +75,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
         getClient(Constants.DEFAULT_TENANT)
                 .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "nonExisting"))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
                 }));
@@ -103,7 +103,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                             .compose(ok2 -> getClient(Constants.DEFAULT_TENANT))
                             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId));
                 })
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> assertStandardProperties(
                             result,
                             deviceId,
@@ -136,7 +136,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         getClient(Constants.DEFAULT_TENANT)
                 // WHEN getting credentials
                 .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx))
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     // THEN the newly created credentials are returned...
                     ctx.verify(() -> {
                         assertThat(result).isNotNull();
@@ -149,7 +149,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                     });
 
                     getHelper().registry.getRegistrationInfo(Constants.DEFAULT_TENANT, result.getDeviceId())
-                            .setHandler(ctx.succeeding(device -> {
+                            .onComplete(ctx.succeeding(device -> {
                                 // AND the device has been registered as well
                                 ctx.verify(() -> assertThat(device.toJsonObject().mapTo(Device.class).getEnabled())
                                         .isTrue());
@@ -187,7 +187,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                             .compose(ok2 -> getClient(Constants.DEFAULT_TENANT))
                             .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId));
                 })
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
                 }));
@@ -216,7 +216,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                 .addCredentials(Constants.DEFAULT_TENANT, deviceId, credentials)
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         assertStandardProperties(
                                 result,
@@ -253,7 +253,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                 .addCredentials(Constants.DEFAULT_TENANT, deviceId, credentials)
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
         }));
@@ -280,7 +280,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                 .addCredentials(Constants.DEFAULT_TENANT, deviceId, credentials)
                 .compose(ok -> getClient(Constants.DEFAULT_TENANT))
                 .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, authId, clientContext))
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
         }));

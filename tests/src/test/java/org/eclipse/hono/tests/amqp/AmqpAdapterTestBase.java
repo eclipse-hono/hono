@@ -88,7 +88,7 @@ public abstract class AmqpAdapterTestBase {
                 .setSsl(true);
 
         helper = new IntegrationTestSupport(VERTX);
-        helper.init().setHandler(ctx.completing());
+        helper.init().onComplete(ctx.completing());
 
     }
 
@@ -104,7 +104,7 @@ public abstract class AmqpAdapterTestBase {
             final Promise<Void> closeAttempt = Promise.promise();
             VERTX.close(closeAttempt);
             return closeAttempt.future();
-        }).setHandler(ctx.completing());
+        }).onComplete(ctx.completing());
     }
 
     /**

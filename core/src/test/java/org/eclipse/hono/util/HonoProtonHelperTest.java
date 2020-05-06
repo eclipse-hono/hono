@@ -58,7 +58,7 @@ class HonoProtonHelperTest {
         }).when(mockContext).runOnContext(any(Handler.class));
 
         HonoProtonHelper.executeOnContext(mockContext, result -> result.complete("done"))
-        .setHandler(ctx.succeeding(s -> {
+        .onComplete(ctx.succeeding(s -> {
             ctx.verify(() -> {
                 verify(mockContext).runOnContext(any(Handler.class));
                 assertThat(s).isEqualTo("done");

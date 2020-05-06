@@ -164,7 +164,7 @@ public final class DeferredConnectionCheckHandler {
 
         ExpiringConnectionCheckPromise(final Handler<AsyncResult<Void>> connectionCheckResultHandler) {
             this.promise = Promise.promise();
-            promise.future().setHandler(connectionCheckResultHandler);
+            promise.future().onComplete(connectionCheckResultHandler);
         }
 
         /**

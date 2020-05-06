@@ -62,7 +62,7 @@ public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSen
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
 
-        deliveryFuture.setHandler(ctx.succeeding(delivery -> {
+        deliveryFuture.onComplete(ctx.succeeding(delivery -> {
             // THEN the AMQP message conforms to the expectations of the AMQP protocol adapter
             ctx.verify(this::assertMessageConformsAmqpAdapterSpec);
             ctx.completeNow();
@@ -88,7 +88,7 @@ public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSen
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
 
-        deliveryFuture.setHandler(ctx.succeeding(delivery -> {
+        deliveryFuture.onComplete(ctx.succeeding(delivery -> {
             // THEN the given SpanContext is used
             ctx.verify(() -> {
                 verify(spanBuilder).addReference(any(), eq(spanContext));
@@ -113,7 +113,7 @@ public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSen
         final Future<ProtonDelivery> deliveryFuture = commandResponder.sendCommandResponse(DEVICE_ID, ADDRESS,
                 CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES);
 
-        deliveryFuture.setHandler(ctx.completing());
+        deliveryFuture.onComplete(ctx.completing());
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();

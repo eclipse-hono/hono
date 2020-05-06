@@ -65,7 +65,7 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
                 IntegrationTestSupport.HONO_PWD);
 
         registrationConnection = JmsBasedHonoConnection.newConnection(props);
-        registrationConnection.connect().setHandler(ctx.completing());
+        registrationConnection.connect().onComplete(ctx.completing());
     }
 
     /**
@@ -127,7 +127,7 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
 
         getJmsBasedClient(Constants.DEFAULT_TENANT)
         .compose(client -> client.sendRequest(RegistrationConstants.ACTION_ASSERT, null, null))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             DeviceRegistrationApiTests.assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));
@@ -150,7 +150,7 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
                 null,
                 Collections.singletonMap(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
                 null))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             DeviceRegistrationApiTests.assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));
@@ -173,7 +173,7 @@ public class DeviceRegistrationJmsIT extends DeviceRegistrationApiTests {
                 "unsupported-operation",
                 Collections.singletonMap(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
                 null))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             DeviceRegistrationApiTests.assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));

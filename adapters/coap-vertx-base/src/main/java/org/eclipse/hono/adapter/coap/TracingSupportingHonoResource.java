@@ -119,7 +119,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
             log.debug("failed:", t);
             return CoapErrorResponse.respond(coapExchange, t);
         })
-        .setHandler(r -> {
+        .onComplete(r -> {
             log.debug("response: {}", r.result());
             currentSpan.setTag("coap.response_code", r.result().toString());
             currentSpan.finish();

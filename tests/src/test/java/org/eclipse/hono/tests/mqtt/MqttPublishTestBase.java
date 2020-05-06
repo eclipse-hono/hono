@@ -162,7 +162,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).setHandler(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -193,7 +193,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final Tenant tenant = new Tenant();
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).setHandler(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -228,7 +228,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         .compose(cert -> {
             final var tenant = Tenants.createTenantForTrustAnchor(cert);
             return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-        }).setHandler(setup.completing());
+        }).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -265,7 +265,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             if (received.getCount() % 50 == 0) {
                 LOGGER.info("messages received: {}", MESSAGES_TO_SEND - received.getCount());
             }
-        })).setHandler(setup.completing());
+        })).onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -280,7 +280,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             final CountDownLatch messageSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("hello " + messageCount.getAndIncrement());
-                send(tenantId, deviceId, msg, useShortTopicName).setHandler(sendAttempt -> {
+                send(tenantId, deviceId, msg, useShortTopicName).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         LOGGER.debug("error sending message {}", messageCount.get(), sendAttempt.cause());
                     }

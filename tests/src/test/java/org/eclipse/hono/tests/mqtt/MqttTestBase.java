@@ -78,7 +78,7 @@ public abstract class MqttTestBase {
     public static void init(final VertxTestContext ctx) {
 
         helper = new IntegrationTestSupport(VERTX);
-        helper.init().setHandler(ctx.completing());
+        helper.init().onComplete(ctx.completing());
     }
 
     /**
@@ -109,7 +109,7 @@ public abstract class MqttTestBase {
             });
         }
         helper.deleteObjects(ctx);
-        disconnectHandler.future().setHandler(closeAttempt -> {
+        disconnectHandler.future().onComplete(closeAttempt -> {
             LOGGER.info("connection to MQTT adapter closed");
             context = null;
             ctx.completeNow();
@@ -124,7 +124,7 @@ public abstract class MqttTestBase {
     @AfterAll
     public static void disconnect(final VertxTestContext ctx) {
 
-        helper.disconnect().setHandler(ctx.completing());
+        helper.disconnect().onComplete(ctx.completing());
     }
 
     /**

@@ -76,7 +76,7 @@ public class TelemetryJmsQoS1IT {
         helper.initRegistryClient();
 
         amqpMessagingNetwork = JmsBasedHonoConnection.newConnection(IntegrationTestSupport.getMessagingNetworkProperties());
-        amqpMessagingNetwork.connect().setHandler(ctx.completing());
+        amqpMessagingNetwork.connect().onComplete(ctx.completing());
     }
 
     /**
@@ -146,7 +146,7 @@ public class TelemetryJmsQoS1IT {
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, pwd)
         .compose(ok -> getAmqpAdapterConnection(username, pwd))
-        .setHandler(setup.succeeding(connection -> {
+        .onComplete(setup.succeeding(connection -> {
             amqpAdapter = connection;
             setup.completeNow();
         }));

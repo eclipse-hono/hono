@@ -192,7 +192,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.succeeding(s -> {
+        startupTracker.future().onComplete(ctx.succeeding(s -> {
             // THEN the client provided HTTP server has been configured and started
             ctx.verify(() -> {
                 verify(server).requestHandler(any(Handler.class));
@@ -223,7 +223,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
                 s -> onStartupSuccess.flag());
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.completing());
+        startupTracker.future().onComplete(ctx.completing());
         adapter.start(startupTracker);
     }
 
@@ -243,7 +243,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().setHandler(ctx.failing(t -> ctx.completeNow()));
+        startupTracker.future().onComplete(ctx.failing(t -> ctx.completeNow()));
         adapter.start(startupTracker);
 
         // THEN the onStartupSuccess method has not been invoked

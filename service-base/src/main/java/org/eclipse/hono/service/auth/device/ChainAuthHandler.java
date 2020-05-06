@@ -83,7 +83,7 @@ public class ChainAuthHandler<T extends ExecutionContext> extends ExecutionConte
         } else {
 
             final AuthHandler<T> handler = handlerChain.get(idx);
-            handler.parseCredentials(context).setHandler(r -> {
+            handler.parseCredentials(context).onComplete(r -> {
 
                 if (r.failed()) {
                     parseCredentials(idx + 1, context, r.cause(), resultHandler);

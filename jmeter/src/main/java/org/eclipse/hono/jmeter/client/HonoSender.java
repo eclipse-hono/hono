@@ -102,7 +102,7 @@ public class HonoSender extends AbstractClient {
                 LOGGER.debug("create hono sender - tenant: {}", sampler.getTenant());
 
                 connectToAmqpMessagingNetwork()
-                    .setHandler(startup -> {
+                    .onComplete(startup -> {
                         if (startup.succeeded()) {
                             LOGGER.info("sender initialization complete");
                             LOGGER.debug("sender active: {}/{} ({})", sampler.getEndpoint(), tenant,
@@ -211,7 +211,7 @@ public class HonoSender extends AbstractClient {
         final CompletableFuture<SampleResult> tracker = new CompletableFuture<>();
         final Promise<ProtonDelivery> deliveryTracker = Promise.promise();
         deliveryTracker.future()
-        .setHandler(s -> {
+        .onComplete(s -> {
             if (s.succeeded()) {
                 sampleResult.setResponseMessage(MessageFormat.format("{0}/{1}/{2}", endpoint, tenant, deviceId));
                 sampleResult.setSentBytes(payload.length);
@@ -238,9 +238,9 @@ public class HonoSender extends AbstractClient {
 
             final Handler<Void> sendHandler = s -> {
                 if (waitForDeliveryResult) {
-                    sender.sendAndWaitForOutcome(msg).setHandler(deliveryTracker);
+                    sender.sendAndWaitForOutcome(msg).onComplete(deliveryTracker);
                 } else {
-                    sender.send(msg).setHandler(ar -> {
+                    sender.send(msg).onComplete(ar -> {
                         if (ar.succeeded()) {
                             LOGGER.debug("{}: got delivery result for message sent for device [{}]: remoteState={}, localState={}",
                                     sampler.getThreadName(), deviceId, ar.result().getRemoteState(),
@@ -315,7 +315,7 @@ public class HonoSender extends AbstractClient {
             honoTracker.future()
             .otherwiseEmpty()
             .compose(ok -> closeVertx())
-            .setHandler(done -> shutdown.complete(null));
+            .onComplete(done -> shutdown.complete(null));
         } else {
             LOGGER.debug("sender already stopped");
             shutdown.complete(null);

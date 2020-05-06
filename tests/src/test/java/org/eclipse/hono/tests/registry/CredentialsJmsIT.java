@@ -66,7 +66,7 @@ public class CredentialsJmsIT extends CredentialsApiTests {
                 IntegrationTestSupport.HONO_PWD);
 
         connection = JmsBasedHonoConnection.newConnection(props);
-        connection.connect().setHandler(ctx.completing());
+        connection.connect().onComplete(ctx.completing());
     }
 
     /**
@@ -131,7 +131,7 @@ public class CredentialsJmsIT extends CredentialsApiTests {
                 CredentialsAction.get.toString(),
                 null,
                 Buffer.buffer(new byte[] { 0x01, 0x02, 0x03, 0x04 }))) // no JSON
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));
@@ -155,7 +155,7 @@ public class CredentialsJmsIT extends CredentialsApiTests {
                 null,
                 null,
                 searchCriteria.toBuffer()))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));
@@ -179,7 +179,7 @@ public class CredentialsJmsIT extends CredentialsApiTests {
                 "unsupported-operation",
                 null,
                 searchCriteria.toBuffer()))
-        .setHandler(ctx.failing(t -> {
+        .onComplete(ctx.failing(t -> {
             assertErrorCode(t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
         }));

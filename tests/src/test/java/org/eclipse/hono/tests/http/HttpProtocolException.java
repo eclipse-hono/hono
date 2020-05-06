@@ -85,7 +85,7 @@ public class HttpProtocolException extends ServiceInvocationException {
                     httpClient.create()
                         .recover(HttpProtocolException::transformInto)
                 })
-                .setHandler(ctx.asyncAssertFailure(t -> {
+                .onComplete(ctx.asyncAssertFailure(t -> {
                     // ... evaluate only http protocol adapter errors
                     HttpProtocolException.assertProtocolError(HttpURLConnection.HTTP_NOT_FOUND, t);
                 }));

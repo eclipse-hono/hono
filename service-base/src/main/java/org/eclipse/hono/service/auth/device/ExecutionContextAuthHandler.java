@@ -76,7 +76,7 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
                     final Promise<User> authResult = Promise.promise();
                     getAuthProvider(context).authenticate(authInfo, authResult);
                     return authResult.future();
-                }).setHandler(authAttempt -> {
+                }).onComplete(authAttempt -> {
                     if (authAttempt.succeeded()) {
                         if (authAttempt.result() instanceof DeviceUser) {
                             result.complete((DeviceUser) authAttempt.result());

@@ -234,7 +234,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         return Future.failedFuture(e);
                     }
                 })
-                .setHandler(startPromise);
+                .onComplete(startPromise);
     }
 
     private Future<CoapServer> createServer() {
@@ -533,7 +533,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
             return Future.succeededFuture();
         })
         .compose(ok -> postShutdown())
-        .setHandler(stopPromise);
+        .onComplete(stopPromise);
     }
 
     /**
@@ -930,7 +930,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
                 if (requestProcessed.compareAndSet(false, true)) {
                     checkMessageLimit(tenantObject, command.getPayloadSize(), currentSpan.context())
-                            .setHandler(result -> {
+                            .onComplete(result -> {
                                 if (result.succeeded()) {
                                     addMicrometerSample(commandContext, commandSample);
                                     // put command context to routing context and notify

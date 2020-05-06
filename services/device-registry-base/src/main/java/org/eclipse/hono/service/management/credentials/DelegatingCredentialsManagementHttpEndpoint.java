@@ -131,7 +131,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         logger.debug("updating credentials [tenant: {}, device-id: {}] - {}", tenantId, deviceId, credentials);
 
         getService().updateCredentials(tenantId, deviceId, commonCredentials, resourceVersion, span)
-                .setHandler(handler -> {
+                .onComplete(handler -> {
                     final OperationResult<Void> operationResult = handler.result();
                     writeOperationResponse(
                             ctx,
@@ -159,7 +159,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         logger.debug("getCredentialsForDevice [tenant: {}, device-id: {}]]", tenantId, deviceId);
 
         getService().readCredentials(tenantId, deviceId, span)
-                .setHandler(handler -> {
+                .onComplete(handler -> {
                     final OperationResult<List<CommonCredential>> operationResult = handler.result();
                     final int status = operationResult.getStatus();
                     response.setStatusCode(status);

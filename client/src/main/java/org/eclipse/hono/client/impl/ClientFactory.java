@@ -93,7 +93,7 @@ class ClientFactory<T> {
             };
             creationRequests.add(connectionFailureHandler);
 
-            clientSupplier.get().setHandler(attempt -> {
+            clientSupplier.get().onComplete(attempt -> {
                 creationRequests.remove(connectionFailureHandler);
                 result.handle(attempt);
             });

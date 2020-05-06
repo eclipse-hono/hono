@@ -254,7 +254,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
                                 return null;
                             }
                         }))
-                .setHandler(s -> {
+                .onComplete(s -> {
                     // allow client to send another request
                     flowCreditToRequestor(receiver, replyTo);
                     currentSpan.finish();

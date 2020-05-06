@@ -91,7 +91,7 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
                 span.finish();
                 result.fail(e);
             } else {
-                sendMessageAndWaitForOutcome(rawMessage, span).setHandler(result);
+                sendMessageAndWaitForOutcome(rawMessage, span).onComplete(result);
             }
         });
     }

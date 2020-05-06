@@ -245,7 +245,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
-        startupTracker.future().setHandler(ctx.succeeding(s -> {
+        startupTracker.future().onComplete(ctx.succeeding(s -> {
             ctx.verify(() -> {
                 verify(server).listen(any(Handler.class));
                 verify(server).endpointHandler(any(Handler.class));
@@ -385,7 +385,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
         final Promise<Void> startupTracker = Promise.promise();
         adapter.start(startupTracker);
-        startupTracker.future().setHandler(ctx.succeeding(s -> {
+        startupTracker.future().onComplete(ctx.succeeding(s -> {
             forceClientMocksToConnected();
             // which already has 1 connection open
             when(metrics.getNumberOfConnections()).thenReturn(1);
@@ -665,7 +665,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 EndpointType.EVENT,
                 (adapter, mqttContext) -> {
                     adapter.uploadEventMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
-                            .setHandler(ctx.completing());
+                            .onComplete(ctx.completing());
                 });
     }
 
@@ -688,7 +688,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 (adapter, mqttContext) -> {
                     // WHEN forwarding a telemetry message that has been published with QoS 1
                     adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
-                            .setHandler(ctx.completing());
+                            .onComplete(ctx.completing());
                 });
     }
 
@@ -723,7 +723,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         final ResourceIdentifier address = ResourceIdentifier
                 .fromString("command/my-tenant/4712/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
         adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint), address)
-                .setHandler(ctx.succeeding(result -> {
+                .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         verify(sender).sendCommandResponse(any(), any());
                         // then it is forwarded successfully
@@ -809,7 +809,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.topicName()).thenReturn("e/tenant/device");
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
-        adapter.uploadEventMessage(context, "my-tenant", "4712", payload).setHandler(ctx.failing());
+        adapter.uploadEventMessage(context, "my-tenant", "4712", payload).onComplete(ctx.failing());
 
         // and the peer rejects the message
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -859,7 +859,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         when(messageFromDevice.payload()).thenReturn(payload);
         final MqttContext context = newMqttContext(messageFromDevice, endpoint);
 
-        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", payload).setHandler(ctx.succeeding(ok -> {
+        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", payload).onComplete(ctx.succeeding(ok -> {
 
             ctx.verify(() -> {
                 // THEN the device has received a PUBACK
@@ -1036,35 +1036,35 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint),
                 resourceId,
-                messageFromDevice).setHandler(ctx.succeeding());
+                messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("event", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint),
                 resourceId,
-                messageFromDevice).setHandler(ctx.succeeding());
+                messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("t", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint),
                 resourceId,
-                messageFromDevice).setHandler(ctx.succeeding());
+                messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("e", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint),
                 resourceId,
-                messageFromDevice).setHandler(ctx.succeeding());
+                messageFromDevice).onComplete(ctx.succeeding());
 
         resourceId = ResourceIdentifier.from("unknown", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint),
                 resourceId,
-                messageFromDevice).setHandler(ctx.failing(t -> {
+                messageFromDevice).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
                 }));
         ctx.completeNow();
@@ -1208,7 +1208,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 newMqttContext(msg, mockEndpoint()),
                 "my-tenant",
                 "the-device",
-                Buffer.buffer("test")).setHandler(ctx.failing(t -> {
+                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the message has not been sent downstream
                         verify(sender, never()).send(any(Message.class));
@@ -1256,7 +1256,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 newMqttContext(msg, mockEndpoint()),
                 "my-tenant",
                 "the-device",
-                Buffer.buffer("test")).setHandler(ctx.failing(t -> {
+                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the message has not been sent downstream
                         verify(sender, never()).send(any(Message.class));
@@ -1303,7 +1303,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 ResourceIdentifier.fromString(String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(),
                         Command.getRequestId("cmd123", "to", "deviceId"))),
                 msg)
-                .setHandler(ctx.failing(t -> {
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
 
                         // THEN the request fails with a 429 error
@@ -1348,7 +1348,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 newMqttContext(msg, mockEndpoint()),
                 "tenant",
                 "device",
-                Buffer.buffer("test")).setHandler(ctx.failing(t -> {
+                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
                         verify(sender).sendAndWaitForOutcome(messageCaptor.capture(), (SpanContext) any());
@@ -1388,7 +1388,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 newMqttContext(msg, mockEndpoint()),
                 "tenant",
                 "device",
-                Buffer.buffer("test")).setHandler(ctx.failing(t -> {
+                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
 

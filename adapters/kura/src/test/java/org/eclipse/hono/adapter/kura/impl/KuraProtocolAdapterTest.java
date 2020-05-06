@@ -71,7 +71,7 @@ public class KuraProtocolAdapterTest {
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
         final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "$EDC/my-scope/4711");
-        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+        adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
                 ctx.verify(() -> {
                     // THEN the message is mapped to the event API
                     assertAddress(msg, EventConstants.EVENT_ENDPOINT, "my-scope", "4711");
@@ -97,7 +97,7 @@ public class KuraProtocolAdapterTest {
 
         // WHEN a message is published to a topic with the Kura $EDC prefix as endpoint
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "$EDC/my-scope/4711");
-        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+        adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the telemetry API
                 assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
@@ -122,7 +122,7 @@ public class KuraProtocolAdapterTest {
 
         // WHEN a message is published to a topic with the custom prefix as endpoint
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "bumlux/my-scope/4711");
-        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+        adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the event API
                 assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
@@ -148,7 +148,7 @@ public class KuraProtocolAdapterTest {
 
         // WHEN a message is published to an application topic with QoS 0
         final MqttContext context = newContext(MqttQoS.AT_MOST_ONCE, "my-scope/4711");
-        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+        adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is mapped to the telemetry API
                 assertAddress(msg, TelemetryConstants.TELEMETRY_ENDPOINT, "my-scope", "4711");
@@ -173,7 +173,7 @@ public class KuraProtocolAdapterTest {
 
         // WHEN a message is published to an application topic with QoS 1
         final MqttContext context = newContext(MqttQoS.AT_LEAST_ONCE, "my-scope/4711");
-        adapter.mapTopic(context).setHandler(ctx.succeeding(msg -> {
+        adapter.mapTopic(context).onComplete(ctx.succeeding(msg -> {
             ctx.verify(() -> {
                 // THEN the message is forwarded to the event API
                 assertAddress(msg, EventConstants.EVENT_ENDPOINT, "my-scope", "4711");

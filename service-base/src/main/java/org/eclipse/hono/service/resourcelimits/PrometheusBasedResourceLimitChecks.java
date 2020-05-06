@@ -221,7 +221,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         return isExceeded;
                     })
                     .otherwise(failure -> Boolean.FALSE)
-                    .setHandler(result);
+                    .onComplete(result);
             }
         }
 
@@ -398,7 +398,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             return isExceeded;
                         })
                         .otherwise(failed -> Boolean.FALSE)
-                        .setHandler(result);
+                        .onComplete(result);
             }
         }
     }
@@ -479,7 +479,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             return isExceeded;
                         })
                         .otherwise(failed -> Boolean.FALSE)
-                        .setHandler(result);
+                        .onComplete(result);
             }
         }
     }

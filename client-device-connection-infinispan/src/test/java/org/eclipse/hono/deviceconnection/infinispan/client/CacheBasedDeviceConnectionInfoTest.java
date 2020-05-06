@@ -134,7 +134,7 @@ class CacheBasedDeviceConnectionInfoTest {
         info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.put(anyString(), anyString())).thenReturn(Future.succeededFuture("oldValue"));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", null)
-            .setHandler(ctx.completing());
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -148,7 +148,7 @@ class CacheBasedDeviceConnectionInfoTest {
         info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.put(anyString(), anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", mock(SpanContext.class))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
                 ctx.completeNow();
             }));
@@ -165,7 +165,7 @@ class CacheBasedDeviceConnectionInfoTest {
         info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.get(anyString())).thenReturn(Future.succeededFuture("gw-id"));
         info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", null)
-            .setHandler(ctx.succeeding(value -> {
+            .onComplete(ctx.succeeding(value -> {
                 ctx.verify(() -> {
                     assertThat(value.getString(DeviceConnectionConstants.FIELD_GATEWAY_ID)).isEqualTo("gw-id");
                 });
@@ -184,7 +184,7 @@ class CacheBasedDeviceConnectionInfoTest {
         info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.get(anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
         info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(SpanContext.class))
-            .setHandler(ctx.failing(t -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
                 ctx.completeNow();
             }));
@@ -202,7 +202,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final String adapterInstance = "adapterInstance";
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null, false,
                 spanContext)
-                .setHandler(ctx.succeeding(result -> ctx.completeNow()));
+                .onComplete(ctx.succeeding(result -> ctx.completeNow()));
     }
 
     /**
@@ -217,7 +217,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final String adapterInstance = "adapterInstance";
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, Duration.ofSeconds(10),
                 false, spanContext)
-                .setHandler(ctx.succeeding(result -> ctx.completeNow()));
+                .onComplete(ctx.succeeding(result -> ctx.completeNow()));
     }
 
     /**
@@ -236,7 +236,7 @@ class CacheBasedDeviceConnectionInfoTest {
         // now update the entry
         .compose(v -> info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstance, null,
                 true, spanContext))
-        .setHandler(ctx.succeeding(result -> ctx.completeNow()));
+        .onComplete(ctx.succeeding(result -> ctx.completeNow()));
     }
 
     /**
@@ -256,7 +256,7 @@ class CacheBasedDeviceConnectionInfoTest {
         // now try to update the entry, but with another adapter instance
         .compose(v -> info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, "otherAdapterInstance",
                 null, true, spanContext))
-        .setHandler(ctx.failing(t -> ctx.verify(() -> {
+        .onComplete(ctx.failing(t -> ctx.verify(() -> {
             assertThat(t).isInstanceOf(ServiceInvocationException.class);
             assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
             ctx.completeNow();
@@ -276,7 +276,7 @@ class CacheBasedDeviceConnectionInfoTest {
                 spanContext)
         .compose(v -> info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId,
                 adapterInstance, spanContext))
-        .setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        .onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertThat(result).isTrue();
             ctx.completeNow();
         })));
@@ -297,7 +297,7 @@ class CacheBasedDeviceConnectionInfoTest {
                 spanContext)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "otherDevice", adapterInstance, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertThat(result).isFalse();
             ctx.completeNow();
         })));
@@ -317,7 +317,7 @@ class CacheBasedDeviceConnectionInfoTest {
                 spanContext)
         .compose(v -> {
             return info.removeCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, "otherAdapterInstance", spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertThat(result).isFalse();
             ctx.completeNow();
         })));
@@ -337,7 +337,7 @@ class CacheBasedDeviceConnectionInfoTest {
                 spanContext)
         .compose(v -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, Collections.emptySet(), spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, deviceId, adapterInstance);
             assertGetInstancesResultSize(result, 1);
@@ -367,10 +367,10 @@ class CacheBasedDeviceConnectionInfoTest {
             vertx.setTimer(2, tid -> {
                 info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId,
                         Collections.emptySet(), spanContext)
-                        .setHandler(instancesPromise.future());
+                        .onComplete(instancesPromise.future());
             });
             return instancesPromise.future();
-        }).setHandler(ctx.failing(t -> ctx.verify(() -> {
+        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
             assertThat(t).isInstanceOf(ServiceInvocationException.class);
             assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
@@ -388,7 +388,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final String deviceId = "testDevice";
         final Set<String> viaGateways = Collections.emptySet();
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext)
-                .setHandler(ctx.failing(t -> ctx.verify(() -> {
+                .onComplete(ctx.failing(t -> ctx.verify(() -> {
                     assertThat(t).isInstanceOf(ServiceInvocationException.class);
                     assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     ctx.completeNow();
@@ -423,7 +423,7 @@ class CacheBasedDeviceConnectionInfoTest {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, spanContext);
         }).compose(u -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
             // be sure that only the mapping for the last-known-gateway is returned, not the mappings for both via gateways
@@ -462,7 +462,7 @@ class CacheBasedDeviceConnectionInfoTest {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayIdNotInVia, spanContext);
         }).compose(u -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
             assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
@@ -502,7 +502,7 @@ class CacheBasedDeviceConnectionInfoTest {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayWithNoAdapterInstance, spanContext);
         }).compose(u -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
             assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
@@ -535,7 +535,7 @@ class CacheBasedDeviceConnectionInfoTest {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, spanContext);
         }).compose(u -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.failing(t -> ctx.verify(() -> {
+        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
             assertThat(t).isInstanceOf(ServiceInvocationException.class);
             assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
@@ -570,7 +570,7 @@ class CacheBasedDeviceConnectionInfoTest {
             return info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceId, gatewayId, spanContext);
         }).compose(w -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, deviceId, adapterInstance);
             // be sure that only the mapping for the device is returned, not the mappings for the gateway
@@ -605,7 +605,7 @@ class CacheBasedDeviceConnectionInfoTest {
                     false, spanContext);
         }).compose(w -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, deviceId, adapterInstance);
             // be sure that only the mapping for the device is returned, not the mappings for the gateway
@@ -635,7 +635,7 @@ class CacheBasedDeviceConnectionInfoTest {
                 spanContext)
         .compose(v -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
             assertGetInstancesResultSize(result, 1);
@@ -669,7 +669,7 @@ class CacheBasedDeviceConnectionInfoTest {
                     false, spanContext);
         }).compose(u -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.succeeding(result -> ctx.verify(() -> {
+        }).onComplete(ctx.succeeding(result -> ctx.verify(() -> {
             assertNotNull(result);
             assertGetInstancesResultMapping(result, gatewayId, adapterInstance);
             assertGetInstancesResultMapping(result, otherGatewayId, otherAdapterInstance);
@@ -693,7 +693,7 @@ class CacheBasedDeviceConnectionInfoTest {
         final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
         viaGateways.addAll(extraUnusedViaGateways);
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext)
-        .setHandler(ctx.failing(t -> ctx.verify(() -> {
+        .onComplete(ctx.failing(t -> ctx.verify(() -> {
             assertThat(t).isInstanceOf(ServiceInvocationException.class);
             assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
@@ -721,7 +721,7 @@ class CacheBasedDeviceConnectionInfoTest {
                 spanContext)
         .compose(v -> {
             return info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, spanContext);
-        }).setHandler(ctx.failing(t -> ctx.verify(() -> {
+        }).onComplete(ctx.failing(t -> ctx.verify(() -> {
             assertThat(t).isInstanceOf(ServiceInvocationException.class);
             assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();

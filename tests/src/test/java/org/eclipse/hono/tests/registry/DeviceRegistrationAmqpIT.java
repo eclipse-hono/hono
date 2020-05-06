@@ -55,7 +55,7 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
                         IntegrationTestSupport.getDeviceRegistryProperties(
                                 IntegrationTestSupport.HONO_USER,
                                 IntegrationTestSupport.HONO_PWD)));
-        registrationClientFactory.connect().setHandler(ctx.completing());
+        registrationClientFactory.connect().onComplete(ctx.completing());
     }
 
     /**

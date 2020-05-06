@@ -484,7 +484,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         cache.checkForCacheAvailability()
             .map(stats -> Status.OK(stats))
             .otherwise(t -> Status.KO())
-            .setHandler(status);
+            .onComplete(status);
     }
 
     /**

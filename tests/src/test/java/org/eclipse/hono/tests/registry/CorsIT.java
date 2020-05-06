@@ -194,7 +194,7 @@ public class CorsIT {
                         .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                         .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method.name()),
                 status -> status == HttpURLConnection.HTTP_OK)
-        .setHandler(ctx.succeeding(headers -> ctx.verify(() -> {
+        .onComplete(ctx.succeeding(headers -> ctx.verify(() -> {
             assertAccessControlHeaders(headers, method);
             ctx.completeNow();
          })));

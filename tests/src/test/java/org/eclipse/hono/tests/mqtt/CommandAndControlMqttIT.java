@@ -271,7 +271,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             }
         }))
         .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
-        .setHandler(setup.succeeding(ok -> ready.flag()));
+        .onComplete(setup.succeeding(ok -> ready.flag()));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -287,7 +287,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                commandSender.apply(msg).setHandler(sendAttempt -> {
+                commandSender.apply(msg).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         LOGGER.info("error sending command {}", commandsSent.get(), sendAttempt.cause());
                     } else {
@@ -362,7 +362,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .compose(conAck -> subscribeToCommands(commandTargetDeviceId, msg -> {
                     setup.failNow(new IllegalStateException("should not have received command"));
                 }, endpointConfig, MqttQoS.AT_MOST_ONCE))
-                .setHandler(ctx.succeeding(ok -> ready.flag()));
+                .onComplete(ctx.succeeding(ok -> ready.flag()));
 
         final AtomicReference<MessageSender> sender = new AtomicReference<>();
         final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
@@ -388,7 +388,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         messageWithoutSubject.setAddress(messageAddress);
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutSubject).setHandler(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutSubject).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             failedAttempts.flag();
         }));
@@ -398,7 +398,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         messageWithoutId.setAddress(messageAddress);
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutId).setHandler(ctx.failing(t -> {
+        sender.get().sendAndWaitForOutcome(messageWithoutId).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             failedAttempts.flag();
         }));

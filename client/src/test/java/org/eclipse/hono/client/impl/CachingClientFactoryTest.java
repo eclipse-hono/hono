@@ -182,7 +182,7 @@ public class CachingClientFactoryTest {
 
 
         // THEN all creation requests are failed
-        creationAttempt.future().setHandler(ctx.failing(t -> {
+        creationAttempt.future().onComplete(ctx.failing(t -> {
             // and the next request to create a client for the same key succeeds
             factory.getOrCreateClient(
                     "tenant",
@@ -221,7 +221,7 @@ public class CachingClientFactoryTest {
 
         // THEN the creation request is failed with the error produced when clearing the creation attempts
         // and the client creation failure triggered above is ignored
-        creationAttempt.future().setHandler(ctx.failing(t -> {
+        creationAttempt.future().onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 // make sure the creationFailure was actually completed at this point
                 assertThat(creationFailure.future().isComplete()).isTrue();
