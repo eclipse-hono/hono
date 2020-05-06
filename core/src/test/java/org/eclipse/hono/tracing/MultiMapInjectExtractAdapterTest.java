@@ -26,7 +26,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 import io.vertx.core.MultiMap;
-import io.vertx.core.http.CaseInsensitiveHeaders;
 
 /**
  * Tests verifying the behavior of {@link MultiMapInjectAdapter} and {@link MultiMapExtractAdapter}.
@@ -44,7 +43,7 @@ public class MultiMapInjectExtractAdapterTest {
         testEntries.put("key1", "value1");
         testEntries.put("key2", "value2");
 
-        final MultiMap multiMap = new CaseInsensitiveHeaders();
+        final MultiMap multiMap = MultiMap.caseInsensitiveMultiMap();
         final MultiMapInjectAdapter injectAdapter = new MultiMapInjectAdapter(multiMap);
         testEntries.forEach((key, value) -> {
             injectAdapter.put(key, value);
@@ -66,7 +65,7 @@ public class MultiMapInjectExtractAdapterTest {
         final Tracer tracer = config.getTracer();
         final Span span = tracer.buildSpan("do").start();
 
-        final MultiMap multiMap = new CaseInsensitiveHeaders();
+        final MultiMap multiMap = MultiMap.caseInsensitiveMultiMap();
         final MultiMapInjectAdapter injectAdapter = new MultiMapInjectAdapter(multiMap);
         tracer.inject(span.context(), Format.Builtin.TEXT_MAP, injectAdapter);
 

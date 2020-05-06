@@ -38,7 +38,6 @@ import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tags;
 import io.vertx.core.MultiMap;
 import io.vertx.core.eventbus.DeliveryOptions;
-import io.vertx.core.http.CaseInsensitiveHeaders;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -344,7 +343,7 @@ public final class TracingHelper {
             final MultiMap headers = Optional.of(deliveryOptions)
                     .map(options -> options.getHeaders())
                     .orElseGet(() -> {
-                        final MultiMap newHeaders = new CaseInsensitiveHeaders();
+                        final MultiMap newHeaders = MultiMap.caseInsensitiveMultiMap();
                         deliveryOptions.setHeaders(newHeaders);
                         return newHeaders;
                     });
