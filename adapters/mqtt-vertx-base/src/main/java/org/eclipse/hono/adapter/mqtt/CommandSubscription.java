@@ -18,6 +18,7 @@ import java.util.Objects;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,19 +42,19 @@ public class CommandSubscription {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandSubscription.class);
 
-    private String endpoint;
-    private String req;
-    private String tenant;
-    private String deviceId;
-    private String authenticatedDeviceId;
+    private final String endpoint;
+    private final String req;
+    private final String tenant;
+    private final String deviceId;
+    private final String authenticatedDeviceId;
+    private final String topic;
+    private final boolean isAuthenticated;
+
     private MqttQoS qos;
     private String clientId;
-    private String topic;
-    private boolean isAuthenticated;
 
-    private CommandSubscription(final String topic) {
-
-        Objects.requireNonNull(topic);
+    private CommandSubscription(final String topic, final Device authenticatedDevice) {
+        this.topic = Objects.requireNonNull(topic);
         final ResourceIdentifier resource = ResourceIdentifier.fromString(topic);
 
         if (resource.length() != 5 || !"#".equals(resource.elementAt(4))) {
@@ -72,39 +73,31 @@ public class CommandSubscription {
                     "the request part needs to be '" + CommandConstants.COMMAND_RESPONSE_REQUEST_PART + "' or '"
                             + CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT + "'");
         }
-        this.topic = topic;
         this.endpoint = resource.getEndpoint();
-        if (!"+".equals(resource.getTenantId())) {
-            tenant = resource.getTenantId();
-        }
-        if (!"+".equals(resource.getResourceId())) {
-            deviceId = resource.getResourceId();
-        }
+        final String resourceTenant = "+".equals(resource.getTenantId()) ? null : resource.getTenantId();
+        final String resourceDeviceId = "+".equals(resource.getResourceId()) ? null : resource.getResourceId();
         this.req = resource.elementAt(3);
-    }
 
-    private CommandSubscription(final String topic, final Device authenticatedDevice) {
-        this(topic);
+        this.isAuthenticated = authenticatedDevice != null;
+        this.authenticatedDeviceId = authenticatedDevice != null ? authenticatedDevice.getDeviceId() : null;
         if (authenticatedDevice == null) {
-            isAuthenticated = false;
-            if (tenant == null || tenant.isEmpty()) {
+            if (Strings.isNullOrEmpty(resourceTenant)) {
                 throw new IllegalArgumentException(
                         "for unauthenticated devices the tenant needs to be given in the subscription");
             }
-            if (deviceId == null || deviceId.isEmpty()) {
+            if (Strings.isNullOrEmpty(resourceDeviceId)) {
                 throw new IllegalArgumentException(
                         "for unauthenticated devices the device-id needs to be given in the subscription");
             }
+            this.tenant = resourceTenant;
+            this.deviceId = resourceDeviceId;
         } else {
-            isAuthenticated = true;
-            if (tenant != null && !authenticatedDevice.getTenantId().equals(tenant)) {
+            if (resourceTenant != null && !authenticatedDevice.getTenantId().equals(resourceTenant)) {
                 throw new IllegalArgumentException(
                         "tenant in topic filter does not match authenticated device");
-            } else if (deviceId == null || deviceId.isEmpty()) {
-                deviceId = authenticatedDevice.getDeviceId();
             }
-            tenant = authenticatedDevice.getTenantId();
-            authenticatedDeviceId = authenticatedDevice.getDeviceId();
+            this.tenant = authenticatedDevice.getTenantId();
+            this.deviceId = Strings.isNullOrEmpty(resourceDeviceId) ? authenticatedDevice.getDeviceId() : resourceDeviceId;
         }
     }
 
