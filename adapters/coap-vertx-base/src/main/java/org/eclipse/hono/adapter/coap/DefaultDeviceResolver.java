@@ -133,7 +133,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
             final Span span = newSpan("PSK-getDeviceIdentityInfo");
             final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(span, clientIdentity.getName());
             TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
-            span.log(Map.of(CredentialsConstants.FIELD_AUTH_ID, deviceIdentity.getAuthId()));
+            TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
             final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
             context.runOnContext(go -> {
                 credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId())
@@ -170,7 +170,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
             return null;
         }
         TracingHelper.TAG_TENANT_ID.set(span, handshakeIdentity.getTenantId());
-        span.log(Map.of(CredentialsConstants.FIELD_AUTH_ID, handshakeIdentity.getAuthId()));
+        TracingHelper.TAG_AUTH_ID.set(span, handshakeIdentity.getAuthId());
 
         final CompletableFuture<SecretKey> secret = new CompletableFuture<>();
         context.runOnContext((v) -> {
