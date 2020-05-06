@@ -750,7 +750,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             tenantTracker.result(),
                             ProcessingOutcome.FORWARDED,
                             qos,
-                            payload.length(),
+                            payloadSize,
                             getTtdStatus(ctx),
                             getMicrometerSample(ctx));
                     currentSpan.finish();
@@ -821,7 +821,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     tenantTracker.result(),
                     outcome,
                     qos,
-                    payload.length(),
+                    payloadSize,
                     getTtdStatus(ctx),
                     getMicrometerSample(ctx));
             TracingHelper.logError(currentSpan, t);
@@ -1232,7 +1232,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             tenant,
                             tenantTracker.result(),
                             ProcessingOutcome.from(t),
-                            payload.length(),
+                            payloadSize,
                             getMicrometerSample(ctx));
                     ctx.fail(t);
                     return null;

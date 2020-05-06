@@ -280,9 +280,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final Function<Handler<Void>, Future<Void>> receiver = callback -> {
             return createConsumer(tenantId, msg -> {
                 if (log.isTraceEnabled()) {
-                    final Buffer payload = MessageHelper.getPayload(msg);
                     log.trace("received message [{}]: {}",
-                            msg.getContentType(), payload.toString(StandardCharsets.UTF_8));
+                            msg.getContentType(), MessageHelper.getPayloadAsString(msg));
                 }
                 assertMessageProperties(messageSending, msg);
                 callback.handle(null);
