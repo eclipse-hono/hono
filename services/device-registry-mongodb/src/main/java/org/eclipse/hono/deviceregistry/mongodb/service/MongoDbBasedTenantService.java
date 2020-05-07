@@ -35,8 +35,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.AuthenticationConstants;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantResult;
 import org.slf4j.Logger;
@@ -96,14 +94,19 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
 
     @Override
     public Future<Void> start() {
+        // initialize indexes
         return CompositeFuture.all(
+                // add unique index for the tenant id
                 mongoDbCallExecutor.createCollectionIndex(config.getCollectionName(),
-                        new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, 1),
+                        new JsonObject().put(
+                                RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
                         new IndexOptions().unique(true), INDEX_CREATION_MAX_RETRIES),
+                // add unique index for subject-dn inside field of trusted-ca inside tenant object
                 mongoDbCallExecutor.createCollectionIndex(config.getCollectionName(),
                         new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
                                 RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
-                                AuthenticationConstants.FIELD_SUBJECT_DN, 1),
+                                RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                        // add unique index predicate for tenants with field of trusted-ca inside tenant object
                         new IndexOptions().unique(true)
                                 .partialFilterExpression(new JsonObject().put(
                                         RegistryManagementConstants.FIELD_TENANT + "." +
@@ -213,8 +216,6 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
 
     @Override
     public Future<TenantResult<JsonObject>> get(final String tenantId) {
-        Objects.requireNonNull(tenantId);
-
         return get(tenantId, NoopSpan.INSTANCE);
     }
 
@@ -239,8 +240,6 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
 
     @Override
     public Future<TenantResult<JsonObject>> get(final X500Principal subjectDn) {
-        Objects.requireNonNull(subjectDn);
-
         return get(subjectDn, NoopSpan.INSTANCE);
     }
 
@@ -249,45 +248,16 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
         Objects.requireNonNull(subjectDn);
         Objects.requireNonNull(span);
 
-        return getForCertificateAuthority(subjectDn, span);
-    }
-
-    /**
-     * Finds an existing tenant by the subject DN of its configured certificate authority.
-     *
-     * @param subjectDn the subject DN to find the tenant with.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
-     *            An implementation should log (error) events on this span and it may set tags
-     *            and use this span as the parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation.
-     *         The <em>status</em> will be
-     *         <ul>
-     *         <li><em>200 OK</em> if a tenant with the given certificate authority is registered.
-     *         The <em>payload</em> will contain the tenant's configuration information.</li>
-     *         <li><em>400 Bad Request</em> if the certificate authority is missing.</li>
-     *         <li><em>404 Not Found</em> if no tenant with the given identifier.</li>
-     *         </ul>
-     * @throws NullPointerException if the parameters are {@code null}.
-     */
-    private Future<TenantResult<JsonObject>> getForCertificateAuthority(
-            final X500Principal subjectDn,
-            final Span span) {
-
-        if (subjectDn == null) {
-            TracingHelper.logError(span, "missing subject DN");
-            return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else {
-            return findTenant(subjectDn)
-                    .compose(tenantDtoResult -> Future.succeededFuture(TenantResult.from(
-                            HttpURLConnection.HTTP_OK,
-                            DeviceRegistryUtils.convertTenant(tenantDtoResult.getTenantId(),
-                                    tenantDtoResult.getTenant(), true),
-                            DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()))))
-                    .recover(error -> {
-                        TracingHelper.logError(span, "no tenant found for subject DN", error);
-                        return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-                    });
-        }
+        return findTenant(subjectDn)
+                .compose(tenantDtoResult -> Future.succeededFuture(TenantResult.from(
+                        HttpURLConnection.HTTP_OK,
+                        DeviceRegistryUtils.convertTenant(tenantDtoResult.getTenantId(),
+                                                          tenantDtoResult.getTenant(), true),
+                        DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()))))
+                .recover(error -> {
+                    TracingHelper.logError(span, "no tenant found for subject DN", error);
+                    return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND));
+                });
     }
 
     @Override

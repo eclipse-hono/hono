@@ -53,14 +53,14 @@ public final class MongoDbDocumentBuilder {
     /**
      * Creates a new builder for a given subject DN.
      *
-     * @param SubjectDn The subject DN to add to the document.
+     * @param subjectDn The subject DN to add to the document.
      * @return The new document builder.
-     * @throws NullPointerException if SubjectDn is {@code null}.
+     * @throws NullPointerException if subject DN is {@code null}.
      */
-    public static MongoDbDocumentBuilder forSubjectDN(final String SubjectDn) {
-        Objects.requireNonNull(SubjectDn);
+    public static MongoDbDocumentBuilder forSubjectDN(final String subjectDn) {
+        Objects.requireNonNull(subjectDn);
         final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
-        return builder.withCa(SubjectDn);
+        return builder.withCa(subjectDn);
     }
 
     /**
@@ -102,11 +102,11 @@ public final class MongoDbDocumentBuilder {
     /**
      * Sets the json object with the given subject DN.
      *
-     * @param SubjectDn The subject DN.
+     * @param subjectDn The subject DN.
      * @return a reference to this for fluent use.
      */
-    public MongoDbDocumentBuilder withCa(final String SubjectDn) {
-        document.put(TENANT_TRUSTED_CA_SUBJECT_PATH, new JsonObject().put("$eq", SubjectDn));
+    public MongoDbDocumentBuilder withCa(final String subjectDn) {
+        document.put(TENANT_TRUSTED_CA_SUBJECT_PATH, new JsonObject().put("$eq", subjectDn));
         return this;
     }
 

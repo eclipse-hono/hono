@@ -26,7 +26,6 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsSe
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -182,17 +181,6 @@ public class ApplicationConfig {
     @Scope("prototype")
     public MongoClient mongoClient() {
         return MongoClient.createShared(vertx(), mongoDbConfigProperties().getMongoClientConfig());
-    }
-
-    /**
-     * Gets a {@link MongoDbCallExecutor} instance containing helper methods for mongodb interaction.
-     *
-     * @return An instance of the helper class {@link MongoDbCallExecutor}.
-     */
-    @Bean
-    @Scope("prototype")
-    public MongoDbCallExecutor mongoDBCallExecutor() {
-        return new MongoDbCallExecutor(vertx(), mongoClient());
     }
 
     //
