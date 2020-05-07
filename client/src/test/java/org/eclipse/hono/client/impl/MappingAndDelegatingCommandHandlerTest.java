@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
@@ -172,21 +174,55 @@ public class MappingAndDelegatingCommandHandlerTest {
     }
 
     /**
-     * Verifies the behaviour of the <em>mapAndDelegateIncomingCommandMessage</em> method in a scenario where
-     * the given command message has an invalid <em>to</em> address.
+     * Verifies that a command message with an address that doesn't contain a device ID
+     * gets rejected.
      */
+    @SuppressWarnings("unchecked")
     @Test
-    public void testMapWithMessageHavingInvalidAddress() {
-        final String deviceId = "4711";
+    public void testMapForMessageHavingAddressWithoutDeviceId() {
 
-        // WHEN mapping and delegating a command message with an invalid address
+        // GIVEN a command message with an address that does not
+        // contain a device ID
+        final String deviceId = "4711";
         final Message message = getValidCommandMessage(deviceId);
-        message.setAddress("invalid address");
+        message.setAddress(String.format("%s/%s", CommandConstants.COMMAND_ENDPOINT, Constants.DEFAULT_TENANT));
+
+        // WHEN mapping and delegating the command
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
 
         // THEN the disposition is REJECTED
-        verify(delivery).disposition(any(Rejected.class), eq(true));
+        verify(delivery).disposition(
+                argThat(state -> Constants.AMQP_BAD_REQUEST.equals(((Rejected) state).getError().getCondition())),
+                eq(true));
+        // and the message is not being delegated
+        verify(sender, never()).send(any(Message.class), any(Handler.class));
+    }
+
+    /**
+     * Verifies that a command message with an address that contains a tenant which doesn't
+     * match the scope of the command receiver link gets rejected.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testMapForMessageHavingAddressWithInvalidTenant() {
+
+        // GIVEN a command message with an address that contains an
+        // invalid tenant
+        final String deviceId = "4711";
+        final Message message = getValidCommandMessage(deviceId);
+        message.setAddress(String.format("%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, "wrong-tenant", deviceId));
+
+        // WHEN mapping and delegating the command
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        mappingAndDelegatingCommandHandler.mapAndDelegateIncomingCommandMessage(Constants.DEFAULT_TENANT, delivery, message);
+
+        // THEN the disposition is REJECTED
+        verify(delivery).disposition(
+                argThat(state -> AmqpError.UNAUTHORIZED_ACCESS.equals(((Rejected) state).getError().getCondition())),
+                eq(true));
+        // and the message is not being delegated
+        verify(sender, never()).send(any(Message.class), any(Handler.class));
     }
 
     /**
