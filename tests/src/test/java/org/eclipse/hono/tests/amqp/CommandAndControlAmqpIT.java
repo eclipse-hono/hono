@@ -642,7 +642,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
                 sender -> createNotSendingDeliveryUpdateCommandConsumer(ctx, receivedMessagesCounter));
 
-        final int totalNoOfCommandsToSend = 3;
+        final int totalNoOfCommandsToSend = 2;
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
@@ -695,15 +695,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             commandSent.await();
         }
 
-        // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
-        final long timeToWait = 1300 + ((totalNoOfCommandsToSend - 1) * 300);
+        // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for each command message
+        final long timeToWait = 300 + (totalNoOfCommandsToSend * 1300);
         if (!commandsFailed.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for commands", timeToWait);
         }
-        // assert that only the first command message has reached the device,
-        // subsequent command messages shouldn't have come so far because the adapter has closed device link and command consumer
-        // after it didn't get a disposition update for the first command
-        assertThat(receivedMessagesCounter.get()).isEqualTo(1);
+        assertThat(receivedMessagesCounter.get()).isEqualTo(totalNoOfCommandsToSend);
         final long commandsCompleted = totalNoOfCommandsToSend - commandsFailed.getCount();
         log.info("commands sent: {}, commands failed: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
