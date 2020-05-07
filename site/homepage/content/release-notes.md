@@ -20,7 +20,7 @@ title = "Release Notes"
   for additional information.
 * When sending a command message to a device, the AMQP adapter now waits for a
   configurable period of time (default is 1 second) for the acknowledgement from the device.
-  If none is received, the AMQP link to the device for sending commands is being closed.
+  If none is received, the downstream command sender gets back a `released` outcome.
   Please refer to the `sendMessageToDeviceTimeout` property description in the
   AMQP Adapter admin guide for additional information.
 * The client for storing device connection information to a data grid now supports configuring

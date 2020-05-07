@@ -788,7 +788,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
         final CommandContext context = CommandContext.from(command, commandDelivery, mock(Span.class));
         final ProtocolAdapterCommandConsumer commandConsumer = mock(ProtocolAdapterCommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        adapter.onCommandReceived(tenantObject, deviceLink, commandConsumer, context);
+        adapter.onCommandReceived(tenantObject, deviceLink, context);
         // and the device settles it
         final ArgumentCaptor<Handler<ProtonDelivery>> deliveryUpdateHandler = ArgumentCaptor.forClass(Handler.class);
         verify(deviceLink).send(any(Message.class), deliveryUpdateHandler.capture());
@@ -1102,13 +1102,9 @@ public class VertxBasedAmqpProtocolAdapterTest {
             return 1L;
         }).when(vertx).setTimer(anyLong(), any(Handler.class));
 
-        adapter.onCommandReceived(tenantObject, deviceLink, commandConsumer, context);
-        // THEN the adapter closes the device link
-        verify(deviceLink).close();
-        // AND notifies the application by sending back a RELEASED disposition
+        adapter.onCommandReceived(tenantObject, deviceLink, context);
+        // THEN the adapter notifies the application by sending back a RELEASED disposition
         verify(commandDelivery).disposition(any(Released.class), eq(true));
-        // AND the command consumer is closed
-        verify(commandConsumer).close(any());
     }
 
     /**

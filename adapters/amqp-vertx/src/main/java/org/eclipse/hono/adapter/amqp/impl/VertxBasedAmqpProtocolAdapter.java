@@ -20,7 +20,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
@@ -718,24 +717,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
                 return openCommandSenderLink(sender, validAddress, authenticatedDevice, span, traceSamplingPriority)
                         .map(consumer -> {
-                            addConnectionLossHandler(connection, connectionLost -> {
-                                // do not use the current span for sending the disconnected event
+                            setConnectionLossHandler(connection, connectionLost -> {
+                                // do not use the above created span for onCommandConnectionClose()
                                 // because that span will (usually) be finished long before the
                                 // connection is closed/lost
-                                final Span connectionLostSpan = newSpan("handle closing of command connection",
-                                        authenticatedDevice, traceSamplingPriority);
-                                sendDisconnectedTtdEvent(
-                                        validAddress.getTenantId(),
-                                        validAddress.getResourceId(),
-                                        authenticatedDevice,
-                                        connectionLostSpan.context())
-                                .onComplete(sendAttempt -> {
-                                    if (sendAttempt.failed()) {
-                                        TracingHelper.logError(connectionLostSpan, sendAttempt.cause());
-                                    }
-                                    consumer.close(connectionLostSpan.context())
-                                            .onComplete(v -> connectionLostSpan.finish());
-                                });
+                                onCommandConnectionClose(validAddress.getTenantId(), validAddress.getResourceId(),
+                                        authenticatedDevice, consumer, traceSamplingPriority);
                             });
                             return consumer;
                         });
@@ -762,6 +749,20 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
     }
 
+    private void onCommandConnectionClose(final String tenantId, final String deviceId, final Device authenticatedDevice,
+            final ProtocolAdapterCommandConsumer consumer, final OptionalInt traceSamplingPriority) {
+
+        final Span span = newSpan("handle closing of command connection", authenticatedDevice, traceSamplingPriority);
+        final Future<ProtonDelivery> sendEventFuture = sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice,
+                span.context());
+        final Future<Void> closeConsumerFuture = consumer.close(span.context());
+
+        CompositeFuture.join(sendEventFuture, closeConsumerFuture).recover(thr -> {
+            Tags.ERROR.set(span, true);
+            return Future.failedFuture(thr);
+        }).onComplete(v -> span.finish());
+    }
+
     private Span newSpan(final String operationName, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
         return newSpan(operationName, authenticatedDevice, traceSamplingPriority, null);
@@ -769,11 +770,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private Span newSpan(final String operationName, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority, final SpanContext context) {
-        final Span span = tracer.buildSpan(operationName)
-                .asChildOf(context)
-                .ignoreActiveSpan()
+        final Span span = TracingHelper.buildChildSpan(tracer, context, operationName, getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), getTypeName())
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                 .start();
 
@@ -829,7 +827,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Device authenticatedDevice,
             final Span span) {
 
-        final AtomicReference<ProtocolAdapterCommandConsumer> commandConsumerRef = new AtomicReference<>();
         final Handler<CommandContext> commandHandler = commandContext -> {
 
             final Sample timer = metrics.startTimer();
@@ -850,8 +847,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 }
                 return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
             }).compose(success -> {
-                // commandConsumerRef.get() != null here (see above sender.isOpen() check; sender only opened after createCommandConsumer succeeded)
-                onCommandReceived(tenantTracker.result(), sender, commandConsumerRef.get(), commandContext);
+                onCommandReceived(tenantTracker.result(), sender, commandContext);
                 return Future.succeededFuture();
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
@@ -870,19 +866,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return null;
             });
         };
-        final Future<ProtocolAdapterCommandConsumer> commandConsumer;
         if (authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(sourceAddress.getResourceId())) {
             // gateway scenario
-            commandConsumer = getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
+            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(), authenticatedDevice.getDeviceId(), commandHandler, null, span.context());
         } else {
-            commandConsumer = getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
+            return getCommandConsumerFactory().createCommandConsumer(sourceAddress.getTenantId(),
                     sourceAddress.getResourceId(), commandHandler, null, span.context());
         }
-        return commandConsumer.map(consumer -> {
-            commandConsumerRef.set(consumer);
-            return consumer;
-        });
     }
 
     /**
@@ -894,16 +885,14 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * 
      * @param tenantObject The tenant configuration object.
      * @param sender The link for sending the command to the device.
-     * @param commandConsumer The command consumer.
      * @param commandContext The context in which the adapter receives the command message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     protected void onCommandReceived(final TenantObject tenantObject, final ProtonSender sender,
-            final ProtocolAdapterCommandConsumer commandConsumer, final CommandContext commandContext) {
+            final CommandContext commandContext) {
 
         Objects.requireNonNull(tenantObject);
         Objects.requireNonNull(sender);
-        Objects.requireNonNull(commandConsumer);
         Objects.requireNonNull(commandContext);
 
         final Command command = commandContext.getCommand();
@@ -923,12 +912,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     log.debug("waiting for delivery update timed out after "
                             + getConfig().getSendMessageToDeviceTimeout() + " ms");
                     if (isCommandSettled.compareAndSet(false, true)) {
+                        // timeout reached -> release command
                         final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                "timeout waiting for delivery update");
-                        // timeout reached -> close link with device, close consumer and release command
-                        closeLinkWithError(sender, ex, commandContext.getCurrentSpan());
-                        commandConsumer.close(commandContext.getCurrentSpan().context())
-                                .onComplete(v -> commandContext.release());
+                                "timeout waiting for delivery update from device");
+                        TracingHelper.logError(commandContext.getCurrentSpan(), ex);
+                        commandContext.release();
                     } else {
                         log.trace("command is already settled and downstream application notified");
                     }
@@ -1257,7 +1245,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
     }
 
-    private static void addConnectionLossHandler(final ProtonConnection con, final Handler<Void> handler) {
+    private static void setConnectionLossHandler(final ProtonConnection con, final Handler<Void> handler) {
 
         con.attachments().set("connectionLossHandler", Handler.class, handler);
     }
