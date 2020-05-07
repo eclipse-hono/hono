@@ -79,7 +79,6 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
     private String tenantCommandAddress;
     private String tenantId;
     private String deviceId;
-    private String gatewayId;
     private String adapterInstanceId;
 
     /**
@@ -100,7 +99,6 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         when(vertx.eventBus()).thenReturn(eventBus);
 
         deviceId = "theDevice";
-        gatewayId = "theGateway";
         tenantId = "theTenant";
         adapterInstanceId = UUID.randomUUID().toString();
 

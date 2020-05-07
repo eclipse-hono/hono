@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.Command;
@@ -96,34 +97,56 @@ public class MappingAndDelegatingCommandHandler {
     }
 
     /**
+     * Delegates an incoming command to the protocol adapter instance that the target
+     * device is connected to.
+     * <p>
      * Determines the target gateway (if applicable) and protocol adapter instance for an incoming command
      * and delegates the command either to the local AdapterInstanceCommandHandler or to the resulting
      * protocol adapter instance.
      *
-     * @param tenantId The tenant id.
+     * @param tenantId The tenant that the command target must belong to.
      * @param originalMessageDelivery The delivery of the command message.
      * @param message The command message.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public void mapAndDelegateIncomingCommandMessage(final String tenantId,
-            final ProtonDelivery originalMessageDelivery, final Message message) {
+    public void mapAndDelegateIncomingCommandMessage(
+            final String tenantId,
+            final ProtonDelivery originalMessageDelivery,
+            final Message message) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(originalMessageDelivery);
         Objects.requireNonNull(message);
 
-        // this is the place where a command message on the "command/tenant" address arrives *first*
-        final String deviceId = message.getAddress() != null ? ResourceIdentifier.fromString(message.getAddress()).getResourceId() : null;
-        if (deviceId == null) {
-            LOG.debug("address of command message is invalid: {}", message.getAddress());
+        // this is the place where a command message on the "command/${tenant}" address arrives *first*
+        if (message.getAddress() == null) {
+            LOG.debug("command message has no address");
+            final Rejected rejected = new Rejected();
+            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "missing command target address"));
+            originalMessageDelivery.disposition(rejected, true);
+            return;
+        }
+        final ResourceIdentifier targetAddress = ResourceIdentifier.fromString(message.getAddress());
+        final String deviceId = targetAddress.getResourceId();
+        if (!tenantId.equals(targetAddress.getTenantId())) {
+            LOG.debug("command message address contains invalid tenant [expected: {}, found: {}]", tenantId, targetAddress.getTenantId());
+            final Rejected rejected = new Rejected();
+            rejected.setError(new ErrorCondition(AmqpError.UNAUTHORIZED_ACCESS, "unauthorized to send command to tenant"));
+            originalMessageDelivery.disposition(rejected, true);
+            return;
+        } else if (deviceId == null) {
+            LOG.debug("invalid command message address: {}", message.getAddress());
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "invalid command target address"));
             originalMessageDelivery.disposition(rejected, true);
             return;
         }
+
         final Command command = Command.from(message, tenantId, deviceId);
-        LOG.trace("received command [{}]", command);
-        if (!command.isValid()) {
-            LOG.debug("received command message is invalid: {}", command);
+        if (command.isValid()) {
+            LOG.trace("received valid command message: [{}]", command);
+        } else {
+            LOG.debug("received invalid command message: {}", command);
         }
         final SpanContext spanContext = TracingHelper.extractSpanContext(connection.getTracer(), message);
         final Span currentSpan = CommandConsumer.createSpan("map and delegate command", tenantId, deviceId, null,
