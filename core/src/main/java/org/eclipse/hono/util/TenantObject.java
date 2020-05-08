@@ -140,7 +140,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param subjectDn The CA's subject DN.
      * @param autoProvisioningEnabled A flag indicating whether this CA may be used for automatic provisioning.
      * @return This tenant for command chaining.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if the public key or subjectDN parameters is {@code null}.
      */
     @JsonIgnore
     public TenantObject addTrustAnchor(final PublicKey publicKey, final X500Principal subjectDn,
@@ -148,7 +148,6 @@ public final class TenantObject extends JsonBackedValueObject {
 
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
-        Objects.requireNonNull(autoProvisioningEnabled);
 
         final JsonObject trustedCa = new JsonObject();
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
@@ -223,15 +222,17 @@ public final class TenantObject extends JsonBackedValueObject {
      * 
      * @param subjectDn The subject DN of the CA to check.
      * @return {@code true} if auto-provisioning is enabled.
+     * @throws NullPointerException if the parameter subjectDN is {@code null}.
      */
     @JsonIgnore
     public boolean isAutoProvisioningEnabled(final String subjectDn) {
+        Objects.requireNonNull(subjectDn);
         return getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray())
                 .stream()
-                .filter(obj -> obj instanceof JsonObject)
-                .map(obj -> (JsonObject) obj)
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
                 .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
-                .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, Boolean.class))
+                .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, Boolean.class, false))
                 .findFirst().orElse(false);
     }
 
