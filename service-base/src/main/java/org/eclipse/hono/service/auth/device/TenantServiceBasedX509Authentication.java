@@ -173,7 +173,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
             span.finish();
             return authInfo;
         }).recover(t -> {
-            log.debug("verification of client certificate failed: {}", t.getMessage());
+            log.debug("verification of client certificate failed", t);
             TracingHelper.logError(span, t);
             span.finish();
             return Future.failedFuture(t);

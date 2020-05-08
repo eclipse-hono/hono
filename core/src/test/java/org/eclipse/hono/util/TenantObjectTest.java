@@ -410,4 +410,23 @@ public class TenantObjectTest {
 
         assertThat(tenantObject.getMinimumMessageSize()).isEqualTo(TenantConstants.DEFAULT_MINIMUM_MESSAGE_SIZE);
     }
+
+    /**
+     * Test if the "auto provisioning enabled" field can be null.
+     * 
+     * @throws Exception in case the certificate generation fails.
+     */
+    @Test
+    public void testAcceptsNullAutoProvisioning() throws Exception {
+
+        final String caName = "eclipse.org";
+        final X509Certificate caCert = createCaCertificate(caName);
+
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .setTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal())
+                .addTrustAnchor(caCert.getPublicKey(), caCert.getSubjectX500Principal(), null);
+
+        assertThat(tenantObject.isAutoProvisioningEnabled(caCert.getSubjectX500Principal().getName())).isFalse();
+
+    }
 }
