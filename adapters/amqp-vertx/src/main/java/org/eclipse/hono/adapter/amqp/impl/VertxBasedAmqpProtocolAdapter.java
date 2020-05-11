@@ -851,7 +851,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return Future.succeededFuture();
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
-                    // issue credit so that application(s) can send the next command
                     commandContext.reject(getErrorCondition(failure));
                 } else {
                     commandContext.release();
@@ -881,8 +880,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * an application.
      * <p>
      * This implementation simply forwards the command to the device
-     * via the given link and flows a single credit back to the application.
-     * 
+     * via the given link.
+     *
      * @param tenantObject The tenant configuration object.
      * @param sender The link for sending the command to the device.
      * @param commandContext The context in which the adapter receives the command message.
@@ -909,14 +908,15 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null
                 : vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
-                    log.debug("waiting for delivery update timed out after "
-                            + getConfig().getSendMessageToDeviceTimeout() + " ms");
+                    log.debug("waiting for delivery update timed out after {}ms",
+                            getConfig().getSendMessageToDeviceTimeout());
                     if (isCommandSettled.compareAndSet(false, true)) {
                         // timeout reached -> release command
                         final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                 "timeout waiting for delivery update from device");
                         TracingHelper.logError(commandContext.getCurrentSpan(), ex);
                         commandContext.release();
+                        reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
                     } else {
                         log.trace("command is already settled and downstream application notified");
                     }
@@ -957,13 +957,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     commandContext.release();
                     outcome = ProcessingOutcome.UNDELIVERABLE;
                 }
-                metrics.reportCommand(
-                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                        command.getTenant(),
-                        tenantObject,
-                        outcome,
-                        command.getPayloadSize(),
-                        getMicrometerSample(commandContext));
+                reportSentCommand(tenantObject, commandContext, outcome);
             }
         });
 
@@ -975,6 +969,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         items.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().name());
         items.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
         commandContext.getCurrentSpan().log(items);
+    }
+
+    private void reportSentCommand(final TenantObject tenantObject, final CommandContext commandContext,
+            final ProcessingOutcome outcome) {
+        metrics.reportCommand(
+                commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
+                commandContext.getCommand().getTenant(),
+                tenantObject,
+                outcome,
+                commandContext.getCommand().getPayloadSize(),
+                getMicrometerSample(commandContext));
     }
 
     /**
