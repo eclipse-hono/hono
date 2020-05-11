@@ -1402,13 +1402,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier(), subscription.getQos(),
                         sentHandler.cause());
                 TracingHelper.logError(commandContext.getCurrentSpan(), sentHandler.cause());
-                metrics.reportCommand(
-                        command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                        subscription.getTenant(),
-                        tenantObject,
-                        ProcessingOutcome.from(sentHandler.cause()),
-                        command.getPayloadSize(),
-                        getMicrometerSample(commandContext));
+                reportPublishedCommand(tenantObject, subscription, commandContext,
+                        ProcessingOutcome.from(sentHandler.cause()));
                 commandContext.release();
             }
         });
@@ -1431,7 +1426,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         if (waitForAck) {
             final Handler<Integer> onAckHandler = msgId -> {
-                reportPublishedCommand(tenantObject, subscription, commandContext);
+                reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
                 log.debug("Acknowledged [Msg-id: {}] command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
                         msgId, subscription.getTenant(), subscription.getDeviceId(), subscription.getClientId(),
                         subscription.getQos());
@@ -1446,21 +1441,22 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 logSubscriptionEventToSpan(commandContext.getCurrentSpan(), subscription, false,
                         "Timed out waiting for acknowledgment for command sent to device");
                 commandContext.release();
+                reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
             };
             cmdSubscriptionsManager.addToWaitingForAcknowledgement(publishedMsgId, onAckHandler, onAckTimeoutHandler);
         } else {
-            reportPublishedCommand(tenantObject, subscription, commandContext);
+            reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
             commandContext.accept();
         }
     }
 
     private void reportPublishedCommand(final TenantObject tenantObject, final CommandSubscription subscription,
-            final CommandContext commandContext) {
+            final CommandContext commandContext, final ProcessingOutcome outcome) {
         metrics.reportCommand(
                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                 subscription.getTenant(),
                 tenantObject,
-                ProcessingOutcome.FORWARDED,
+                outcome,
                 commandContext.getCommand().getPayloadSize(),
                 getMicrometerSample(commandContext));
     }
