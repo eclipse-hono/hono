@@ -65,8 +65,8 @@ public final class Configurations {
 
         return StatementConfiguration
                 .empty(tableNameRegistrationsString, tableNameCredentialsString)
-                .overideWithDefaultPattern("base", dialect, Configurations.class, base)
-                .overideWithDefaultPattern("table", dialect, Configurations.class, base);
+                .overrideWithDefaultPattern("base", dialect, Configurations.class, base)
+                .overrideWithDefaultPattern("table", dialect, Configurations.class, base);
 
     }
 
@@ -90,9 +90,9 @@ public final class Configurations {
 
         return StatementConfiguration
                 .empty(tableNameString)
-                .overideWithDefaultPattern("base", dialect, Configurations.class, base)
-                .overideWithDefaultPattern("json", dialect, Configurations.class, base)
-                .overideWithDefaultPattern(jsonModel, dialect, Configurations.class, base);
+                .overrideWithDefaultPattern("base", dialect, Configurations.class, base)
+                .overrideWithDefaultPattern("json", dialect, Configurations.class, base)
+                .overrideWithDefaultPattern(jsonModel, dialect, Configurations.class, base);
 
     }
 

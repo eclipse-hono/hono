@@ -152,13 +152,13 @@ public class StatementConfiguration {
      * @return The statement, never returns {@code null}.
      * @throws IllegalArgumentException if the statement is not present in the configuration.
      */
-    public Statement getRequiredStatment(final String key) {
+    public Statement getRequiredStatement(final String key) {
         return getStatement(key)
                 .orElseThrow(() -> new IllegalArgumentException(String.format("Statement with key '%s' not found", key)));
     }
 
     /**
-     * And empty statment configuration.
+     * And empty statement configuration.
      * <p>
      * This is intended to be use as a starting point, chaining several calls to the different
      * "override" methods.
@@ -190,7 +190,7 @@ public class StatementConfiguration {
      * @return An overridden configuration.
      * @throws IOException In case of any IO error.
      */
-    public StatementConfiguration overideWithDefaultPattern(final String basename, final String dialect, final Class<?> clazz, final Path path) throws IOException {
+    public StatementConfiguration overrideWithDefaultPattern(final String basename, final String dialect, final Class<?> clazz, final Path path) throws IOException {
 
         final String base = basename + ".sql.yaml";
         final String dialected = basename + "." + dialect + ".sql.yaml";

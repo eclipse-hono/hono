@@ -71,24 +71,24 @@ public class TableManagementStore extends AbstractDeviceManagementStore {
         super(client, tracer, cfg);
         cfg.dump(log);
 
-        this.readForUpdateStatement = cfg.getRequiredStatment("readForUpdate")
+        this.readForUpdateStatement = cfg.getRequiredStatement("readForUpdate")
                 .validateParameters(
                         "tenant_id",
                         "device_id");
-        this.readForUpdateVersionedStatement = cfg.getRequiredStatment("readForUpdateVersioned")
+        this.readForUpdateVersionedStatement = cfg.getRequiredStatement("readForUpdateVersioned")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
                         "expected_version");
 
         this.readCredentialsStatement = cfg
-                .getRequiredStatment("readCredentials")
+                .getRequiredStatement("readCredentials")
                 .validateParameters(
                         "tenant_id",
                         "device_id");
 
         this.insertCredentialEntryStatement = cfg
-                .getRequiredStatment("insertCredentialEntry")
+                .getRequiredStatement("insertCredentialEntry")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
@@ -97,13 +97,13 @@ public class TableManagementStore extends AbstractDeviceManagementStore {
                         "data");
 
         this.deleteAllCredentialsStatement = cfg
-                .getRequiredStatment("deleteAllCredentials")
+                .getRequiredStatement("deleteAllCredentials")
                 .validateParameters(
                         "tenant_id",
                         "device_id");
 
         this.updateDeviceVersionStatement = cfg
-                .getRequiredStatment("updateDeviceVersion")
+                .getRequiredStatement("updateDeviceVersion")
                 .validateParameters(
                         "tenant_id",
                         "device_id",

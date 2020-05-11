@@ -66,7 +66,7 @@ public class JsonAdapterStore extends AbstractDeviceAdapterStore {
         this.hierarchical = hierarchical;
 
         this.findCredentialsStatement = cfg
-                .getRequiredStatment("findCredentials")
+                .getRequiredStatement("findCredentials")
                 .validateParameters(
                         "tenant_id",
                         "type",

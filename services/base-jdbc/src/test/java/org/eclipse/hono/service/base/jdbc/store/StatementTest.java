@@ -90,7 +90,7 @@ public class StatementTest {
         final var cfg = StatementConfiguration.empty()
                 .overrideWith(new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)), false);
 
-        assertEquals("SELECT 1", cfg.getRequiredStatment("read").expand().getSql());
+        assertEquals("SELECT 1", cfg.getRequiredStatement("read").expand().getSql());
 
     }
 

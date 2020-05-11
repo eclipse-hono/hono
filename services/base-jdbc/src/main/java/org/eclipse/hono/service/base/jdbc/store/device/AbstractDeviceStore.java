@@ -55,7 +55,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
         this.tracer = tracer;
 
         this.readRegistrationStatement = cfg
-                .getRequiredStatment("readRegistration")
+                .getRequiredStatement("readRegistration")
                 .validateParameters(
                         "tenant_id",
                         "device_id");

@@ -114,7 +114,7 @@ public abstract class CommonCredential {
     /**
      * Adds a new extension entry to the device.
      * <p>
-     * If an extension entry already exist for the specified key, the old value is replaced by the specified value.
+     * If an extension entry already exists for the specified key, the old value is replaced by the specified value.
      * 
      * @param key The key of the entry.
      * @param value The value of the entry.

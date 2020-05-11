@@ -156,7 +156,7 @@ public class ResourceLimits {
     /**
      * Adds an extension property to this resource limit.
      * <p>
-     * If an extension property already exist for the specified key, the old value is replaced by the specified value.
+     * If an extension property already exists for the specified key, the old value is replaced by the specified value.
      *
      * @param key The key of the entry.
      * @param value The value of the entry.

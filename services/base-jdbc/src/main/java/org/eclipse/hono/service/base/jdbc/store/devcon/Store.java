@@ -64,18 +64,18 @@ public class Store extends AbstractStore {
         this.tracer = tracer;
 
         this.readStatement = cfg
-                .getRequiredStatment("read")
+                .getRequiredStatement("read")
                 .validateParameters(
                         "tenant_id",
                         "device_id");
 
-        this.updateStatement = cfg.getRequiredStatment("update")
+        this.updateStatement = cfg.getRequiredStatement("update")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
                         "gateway_id");
 
-        this.dropTenantStatement = cfg.getRequiredStatment("dropTenant")
+        this.dropTenantStatement = cfg.getRequiredStatement("dropTenant")
                 .validateParameters("tenant_id");
 
     }
@@ -95,7 +95,7 @@ public class Store extends AbstractStore {
 
         return StatementConfiguration
                 .empty(tableNameString)
-                .overideWithDefaultPattern("base", dialect, Store.class, StatementConfiguration.DEFAULT_PATH.resolve("devcon"));
+                .overrideWithDefaultPattern("base", dialect, Store.class, StatementConfiguration.DEFAULT_PATH.resolve("devcon"));
 
     }
 

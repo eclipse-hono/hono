@@ -66,13 +66,13 @@ public class JsonManagementStore extends AbstractDeviceManagementStore {
         this.hierarchical = hierarchical;
 
         this.readCredentialsStatement = cfg
-                .getRequiredStatment("readCredentials")
+                .getRequiredStatement("readCredentials")
                 .validateParameters(
                         "tenant_id",
                         "device_id");
 
         this.updateCredentialsStatement = cfg
-                .getRequiredStatment("updateCredentials")
+                .getRequiredStatement("updateCredentials")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
@@ -80,7 +80,7 @@ public class JsonManagementStore extends AbstractDeviceManagementStore {
                         "data");
 
         this.updateCredentialsVersionedStatement = cfg
-                .getRequiredStatment("updateCredentialsVersioned")
+                .getRequiredStatement("updateCredentialsVersioned")
                 .validateParameters(
                         "tenant_id",
                         "device_id",

@@ -405,7 +405,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
         Objects.requireNonNull(tenantSpec);
 
         if (tenants.containsKey(tenantId)) {
-            TracingHelper.logError(span, "Conflict : tenantId already exists.");
+            TracingHelper.logError(span, "Conflict: tenantId already exists");
             return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
         }
         try {
@@ -417,7 +417,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
 
             if (existsConflictingTenant) {
                 // we are trying to use the same CA as an already existing tenant
-                TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
+                TracingHelper.logError(span, "Conflict: CA already used by an existing tenant");
                 return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
             } else {
                 final Versioned<Tenant> tenant = new Versioned<>(tenantSpec);
@@ -484,7 +484,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
 
                     if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getKey())) {
                         // we are trying to use the same CA as another tenant
-                        TracingHelper.logError(span, "Conflict : CA already used by an existing tenant.");
+                        TracingHelper.logError(span, "Conflict: CA already used by an existing tenant");
                         return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
                     } else {
                         final Versioned<Tenant> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> tenantSpec);

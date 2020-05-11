@@ -579,7 +579,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
 
                     // check if the secretID given was found
                     if (!found) {
-                        TracingHelper.logError(span, "secret ID given does not exist for this auth-id and type.");
+                        TracingHelper.logError(span, "secret ID given does not exist for this auth-id and type");
                         return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
                     }
                 }

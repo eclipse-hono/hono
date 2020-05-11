@@ -350,7 +350,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         final Versioned<Device> device = getRegistrationData(tenantId, deviceId);
 
         if (device == null) {
-            TracingHelper.logError(span, "Device not found.");
+            TracingHelper.logError(span, "Device not found");
             return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
         }
 
@@ -457,7 +457,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
                     Id.of(deviceIdValue), Optional.empty(), Optional.of(newDevice.getVersion()));
         } else {
-            TracingHelper.logError(span, "Device already exist for tenant");
+            TracingHelper.logError(span, "Device already exists for tenant");
             return Result.from(HttpURLConnection.HTTP_CONFLICT, OperationResult::empty);
         }
 

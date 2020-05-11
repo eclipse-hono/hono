@@ -55,7 +55,7 @@ public class TableAdapterStore extends AbstractDeviceAdapterStore {
         cfg.dump(log);
 
         this.findCredentialsStatement = cfg
-                .getRequiredStatment("findCredentials")
+                .getRequiredStatement("findCredentials")
                 .validateParameters(
                         "tenant_id",
                         "type",

@@ -66,7 +66,7 @@ public abstract class AbstractDeviceManagementStore extends AbstractDeviceStore 
         super(client, tracer, cfg);
 
         this.createStatement = cfg
-                .getRequiredStatment("create")
+                .getRequiredStatement("create")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
@@ -74,7 +74,7 @@ public abstract class AbstractDeviceManagementStore extends AbstractDeviceStore 
                         "data");
 
         this.updateRegistrationStatement = cfg
-                .getRequiredStatment("updateRegistration")
+                .getRequiredStatement("updateRegistration")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
@@ -82,7 +82,7 @@ public abstract class AbstractDeviceManagementStore extends AbstractDeviceStore 
                         "data");
 
         this.updateRegistrationVersionedStatement = cfg
-                .getRequiredStatment("updateRegistrationVersioned")
+                .getRequiredStatement("updateRegistrationVersioned")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
@@ -91,20 +91,20 @@ public abstract class AbstractDeviceManagementStore extends AbstractDeviceStore 
                         "expected_version");
 
         this.deleteStatement = cfg
-                .getRequiredStatment("delete")
+                .getRequiredStatement("delete")
                 .validateParameters(
                         "tenant_id",
                         "device_id");
 
         this.deleteVersionedStatement = cfg
-                .getRequiredStatment("deleteVersioned")
+                .getRequiredStatement("deleteVersioned")
                 .validateParameters(
                         "tenant_id",
                         "device_id",
                         "expected_version");
 
         this.dropTenantStatement = cfg
-                .getRequiredStatment("dropTenant")
+                .getRequiredStatement("dropTenant")
                 .validateParameters(
                         "tenant_id");
 
