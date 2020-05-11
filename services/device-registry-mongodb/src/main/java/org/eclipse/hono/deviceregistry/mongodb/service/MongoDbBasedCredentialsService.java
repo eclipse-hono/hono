@@ -41,9 +41,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.ErrorCategory;
-import com.mongodb.MongoException;
-
 import io.opentracing.Span;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -107,7 +104,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
     public Future<Void> start() {
         return createIndices()
                 .map(ok -> {
-                    LOG.debug("MongoDB credentials service started.");
+                    LOG.debug("MongoDB credentials service started");
                     return null;
                 });
     }
@@ -374,16 +371,6 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 .orElse(true);
     }
 
-    private boolean isDuplicateKeyError(final Throwable throwable) {
-
-        if (throwable instanceof MongoException) {
-            final MongoException mongoException = (MongoException) throwable;
-            return ErrorCategory.fromErrorCode(mongoException.getCode()) == ErrorCategory.DUPLICATE_KEY;
-        }
-
-        return false;
-    }
-
     private Future<CredentialsResult<JsonObject>> processGetCredential(
             final String tenantId,
             final String type,
@@ -487,7 +474,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                     }
                 })
                 .recover(error -> {
-                    if (isDuplicateKeyError(error)) {
+                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
                         LOG.debug("the composite key of auth-id and type for the given tenant[{}] must be unique",
                                 deviceKey.getTenantId(), error);
                         TracingHelper.logError(span,

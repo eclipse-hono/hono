@@ -21,7 +21,7 @@ import java.util.Set;
 /**
  * Configuration properties for Hono's credentials service and management APIs.
  */
-public class MongoDbBasedCredentialsConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
+public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
 
     /**
      * The name of the mongodb collection where devices information are stored.

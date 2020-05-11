@@ -60,8 +60,8 @@ public class CredentialsDto extends BaseDto {
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
      * @param credentials The list of credentials.
-     * @param version The version of tenant to be sent as request header.
-     * @throws NullPointerException if any of the parameters except the secrets are {@code null}
+     * @param version The version of the credentials to be sent as request header.
+     * @throws NullPointerException if any of the parameters except credentials is {@code null}
      * @throws IllegalArgumentException if validation of the given credentials fail.
      */
     public CredentialsDto(
@@ -164,6 +164,20 @@ public class CredentialsDto extends BaseDto {
     }
 
     @JsonIgnore
+    private String getAuthType(final CommonCredential credential) {
+        if (credential instanceof GenericCredential) {
+            return ((GenericCredential) credential).getType();
+        } else if (credential instanceof PasswordCredential) {
+            return RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD;
+        } else if (credential instanceof PskCredential) {
+            return RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY;
+        } else if (credential instanceof X509CertificateCredential) {
+            return RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
+        }
+        return null;
+    }
+
+    @JsonIgnore
     private List<? extends CommonSecret> getSecrets(final CommonCredential credential) {
         if (credential instanceof PasswordCredential) {
             return ((PasswordCredential) credential).getSecrets();
@@ -189,7 +203,7 @@ public class CredentialsDto extends BaseDto {
     @JsonIgnore
     private void validateForUniqueAuthIdAndType(final List<? extends CommonCredential> credentials) {
             final long uniqueAuthIdAndTypeCount = credentials.stream()
-                    .map(credential -> credential.getAuthId() + credential.getClass().getSimpleName())
+                    .map(credential -> credential.getAuthId() + getAuthType(credential))
                     .distinct()
                     .count();
 
