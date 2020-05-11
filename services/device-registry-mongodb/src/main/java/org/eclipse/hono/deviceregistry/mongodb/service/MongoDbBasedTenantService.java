@@ -96,17 +96,17 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
     public Future<Void> start() {
         // initialize indexes
         return CompositeFuture.all(
-                // add unique index for the tenant id
                 mongoDbCallExecutor.createCollectionIndex(config.getCollectionName(),
                         new JsonObject().put(
                                 RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
                         new IndexOptions().unique(true), INDEX_CREATION_MAX_RETRIES),
-                // add unique index for subject-dn inside field of trusted-ca inside tenant object
+                // add unique index predicate for tenants with field of trusted-ca inside tenant object
+                // to ensure that no tenants have the same trusted-ca but only if trusted-ca exist
+                // to to deal with creating/updating tenants containing unique ids.
                 mongoDbCallExecutor.createCollectionIndex(config.getCollectionName(),
                         new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
                                 RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
                                 RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                        // add unique index predicate for tenants with field of trusted-ca inside tenant object
                         new IndexOptions().unique(true)
                                 .partialFilterExpression(new JsonObject().put(
                                         RegistryManagementConstants.FIELD_TENANT + "." +
@@ -145,7 +145,9 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
             final Optional<String> resourceVersion,
             final Span span) {
 
-        final JsonObject updateTenantQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
+        final JsonObject updateTenantQuery =
+                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
+                        .orElse(MongoDbDocumentBuilder.builder())
                 .withTenantId(tenantId)
                 .document();
 
@@ -198,9 +200,11 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
     private Future<Result<Void>> processDeleteTenant(final String tenantId, final Optional<String> resourceVersion,
             final Span span) {
 
-        final JsonObject deleteTenantQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
-                .withTenantId(tenantId)
-                .document();
+        final JsonObject deleteTenantQuery =
+                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
+                        .orElse(MongoDbDocumentBuilder.builder())
+                        .withTenantId(tenantId)
+                        .document();
 
         final Promise<JsonObject> deleteTenantPromise = Promise.promise();
         mongoClient.findOneAndDelete(config.getCollectionName(), deleteTenantQuery, deleteTenantPromise);
@@ -294,7 +298,7 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
     private Future<TenantDto> findTenant(final String tenantId) {
         Objects.requireNonNull(tenantId);
 
-        final JsonObject findTenantQuery = MongoDbDocumentBuilder.forTenantId(tenantId).document();
+        final JsonObject findTenantQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId).document();
         return findTenant(findTenantQuery);
     }
 
@@ -312,7 +316,9 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
     private Future<TenantDto> findTenant(final X500Principal subjectDn) {
         Objects.requireNonNull(subjectDn);
 
-        final JsonObject findTenantQuery = MongoDbDocumentBuilder.forSubjectDN(subjectDn.getName()).document();
+        final JsonObject findTenantQuery = MongoDbDocumentBuilder.builder()
+                        .withCa(subjectDn.getName())
+                        .document();
 
         return findTenant(findTenantQuery);
     }

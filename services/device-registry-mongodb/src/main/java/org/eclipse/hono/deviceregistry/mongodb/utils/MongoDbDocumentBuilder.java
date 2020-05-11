@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.utils;
 
-import java.util.Objects;
-import java.util.Optional;
-
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -38,43 +35,12 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
-     * Creates a new builder for a given tenant.
-     * 
-     * @param tenant The tenant to add to the document (may be empty).
-     * @return The new document builder.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    public static MongoDbDocumentBuilder forTenantId(final String tenant) {
-        Objects.requireNonNull(tenant);
-        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
-        return builder.withTenantId(tenant);
-    }
-
-    /**
-     * Creates a new builder for a given subject DN.
+     * Creates a new builder to append document properties to.
      *
-     * @param subjectDn The subject DN to add to the document.
      * @return The new document builder.
-     * @throws NullPointerException if subject DN is {@code null}.
      */
-    public static MongoDbDocumentBuilder forSubjectDN(final String subjectDn) {
-        Objects.requireNonNull(subjectDn);
-        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
-        return builder.withCa(subjectDn);
-    }
-
-    /**
-     * Creates a new builder for a given version.
-     * 
-     * @param version The version to add to the document (may be empty).
-     * @return The new document builder.
-     * @throws NullPointerException if version is {@code null}.
-     */
-    public static MongoDbDocumentBuilder forVersion(final Optional<String> version) {
-        Objects.requireNonNull(version);
-        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
-        version.ifPresent(v -> builder.withVersion(v));
-        return builder;
+    public static MongoDbDocumentBuilder builder() {
+        return new MongoDbDocumentBuilder();
     }
 
     /**
