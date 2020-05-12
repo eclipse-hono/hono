@@ -36,16 +36,6 @@ The following sequence diagram illustrates the establishment of the required lin
 
 {{< figure src="send_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
 
-{{% note title="Deprecation" %}}
-Previous versions of Hono required applications to
-
-* use a sender link with target address `control/${tenant_id}/${device_id}` for sending one-ways commands to a specific device.
-
-This link address can still be used but support for it will be removed in a future version of Hono!
-Newly built applications should **only** use the tenant scoped link as described above.
-Note that the deprecated link address also **does not** support sending commands to devices connected via a gateway.
-{{% /note %}}
-
 **Message Format**
 
 The following table provides an overview of the properties the *Business Application* needs to set on a one-way command message.
@@ -105,17 +95,6 @@ This link is used by the *Business Application* to receive the response to the c
 The following sequence diagram illustrates the establishment of the required links:
 
 {{< figure src="receive_preconditions.svg" title="Application connecting to the AMQP 1.0 Messaging Network" >}}
-
-{{% note title="Deprecation" %}}
-Previous versions of Hono required applications to
-
-* use a sender link with target address `control/${tenant_id}/${device_id}` for sending commands to a specific device and
-* use a receiver link with source address `control/${tenant_id}/${device_id}/{reply_id}` for receiving command responses from a device.
-
-These link addresses can still be used but support for them will be removed in a future version of Hono!
-Newly built applications should **only** use the tenant scoped links as described above.
-Note that the deprecated link addresses also **do not** support sending commands to devices connected via a gateway.
-{{% /note %}}
 
 **Command Message Format**
 
