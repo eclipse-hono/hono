@@ -118,10 +118,6 @@
         "activities": [ "READ" ]
       },
       {
-        "resource": "control/*",
-        "activities": [ "READ", "WRITE" ]
-      },
-      {
         "resource": "command/*",
         "activities": [ "WRITE" ]
       },
@@ -137,10 +133,6 @@
       }, {
         "resource": "event/DEFAULT_TENANT",
         "activities": [ "READ" ]
-      },
-      {
-        "resource": "control/DEFAULT_TENANT",
-        "activities": [ "READ", "WRITE" ]
       },
       {
         "resource": "command/DEFAULT_TENANT",
