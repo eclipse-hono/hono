@@ -24,10 +24,10 @@ info:
       ## Code generation
 
       This model is not optimized for generating code from it. Code generators
-      try to understand the model and then translate this into the require
-      programming language. Even if the there would be no bugs in the code
-      generators, that process would be already only be an approximation. So
-      this model does focus in the description of the API, and doesn't tweak
+      try to understand the model and then translate this into the required
+      programming language. Even if there would be no bugs in the code
+      generators, that process would already only be an approximation. So
+      this model focuses on the description of the API, and doesn't tweak
       the specification in a way to please code generators.
 
    contact:
