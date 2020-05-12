@@ -906,69 +906,77 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final AtomicBoolean isCommandSettled = new AtomicBoolean(false);
 
-        final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null
-                : vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
-                    log.debug("waiting for delivery update timed out after {}ms",
-                            getConfig().getSendMessageToDeviceTimeout());
-                    if (isCommandSettled.compareAndSet(false, true)) {
-                        // timeout reached -> release command
-                        final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                "timeout waiting for delivery update from device");
-                        TracingHelper.logError(commandContext.getCurrentSpan(), ex);
-                        commandContext.release();
-                        reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
-                    } else {
-                        log.trace("command is already settled and downstream application notified");
-                    }
-                });
-
-        sender.send(msg, delivery -> {
-
-            if (timerId != null) {
-                // disposition received -> cancel timer
-                vertx.cancelTimer(timerId);
-            }
-            if (!isCommandSettled.compareAndSet(false, true)) {
-                log.trace("command is already settled and downstream application notified");
-            } else {
-                // release the command message when the device either
-                // rejects or does not settle the command request message.
-                final DeliveryState remoteState = delivery.getRemoteState();
-                ProcessingOutcome outcome = null;
-                if (delivery.remotelySettled()) {
-                    commandContext.disposition(remoteState);
-                    if (Accepted.class.isInstance(remoteState)) {
-                        outcome = ProcessingOutcome.FORWARDED;
-                    } else if (Rejected.class.isInstance(remoteState)) {
-                        outcome = ProcessingOutcome.UNPROCESSABLE;
-                    } else if (Released.class.isInstance(remoteState)) {
-                        outcome = ProcessingOutcome.UNDELIVERABLE;
-                    } else if (Modified.class.isInstance(remoteState)) {
-                        final Modified modified = (Modified) remoteState;
-                        outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
-                    }
-                } else {
-                    log.debug("device did not settle command message [command: {}, remote state: {}]", command.getName(),
-                            remoteState);
-                    final Map<String, Object> logItems = new HashMap<>(2);
-                    logItems.put(Fields.EVENT, "device did not settle command");
-                    logItems.put("remote state", remoteState);
-                    commandContext.getCurrentSpan().log(logItems);
+        if (sender.sendQueueFull()) {
+            log.debug("cannot send command to device: no credit available [{}]", command);
+            final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "no credit available for sending command to device");
+            TracingHelper.logError(commandContext.getCurrentSpan(), ex);
+            commandContext.release();
+            reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
+        } else {
+            final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null
+                    : vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
+                log.debug("waiting for delivery update timed out after {}ms [{}]",
+                        getConfig().getSendMessageToDeviceTimeout(), command);
+                if (isCommandSettled.compareAndSet(false, true)) {
+                    // timeout reached -> release command
+                    final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                            "timeout waiting for delivery update from device");
+                    TracingHelper.logError(commandContext.getCurrentSpan(), ex);
                     commandContext.release();
-                    outcome = ProcessingOutcome.UNDELIVERABLE;
+                    reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
+                } else {
+                    log.trace("command is already settled and downstream application was already notified [{}]", command);
                 }
-                reportSentCommand(tenantObject, commandContext, outcome);
-            }
-        });
+            });
 
-        final Map<String, Object> items = new HashMap<>(4);
-        items.put(Fields.EVENT, "command sent to device");
-        if (sender.getRemoteTarget() != null) {
-            items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), sender.getRemoteTarget().getAddress());
+            sender.send(msg, delivery -> {
+
+                if (timerId != null) {
+                    // disposition received -> cancel timer
+                    vertx.cancelTimer(timerId);
+                }
+                if (!isCommandSettled.compareAndSet(false, true)) {
+                    log.trace("command is already settled and downstream application was already notified [{}]", command);
+                } else {
+                    // release the command message when the device either
+                    // rejects or does not settle the command request message.
+                    final DeliveryState remoteState = delivery.getRemoteState();
+                    ProcessingOutcome outcome = null;
+                    if (delivery.remotelySettled()) {
+                        commandContext.disposition(remoteState);
+                        if (Accepted.class.isInstance(remoteState)) {
+                            outcome = ProcessingOutcome.FORWARDED;
+                        } else if (Rejected.class.isInstance(remoteState)) {
+                            outcome = ProcessingOutcome.UNPROCESSABLE;
+                        } else if (Released.class.isInstance(remoteState)) {
+                            outcome = ProcessingOutcome.UNDELIVERABLE;
+                        } else if (Modified.class.isInstance(remoteState)) {
+                            final Modified modified = (Modified) remoteState;
+                            outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
+                        }
+                    } else {
+                        log.debug("device did not settle command message [remote state: {}, {}]", remoteState, command);
+                        final Map<String, Object> logItems = new HashMap<>(2);
+                        logItems.put(Fields.EVENT, "device did not settle command");
+                        logItems.put("remote state", remoteState);
+                        commandContext.getCurrentSpan().log(logItems);
+                        commandContext.release();
+                        outcome = ProcessingOutcome.UNDELIVERABLE;
+                    }
+                    reportSentCommand(tenantObject, commandContext, outcome);
+                }
+            });
+
+            final Map<String, Object> items = new HashMap<>(4);
+            items.put(Fields.EVENT, "command sent to device");
+            if (sender.getRemoteTarget() != null) {
+                items.put(Tags.MESSAGE_BUS_DESTINATION.getKey(), sender.getRemoteTarget().getAddress());
+            }
+            items.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().name());
+            items.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
+            commandContext.getCurrentSpan().log(items);
         }
-        items.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().name());
-        items.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
-        commandContext.getCurrentSpan().log(items);
     }
 
     private void reportSentCommand(final TenantObject tenantObject, final CommandContext commandContext,

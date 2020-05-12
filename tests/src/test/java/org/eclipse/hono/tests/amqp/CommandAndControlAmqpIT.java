@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -110,16 +111,15 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     private Future<ProtonReceiver> subscribeToCommands(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final String tenantId,
-            final String commandTargetDeviceId,
-            final ProtonMessageHandler msgHandler) {
+            final String commandTargetDeviceId) {
 
         final Promise<ProtonReceiver> result = Promise.promise();
         context.runOnContext(go -> {
             final ProtonReceiver recv = connection.createReceiver(endpointConfig.getSubscriptionAddress(tenantId, commandTargetDeviceId));
             recv.setAutoAccept(false);
+            recv.setPrefetch(0);
             recv.setQoS(ProtonQoS.AT_LEAST_ONCE);
             recv.openHandler(result);
-            recv.handler(msgHandler);
             recv.open();
         });
         return result.future().map(commandConsumer -> {
@@ -132,7 +132,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final VertxTestContext ctx,
             final String commandTargetDeviceId,
             final AmqpCommandEndpointConfiguration endpointConfig,
-            final Function<ProtonSender, ProtonMessageHandler> commandConsumerFactory) throws InterruptedException {
+            final BiFunction<ProtonReceiver, ProtonSender, ProtonMessageHandler> commandConsumerFactory) throws InterruptedException {
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint notificationReceived = setup.checkpoint();
@@ -149,7 +149,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         }))
         // use anonymous sender
         .compose(con -> createProducer(null))
-        .compose(sender -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId, commandConsumerFactory.apply(sender)))
+        .compose(sender -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
+            .map(recv -> {
+                recv.handler(commandConsumerFactory.apply(recv, sender));
+                recv.flow(50);
+                return null;
+            }))
         .onComplete(setup.completing());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
@@ -158,7 +163,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         }
     }
 
-    private ProtonMessageHandler createCommandConsumer(final VertxTestContext ctx, final ProtonSender sender) {
+    private ProtonMessageHandler createCommandConsumer(final VertxTestContext ctx, final ProtonReceiver cmdReceiver,
+            final ProtonSender cmdResponseSender) {
 
         return (delivery, msg) -> {
             ctx.verify(() -> {
@@ -170,6 +176,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final Object correlationId = msg.getCorrelationId();
             log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
             ProtonHelper.accepted(delivery, true);
+            cmdReceiver.flow(1);
             // send response
             final Message commandResponse = ProtonHelper.message(command + " ok");
             commandResponse.setAddress(msg.getReplyTo());
@@ -177,7 +184,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             commandResponse.setContentType("text/plain");
             MessageHelper.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
             log.debug("sending response [to: {}, correlation-id: {}]", commandResponse.getAddress(), commandResponse.getCorrelationId());
-            sender.send(commandResponse, updatedDelivery -> {
+            cmdResponseSender.send(commandResponse, updatedDelivery -> {
                 if (!Accepted.class.isInstance(updatedDelivery.getRemoteState())) {
                     log.error("AMQP adapter did not accept command response [remote state: {}]",
                             updatedDelivery.getRemoteState().getClass().getSimpleName());
@@ -186,7 +193,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         };
     }
 
-    private ProtonMessageHandler createRejectingCommandConsumer(final VertxTestContext ctx) {
+    private ProtonMessageHandler createRejectingCommandConsumer(final VertxTestContext ctx, final ProtonReceiver receiver) {
         return (delivery, msg) -> {
             ctx.verify(() -> {
                 assertThat(msg.getReplyTo()).isNotNull();
@@ -199,11 +206,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, REJECTED_COMMAND_ERROR_MESSAGE));
             delivery.disposition(rejected, true);
+            receiver.flow(1);
         };
     }
 
     private ProtonMessageHandler createNotSendingDeliveryUpdateCommandConsumer(final VertxTestContext ctx,
-            final AtomicInteger receivedMessagesCounter) {
+            final ProtonReceiver receiver, final AtomicInteger receivedMessagesCounter) {
         return (delivery, msg) -> {
             receivedMessagesCounter.incrementAndGet();
             ctx.verify(() -> {
@@ -214,6 +222,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final String command = msg.getSubject();
             final Object correlationId = msg.getCorrelationId();
             log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
+            receiver.flow(1);
         };
     }
 
@@ -243,13 +252,14 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ctx,
                 commandTargetDeviceId,
                 endpointConfig,
-                sender -> (delivery, msg) -> {
+                (cmdReceiver, cmdResponseSender) -> (delivery, msg) -> {
                     ctx.verify(() -> {
                         assertThat(msg.getReplyTo()).isNull();
                         assertThat(msg.getSubject()).isEqualTo("setValue");
                     });
                     log.debug("received command [name: {}]", msg.getSubject());
                     ProtonHelper.accepted(delivery, true);
+                    cmdReceiver.flow(1);
                     commandsReceived.flag();
                 }, payload -> {
                     return helper.sendOneWayCommand(
@@ -282,7 +292,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
-        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig, sender -> createCommandConsumer(ctx, sender));
+        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
+                (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender));
 
         final String replyId = "reply-id";
         final int totalNoOfCommandsToSend = 60;
@@ -379,7 +390,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ctx,
                 commandTargetDeviceId,
                 endpointConfig,
-                sender -> createCommandConsumer(ctx, sender),
+                (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender),
                 payload -> {
                     return helper.sendCommand(
                             tenantId,
@@ -405,7 +416,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final VertxTestContext ctx,
             final String commandTargetDeviceId,
             final AmqpCommandEndpointConfiguration endpointConfig,
-            final Function<ProtonSender, ProtonMessageHandler> commandConsumerFactory,
+            final BiFunction<ProtonReceiver, ProtonSender, ProtonMessageHandler> commandConsumerFactory,
             final Function<Buffer, Future<?>> commandSender,
             final int totalNoOfCommandsToSend) throws InterruptedException {
 
@@ -490,9 +501,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 preconditions.flag();
             }
         }))
-        .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId, (delivery, msg) -> {
-            ctx.failNow(new IllegalStateException("should not have received command"));
-        }))
+        .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
+            .map(recv -> {
+                recv.handler((delivery, msg) -> ctx
+                        .failNow(new IllegalStateException("should not have received command")));
+                return null;
+            }))
         .compose(ok -> helper.applicationClientFactory.createGenericMessageSender(targetAddress))
         .map(s -> {
             log.debug("created generic sender for sending commands [target address: {}]", targetAddress);
@@ -531,6 +545,81 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     }
 
     /**
+     * Verifies that the adapter immediately forwards the <em>released</em> disposition
+     * if there is no credit left for sending the command to the device.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("allCombinations")
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    public void testSendCommandFailsWhenNoCredit(
+            final AmqpCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint preconditions = setup.checkpoint(1);
+
+        connectToAdapter(tenantId, tenant, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+            // expect empty notification with TTD -1
+            ctx.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+            final TimeUntilDisconnectNotification notification = TimeUntilDisconnectNotification.fromMessage(msg).orElse(null);
+            log.debug("received notification [{}]", notification);
+            ctx.verify(() -> assertThat(notification).isNotNull());
+            if (notification.getTtd() == -1) {
+                preconditions.flag();
+            }
+        }))
+        .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
+            .map(recv -> {
+                recv.handler((delivery, msg) -> {
+                    log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", msg.getSubject(), msg.getReplyTo(),
+                            msg.getCorrelationId());
+                    ProtonHelper.accepted(delivery, true);
+                    // don't send credits
+                });
+                recv.flow(1); // just give 1 initial credit
+                return null;
+            }))
+        .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+        }
+
+        final Checkpoint expectedSteps = ctx.checkpoint(2);
+
+        // send first command
+        helper.sendOneWayCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
+                Buffer.buffer("cmd"), null, 200)
+        // first command shall succeed because there's one initial credit
+        .onComplete(ctx.succeeding(v -> {
+            expectedSteps.flag();
+            // send second command
+            helper.sendOneWayCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
+                    Buffer.buffer("cmd"), null, 200)
+            // second command shall fail because there's no credit left
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
+                    // and the error here would be caused by a request timeout in the sendOneWayCommand() method above (after 200ms already)
+                    assertThat(t.getMessage()).doesNotContain("timed out");
+                });
+                expectedSteps.flag();
+            }));
+        }));
+    }
+
+    /**
      * Verifies that the adapter forwards the <em>rejected</em> disposition, received from a device, back to the
      * application.
      *
@@ -549,7 +638,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
-        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig, sender -> createRejectingCommandConsumer(ctx));
+        connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
+                (cmdReceiver, cmdResponseSender) -> createRejectingCommandConsumer(ctx, cmdReceiver));
 
         final int totalNoOfCommandsToSend = 3;
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
@@ -559,10 +649,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
         final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
-                .onComplete(ctx.succeeding(c -> {
-                    c.setRequestTimeout(300);
-                    commandClientCreation.completeNow();
-                }));
+                .onSuccess(c -> c.setRequestTimeout(300))
+                .onComplete(commandClientCreation.completing());
 
         assertThat(commandClientCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
@@ -640,7 +728,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final AtomicInteger receivedMessagesCounter = new AtomicInteger(0);
         // command handler won't send a disposition update
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig,
-                sender -> createNotSendingDeliveryUpdateCommandConsumer(ctx, receivedMessagesCounter));
+                (cmdReceiver, cmdResponseSender) -> createNotSendingDeliveryUpdateCommandConsumer(ctx, cmdReceiver, receivedMessagesCounter));
 
         final int totalNoOfCommandsToSend = 2;
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
@@ -650,10 +738,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final VertxTestContext commandClientCreation = new VertxTestContext();
         final Future<CommandClient> commandClient = helper.applicationClientFactory.getOrCreateCommandClient(tenantId, "test-client")
-                .onComplete(ctx.succeeding(c -> {
-                    c.setRequestTimeout(1300); // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
-                    commandClientCreation.completeNow();
-                }));
+                .onSuccess(c -> c.setRequestTimeout(1300)) // have to wait more than AmqpAdapterProperties.DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT (1000ms) for the first command message
+                .onComplete(commandClientCreation.completing());
 
         assertThat(commandClientCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (commandClientCreation.failed()) {
@@ -732,11 +818,11 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final Supplier<Future<MessageConsumer>> consumerFactory) {
 
         return helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+        .addDeviceForTenant(tenantId, tenant, deviceId, password)
         .compose(ok -> Optional.ofNullable(consumerFactory)
-                .map(factory -> factory.get())
+                .map(Supplier::get)
                 .orElse(Future.succeededFuture()))
-                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+        .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .recover(t -> {
             log.error("failed to establish connection to AMQP adapter [host: {}, port: {}]",
                     IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQP_PORT, t);
