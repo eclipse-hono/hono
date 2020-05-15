@@ -24,7 +24,7 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MongoDbDocumentBuilder {
 
-    public static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
+    private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
             RegistryManagementConstants.FIELD_TENANT,
             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
             AuthenticationConstants.FIELD_SUBJECT_DN);
