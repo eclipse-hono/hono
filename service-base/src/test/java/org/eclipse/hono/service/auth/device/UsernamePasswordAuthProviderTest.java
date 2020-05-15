@@ -196,4 +196,17 @@ public class UsernamePasswordAuthProviderTest {
                 any(),
                 any())).thenReturn(Future.succeededFuture(credentials));
     }
+
+    /**
+     * Verifies that the provider succeeds retrieving credentials encoded in the username.
+     *
+     */
+    @Test
+    public void testRetrievingCredentialsInUsernameSucceeds() {
+        final JsonObject originalCredentials = (new JsonObject()).put("username", "ZGV2aWNlQERFRkFVTFRfVEVOQU5UOnRoZS1zZWNyZXQ=").put("password", "");
+        final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
+        assertThat(credentials.getPassword()).isEqualTo("the-secret");
+        assertThat(credentials.getTenantId()).isEqualTo("DEFAULT_TENANT");
+        assertThat(credentials.getAuthId()).isEqualTo("device");
+    }
 }
