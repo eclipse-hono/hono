@@ -52,6 +52,7 @@
     <jjwt.version>0.10.6</jjwt.version>
     <jmeter.version>5.1.1</jmeter.version>
     <junit.jupiter.version>5.6.0</junit.jupiter.version>
+    <log4j.version>2.12.1</log4j.version>
     <logback.version>1.2.3</logback.version>
     <mchange-commons.version>0.2.15</mchange-commons.version>
     <micrometer.version>1.1.11</micrometer.version>
@@ -75,9 +76,10 @@
     <spring-security-crypto.version>5.2.4.RELEASE</spring-security-crypto.version>
     <truth.version>0.28</truth.version>
     <vertx.version>3.9.1</vertx.version>
-    <wildfly-common.version>1.5.1.Final</wildfly-common.version>
+    <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
     <wildfly-elytron.version>1.10.4.Final</wildfly-elytron.version>
     <wiremock.version>2.24.1</wiremock.version>
+    <quarkus.platform.version>1.6.1.Final</quarkus.platform.version>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>

@@ -11,7 +11,7 @@ hono:
     bindAddress: 0.0.0.0
     insecurePortBindAddress: 0.0.0.0
     insecurePortEnabled: true
-    nativeTlsRequired: true
+    nativeTlsRequired: true # Use false when testing with Quarkus image for now
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
     maxPayloadSize: 2048
