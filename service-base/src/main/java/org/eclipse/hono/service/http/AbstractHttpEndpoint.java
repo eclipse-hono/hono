@@ -208,8 +208,8 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @return The value of the parameter if it's set or {@code null} otherwise.
      * @throws NullPointerException If ctx or paramName are {@code null}.
      */
-    protected final String getMandatoryRequestParam(final String paramName, final RoutingContext ctx, final Span span) {
-        return getRequestParam(paramName, ctx, span, false);
+    protected final String getMandatoryIdRequestParam(final String paramName, final RoutingContext ctx, final Span span) {
+        return getRequestIdParam(paramName, ctx, span, false);
     }
 
     /**
@@ -223,19 +223,42 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @return The value of the parameter if it's set or {@code null} otherwise.
      * @throws NullPointerException If ctx or paramName are {@code null}.
      */
-    protected final String getRequestParam(final String paramName, final RoutingContext ctx, final Span span, final boolean optional) {
+    protected final String getRequestIdParam(final String paramName, final RoutingContext ctx, final Span span, final boolean optional) {
         final String value = ctx.request().getParam(paramName);
-        if (!optional && value == null) {
+
+        if (value != null) {
+            if (value.matches(config.getResourceIdRegex())) {
+                span.setTag(paramName, value);
+                return value;
+            } else {
+                final String msg = String.format("%s does not match allowed pattern: %s",
+                        value, config.getResourceIdRegex());
+                HttpUtils.badRequest(ctx, msg);
+                finishSpanWithError(span, HttpURLConnection.HTTP_BAD_REQUEST, msg);
+                return null;
+            }
+        } else if (!optional) {
             final String msg = String.format("Missing request parameter: %s", paramName);
-            TracingHelper.logError(span, msg);
             HttpUtils.badRequest(ctx, msg);
-            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
-            span.finish();
+            finishSpanWithError(span, HttpURLConnection.HTTP_BAD_REQUEST, msg);
             return null;
         } else {
             span.setTag(paramName, value);
             return value;
         }
+    }
+
+    /**
+     * Finish the given span with the error code and logs the error message.
+     *
+     * @param span The nspan to finish.
+     * @param httpErrorCode The HTTP Error code to use.
+     * @param errorMessage A string containing a message describing the error.
+     */
+    protected final void finishSpanWithError(final Span span, final int httpErrorCode, final String errorMessage) {
+        TracingHelper.logError(span, errorMessage);
+        Tags.HTTP_STATUS.set(span, httpErrorCode);
+        span.finish();
     }
 
     /**

@@ -574,7 +574,7 @@ public class CredentialsHttpIT {
     }
 
     private static String getRandomAuthId(final String authIdPrefix) {
-        return authIdPrefix + "." + UUID.randomUUID();
+        return authIdPrefix + "-" + UUID.randomUUID();
     }
 
     private static PskCredential newPskCredentials(final String authId) {
