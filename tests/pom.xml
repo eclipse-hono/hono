@@ -715,6 +715,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.image.org-name}/hono-adapter-http-vertx:${project.version}</from>
+                    <!--
+                    Enable to test with Quarkus adapter
+                    <from>${docker.image.org-name}/hono-adapter-http-vertx-quarkus:${project.version}</from>
+                    -->
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -737,6 +741,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                               <include>*</include>
                             </includes>
                           </fileSet>
+                          <!--
+                          Enable to configure Quarkus JVM image
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/http</directory>
+                            <outputDirectory>/deployments/config</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          -->
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>

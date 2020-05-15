@@ -17,6 +17,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import io.vertx.core.json.JsonObject;
 
@@ -25,6 +26,7 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * Uses a JSON object for storing arbitrary properties.
  */
+@JsonDeserialize
 abstract class JsonBackedValueObject {
 
     /**
