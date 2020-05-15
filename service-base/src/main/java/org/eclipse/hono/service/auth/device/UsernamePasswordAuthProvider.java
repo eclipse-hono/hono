@@ -14,7 +14,9 @@
 package org.eclipse.hono.service.auth.device;
 
 import java.net.HttpURLConnection;
+import java.util.Base64;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -31,7 +33,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-
 
 /**
  * An authentication provider that verifies username/password credentials using
@@ -90,18 +91,41 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      */
     @Override
     protected UsernamePasswordCredentials getCredentials(final JsonObject authInfo) {
-
         try {
             final String username = authInfo.getString("username");
             final String password = authInfo.getString("password");
             if (username == null || password == null) {
                 return null;
             } else {
+                if (password.isEmpty()) {
+                    final Optional<UsernamePasswordCredentials> credentials = tryGetCredentialsEncodedInUsername(authInfo);
+                    if (credentials.isPresent()) {
+                        return credentials.get();
+                    }
+                }
                 return UsernamePasswordCredentials.create(username, password, config.isSingleTenant());
             }
         } catch (ClassCastException e) {
             return null;
         }
+    }
+
+    private Optional<UsernamePasswordCredentials> tryGetCredentialsEncodedInUsername(final JsonObject authInfo) {
+        try {
+            final String decoded = new String(Base64.getDecoder().decode(authInfo.getString("username")));
+            final int colonIdx = decoded.indexOf(":");
+            if (colonIdx != -1) {
+                final String user = decoded.substring(0, colonIdx);
+                final String pass = decoded.substring(colonIdx + 1);
+                final UsernamePasswordCredentials credentials = getCredentials((new JsonObject()).put("username", user).put("password", pass));
+                if (credentials != null) {
+                    return Optional.of(credentials);
+                }
+            }
+        } catch (RuntimeException ex) {
+            log.error("Exception during retrieval of base64 encoded credentials in username.", ex);
+        }
+        return Optional.empty();
     }
 
     @Override
