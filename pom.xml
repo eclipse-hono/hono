@@ -215,6 +215,7 @@
     <module>example</module>
     <module>jmeter</module>
     <module>legal</module>
+    <module>sdk</module>
     <module>service-base</module>
     <module>services</module>
     <module>site</module>

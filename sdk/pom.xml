@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2020 Contributors to the Eclipse Foundation
+   
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+   
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+   
+    SPDX-License-Identifier: EPL-2.0
+ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-bom</artifactId>
+        <version>1.3.0-SNAPSHOT</version>
+        <relativePath>../bom</relativePath>
+    </parent>
+
+    <artifactId>hono-sdk</artifactId>
+    <packaging>bundle</packaging>
+
+    <name>Hono SDK</name>
+    <description>A collection of templates and tools for the creation of Hono clients.</description>
+    <url>https://www.eclipse.org/hono</url>
+
+    <properties>
+        <java.level>1.8</java.level>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.hono</groupId>
+            <artifactId>hono-legal</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-mqtt</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <configuration>
+                        <source>${java.level}</source>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.level}</source>
+                    <target>${java.level}</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>verify_java8_compatibility</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- 
+                  Copy legal documents from "legal" module to "target/classes" folder
+                  so that we make sure to include legal docs in all modules.
+                 -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <!-- make sure that we include the legal docs in the bundle -->
+                        <Include-Resource>
+                            META-INF=${project.build.outputDirectory}/META-INF
+                        </Include-Resource>
+                        <Export-Package>
+                            {local-packages}
+                        </Export-Package>
+                        <Require-Capability>
+                            osgi.ee;filter:="(&amp;(osgi.ee=JavaSE)(version=${java.level}))"
+                        </Require-Capability>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

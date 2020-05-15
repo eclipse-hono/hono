@@ -1,0 +1,50 @@
+#
+# Copyright (c) 2020 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+logging:
+  level:
+    org.eclipse.hono.example: TRACE
+    org.eclipse.hono.sdk: TRACE
+
+hono:
+  server:
+    mqtt:
+      bindAddress: 0.0.0.0
+      port: 1883
+  client:
+    amqp:
+      host: hono.eclipseprojects.io
+      port: 5671
+      tlsEnabled: true
+      username: gw@DEFAULT_TENANT
+      password: gw-secret
+  demo:
+    device:
+      tenantId: DEFAULT_TENANT
+      deviceId: 4712
+      username: demo1
+      password: demo-secret
+
+
+---
+
+spring:
+  profiles: ssl
+
+hono:
+  server:
+    mqtt:
+      bindAddress: 0.0.0.0
+      port: 8883
+      keyPath: target/config/hono-demo-certs-jar/azure-protocol-gateway-key.pem
+      certPath: target/config/hono-demo-certs-jar/azure-protocol-gateway-cert.pem
+        
