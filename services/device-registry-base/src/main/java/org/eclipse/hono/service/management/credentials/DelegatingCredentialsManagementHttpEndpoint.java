@@ -26,6 +26,7 @@ import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
@@ -111,8 +112,8 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
 
         final JsonArray credentials = ctx.get(KEY_REQUEST_BODY);
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
         final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
 
         final List<CommonCredential> commonCredentials;
@@ -151,8 +152,8 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         ).start();
 
         // mandatory params
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
 
         final HttpServerResponse response = ctx.response();
 
@@ -214,12 +215,29 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
             return null;
         }
 
-        final String type = object.getString("type");
-        if (type == null || type.isEmpty()) {
-            throw new IllegalArgumentException("'type' field must be set");
+        verifyRegex(object, CredentialsConstants.FIELD_TYPE, CredentialsConstants.TYPE_VALUE_REGEX);
+        verifyRegex(object, CredentialsConstants.FIELD_AUTH_ID, CredentialsConstants.AUTH_ID_VALUE_REGEX);
+
+        final String type = object.getString(CredentialsConstants.FIELD_TYPE);
+        return decodeCredential(type, object);
+    }
+
+    /**
+     * Verify a fields exists in a JSON object and match a regular expression.
+     *
+     * @throws IllegalArgumentException If field is not set or does not match the regular expression.
+     */
+    private void verifyRegex(final JsonObject object, final String name, final String regexp) {
+        final String value = object.getString(name);
+
+        if (value == null || value.isEmpty()) {
+            throw new IllegalArgumentException(String.format("'%s' field must be set", name));
         }
 
-        return decodeCredential(type, object);
+        if (! value.matches(regexp)) {
+            throw new IllegalArgumentException(String.format("'%s' value : '%s' does not match allowed pattern: %s",
+                    name, value, regexp));
+        }
     }
 
     /**

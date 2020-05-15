@@ -15,6 +15,8 @@ package org.eclipse.hono.config;
 
 import java.util.Objects;
 
+import org.eclipse.hono.util.RegistryManagementConstants;
+
 /**
  * A POJO for configuring common properties of server components.
  *
@@ -39,6 +41,12 @@ public class ServiceConfigProperties extends ServerConfig {
      * and any value less than this minimum value is not accepted.
      */
     private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
+
+    /**
+     * The regexp to use to validate tenant IDs and device IDs.
+     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_ID_REGEX}
+     */
+    private String resourceIdRegex = RegistryManagementConstants.DEFAULT_ID_REGEX;
 
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
@@ -245,5 +253,26 @@ public class ServiceConfigProperties extends ServerConfig {
                     String.format("send time out value must be >= %sms", MIN_SEND_TIMEOUT_IN_MS));
         }
         this.sendTimeOutInMs = sendTimeOutInMs;
+    }
+
+    /**
+     * Gets the regular expression to use to validate tenant IDs and device IDs.
+     * <p>
+     *
+     * @return The regular expression as a string.
+     */
+    public final String getResourceIdRegex() {
+        return resourceIdRegex;
+    }
+
+    /**
+     * Sets the regular expression to use to validate tenant IDs and device IDs.
+     * <p>
+     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_ID_REGEX}
+     *
+     * @param regex A string containing the regular expression.
+     */
+    public void setResourceIdRegex(final String regex) {
+        this.resourceIdRegex = regex;
     }
 }

@@ -810,8 +810,10 @@ components:
          properties:
             "type":
                type: string
+               pattern: [a-z0-9-]
             "auth-id":
                type: string
+               pattern: [a-zA-Z0-9-_=.]
             "enabled":
                type: boolean
                default: true
@@ -945,6 +947,7 @@ components:
          required: true
          schema:
             type: string
+            pattern: [a-zA-Z0-9-_]
          example: DEFAULT_TENANT
 
       deviceId:
@@ -954,6 +957,7 @@ components:
          required: true
          schema:
             type: string
+            pattern: [a-zA-Z0-9-_]
          example: 4711
 
       authId:
@@ -963,6 +967,7 @@ components:
          required: true
          schema:
             type: string
+            pattern: [a-zA-Z0-9-_=.]
          example: sensor1
 
       type:
@@ -972,6 +977,7 @@ components:
          required: true
          schema:
             type: string
+            pattern: [a-z0-9-]
          example: sha-256
 
    responses:

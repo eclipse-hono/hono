@@ -121,8 +121,8 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
 
         // NOTE that the remaining code would be executed in any case, i.e.
         // even if any of the parameters retrieved from the RoutingContext were null
@@ -161,8 +161,8 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getRequestParam(PARAM_DEVICE_ID, ctx, span, true);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getRequestIdParam(PARAM_DEVICE_ID, ctx, span, true);
 
         // NOTE that the remaining code would be executed in any case, i.e.
         // even if any of the parameters retrieved from the RoutingContext were null
@@ -210,8 +210,8 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
 
         // NOTE that the remaining code would be executed in any case, i.e.
         // even if any of the parameters retrieved from the RoutingContext were null
@@ -243,8 +243,8 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
 
         // NOTE that the remaining code would be executed in any case, i.e.
         // even if any of the parameters retrieved from the RoutingContext were null

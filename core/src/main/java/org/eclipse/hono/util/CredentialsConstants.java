@@ -116,6 +116,14 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
      * The vert.x event bus address to which inbound credentials messages are published.
      */
     public static final String EVENT_BUS_ADDRESS_CREDENTIALS_IN = "credentials.in";
+    /**
+     * The regular expression to validate that the auth-id field supplied in credentials is legal.
+     */
+    public static final String AUTH_ID_VALUE_REGEX = "^[a-zA-Z0-9-=.]+$";
+    /**
+     * The regular expression to validate that the type field supplied in credentials is legal.
+     */
+    public static final String TYPE_VALUE_REGEX = "^[a-z0-9-]+$";
 
     /**
      * Request actions that belong to the Credentials API.

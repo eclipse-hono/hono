@@ -90,28 +90,33 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
 
         // ADD tenant with auto-generated ID
-        router.post(path).handler(bodyHandler);
-        router.post(path).handler(this::extractOptionalJsonPayload);
-        router.post(path).handler(this::createTenant);
+        router.post(path)
+                .handler(bodyHandler)
+                .handler(this::extractOptionalJsonPayload)
+                .handler(this::createTenant);
 
         // ADD tenant
-        router.post(pathWithTenant).handler(bodyHandler);
-        router.post(pathWithTenant).handler(this::extractOptionalJsonPayload);
-        router.post(pathWithTenant).handler(this::updatePayloadWithTenantId);
-        router.post(pathWithTenant).handler(this::createTenant);
+        router.post(pathWithTenant)
+                .handler(bodyHandler)
+                .handler(this::extractOptionalJsonPayload)
+                .handler(this::updatePayloadWithTenantId)
+                .handler(this::createTenant);
 
         // GET tenant
-        router.get(pathWithTenant).handler(this::getTenant);
+        router.get(pathWithTenant)
+                .handler(this::getTenant);
 
         // UPDATE tenant
-        router.put(pathWithTenant).handler(bodyHandler);
-        router.put(pathWithTenant).handler(this::extractRequiredJsonPayload);
-        router.put(pathWithTenant).handler(this::extractIfMatchVersionParam);
-        router.put(pathWithTenant).handler(this::updateTenant);
+        router.put(pathWithTenant)
+                .handler(bodyHandler)
+                .handler(this::extractRequiredJsonPayload)
+                .handler(this::extractIfMatchVersionParam)
+                .handler(this::updateTenant);
 
         // REMOVE tenant
-        router.delete(pathWithTenant).handler(this::extractIfMatchVersionParam);
-        router.delete(pathWithTenant).handler(this::deleteTenant);
+        router.delete(pathWithTenant)
+                .handler(this::extractIfMatchVersionParam)
+                .handler(this::deleteTenant);
     }
 
     /**
@@ -151,7 +156,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getRequestParam(PARAM_TENANT_ID, ctx, span, true);
+        final String tenantId = getRequestIdParam(PARAM_TENANT_ID, ctx, span, true);
 
         final JsonObject payload = getRequestPayload(ctx.get(KEY_REQUEST_BODY));
 
@@ -194,7 +199,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
 
         final HttpServerResponse response = ctx.response();
 
@@ -226,7 +231,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
         final JsonObject payload = getRequestPayload(ctx.get(KEY_REQUEST_BODY));
         if (payload != null) {
             payload.remove(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID);
@@ -262,7 +267,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryRequestParam(PARAM_TENANT_ID, ctx, span);
+        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
 
         logger.debug("removing tenant [{}]", tenantId);
 

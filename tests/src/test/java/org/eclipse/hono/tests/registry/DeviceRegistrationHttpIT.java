@@ -393,6 +393,22 @@ public class DeviceRegistrationHttpIT {
         }));
     }
 
+    /**
+     * Verifies that a request to create a request with non valid name fails fails.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddDeviceFailsForInvalidDeviceId(final VertxTestContext ctx) {
+
+        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
+
+        registry.registerDevice(TENANT, "device ID With spaces and $pecial chars!", null).onComplete(ctx.failing(t -> {
+            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+            ctx.completeNow();
+        }));
+    }
+
     private static void assertRegistrationInformation(
             final VertxTestContext ctx,
             final Device response,

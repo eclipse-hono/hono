@@ -82,7 +82,7 @@ public class TenantHttpIT {
     @BeforeEach
     public void setUp(final TestInfo testInfo) {
         LOG.debug("running test: {}", testInfo.getDisplayName());
-        tenantId = TENANT_PREFIX + "." + UUID.randomUUID();
+        tenantId = TENANT_PREFIX + "-" + UUID.randomUUID();
     }
 
     /**
@@ -175,6 +175,18 @@ public class TenantHttpIT {
 
         registry.addTenant(tenantId)
                 .onComplete(context.completing());
+    }
+
+    /**
+     * Verifies that the a tenant cannot be created if the tenant ID is invalid .
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsWithInvalidTenantId(final VertxTestContext context) {
+
+        registry.addTenant("tenantid$", null, HttpURLConnection.HTTP_BAD_REQUEST)
+                .setHandler(context.completing());
     }
 
     /**
