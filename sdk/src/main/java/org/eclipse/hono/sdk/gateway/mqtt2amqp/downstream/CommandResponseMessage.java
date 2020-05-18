@@ -60,7 +60,7 @@ public final class CommandResponseMessage extends DownstreamMessage {
      *
      * @param tenantId The tenant.
      * @param deviceId The device that sends the response.
-     * @return The command reply address as expected by Hono's Command & Control API
+     * @return The command reply address as expected by Hono's<em>Command &amp; Control API</em>.
      */
     public String getTargetAddress(final String tenantId, final String deviceId) {
         return String.format("%s/%s/%s/%s", CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, deviceId,
