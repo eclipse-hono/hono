@@ -168,6 +168,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         Objects.requireNonNull(command);
 
         final Span currentSpan = newChildSpan(null, command);
+        TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
 
         final Promise<BufferResult> resultTracker = Promise.promise();
 
@@ -207,6 +208,7 @@ public class CommandClientImpl extends AbstractRequestResponseClient<BufferResul
         Objects.requireNonNull(command);
 
         final Span currentSpan = newChildSpan(null, command);
+        TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
 
         if (sender.isOpen()) {
             final Promise<BufferResult> responseTracker = Promise.promise();

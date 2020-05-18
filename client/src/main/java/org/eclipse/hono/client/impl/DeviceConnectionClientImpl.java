@@ -25,6 +25,7 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.DeviceConnectionClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionResult;
@@ -177,6 +178,8 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
         // using FollowsFrom instead of ChildOf reference here as invoking methods usually don't depend and wait on the result of this method
         final Span currentSpan = newFollowingSpan(context, "set last known gateway for device");
+        TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
         final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
         createAndSendRequest(
                 DeviceConnectionConstants.DeviceConnectionAction.SET_LAST_GATEWAY.getSubject(),
@@ -210,6 +213,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
         final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
 
         final Span currentSpan = newChildSpan(context, "get last known gateway for device");
+        TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
         createAndSendRequest(
                 DeviceConnectionConstants.DeviceConnectionAction.GET_LAST_GATEWAY.getSubject(),
                 createDeviceIdProperties(deviceId),
@@ -240,6 +244,8 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
         properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
         final Span currentSpan = newChildSpan(context, "remove command handling adapter instance");
+        TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
         final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
         createAndSendRequest(
                 DeviceConnectionConstants.DeviceConnectionAction.REMOVE_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
@@ -275,6 +281,9 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
         properties.put(MessageHelper.APP_PROPERTY_UPDATE_ONLY, updateOnly);
 
         final Span currentSpan = newChildSpan(context, "set command handling adapter instance");
+        TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        currentSpan.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
         final Promise<DeviceConnectionResult> resultTracker = Promise.promise();
         createAndSendRequest(
                 DeviceConnectionConstants.DeviceConnectionAction.SET_CMD_HANDLING_ADAPTER_INSTANCE.getSubject(),
@@ -304,6 +313,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
         payload.put(DeviceConnectionConstants.FIELD_GATEWAY_IDS, new JsonArray(viaGateways));
 
         final Span currentSpan = newChildSpan(context, "get command handling adapter instances");
+        TracingHelper.setDeviceTags(currentSpan, getTenantId(), deviceId);
         createAndSendRequest(
                 DeviceConnectionConstants.DeviceConnectionAction.GET_CMD_HANDLING_ADAPTER_INSTANCES.getSubject(),
                 properties,
