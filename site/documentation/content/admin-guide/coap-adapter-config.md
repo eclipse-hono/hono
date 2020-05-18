@@ -42,7 +42,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_COAP_KEY_STORE_PATH`<br>`--hono.coap.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the protocol adapter should use for authenticating to clients. Either this option or the `HONO_COAP_KEY_PATH` and `HONO_COAP_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_COAP_MAX_CONNECTIONS`<br>`--hono.coap.maxConnections` | no | `0` | The maximum number of concurrent DTLS connections that the protocol adapter should accept. If set to `0`, the protocol adapter determines a reasonable value based on the available resources like memory and CPU. |
 | `HONO_COAP_MAX_PAYLOAD_SIZE`<br>`--hono.coap.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming CoAP request's body in bytes. Requests with a larger body size are rejected with a 4.13 `Request entity too large` response. |
-| `HONO_COAP_MESSAGE_OFFLOADING_ENABLED`<br>`--hono.coap.messageOffloadingEnabled` | no | true | Enables to clear payload and serilaized messages kept for deduplication in order to reduce the heap consumpion. Experimental. |
+| `HONO_COAP_MESSAGE_OFFLOADING_ENABLED`<br>`--hono.coap.messageOffloadingEnabled` | no | true | Enables to clear payload and serialized messages kept for deduplication in order to reduce the heap consumption. Experimental. |
 | `HONO_COAP_NETWORK_CONFIG`<br>`--hono.coap.networkConfig` | no | - | The absolute path to a Californium properties file containing network configuration properties that should be used for the secure CoAP port. If not set, Californium's default properties will be used. |
 | `HONO_COAP_PORT`<br>`--hono.coap.port` | no | - | The secure port that the protocol adapter should listen on.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_COAP_TENANT_IDLE_TIMEOUT`<br>`--hono.coap.tenantIdleTimeout` | no | `0ms` | The duration after which the protocol adapter removes local state of the tenant (e.g. open AMQP links) with an amount and a unit, e.g. `2h` for 2 hours. See the [Spring Boot documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config-conversion-duration) for an explanation of the format. The value `0ms` disables the timeout. |
@@ -93,7 +93,7 @@ Setting this variable to `0.0.0.0` will let the port being bound to **all** netw
 
 {{% note %}}
 The insecure port will only be bound if the `HONO_COAP_AUTHENTICATION_REQUIRED` variable is set to `false` because CoAP authenticates clients (devices) as
-part of the DTLS handshake. Thus, requiring devices to authenticate effectively rules out setting up an non-DTLS secured port.
+part of the DTLS handshake. Thus, requiring devices to authenticate effectively rules out setting up a non-DTLS secured port.
 {{% /note %}}
 
 

@@ -6,7 +6,7 @@ This module provides some example key stores containing public/private key pairs
 
 ### Provided Keys and Certificates
 
-You can find the example keys, certificates and key stores in the `certs` folder. They have been generated using teh `create_certs.sh` shell script. You can run that script from the command line in order to either *refresh* the example keys (i.e. extend their validity period) or you can adapt the script to your needs and create your own custom keys and certificates to be used with your Hono installation.
+You can find the example keys, certificates and key stores in the `certs` folder. They have been generated using the `create_certs.sh` shell script. You can run that script from the command line in order to either *refresh* the example keys (i.e. extend their validity period) or you can adapt the script to your needs and create your own custom keys and certificates to be used with your Hono installation.
 
 The script creates the following keys and certificates:
 

@@ -1,13 +1,13 @@
 This folder contains the content of the Hono website.
 It is built using the [Hugo template system](https://gohugo.io).
-The website consists of the *homepage *and the *documentation*, which are two separate hugo projects. 
+The website consists of the *homepage* and the *documentation*, which are two separate hugo projects. 
 
 # Links between Homepage and Documentation
 
 There are two Hugo shortcodes available for creating HTML links between the projects:
 
 * use the `doclink` shortcode for creating a link to the documentation from the homepage
-* use the `homelink` shortcode for creating a ling to the homepage from the documentation
+* use the `homelink` shortcode for creating a link to the homepage from the documentation
 
 Both shortcodes accept a single (unnamed) parameter which is the URL of the link target relative to the respective document base.
 A link from the homepage to the HTTP adapter user guide can be created using the following markdown:

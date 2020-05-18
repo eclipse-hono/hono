@@ -105,7 +105,7 @@ Responses from the Device Connection service are never cached, so the properties
 
 #### Direct Connection to Data Grid
 
-Protocol adapters can alternatively be configured to directly access an data grid for storing and retrieving
+Protocol adapters can alternatively be configured to directly access a data grid for storing and retrieving
 device connection information using [Infinispan](https://infinispan.org)'s Hotrod protocol.
 This has the advantage of saving the network hop to the Device Connection service. However,
 this is only beneficial if the Device Connection service implementation itself uses a remote service (like a data grid) for
