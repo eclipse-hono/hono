@@ -13,13 +13,17 @@
 package org.eclipse.hono.adapter.amqp.impl;
 
 import java.net.HttpURLConnection;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
@@ -92,6 +96,8 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using AMQP.
  */
 public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapterBase<AmqpAdapterProperties> {
+
+    private static final String KEY_CONNECTION_LOSS_HANDLERS = "connectionLossHandlers";
 
     // These values should be made configurable.
     /**
@@ -298,12 +304,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         con.disconnectHandler(lostConnection -> {
             log.debug("lost connection to device [container: {}]", con.getRemoteContainer());
-            Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
+            onConnectionLoss(con);
             decrementConnectionCount(con);
         });
         con.closeHandler(remoteClose -> {
             handleRemoteConnectionClose(con, remoteClose);
-            Optional.ofNullable(getConnectionLossHandler(con)).ifPresent(handler -> handler.handle(null));
+            onConnectionLoss(con);
             decrementConnectionCount(con);
         });
 
@@ -331,6 +337,18 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 processRemoteOpen(remoteOpen.result());
             }
         });
+    }
+
+    private void onConnectionLoss(final ProtonConnection con) {
+        final Span span = newSpan("handle closing of command connection", getAuthenticatedDevice(con),
+                getTraceSamplingPriority(con));
+        @SuppressWarnings("rawtypes")
+        final List<Future> handlerResults = getConnectionLossHandlers(con).stream().map(handler -> handler.apply(span))
+                .collect(Collectors.toList());
+        CompositeFuture.join(handlerResults).recover(thr -> {
+            Tags.ERROR.set(span, true);
+            return Future.failedFuture(thr);
+        }).onComplete(v -> span.finish());
     }
 
     private void processRemoteOpen(final ProtonConnection con) {
@@ -507,9 +525,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final Device authenticatedDevice = conn.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
                 Device.class);
-        final OptionalInt traceSamplingPriority = Optional
-                .ofNullable(conn.attachments().get(AmqpAdapterConstants.KEY_TRACE_SAMPLING_PRIORITY, OptionalInt.class))
-                .orElse(OptionalInt.empty());
+        final OptionalInt traceSamplingPriority = getTraceSamplingPriority(conn);
 
         final Span span = newSpan("attach receiver", authenticatedDevice, traceSamplingPriority);
 
@@ -704,9 +720,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         final Device authenticatedDevice = connection.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE,
                 Device.class);
-        final OptionalInt traceSamplingPriority = Optional.ofNullable(
-                connection.attachments().get(AmqpAdapterConstants.KEY_TRACE_SAMPLING_PRIORITY, OptionalInt.class))
-                .orElse(OptionalInt.empty());
+        final OptionalInt traceSamplingPriority = getTraceSamplingPriority(connection);
 
         final Span span = newSpan("attach Command receiver", authenticatedDevice, traceSamplingPriority);
 
@@ -715,14 +729,17 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         .map(validAddress -> {
             // validAddress ALWAYS contains the tenant and device ID
             if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
-                return openCommandSenderLink(sender, validAddress, authenticatedDevice, span, traceSamplingPriority)
+                return openCommandSenderLink(connection, sender, validAddress, authenticatedDevice, span, traceSamplingPriority)
                         .map(consumer -> {
-                            setConnectionLossHandler(connection, connectionLost -> {
+                            setConnectionLossHandler(connection, validAddress.toString(), connectionLossSpan -> {
                                 // do not use the above created span for onCommandConnectionClose()
                                 // because that span will (usually) be finished long before the
                                 // connection is closed/lost
-                                onCommandConnectionClose(validAddress.getTenantId(), validAddress.getResourceId(),
-                                        authenticatedDevice, consumer, traceSamplingPriority);
+                                final Future<ProtonDelivery> sendEventFuture = sendDisconnectedTtdEvent(validAddress.getTenantId(), 
+                                        validAddress.getResourceId(), authenticatedDevice, connectionLossSpan.context());
+                                final Future<Void> closeConsumerFuture = consumer.close(connectionLossSpan.context());
+
+                                return CompositeFuture.join(sendEventFuture, closeConsumerFuture).mapEmpty();
                             });
                             return consumer;
                         });
@@ -749,20 +766,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
     }
 
-    private void onCommandConnectionClose(final String tenantId, final String deviceId, final Device authenticatedDevice,
-            final ProtocolAdapterCommandConsumer consumer, final OptionalInt traceSamplingPriority) {
-
-        final Span span = newSpan("handle closing of command connection", authenticatedDevice, traceSamplingPriority);
-        final Future<ProtonDelivery> sendEventFuture = sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice,
-                span.context());
-        final Future<Void> closeConsumerFuture = consumer.close(span.context());
-
-        CompositeFuture.join(sendEventFuture, closeConsumerFuture).recover(thr -> {
-            Tags.ERROR.set(span, true);
-            return Future.failedFuture(thr);
-        }).onComplete(v -> span.finish());
-    }
-
     private Span newSpan(final String operationName, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
         return newSpan(operationName, authenticatedDevice, traceSamplingPriority, null);
@@ -785,6 +788,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private Future<ProtocolAdapterCommandConsumer> openCommandSenderLink(
+            final ProtonConnection connection,
             final ProtonSender sender,
             final ResourceIdentifier address,
             final Device authenticatedDevice,
@@ -802,6 +806,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Handler<AsyncResult<ProtonSender>> detachHandler = link -> {
                 final Span detachHandlerSpan = newSpan("detach Command receiver", authenticatedDevice,
                         traceSamplingPriority);
+                removeConnectionLossHandler(connection, address.toString());
                 sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, detachHandlerSpan.context());
                 onLinkDetach(sender);
                 consumer.close(detachHandlerSpan.context())
@@ -1250,21 +1255,35 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
     }
 
-    private static void setConnectionLossHandler(final ProtonConnection con, final Handler<Void> handler) {
-
-        con.attachments().set("connectionLossHandler", Handler.class, handler);
+    private static void setConnectionLossHandler(final ProtonConnection con, final String key, final Function<Span, Future<Void>> handler) {
+        @SuppressWarnings("unchecked")
+        final Map<String, Function<Span, Future<Void>>> handlers = Optional
+                .ofNullable(con.attachments().get(KEY_CONNECTION_LOSS_HANDLERS, Map.class))
+                .orElse(new HashMap<>());
+        handlers.put(key, handler);
+        con.attachments().set(KEY_CONNECTION_LOSS_HANDLERS, Map.class, handlers);
     }
 
-    @SuppressWarnings("unchecked")
-    private static Handler<Void> getConnectionLossHandler(final ProtonConnection con) {
+    private static Collection<Function<Span, Future<Void>>> getConnectionLossHandlers(final ProtonConnection con) {
+        @SuppressWarnings("unchecked")
+        final Map<String, Function<Span, Future<Void>>> handlers = con.attachments().get(KEY_CONNECTION_LOSS_HANDLERS, Map.class);
+        return handlers != null ? handlers.values() : Collections.emptyList();
+    }
 
-        return con.attachments().get("connectionLossHandler", Handler.class);
+    private static boolean removeConnectionLossHandler(final ProtonConnection con, final String key) {
+        @SuppressWarnings("unchecked")
+        final Map<String, Function<Span, Future<Void>>> handlers = con.attachments().get(KEY_CONNECTION_LOSS_HANDLERS, Map.class);
+        return handlers != null && handlers.remove(key) != null;
     }
 
     private static Device getAuthenticatedDevice(final ProtonConnection con) {
-        return Optional.ofNullable(con.attachments())
-                .map(attachments -> attachments.get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class))
+        return Optional.ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class))
                 .orElse(null);
+    }
+
+    private static OptionalInt getTraceSamplingPriority(final ProtonConnection con) {
+        return Optional.ofNullable(con.attachments().get(AmqpAdapterConstants.KEY_TRACE_SAMPLING_PRIORITY, OptionalInt.class))
+                .orElse(OptionalInt.empty());
     }
 
     private Future<Void> checkConnectionLimitForAdapter() {
