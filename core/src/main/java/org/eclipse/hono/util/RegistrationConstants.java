@@ -51,6 +51,12 @@ public final class RegistrationConstants extends RequestResponseApiConstants {
     public static final String FIELD_VIA = "via";
 
     /**
+     * The name of the mapper used. This mapper should be configured for the adapter and can be referenced using
+     * this field.
+     */
+    public static final String FIELD_MAPPER = "mapper";
+
+    /**
      * The name of the Device Registration API endpoint.
      */
     public static final String REGISTRATION_ENDPOINT = "registration";

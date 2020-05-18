@@ -14,6 +14,8 @@
 package org.eclipse.hono.config;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -34,6 +36,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private long eventLoopBlockedCheckTimeout = 5000L;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
+    private Map<String, MapperEndpoint> mapperEndpoints = new HashMap<>();
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined
@@ -228,5 +231,29 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      */
     public void setTenantIdleTimeout(final Duration tenantIdleTimeout) {
         this.tenantIdleTimeout = Objects.requireNonNull(tenantIdleTimeout);
+    }
+
+    /**
+     * Sets the configured mappers for this adapter
+     * <p>
+     * Setting this property to an empty hashMap will disable mapping for this adapter.
+     *
+     * @param mapperEndpoints The new hashMap with mapper endpoints
+     * @throws NullPointerException if parameter is {@code null}.
+     */
+    public final void setMapperEndpoints(final Map<String, MapperEndpoint> mapperEndpoints) {
+        Objects.requireNonNull(mapperEndpoints);
+        this.mapperEndpoints.clear();
+        this.mapperEndpoints.putAll(mapperEndpoints);
+    }
+
+    /**
+     * Gets the configured mapper for the given key.
+     *
+     * @param key The key to identify the mapper
+     * @return the mapperEndpoint. If not found, will return {@code null}.
+     */
+    public final MapperEndpoint getMapperEndpoint(final String key) {
+        return mapperEndpoints.get(key);
     }
 }

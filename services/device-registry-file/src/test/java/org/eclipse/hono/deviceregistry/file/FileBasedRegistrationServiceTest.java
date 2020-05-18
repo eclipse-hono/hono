@@ -303,6 +303,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
         final Device device2 = new Device();
         device2.setEnabled(false);
         device2.setVia(Arrays.asList(deviceId1));
+        device2.setMapper("mapper");
         devices.put(UUID.randomUUID().toString(), device2);
 
         // run test
