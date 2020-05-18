@@ -15,9 +15,14 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+
 import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.junit.jupiter.api.Test;
+
+import io.vertx.ext.web.RoutingContext;
 
 /**
  * Verifies behavior of {@link ThingsNetworkProvider}.
@@ -36,16 +41,40 @@ public class ThingsNetworkProviderTest extends LoraProviderTestBase<ThingsNetwor
     /**
      * Test an uplink message with a null payload.
      *
-     * @throws Exception if anything goes wrong.
+     * @throws IOException If the file containing the example message could not be loaded.
      */
     @Test
-    public void testGetMessageParsesUplinkMessagePropertiesWithNullPayload() throws Exception {
+    public void testGetMessageParsesUplinkMessagePropertiesWithNullPayload() throws IOException {
 
-        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) this.provider.getMessage(LoraTestUtil.loadTestFile(this.provider.getProviderName(), LoraMessageType.UPLINK, "with-null-payload"));
+        final RoutingContext requestContext = getRequestContext(LoraMessageType.UPLINK, "with-null-payload");
+        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(requestContext);
 
         assertThat(loraMessage.getDevEUIAsString()).isEqualTo("0102030405060708");
         assertThat(loraMessage.getPayload()).isNotNull();
         assertThat(loraMessage.getPayload().length()).isEqualTo(0);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage loraMessage) {
+
+        final LoraMetaData metaData = loraMessage.getMetaData();
+        assertThat(metaData.getFunctionPort()).isEqualTo(1);
+        assertThat(metaData.getFrameCount()).isEqualTo(9);
+        assertThat(metaData.getSpreadingFactor()).isEqualTo(7);
+        assertThat(metaData.getBandwidth()).isEqualTo(125);
+        assertThat(metaData.getFrequency()).isEqualTo(868.1);
+        assertThat(metaData.getCodingRateIdentifier()).isEqualTo("4/5");
+
+        assertThat(metaData.getGatewayInfo()).hasSize(1);
+        assertThat(metaData.getGatewayInfo().get(0).getGatewayId()).isEqualTo("0203040506070809");
+        assertThat(metaData.getGatewayInfo().get(0).getChannel()).isEqualTo(0);
+        assertThat(metaData.getGatewayInfo().get(0).getSnr()).isEqualTo(5.0);
+        assertThat(metaData.getGatewayInfo().get(0).getRssi()).isEqualTo(-25);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getLongitude()).isEqualTo(9.1934);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getLatitude()).isEqualTo(53.1088);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getAltitude()).isEqualTo(90.0);
+    }
 }

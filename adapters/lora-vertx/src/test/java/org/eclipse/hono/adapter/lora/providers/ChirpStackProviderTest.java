@@ -14,17 +14,9 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.util.Map;
-
-import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
-import org.junit.jupiter.api.Test;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
 /**
  * Verifies behavior of {@link ChirpStackProvider}.
@@ -41,30 +33,25 @@ public class ChirpStackProviderTest extends LoraProviderTestBase<ChirpStackProvi
     }
 
     /**
-     * Verifies that properties are parsed correctly from the lora message.
+     * {@inheritDoc}
      */
-    @Test
-    public void testGetMessageParsesProperties() {
+    @Override
+    protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage loraMessage) {
 
-        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(uplinkMessageBuffer);
+        final LoraMetaData metaData = loraMessage.getMetaData();
+        assertThat(metaData.getFunctionPort()).isEqualTo(5);
+        assertThat(metaData.getFrameCount()).isEqualTo(10);
+        assertThat(metaData.getSpreadingFactor()).isEqualTo(11);
+        assertThat(metaData.getBandwidth()).isEqualTo(125);
+        assertThat(metaData.getFrequency()).isEqualTo(868.1);
+        assertThat(metaData.getDataRateIdentifier()).isEqualTo("1");
 
-        final Map<String, Object> normalizedData = loraMessage.getNormalizedData();
-        assertThat(normalizedData).contains(Map.entry(LoraConstants.APP_PROPERTY_FUNCTION_PORT, 5));
-        assertThat(normalizedData).contains(Map.entry(LoraConstants.FRAME_COUNT, 10));
-        assertThat(normalizedData).contains(Map.entry(LoraConstants.APP_PROPERTY_SPREADING_FACTOR, 11));
-        assertThat(normalizedData).contains(Map.entry(LoraConstants.APP_PROPERTY_BANDWIDTH, 125));
-        assertThat(normalizedData).contains(Map.entry(LoraConstants.CODING_RATE, "4/5"));
-        assertThat(normalizedData).contains(Map.entry(LoraConstants.FREQUENCY, 868100000));
-
-        final String gatewaysString = (String) normalizedData.get(LoraConstants.GATEWAYS);
-        final JsonArray gateways = (JsonArray) Json.decodeValue(gatewaysString);
-        final JsonObject gateway = gateways.getJsonObject(0);
-
-        assertEquals(4.9144401, gateway.getDouble(LoraConstants.APP_PROPERTY_FUNCTION_LONGITUDE));
-        assertEquals(52.3740364, gateway.getDouble(LoraConstants.APP_PROPERTY_FUNCTION_LATITUDE));
-        assertEquals("0303030303030303", gateway.getString(LoraConstants.GATEWAY_ID));
-        assertEquals(9, gateway.getDouble(LoraConstants.APP_PROPERTY_SNR));
-        assertEquals(5, gateway.getInteger(LoraConstants.APP_PROPERTY_CHANNEL));
-        assertEquals(-48, gateway.getInteger(LoraConstants.APP_PROPERTY_RSS));
+        assertThat(metaData.getGatewayInfo()).hasSize(1);
+        assertThat(metaData.getGatewayInfo().get(0).getGatewayId()).isEqualTo("0303030303030303");
+        assertThat(metaData.getGatewayInfo().get(0).getSnr()).isEqualTo(9.0);
+        assertThat(metaData.getGatewayInfo().get(0).getRssi()).isEqualTo(-48);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getLongitude()).isEqualTo(4.9144401);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getLatitude()).isEqualTo(52.3740364);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getAltitude()).isEqualTo(10.5);
     }
 }

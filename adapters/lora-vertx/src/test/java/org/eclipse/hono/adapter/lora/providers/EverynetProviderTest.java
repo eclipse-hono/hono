@@ -13,6 +13,11 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.eclipse.hono.adapter.lora.LoraMetaData;
+import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
+
 /**
  * Verifies behavior of {@link EverynetProvider}.
  */
@@ -24,5 +29,28 @@ public class EverynetProviderTest extends LoraProviderTestBase<EverynetProvider>
     @Override
     protected EverynetProvider newProvider() {
         return new EverynetProvider();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void assertMetaDataForUplinkMessage(final UplinkLoraMessage loraMessage) {
+
+        final LoraMetaData metaData = loraMessage.getMetaData();
+        assertThat(metaData.getFunctionPort()).isEqualTo(7);
+        assertThat(metaData.getFrameCount()).isEqualTo(8);
+        assertThat(metaData.getFrequency()).isEqualTo(868.1);
+        assertThat(metaData.getSpreadingFactor()).isEqualTo(12);
+        assertThat(metaData.getBandwidth()).isEqualTo(125);
+        assertThat(metaData.getDataRateIdentifier()).isEqualTo("0");
+
+        assertThat(metaData.getGatewayInfo()).hasSize(1);
+        assertThat(metaData.getGatewayInfo().get(0).getChannel()).isEqualTo(0);
+        assertThat(metaData.getGatewayInfo().get(0).getRssi()).isEqualTo(-100);
+        assertThat(metaData.getGatewayInfo().get(0).getSnr()).isEqualTo(5.0);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getLongitude()).isEqualTo(30.258167266845703);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getLatitude()).isEqualTo(59.890445709228516);
+        assertThat(metaData.getGatewayInfo().get(0).getLocation().getAltitude()).isNull();
     }
 }

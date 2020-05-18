@@ -44,9 +44,8 @@ public final class LoraTestUtil {
      * @param classifiers additional classifiers of the test file.
      * @return the contents of the file.
      * @throws IOException if the test file could not be loaded.
-     * @throws URISyntaxException if the test file could not be loaded.
      */
-    public static Buffer loadTestFile(final String providerName, final LoraMessageType type, final String... classifiers) throws IOException, URISyntaxException {
+    public static Buffer loadTestFile(final String providerName, final LoraMessageType type, final String... classifiers) throws IOException {
         Objects.requireNonNull(providerName);
         Objects.requireNonNull(type);
         final String name = Stream
@@ -54,8 +53,13 @@ public final class LoraTestUtil {
                         Stream.of(providerName, type.name().toLowerCase()),
                         Arrays.stream(classifiers))
                 .collect(Collectors.joining("."));
-        final URL location = LoraTestUtil.class.getResource(String.format("/payload/%s.json", name));
-        return Buffer.buffer(Files.readAllBytes(Paths.get(location.toURI())));
+        try {
+            final URL location = LoraTestUtil.class.getResource(String.format("/payload/%s.json", name));
+            return Buffer.buffer(Files.readAllBytes(Paths.get(location.toURI())));
+        } catch (final URISyntaxException e) {
+            // cannot happen because the URL is created by the class loader
+            return null;
+        }
     }
 
 }

@@ -23,6 +23,7 @@ public class LoraConstants {
      * which an uploaded message has originally been received.
      */
     public static final String APP_PROPERTY_ORIG_LORA_PROVIDER = "orig_lora_provider";
+
     public static final String FIELD_PSK = "psk";
     public static final String FIELD_VIA = "via";
     public static final String FIELD_AUTH_ID = "auth-id";
@@ -37,8 +38,9 @@ public class LoraConstants {
     public static final String EMPTY = "";
     public static final String CONTENT_TYPE_LORA_POST_FIX = "+json";
     public static final String CONTENT_TYPE_LORA_BASE = "application/vnd.eclipse-hono.lora.";
-    public static final String NORMALIZED_PROPERTIES = "normalized_properties";
+    public static final String META_DATA = "meta_data";
     public static final String ADDITIONAL_DATA = "additional_data";
+
     public static final String APP_PROPERTY_RSS = "rss";
     public static final String APP_PROPERTY_TX_POWER = "tx_power";
     public static final String APP_PROPERTY_CHANNEL = "channel";
@@ -47,15 +49,19 @@ public class LoraConstants {
     public static final String APP_PROPERTY_BANDWIDTH = "bandwidth";
     public static final String APP_PROPERTY_SNR = "snr";
     public static final String APP_PROPERTY_FUNCTION_PORT = "function_port";
+    public static final String APP_PROPERTY_FUNCTION_ALTITUDE = "altitude";
     public static final String APP_PROPERTY_FUNCTION_LATITUDE = "latitude";
     public static final String APP_PROPERTY_FUNCTION_LONGITUDE = "longitude";
     public static final String APP_PROPERTY_MIC = "mic";
+    public static final String ADAPTIVE_DATA_RATE_ENABLED = "adr_enabled";
     public static final String GATEWAYS = "gateways";
     public static final String GATEWAY_ID = "gateway_id";
     public static final String DATA_RATE = "data_rate";
+    public static final String DATA_RATE_ID = "data_rate_id";
     public static final String CODING_RATE = "coding_rate";
     public static final String FREQUENCY = "frequency";
     public static final String FRAME_COUNT = "frame_count";
+    public static final String LOCATION = "location";
 
     private LoraConstants() {
         // prevent instantiation

@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
+import org.eclipse.hono.adapter.lora.Location;
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 
@@ -70,6 +71,58 @@ public class LoraUtils {
                 .filter(expectedType::isInstance)
                 .map(expectedType::cast);
     }
+
+    /**
+     * Creates a new location for coordinates.
+     *
+     * @param longitude The longitude.
+     * @param latitude The latitude.
+     * @param altitude The altitude.
+     * @return The location or {@code null} if longitude or latitude cannot be parsed into a double.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static Location newLocationFromString(final Optional<String> longitude, final Optional<String> latitude, final Optional<String> altitude) {
+
+        Objects.requireNonNull(longitude);
+        Objects.requireNonNull(latitude);
+        Objects.requireNonNull(altitude);
+
+        if (longitude.isEmpty() || latitude.isEmpty()) {
+            return null;
+        } else {
+            try {
+                final Double lon = Double.valueOf(longitude.get());
+                final Double lat = Double.valueOf(latitude.get());
+                final Double alt = altitude.map(Double::valueOf).orElse(null);
+                return new Location(lon, lat, alt);
+            } catch (final NumberFormatException e) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Creates a new location for coordinates.
+     *
+     * @param longitude The longitude.
+     * @param latitude The latitude.
+     * @param altitude The altitude.
+     * @return The location or {@code null} if longitude or latitude are empty.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static Location newLocation(final Optional<Double> longitude, final Optional<Double> latitude, final Optional<Double> altitude) {
+
+        Objects.requireNonNull(longitude);
+        Objects.requireNonNull(latitude);
+        Objects.requireNonNull(altitude);
+
+        if (longitude.isEmpty() || latitude.isEmpty()) {
+            return null;
+        } else {
+            return new Location(longitude.get(), latitude.get(), altitude.orElse(null));
+        }
+    }
+
 
     /**
      * Extracts a property from a JSON object, applies a normalization function to

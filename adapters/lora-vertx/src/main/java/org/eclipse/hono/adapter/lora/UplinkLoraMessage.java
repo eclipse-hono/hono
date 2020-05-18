@@ -14,9 +14,6 @@
 
 package org.eclipse.hono.adapter.lora;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import com.google.common.io.BaseEncoding;
@@ -34,7 +31,7 @@ public class UplinkLoraMessage implements LoraMessage {
     private final byte[] devEui;
     private final String devEuiAsString;
     private Buffer payload;
-    private Map<String, Object> normalizedData = new HashMap<>();
+    private LoraMetaData metaData = null;
     private JsonObject additionalData;
 
     /**
@@ -110,26 +107,21 @@ public class UplinkLoraMessage implements LoraMessage {
     }
 
     /**
-     * Gets the normalized data contained in this message.
+     * Gets the meta data contained in this message.
      *
-     * @return The normalized data.
+     * @return The meta data.
      */
-    public final Map<String, Object> getNormalizedData() {
-        return Collections.unmodifiableMap(normalizedData);
+    public final LoraMetaData getMetaData() {
+        return metaData;
     }
 
     /**
-     * Sets the normalized data contained in this message.
+     * Sets the meta data contained in this message.
      *
-     * @param data The normalized data.
-     * @throws NullPointerException if data is {@code null}.
+     * @param data The meta data.
      */
-    public final void setNormalizedData(final Map<String, Object> data) {
-        Objects.requireNonNull(data);
-        synchronized (normalizedData) {
-            normalizedData.clear();
-            normalizedData.putAll(data);
-        }
+    public final void setMetaData(final LoraMetaData data) {
+        this.metaData = data;
     }
 
     /**
