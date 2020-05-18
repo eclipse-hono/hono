@@ -22,8 +22,10 @@ import java.util.Optional;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.LoraMessage;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
+import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.auth.Device;
@@ -47,21 +49,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
-import io.opentracing.noop.NoopSpan;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tag;
-import io.opentracing.tag.Tags;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.ChainAuthHandler;
 
 
 /**
- * A Vert.x based Hono protocol adapter for receiving HTTP push messages from and sending commands to LoRa backends.
+ * A Vert.x based protocol adapter for receiving HTTP push messages from a LoRa provider's network server.
  */
 public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<LoraProtocolAdapterProperties> {
 
@@ -69,7 +67,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private static final String ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE = "missing or unsupported content-type";
     private static final String ERROR_MSG_INVALID_PAYLOAD = "invalid payload";
-    private static final String ERROR_MSG_JSON_MISSING_REQUIRED_FIELDS = "JSON Body does not contain required fields";
     private static final Tag<String> TAG_LORA_DEVICE_ID = new StringTag("lora_device_id");
     private static final Tag<String> TAG_LORA_PROVIDER = new StringTag("lora_provider");
 
@@ -84,9 +81,11 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
      * @param providers The providers.
      * @throws NullPointerException if providers is {@code null}.
      */
-    @Autowired
+    @Autowired(required = false)
     public void setLoraProviders(final List<LoraProvider> providers) {
-        this.loraProviders.addAll(Objects.requireNonNull(providers));
+        Objects.requireNonNull(providers);
+        this.loraProviders.clear();
+        this.loraProviders.addAll(providers);
     }
 
     /**
@@ -124,15 +123,16 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         // the LoraWAN adapter always requires network providers to authenticate
         setupAuthorization(router);
 
-        for (final LoraProvider current : loraProviders) {
-            router.route(HttpMethod.OPTIONS, current.pathPrefix()).handler(this::handleOptionsRoute);
+        for (final LoraProvider provider : loraProviders) {
+            router.route(HttpMethod.OPTIONS, provider.pathPrefix())
+                .handler(this::handleOptionsRoute);
 
-            router.route(current.acceptedHttpMethod(), current.pathPrefix()).consumes(current.acceptedContentType())
-                    .handler(ctx -> this.handleProviderRoute(ctx, current));
+            router.route(provider.acceptedHttpMethod(), provider.pathPrefix())
+                .consumes(provider.acceptedContentType())
+                .handler(ctx -> this.handleProviderRoute(ctx, provider));
 
-            router.route(current.acceptedHttpMethod(), current.pathPrefix()).handler(ctx -> {
-                TracingHelper.logError(getCurrentSpan(ctx), "Incoming request does not contain proper content type");
-                LOG.debug("Incoming request does not contain proper content type. Will return 400.");
+            router.route(provider.acceptedHttpMethod(), provider.pathPrefix()).handler(ctx -> {
+                LOG.debug("request does not contain content-type header, will return 400 ...");
                 handle400(ctx, ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE);
             });
         }
@@ -156,141 +156,126 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     @SuppressWarnings("unchecked")
     @Override
     protected void customizeDownstreamMessage(final Message downstreamMessage, final RoutingContext ctx) {
+
         MessageHelper.addProperty(downstreamMessage, LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER,
                 ctx.get(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER));
 
-        final Object normalizedProperties = ctx.get(LoraConstants.NORMALIZED_PROPERTIES);
-        if (normalizedProperties instanceof Map) {
-            for (final Map.Entry<String, Object> entry:
-                 ((Map<String, Object>) normalizedProperties).entrySet()) {
-                MessageHelper.addProperty(downstreamMessage, entry.getKey(), entry.getValue());
-            }
-        }
+        Optional.ofNullable(ctx.get(LoraConstants.NORMALIZED_PROPERTIES))
+            .filter(Map.class::isInstance)
+            .map(Map.class::cast)
+            .ifPresent(properties -> {
+                ((Map<String, Object>) properties).entrySet()
+                    .forEach(entry -> MessageHelper.addProperty(downstreamMessage, entry.getKey(), entry.getValue()));
+            });
 
-        final Object additionalData = ctx.get(LoraConstants.ADDITIONAL_DATA);
-        if (additionalData != null) {
-            MessageHelper.addProperty(downstreamMessage, LoraConstants.ADDITIONAL_DATA, additionalData);
-        }
-
+        Optional.ofNullable(ctx.get(LoraConstants.ADDITIONAL_DATA))
+            .ifPresent(data -> MessageHelper.addProperty(downstreamMessage, LoraConstants.ADDITIONAL_DATA, data));
     }
 
     void handleProviderRoute(final RoutingContext ctx, final LoraProvider provider) {
 
-        LOG.debug("Handling route for provider with path: [{}]", provider.pathPrefix());
-        final Span currentSpan = getCurrentSpan(ctx);
-        currentSpan.setTag(TAG_LORA_PROVIDER, provider.getProviderName());
+        LOG.debug("processing request from provider [name: {}, URI: {}", provider.getProviderName(), provider.pathPrefix());
+        final Span currentSpan = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                "process message",
+                getClass().getSimpleName())
+                .start();
+
+        TAG_LORA_PROVIDER.set(currentSpan, provider.getProviderName());
         ctx.put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, provider.getProviderName());
 
         if (ctx.user() instanceof Device) {
             final Device gatewayDevice = (Device) ctx.user();
-            currentSpan.setTag(TracingHelper.TAG_TENANT_ID, gatewayDevice.getTenantId());
-            final JsonObject loraMessage = ctx.getBodyAsJson();
+            TracingHelper.setDeviceTags(currentSpan, gatewayDevice.getTenantId(), gatewayDevice.getDeviceId());
 
-            LoraMessageType type = LoraMessageType.UNKNOWN;
             try {
-                type = provider.extractMessageType(loraMessage);
-                final String deviceId = provider.extractDeviceId(loraMessage);
+                final LoraMessage loraMessage = provider.getMessage(ctx.getBody());
+                final LoraMessageType type = loraMessage.getType();
+                currentSpan.log(Map.of("message type", type));
+                final String deviceId = loraMessage.getDevEUIAsString();
                 currentSpan.setTag(TAG_LORA_DEVICE_ID, deviceId);
-                currentSpan.setTag(TracingHelper.TAG_DEVICE_ID, deviceId);
 
                 switch (type) {
                 case UPLINK:
-                    final String payload = provider.extractPayload(loraMessage);
-                    if (payload == null) {
-                        throw new LoraProviderMalformedPayloadException("Payload == null", new NullPointerException("payload"));
-                    }
-                    final Buffer payloadInBuffer = new BufferImpl().appendString(payload);
+                    final UplinkLoraMessage uplinkMessage = (UplinkLoraMessage) loraMessage;
+                    final Buffer payload = uplinkMessage.getPayload();
 
-                    final Map<String, Object> normalizedData = provider.extractNormalizedData(loraMessage);
-                    ctx.put(LoraConstants.NORMALIZED_PROPERTIES, normalizedData);
+                    Optional.ofNullable(uplinkMessage.getNormalizedData())
+                        .ifPresent(data -> ctx.put(LoraConstants.NORMALIZED_PROPERTIES, data));
 
-                    final JsonObject additionalData = provider.extractAdditionalData(loraMessage);
-                    ctx.put(LoraConstants.ADDITIONAL_DATA, additionalData);
+                    Optional.ofNullable(uplinkMessage.getAdditionalData())
+                        .ifPresent(data -> ctx.put(LoraConstants.ADDITIONAL_DATA, data));
 
-                    final String contentType = LoraConstants.CONTENT_TYPE_LORA_BASE +  provider.getProviderName() + LoraConstants.CONTENT_TYPE_LORA_POST_FIX;
+                    final String contentType = String.format(
+                            "%s%s%s",
+                            LoraConstants.CONTENT_TYPE_LORA_BASE,
+                            provider.getProviderName(),
+                            LoraConstants.CONTENT_TYPE_LORA_POST_FIX);
 
-                    doUpload(ctx, gatewayDevice, deviceId, payloadInBuffer, contentType);
+                    uploadTelemetryMessage(ctx, gatewayDevice.getTenantId(), deviceId, payload, contentType);
                     break;
                 default:
-                    LOG.debug("Received message '{}' of type [{}] for device [{}], will discard message.", loraMessage,
-                            type, deviceId);
-                    currentSpan.log(
-                            "Received message of type '" + type + "' for device '" + deviceId + "' will be discarded.");
-                    // Throw away the message but return 202 to not cause errors on the LoRa provider side
+                    LOG.debug("discarding message of unsupported type [tenant: {}, device-id: {}, type: {}]",
+                            gatewayDevice.getTenantId(), deviceId, type);
+                    currentSpan.log("discarding message of unsupported type");
+                    // discard the message but return 202 to not cause errors on the LoRa provider side
                     handle202(ctx);
                 }
-            } catch (final ClassCastException | LoraProviderMalformedPayloadException e) {
-                LOG.debug("cannot parse request payload", e);
-                TracingHelper.logError(currentSpan, "cannot parse request payload", e);
+            } catch (final LoraProviderMalformedPayloadException e) {
+                LOG.debug("error processing request from provider [name: {}]", provider.getProviderName(), e);
+                TracingHelper.logError(currentSpan, "error processing request", e);
                 handle400(ctx, ERROR_MSG_INVALID_PAYLOAD);
             }
         } else {
-            final String userType = ctx.user() == null ? "null" : ctx.user().getClass().getName();
-            TracingHelper.logError(
-                    currentSpan,
-                    Map.of(Fields.MESSAGE, "request contains unsupported type of user credentials",
-                            "type", userType));
-            LOG.debug("request contains unsupported type of credentials [{}], returning 401", userType);
-            handle401(ctx);
+            handleUnsupportedUserType(ctx, currentSpan);
         }
-    }
-
-    private Span getCurrentSpan(final RoutingContext ctx) {
-        return (ctx.get(TracingHandler.CURRENT_SPAN) instanceof Span) ? ctx.get(TracingHandler.CURRENT_SPAN)
-                : NoopSpan.INSTANCE;
+        currentSpan.finish();
     }
 
     void handleOptionsRoute(final RoutingContext ctx) {
-        LOG.debug("Handling options method");
+
+        final Span currentSpan = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                "process OPTIONS request",
+                getClass().getSimpleName())
+                .start();
 
         if (ctx.user() instanceof Device) {
             // Some providers use OPTIONS request to check if request works. Therefore returning 200.
-            LOG.debug("Accept OPTIONS request. Will return 200");
             handle200(ctx);
         } else {
-            LOG.debug("Supplied credentials are not an instance of the user. Returning 401");
-            TracingHelper.logError(getCurrentSpan(ctx), "Supplied credentials are not an instance of the user");
-            handle401(ctx);
+            handleUnsupportedUserType(ctx, currentSpan);
         }
+        currentSpan.finish();
     }
 
-    private void doUpload(final RoutingContext ctx, final Device device, final String deviceId,
-                          final Buffer payload, final String contentType) {
-        LOG.trace("Got push message for tenant '{}' and device '{}'", device.getTenantId(), deviceId);
-        if (deviceId != null && payload != null) {
-            uploadTelemetryMessage(ctx, device.getTenantId(), deviceId, payload,
-                    contentType);
-        } else {
-            LOG.debug("Got payload without mandatory fields: {}", ctx.getBodyAsJson());
-            if (deviceId == null) {
-                TracingHelper.logError(getCurrentSpan(ctx), "Got message without deviceId");
-            }
-            if (payload == null) {
-                TracingHelper.logError(getCurrentSpan(ctx), "Got message without valid payload");
-            }
-            handle400(ctx, ERROR_MSG_JSON_MISSING_REQUIRED_FIELDS);
-        }
+    private void handleUnsupportedUserType(final RoutingContext ctx, final Span currentSpan) {
+        final String userType = Optional.ofNullable(ctx.user()).map(user -> user.getClass().getName()).orElse("null");
+        TracingHelper.logError(
+                currentSpan,
+                Map.of(Fields.MESSAGE, "request contains unsupported type of user credentials",
+                        "type", userType));
+        LOG.debug("request contains unsupported type of credentials [{}], returning 401", userType);
+        handle401(ctx);
+    }
+
+    private void handle200(final RoutingContext ctx) {
+        ctx.response().setStatusCode(200);
+        ctx.response().end();
     }
 
     private void handle202(final RoutingContext ctx) {
-        Tags.HTTP_STATUS.set(getCurrentSpan(ctx), 202);
         ctx.response().setStatusCode(202);
         ctx.response().end();
     }
 
     private void handle401(final RoutingContext ctx) {
-        Tags.HTTP_STATUS.set(getCurrentSpan(ctx), 401);
         HttpUtils.unauthorized(ctx, "Basic realm=\"" + getConfig().getRealm() + "\"");
     }
 
     private void handle400(final RoutingContext ctx, final String msg) {
-        Tags.HTTP_STATUS.set(getCurrentSpan(ctx), 400);
         HttpUtils.badRequest(ctx, msg);
-    }
-
-    private void handle200(final RoutingContext ctx) {
-        Tags.HTTP_STATUS.set(getCurrentSpan(ctx), 200);
-        ctx.response().setStatusCode(200);
-        ctx.response().end();
     }
 }

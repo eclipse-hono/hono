@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,15 +13,25 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Objects;
+
+import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
 
+import com.google.common.io.BaseEncoding;
+
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
  * A LoRaWAN provider with API for Proximus.
+ * <p>
+ * This provider supports messages that comply with the
+ * <a href="https://proximusapi.enco.io/asset/lora4maker/documentation#dataformat">
+ * Proximus data format</a>.
  */
 @Component
-public class ProximusProvider implements LoraProvider {
+public class ProximusProvider extends BaseLoraProvider {
 
     private static final String FIELD_PROXIMUS_DEVICE_EUI = "DevEUI";
     private static final String FIELD_PROXIMUS_PAYLOAD = "payload";
@@ -36,13 +46,31 @@ public class ProximusProvider implements LoraProvider {
         return "/proximus";
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return Always {@link LoraMessageType#UPLINK}.
+     */
     @Override
-    public String extractDeviceId(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_PROXIMUS_DEVICE_EUI);
+    protected LoraMessageType extractMessageType(final JsonObject loraMessage) {
+        return LoraMessageType.UPLINK;
     }
 
     @Override
-    public String extractPayload(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_PROXIMUS_PAYLOAD);
+    protected String extractDevEui(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_PROXIMUS_DEVICE_EUI, String.class)
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device ID property"));
+    }
+
+    @Override
+    protected Buffer extractPayload(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+
+        return LoraUtils.getChildObject(loraMessage, FIELD_PROXIMUS_PAYLOAD, String.class)
+                .map(s -> Buffer.buffer(BaseEncoding.base16().decode(s.toUpperCase())))
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain HEX encoded payload property"));
     }
 }

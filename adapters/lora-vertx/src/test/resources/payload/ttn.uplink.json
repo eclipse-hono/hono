@@ -1,7 +1,7 @@
 {
   "app_id": "ttn-app-id",
   "dev_id": "ttn-dev-id",
-  "hardware_serial": "0352828610682633",
+  "hardware_serial": "0102030405060708",
   "port": 1,
   "counter": 9,
   "is_retry": false,

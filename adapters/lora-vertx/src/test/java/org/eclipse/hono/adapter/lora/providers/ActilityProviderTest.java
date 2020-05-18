@@ -13,13 +13,12 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
-import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonArray;
@@ -28,79 +27,33 @@ import io.vertx.core.json.JsonObject;
 /**
  * Verifies behavior of {@link ActilityProvider}.
  */
-public class ActilityProviderTest {
+public class ActilityProviderTest extends LoraProviderTestBase<ActilityProvider> {
 
-    private final ActilityProvider provider = new ActilityProvider();
 
     /**
-     * Verifies that the extraction of the device id from a message is successful.
+     * {@inheritDoc}
      */
-    @Test
-    public void extractDeviceIdFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
-        final String deviceId = provider.extractDeviceId(loraMessage);
-
-        assertEquals("actility-device", deviceId);
+    @Override
+    protected ActilityProvider newProvider() {
+        return new ActilityProvider();
     }
 
     /**
-     * Verifies the extraction of a payload from a message is successful.
+     * Verifies that properties are parsed correctly from the lora message.
      */
     @Test
-    public void extractPayloadFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
-        final String payload = provider.extractPayload(loraMessage);
+    public void testGetMessageParsesNormalizedProperties() {
 
-        assertEquals("00", payload);
-    }
+        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) provider.getMessage(uplinkMessageBuffer);
 
-    /**
-     * Verifies that the extracted message type matches uplink.
-     */
-    @Test
-    public void extractTypeFromLoraUplinkMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
-        final LoraMessageType type = provider.extractMessageType(loraMessage);
-        assertEquals(LoraMessageType.UPLINK, type);
-    }
+        final Map<String, Object> map = loraMessage.getNormalizedData();
 
-    /**
-     * Verifies that an unknown message type defaults to the {@link LoraMessageType#UNKNOWN} type.
-     */
-    @Test
-    public void extractTypeFromLoraUnknownMessage() {
-        final JsonObject loraMessage = new JsonObject();
-        loraMessage.put("bumlux", "bumlux");
-        final LoraMessageType type = provider.extractMessageType(loraMessage);
-        assertEquals(LoraMessageType.UNKNOWN, type);
-    }
-
-    /**
-     * Verifies that the extracted rssi matches 48.
-     */
-    @Test
-    public void extractRssiFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
-        final Map<String, Object> map = provider.extractNormalizedData(loraMessage);
-        assertTrue(map.containsKey(LoraConstants.APP_PROPERTY_RSS));
-        assertEquals(48.0, map.getOrDefault(LoraConstants.APP_PROPERTY_RSS, null));
-    }
-
-    /**
-     * Verifies that the extracted gateways are correct.
-     */
-    @Test
-    public void extractGatewaysFromLoraMessage() {
-        final JsonObject loraMessage = LoraTestUtil.loadTestFile("actility.uplink");
-        final Map<String, Object> map = provider.extractNormalizedData(loraMessage);
-        assertTrue(map.containsKey(LoraConstants.GATEWAYS));
+        assertThat(map.get(LoraConstants.APP_PROPERTY_RSS)).isEqualTo(48.0);
 
         final JsonArray expectedArray = new JsonArray();
         expectedArray.add(new JsonObject().put("gateway_id", "18035559").put("rss", 48.0).put("snr", 3.0));
         expectedArray.add(new JsonObject().put("gateway_id", "18035560").put("rss", 49.0).put("snr", 4.0));
 
-        final JsonArray gateways = new JsonArray(map.get(LoraConstants.GATEWAYS).toString());
-        assertEquals(expectedArray, gateways);
+        assertThat(new JsonArray((String) map.get(LoraConstants.GATEWAYS))).isEqualTo(expectedArray);
     }
-
 }

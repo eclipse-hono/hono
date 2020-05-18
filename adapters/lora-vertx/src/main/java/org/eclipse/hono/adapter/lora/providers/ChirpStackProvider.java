@@ -13,21 +13,28 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
  * A LoRaWAN provider with API for ChirpStack.
+ * <p>
+ * This provider supports uplink messages only and expects the messages
+ * to comply with the <a href="https://www.chirpstack.io/application-server/integrate/sending-receiving/">
+ * Protobuf based JSON format</a>.
  */
 @Component
-public class ChirpStackProvider implements LoraProvider {
+public class ChirpStackProvider extends BaseLoraProvider {
 
     private static final String FIELD_CHIRPSTACK_PAYLOAD = "data";
     private static final String FIELD_CHIRPSTACK_DEVICE = "devEUI";
@@ -58,92 +65,132 @@ public class ChirpStackProvider implements LoraProvider {
         return "/chirpstack";
     }
 
-    @Override
-    public String extractDeviceId(final JsonObject loraMessage) {
-        final Object deviceId = loraMessage.getValue(FIELD_CHIRPSTACK_DEVICE);
-        if (deviceId == null) {
-            throw new LoraProviderMalformedPayloadException("DeviceId could not be extracted from message.", null);
-        }
-        if (deviceId instanceof String) {
-            return LoraUtils.convertFromBase64ToHex((String) deviceId);
-        }
 
-        throw new LoraProviderMalformedPayloadException("DeviceId could not be extracted from message. Expected " +
-                "string, got " + deviceId.getClass().getName(), null);
+    @Override
+    protected String extractDevEui(final JsonObject loraMessage) {
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_DEVICE, String.class)
+                .map(s -> LoraUtils.convertFromBase64ToHex(s))
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain Base64 encoded device ID property"));
     }
 
     @Override
-    public String extractPayload(final JsonObject loraMessage) {
-        final Object payload = loraMessage.getValue(FIELD_CHIRPSTACK_PAYLOAD);
-        if (payload == null) {
-            throw new LoraProviderMalformedPayloadException("Payload could not be extracted from message.", null);
-        }
-
-        if (payload instanceof String) {
-            return (String) payload;
-        }
-
-        throw new LoraProviderMalformedPayloadException("Payload could not be extracted from message. Expected " +
-                "string, got " + payload.getClass().getName(), null);
+    protected Buffer extractPayload(final JsonObject loraMessage) {
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_PAYLOAD, String.class)
+                .map(s -> Buffer.buffer(Base64.getDecoder().decode(s)))
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain Base64 encoded payload property"));
     }
 
     @Override
-    public LoraMessageType extractMessageType(final JsonObject loraMessage) {
+    protected LoraMessageType extractMessageType(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
         if (loraMessage.containsKey(FIELD_CHIRPSTACK_PAYLOAD)) {
             return LoraMessageType.UPLINK;
+        } else {
+            return LoraMessageType.UNKNOWN;
         }
-        return LoraMessageType.UNKNOWN;
     }
 
     @Override
-    public Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
-        final Map<String, Object> returnMap = new HashMap<>();
-        final JsonObject txInfo = loraMessage.getJsonObject(FIELD_CHIRPSTACK_TX_INFO);
-        if (txInfo != null) {
-            final JsonObject loraModulationInfo = txInfo.getJsonObject(FIELD_CHIRPSTACK_LORA_MODULATION_INFO);
-            if (loraModulationInfo != null) {
-                returnMap.put(LoraConstants.APP_PROPERTY_SPREADING_FACTOR,
-                        loraModulationInfo.getInteger(FIELD_CHIRPSTACK_SPREADING_FACTOR));
-                returnMap.put(LoraConstants.APP_PROPERTY_BANDWIDTH, loraModulationInfo.getInteger(FIELD_CHIRPSTACK_BANDWIDTH));
-                returnMap.put(LoraConstants.CODING_RATE, loraModulationInfo.getString(FIELD_CHIRPSTACK_CODE_RATE));
-            }
-            returnMap.put(LoraConstants.FREQUENCY, txInfo.getInteger(FIELD_CHIRPSTACK_FREQUENCY));
-        }
+    protected Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
 
-        returnMap.put(LoraConstants.APP_PROPERTY_FUNCTION_PORT, loraMessage.getInteger(FIELD_CHIRPSTACK_FUNCTION_PORT));
-        returnMap.put(LoraConstants.FRAME_COUNT, loraMessage.getInteger(FIELD_CHIRPSTACK_FRAME_COUNT));
+        Objects.requireNonNull(loraMessage);
 
-        final JsonArray rxInfos = loraMessage.getJsonArray(FIELD_CHIRPSTACK_RX_INFO);
-        if (rxInfos != null) {
-            final JsonArray normalizedGatways = new JsonArray();
-            for (int i = 0; i < rxInfos.size(); i++) {
-                final JsonObject rxInfo = rxInfos.getJsonObject(i);
-                final JsonObject normalizedGatway = new JsonObject();
-                String gatewayId = rxInfo.getString(FIELD_CHIRPSTACK_GATEWAY_ID);
-                if (gatewayId != null) {
-                    gatewayId = LoraUtils.convertFromBase64ToHex(gatewayId);
-                }
-                normalizedGatway.put(LoraConstants.GATEWAY_ID, gatewayId);
-                normalizedGatway.put(LoraConstants.APP_PROPERTY_RSS, rxInfo.getInteger(FIELD_CHIRPSTACK_RSSI));
-                normalizedGatway.put(LoraConstants.APP_PROPERTY_SNR, rxInfo.getDouble(FIELD_CHIRPSTACK_LSNR));
-                normalizedGatway.put(LoraConstants.APP_PROPERTY_CHANNEL, rxInfo.getDouble(FIELD_CHIRPSTACK_CHANNEL));
-                final JsonObject location = rxInfo.getJsonObject(FIELD_CHIRPSTACK_LOCATION);
-                if (location != null) {
-                    normalizedGatway.put(LoraConstants.APP_PROPERTY_FUNCTION_LATITUDE,
-                            location.getDouble(FIELD_CHIRPSTACK_LATITUDE));
-                    normalizedGatway.put(LoraConstants.APP_PROPERTY_FUNCTION_LONGITUDE,
-                            location.getDouble(FIELD_CHIRPSTACK_LONGITUDE));
-                }
-                normalizedGatways.add(normalizedGatway);
-            }
-            returnMap.put(LoraConstants.GATEWAYS, normalizedGatways.toString());
-        }
+        final Map<String, Object> data = new HashMap<>();
 
-        return returnMap;
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_CHIRPSTACK_FUNCTION_PORT,
+                Integer.class,
+                LoraConstants.APP_PROPERTY_FUNCTION_PORT,
+                n -> n,
+                data);
+        LoraUtils.addNormalizedValue(
+                loraMessage,
+                FIELD_CHIRPSTACK_FRAME_COUNT,
+                Integer.class,
+                LoraConstants.FRAME_COUNT,
+                n -> n,
+                data);
+
+        LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_TX_INFO, JsonObject.class)
+            .map(txInfo -> {
+                LoraUtils.addNormalizedValue(
+                        txInfo,
+                        FIELD_CHIRPSTACK_FREQUENCY,
+                        Integer.class,
+                        LoraConstants.FREQUENCY,
+                        v -> v,
+                        data);
+                return txInfo.getValue(FIELD_CHIRPSTACK_LORA_MODULATION_INFO);
+            })
+            .filter(JsonObject.class::isInstance)
+            .map(JsonObject.class::cast)
+            .ifPresent(modulationInfo -> {
+                LoraUtils.addNormalizedValue(
+                        modulationInfo,
+                        FIELD_CHIRPSTACK_SPREADING_FACTOR,
+                        Integer.class,
+                        LoraConstants.APP_PROPERTY_SPREADING_FACTOR,
+                        v -> v,
+                        data);
+                LoraUtils.addNormalizedValue(
+                        modulationInfo,
+                        FIELD_CHIRPSTACK_BANDWIDTH,
+                        Integer.class,
+                        LoraConstants.APP_PROPERTY_BANDWIDTH,
+                        v -> v,
+                        data);
+                LoraUtils.addNormalizedValue(
+                        modulationInfo,
+                        FIELD_CHIRPSTACK_CODE_RATE,
+                        String.class,
+                        LoraConstants.CODING_RATE,
+                        v -> v,
+                        data);
+            });
+
+        LoraUtils.getChildObject(loraMessage, FIELD_CHIRPSTACK_RX_INFO, JsonArray.class)
+            .ifPresent(rxInfoList -> {
+                final JsonArray normalizedGateways = rxInfoList.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(JsonObject.class::cast)
+                        .map(rxInfo -> {
+                            final JsonObject normalizedGateway = new JsonObject();
+                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_GATEWAY_ID, String.class)
+                                .ifPresent(v -> normalizedGateway.put(LoraConstants.GATEWAY_ID, LoraUtils.convertFromBase64ToHex(v)));
+                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_RSSI, Integer.class)
+                                .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_RSS, v));
+                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_LSNR, Double.class)
+                                .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_SNR, v));
+                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_CHANNEL, Integer.class)
+                                .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_CHANNEL, v));
+
+                            LoraUtils.getChildObject(rxInfo, FIELD_CHIRPSTACK_LOCATION, JsonObject.class)
+                                .ifPresent(loc -> {
+                                    LoraUtils.getChildObject(loc, FIELD_CHIRPSTACK_LATITUDE, Double.class)
+                                        .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_FUNCTION_LATITUDE, v));
+                                    LoraUtils.getChildObject(loc, FIELD_CHIRPSTACK_LONGITUDE, Double.class)
+                                        .ifPresent(v -> normalizedGateway.put(LoraConstants.APP_PROPERTY_FUNCTION_LONGITUDE, v));
+                                });
+                            return normalizedGateway;
+                        })
+                        .collect(() -> new JsonArray(), (array, value) -> array.add(value), (array1, array2) -> array1.addAll(array2));
+                data.put(LoraConstants.GATEWAYS, normalizedGateways.toString());
+            });
+
+        return data;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return Always {@code null}.
+     */
     @Override
-    public JsonObject extractAdditionalData(final JsonObject loraMessage) {
+    protected JsonObject extractAdditionalData(final JsonObject loraMessage) {
         return null;
     }
 }

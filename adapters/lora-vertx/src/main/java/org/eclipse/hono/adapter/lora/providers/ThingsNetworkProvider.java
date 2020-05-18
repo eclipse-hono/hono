@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,19 +13,23 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
+import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.springframework.stereotype.Component;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
  * A LoRaWAN provider with API for Things Network.
  */
 @Component
-public class ThingsNetworkProvider implements LoraProvider {
+public class ThingsNetworkProvider extends BaseLoraProvider {
 
     private static final String FIELD_TTN_DEVICE_EUI = "hardware_serial";
     private static final String FIELD_TTN_PAYLOAD_RAW = "payload_raw";
@@ -41,24 +45,40 @@ public class ThingsNetworkProvider implements LoraProvider {
         return "/ttn";
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return Always {@link LoraMessageType#UPLINK}.
+     */
     @Override
-    public String extractDeviceId(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_TTN_DEVICE_EUI);
+    protected LoraMessageType extractMessageType(final JsonObject loraMessage) {
+        return LoraMessageType.UPLINK;
     }
 
     @Override
-    public String extractPayload(final JsonObject loraMessage) {
-        return loraMessage.getString(FIELD_TTN_PAYLOAD_RAW);
+    protected String extractDevEui(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_TTN_DEVICE_EUI, String.class)
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device ID property"));
     }
 
     @Override
-    public Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
+    protected Buffer extractPayload(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
+        return LoraUtils.getChildObject(loraMessage, FIELD_TTN_PAYLOAD_RAW, String.class)
+                .map(s -> Buffer.buffer(Base64.getDecoder().decode(s)))
+                .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain Base64 encoded payload property"));
+    }
+
+    @Override
+    protected Map<String, Object> extractNormalizedData(final JsonObject loraMessage) {
+
+        Objects.requireNonNull(loraMessage);
         final Map<String, Object> returnMap = new HashMap<>();
 
-        final Integer fport = loraMessage.getInteger(FIELD_TTN_FPORT);
-        if (fport != null) {
-            returnMap.put(LoraConstants.APP_PROPERTY_FUNCTION_PORT, fport);
-        }
+        LoraUtils.addNormalizedValue(loraMessage, FIELD_TTN_FPORT, Integer.class, LoraConstants.APP_PROPERTY_FUNCTION_PORT, v -> v, returnMap);
 
         return returnMap;
     }

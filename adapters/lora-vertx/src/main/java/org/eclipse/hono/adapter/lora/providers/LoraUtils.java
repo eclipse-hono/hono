@@ -14,7 +14,10 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import java.util.Base64;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
 
 import org.eclipse.hono.adapter.lora.LoraConstants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -31,6 +34,68 @@ public class LoraUtils {
 
     private LoraUtils() {
         // prevent instantiation
+    }
+
+    /**
+     * Gets a property of a JSON object.
+     *
+     * @param <T> The expected type of the property.
+     * @param parent The JSON object to retrieve the property from.
+     * @param propertyName The name of the property.
+     * @param expectedType The expected type of the property.
+     * @return An optional containing the property value or an empty optional if the
+     *         JSON object has no property of the expected type.
+     */
+    public static <T> Optional<T> getChildObject(final JsonObject parent, final String propertyName, final Class<T> expectedType) {
+
+        return Optional.ofNullable(parent.getValue(propertyName))
+                .map(obj -> {
+                    if (Number.class.isAssignableFrom(expectedType) && (obj instanceof Number)) {
+                        final Number number = (Number) obj;
+                        if (Double.class.equals(expectedType)) {
+                            return number.doubleValue();
+                        } else if (Integer.class.equals(expectedType)) {
+                            return number.intValue();
+                        } else if (Long.class.equals(expectedType)) {
+                            return number.longValue();
+                        } else if (Float.class.equals(expectedType)) {
+                            return number.floatValue();
+                        } else {
+                            return number;
+                        }
+                    } else {
+                        return obj;
+                    }
+                })
+                .filter(expectedType::isInstance)
+                .map(expectedType::cast);
+    }
+
+    /**
+     * Extracts a property from a JSON object, applies a normalization function to
+     * it and adds it to a map.
+     * <p>
+     * This method does nothing if the given JSON object does not contain a property
+     * of the given name and type.
+     *
+     * @param <T> The expected type of the property.
+     * @param parent The JSON object to retrieve the property from.
+     * @param propertyName The name of the property.
+     * @param expectedType The expected type of the property.
+     * @param normalizedProperyName The key under which the normalized value should be put into the map.
+     * @param valueMapper A function for normalizing the extracted property.
+     * @param normalizedValues The target map to put the normalized value to.
+     */
+    public static <T> void addNormalizedValue(
+            final JsonObject parent,
+            final String propertyName,
+            final Class<T> expectedType,
+            final String normalizedProperyName,
+            final Function<T, Object> valueMapper,
+            final Map<String, Object> normalizedValues) {
+        getChildObject(parent, propertyName, expectedType)
+            .map(valueMapper)
+            .ifPresent(v -> normalizedValues.put(normalizedProperyName, v));
     }
 
     /**

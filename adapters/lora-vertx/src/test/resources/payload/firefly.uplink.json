@@ -44,10 +44,10 @@
     "datr":"SF7BW125",
     "codr":"4/5"
   },
-  "raw_payload":"raw_payload",
+  "raw_payload":"62756D6C7578",
   "port":2,
   "payload_encrypted":false,
-  "payload":"payload",
+  "payload":"62756D6C7578",
   "parsed_packet":{
     "port":2,
     "pending":false,
@@ -80,7 +80,7 @@
     "organization_id":7021,
     "name":"firefly-device",
     "id":7869,
-    "eui":"firefly-device",
+    "eui":"0102030405060708",
     "device_class_id":null,
     "address":"298BF69D"
   },

@@ -9,10 +9,10 @@
   "timestamp": "2019-02-27T14:48:35.544Z",
   "count": 7,
   "payload_encrypted": "4b503954fe7a25629aa9d18b3dc4daa97635c4f5e391e6b7471d4e31d04958b156aa",
-  "payload_cleartext": "00000000004000000000000000000000000000000000000000000000000000000000",
+  "payload_cleartext": "62756D6C7578",
   "device_properties": {
     "appeui": "be4800dfcb4f4333",
-    "deveui": "2032e013597bde6b",
+    "deveui": "0102030405060708",
     "external_id": ""
   },
   "protocol_data": {
