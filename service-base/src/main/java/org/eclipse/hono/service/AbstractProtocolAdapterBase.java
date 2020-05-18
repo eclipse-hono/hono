@@ -1547,25 +1547,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * This method may be set as the close handler of the command consumer.
-     * <p>
-     * This default implementation simply logs that the link was closed and does
-     * not try to reopen it.
-     *
-     * @param tenant The tenant of the device for that a command may be received.
-     * @param deviceId The id of the device for that a command may be received.
-     * @param commandMessageConsumer The Handler that will be called for each command to the device.
-     */
-    protected void onCloseCommandConsumer(
-            final String tenant,
-            final String deviceId,
-            final BiConsumer<ProtonDelivery, Message> commandMessageConsumer) {
-
-        log.debug("command consumer closed [tenantId: {}, deviceId: {}] - no command will be received for this device anymore",
-                tenant, deviceId);
-    }
-
-    /**
      * Registers a health check which tries to run an action on the protocol adapter context.
      * <p>
      * If the protocol adapter vert.x event loop is blocked, the health check procedure will not complete
