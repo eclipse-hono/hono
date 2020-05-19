@@ -26,6 +26,9 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.mongodb.ErrorCategory;
+import com.mongodb.MongoException;
+
 import io.opentracing.Span;
 import io.vertx.core.Future;
 
@@ -101,11 +104,11 @@ public final class MongoDbDeviceRegistryUtils {
 
     /**
      * Checks if the version of the given resource matches that of the request and returns a
-     * failed future with an appropriate status code. 
+     * failed future with an appropriate status code.
 
      * @param resourceId The resource identifier.
      * @param versionFromRequest The version specified in the request.
-     * @param resourceSupplierFuture The Future that supplies the resource for which the version 
+     * @param resourceSupplierFuture The Future that supplies the resource for which the version
      *                               is to be checked.
      * @param <T> The type of the field.
      * @return A failed future with a {@link ServiceInvocationException}. The <em>status</em> will be
@@ -140,5 +143,22 @@ public final class MongoDbDeviceRegistryUtils {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                     String.format("Resource [%s] not found.", resourceId)));
         }
+    }
+
+    /**
+     * Checks if the given error is caused due to duplicate keys.
+     *
+     * @param error The error to check.
+     * @return {@code true} if the given error is caused by duplicate keys.
+     * @throws NullPointerException if the error is {@code null}.
+     */
+    public static boolean isDuplicateKeyError(final Throwable error) {
+        Objects.requireNonNull(error);
+
+        if (error instanceof MongoException) {
+            final MongoException mongoException = (MongoException) error;
+            return ErrorCategory.fromErrorCode(mongoException.getCode()) == ErrorCategory.DUPLICATE_KEY;
+        }
+        return false;
     }
 }

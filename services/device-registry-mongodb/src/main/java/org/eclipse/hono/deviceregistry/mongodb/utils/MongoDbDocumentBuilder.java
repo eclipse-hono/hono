@@ -13,10 +13,9 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.utils;
 
-import java.util.Objects;
-import java.util.Optional;
-
+import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.vertx.core.json.JsonObject;
 
@@ -25,6 +24,10 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MongoDbDocumentBuilder {
 
+    private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
+            RegistryManagementConstants.FIELD_TENANT,
+            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+            AuthenticationConstants.FIELD_SUBJECT_DN);
     private final JsonObject document;
 
     private MongoDbDocumentBuilder() {
@@ -32,30 +35,12 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
-     * Creates a new builder for a given tenant.
-     * 
-     * @param tenant The tenant to add to the document (may be empty).
+     * Creates a new builder to append document properties to.
+     *
      * @return The new document builder.
-     * @throws NullPointerException if tenant is {@code null}.
      */
-    public static MongoDbDocumentBuilder forTenantId(final String tenant) {
-        Objects.requireNonNull(tenant);
-        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
-        return builder.withTenantId(tenant);
-    }
-
-    /**
-     * Creates a new builder for a given version.
-     * 
-     * @param version The version to add to the document (may be empty).
-     * @return The new document builder.
-     * @throws NullPointerException if version is {@code null}.
-     */
-    public static MongoDbDocumentBuilder forVersion(final Optional<String> version) {
-        Objects.requireNonNull(version);
-        final MongoDbDocumentBuilder builder = new MongoDbDocumentBuilder();
-        version.ifPresent(v -> builder.withVersion(v));
-        return builder;
+    public static MongoDbDocumentBuilder builder() {
+        return new MongoDbDocumentBuilder();
     }
 
     /**
@@ -77,6 +62,17 @@ public final class MongoDbDocumentBuilder {
      */
     public MongoDbDocumentBuilder withDeviceId(final String deviceId) {
         document.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+        return this;
+    }
+
+    /**
+     * Sets the json object with the given subject DN.
+     *
+     * @param subjectDn The subject DN.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withCa(final String subjectDn) {
+        document.put(TENANT_TRUSTED_CA_SUBJECT_PATH, new JsonObject().put("$eq", subjectDn));
         return this;
     }
 

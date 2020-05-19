@@ -216,7 +216,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     }
 
     private Future<JsonObject> findDeviceDocument(final String tenantId, final String deviceId) {
-        final JsonObject findDeviceQuery = MongoDbDocumentBuilder.forTenantId(tenantId)
+        final JsonObject findDeviceQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
         final Promise<JsonObject> readDevicePromise = Promise.promise();
@@ -282,10 +282,12 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             final Optional<String> resourceVersion,
             final Span span) {
 
-        final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
-                .withTenantId(tenantId)
-                .withDeviceId(deviceId)
-                .document();
+        final JsonObject deleteDeviceQuery =
+                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
+                        .orElse(MongoDbDocumentBuilder.builder())
+                        .withTenantId(tenantId)
+                        .withDeviceId(deviceId)
+                        .document();
 
         final Promise<JsonObject> deleteDevicePromise = Promise.promise();
 
@@ -320,7 +322,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             final JsonArray viaGroups,
             final Span span) {
 
-        final JsonObject resolveGroupMembersQuery = MongoDbDocumentBuilder.forTenantId(tenantId).document()
+        final JsonObject resolveGroupMembersQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId).document()
                 .put(PROPERTY_DEVICE_MEMBER_OF, new JsonObject().put("$exists", true).put("$in", viaGroups));
         //Retrieve only the deviceId instead of the whole document.
         final FindOptions findOptionsForDeviceId = new FindOptions()
@@ -350,10 +352,13 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             final Optional<String> resourceVersion,
             final Span span) {
 
-        final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.forVersion(resourceVersion)
-                .withTenantId(tenantId)
-                .withDeviceId(deviceId)
-                .document();
+
+        final JsonObject updateDeviceQuery =
+                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
+                        .orElse(MongoDbDocumentBuilder.builder())
+                        .withTenantId(tenantId)
+                        .withDeviceId(deviceId)
+                        .document();
 
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
@@ -384,7 +389,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         }
 
         final Promise<Long> findExistingNoOfDevicesPromise = Promise.promise();
-        mongoClient.count(config.getCollectionName(), MongoDbDocumentBuilder.forTenantId(tenantId).document(),
+        mongoClient.count(config.getCollectionName(), MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
                 findExistingNoOfDevicesPromise);
 
         return findExistingNoOfDevicesPromise.future()
