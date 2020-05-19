@@ -38,14 +38,49 @@ Not supported are the following features of Azure IoT Hub:
 
 ## Device Authentication
 
-A Hono Protocol Gateway is responsible for the authentication of the devices because the devices are not necessarily registered in Hono's device registry.
+A Hono protocol gateway is responsible for the authentication of the devices because the devices are not necessarily registered in Hono's device registry.
 This example implementation does not provide or require data storage for device credentials. 
-Instead, it can only be configured to use a single demo device, which must already be present in Hono's device registry 
- (the [Getting started](https://www.eclipse.org/hono/getting-started/#registering-devices) guide shows how to register a device).
+Instead, it can only be configured to use a single demo device, which must already be present in Hono's device registry (see below).
 Client certificate based authentication is not implemented.
 
 Since there is only one device in this example implementation anyway, the credentials for the tenant's gateway client are not looked up dynamically, but are taken from the configuration.
  
+
+## Prerequisites
+
+### Configuration
+
+The protocol gateway needs the configuration of:
+
+1. the AMQP adapter of a running Hono instance to connect to
+2. the MQTT server 
+3. the Demo-Device to use.
+
+By default, the gateway will connect to the AMQP adapter of the [Hono Sandbox](https://www.eclipse.org/hono/sandbox/).
+However, it can also be configured to connect to a local instance.
+The default configuration can be found in the file `example/mqtt-protocol-gateway-example/src/main/resources/application.yml` 
+and can be customized using [Spring Boot Configuration](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config). 
+
+
+### Registering Devices
+
+The demo device to be used needs to be registered in Hono's device registry. 
+The [Getting started](https://www.eclipse.org/hono/getting-started/#registering-devices) guide shows how to register a device.
+ 
+ 
+### Starting a Receiver
+
+Telemetry and event messages need an application that consumes the messages. 
+The [Getting started](https://www.eclipse.org/hono/getting-started/#starting-the-example-application) guide shows how to start the example application that receives the messages.
+ 
+ 
+## Starting the Protocol Gateway
+
+~~~sh
+# in directory: hono/example/mqtt-protocol-gateway-example/
+mvn spring-boot:run
+~~~
+
  
 ## Enable TLS 
 
@@ -58,12 +93,59 @@ java -jar target/mqtt-protocol-gateway-example*-exec.jar --spring.profiles.activ
 
 Azure IoT Hub only provides connections with TLS and only offers port 8883. 
 This protocol gateway can of course not provide an Azure Server certificate, 
-but if the hostname verification can be disabled on the device, it should connect to TLS. 
+but if the certificate can be changed or hostname verification disabled on the device, it should connect with TLS. 
 
-With the [Eclipse Mosquitto](https://mosquitto.org/) command line client, for example, sending a message would then look like this:
+With the [Eclipse Mosquitto](https://mosquitto.org/) command line client, for example, sending an event message would then look like this:
 
 ~~~sh
 # in directory: hono/example/mqtt-protocol-gateway-example/
-mosquitto_pub -h localhost -u 'demo1' -P 'demo-secret' -t 'devices/4712/messages/events' -m '5 degrees' -p 8883 --insecure --cafile target/config/hono-demo-certs-jar/trusted-certs.pem
+mosquitto_pub -d -h localhost -p 8883 -i '4712' -u 'demo1' -P 'demo-secret'  -t "devices/4712/messages/events/" -m "hello world" -V mqttv311 --cafile target/config/hono-demo-certs-jar/trusted-certs.pem -q 1
 ~~~
  
+
+## Example Requests
+
+With the [Eclipse Mosquitto](https://mosquitto.org/) command line client the requests look like the following.
+ 
+**Telemetry**
+ 
+~~~sh
+mosquitto_pub -d -h localhost -i '4712' -u 'demo1' -P 'demo-secret' -t 'devices/4712/messages/events/?foo%20bar=b%5Fa%5Fz' -m "hello world" -V mqttv311 -q 0
+~~~
+ 
+**Events**
+ 
+~~~sh
+mosquitto_pub -d -h localhost -i '4712' -u 'demo1' -P 'demo-secret' -t 'devices/4712/messages/events/?foo%20bar=b%5Fa%5Fz' -m '{"alarm": 1}' -V mqttv311 -q 1
+~~~
+ 
+### Commands 
+
+The example application can be used to send commands. 
+The [Getting started](https://www.eclipse.org/hono/getting-started/#advanced-sending-commands-to-a-device) shows a walk-through example.
+
+**Subscribe for one-way commands**
+ 
+~~~sh
+mosquitto_sub -v -h localhost -u "demo1" -P "demo-secret" -t 'devices/4712/messages/devicebound/#' -q 1
+~~~
+ 
+**Subscribe for request-response commands**
+ 
+~~~sh
+mosquitto_sub -v -h localhost -u "demo1" -P "demo-secret" -t '$iothub/methods/POST/#' -q 1
+~~~
+
+When the command is received, in the terminal should appear something like this:
+~~~sh
+$iothub/methods/POST/setBrightness/?$rid=0100bba05d61-7027-4131-9a9d-30238b9ec9bb {"brightness": 87}
+~~~
+
+**Respond to a command**
+ 
+To send a response the ID after `rid=` can be copied and pasted into a new terminal to send a response like this:
+~~~sh
+export RID=0100bba05d61-7027-4131-9a9d-30238b9ec9bb
+mosquitto_pub -d -h localhost -u 'demo1' -P 'demo-secret' -t "\$iothub/methods/res/200/?\$rid=$RID" -m ''{"success": true}' -q 1
+~~~
+Note that the actual identifier from the command must be used.
