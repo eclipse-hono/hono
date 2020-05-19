@@ -145,9 +145,8 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
             final Optional<String> resourceVersion,
             final Span span) {
 
-        final JsonObject updateTenantQuery =
-                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
-                        .orElse(MongoDbDocumentBuilder.builder())
+        final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
                 .withTenantId(tenantId)
                 .document();
 
@@ -200,11 +199,10 @@ public final class MongoDbBasedTenantService implements TenantService, TenantMan
     private Future<Result<Void>> processDeleteTenant(final String tenantId, final Optional<String> resourceVersion,
             final Span span) {
 
-        final JsonObject deleteTenantQuery =
-                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
-                        .orElse(MongoDbDocumentBuilder.builder())
-                        .withTenantId(tenantId)
-                        .document();
+        final JsonObject deleteTenantQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
+                .withTenantId(tenantId)
+                .document();
 
         final Promise<JsonObject> deleteTenantPromise = Promise.promise();
         mongoClient.findOneAndDelete(config.getCollectionName(), deleteTenantQuery, deleteTenantPromise);

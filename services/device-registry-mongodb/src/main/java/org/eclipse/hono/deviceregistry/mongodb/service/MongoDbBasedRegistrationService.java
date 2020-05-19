@@ -271,12 +271,11 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             final Optional<String> resourceVersion,
             final Span span) {
 
-        final JsonObject deleteDeviceQuery =
-                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
-                        .orElse(MongoDbDocumentBuilder.builder())
-                        .withTenantId(tenantId)
-                        .withDeviceId(deviceId)
-                        .document();
+        final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
+                .withTenantId(tenantId)
+                .withDeviceId(deviceId)
+                .document();
 
         final Promise<JsonObject> deleteDevicePromise = Promise.promise();
 
@@ -342,12 +341,11 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
             final Span span) {
 
 
-        final JsonObject updateDeviceQuery =
-                resourceVersion.map(v -> MongoDbDocumentBuilder.builder().withVersion(v))
-                        .orElse(MongoDbDocumentBuilder.builder())
-                        .withTenantId(tenantId)
-                        .withDeviceId(deviceId)
-                        .document();
+        final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
+                .withTenantId(tenantId)
+                .withDeviceId(deviceId)
+                .document();
 
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
