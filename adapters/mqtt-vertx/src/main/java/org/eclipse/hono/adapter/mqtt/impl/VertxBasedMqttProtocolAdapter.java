@@ -34,13 +34,13 @@ import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
-import io.vertx.mqtt.messages.MqttPublishMessage;
 
 
 /**
  * A Vert.x based Hono protocol adapter for publishing messages to Hono's Telemetry and Event APIs using MQTT.
  */
 public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> {
+
     private MessageMapping messageMapping;
 
     /**
@@ -54,15 +54,18 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
     }
 
     /**
-     * Sets the messageMapping for this adapter.
+     * Sets a service to call out to for published MQTT messages.
+     * <p>
+     * The service will be invoked after the client device has been authenticated
+     * and before the downstream AMQP message is being created.
      *
-     * @param messageMapping the messageMapping
+     * @param messageMappingService The service to use for mapping mesages.
      * @throws NullPointerException if messageMapping is {@code null}.
      */
     @Autowired
-    public void setMessageMapping(final MessageMapping messageMapping) {
-        Objects.requireNonNull(messageMapping);
-        this.messageMapping = messageMapping;
+    public void setMessageMapping(final MessageMapping messageMappingService) {
+        Objects.requireNonNull(messageMappingService);
+        this.messageMapping = messageMappingService;
     }
 
     /**
@@ -73,31 +76,36 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
 
         return mapTopic(ctx)
                 .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
-                .compose(targetAddress -> mapMessage(ctx, targetAddress, ctx.message()))
-                .compose(mappedMessage -> uploadMessage(mappedMessage.getCtx(), mappedMessage.getResource(),
-                        mappedMessage.getMessage()))
+                .compose(targetAddress -> mapMessage(ctx, targetAddress))
+                .compose(mappedMessage -> uploadMessage(ctx, mappedMessage.getResource(), mappedMessage.getMessage()))
                 .recover(t -> {
-                    log.debug("discarding message [topic: {}] from device: {}",
+                    log.debug("discarding message [topic: {}] from {}",
                             ctx.message().topicName(), ctx.authenticatedDevice(), t);
                     return Future.failedFuture(t);
                 });
     }
 
-    private Future<MappedMessage> mapMessage(final MqttContext ctx, final ResourceIdentifier targetAddress,
-                                 final MqttPublishMessage message) {
-        return getRegistrationAssertion(targetAddress.getTenantId(), targetAddress.getResourceId(),
-                ctx.authenticatedDevice(), ctx.getTracingContext()).compose(registratonInfo -> messageMapping.mapMessage(ctx, targetAddress, message, registratonInfo));
+    private Future<MappedMessage> mapMessage(
+            final MqttContext ctx,
+            final ResourceIdentifier targetAddress) {
+
+        return getRegistrationAssertion(
+                targetAddress.getTenantId(),
+                targetAddress.getResourceId(),
+                ctx.authenticatedDevice(),
+                ctx.getTracingContext())
+                .compose(registratonInfo -> messageMapping.mapMessage(ctx, targetAddress, registratonInfo));
     }
 
     @Override
     protected void customizeDownstreamMessage(final Message downstreamMessage, final MqttContext ctx) {
-        super.customizeDownstreamMessage(downstreamMessage, ctx);
+
         final Object mapperData = ctx.get(MqttConstants.MAPPER_DATA);
         if (mapperData instanceof MultiMap) {
-            for (final Map.Entry<String, String> entry:
-                    ((MultiMap) mapperData).entries()) {
+            for (final Map.Entry<String, String> entry : ((MultiMap) mapperData).entries()) {
                 final Object value = entry.getValue();
                 if (value instanceof String) {
+                    // prevent quotes around strings
                     MessageHelper.addProperty(downstreamMessage, entry.getKey(), value);
                 } else {
                     MessageHelper.addProperty(downstreamMessage, entry.getKey(), Json.encode(value));

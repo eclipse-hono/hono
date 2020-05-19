@@ -19,7 +19,8 @@ import java.util.Objects;
  * Configuration class for custom mappers.
  */
 public final class MapperEndpoint {
-    public boolean ssl = true;
+
+    private boolean tlsEnabled = true;
     private String host;
     private Integer port;
     private String uri;
@@ -82,22 +83,28 @@ public final class MapperEndpoint {
     }
 
     /**
-     * Gets a boolean indicating whether or not this mapperEndpoint is secure.
+     * Checks whether the connection to the message mapping service is secured
+     * using TLS.
+     * <p>
+     * The default value of this property is {@code true}.
      *
-     * @return ssl.
+     * @return {@code true} if the connection to the mapper is secured using TLS.
      */
-    public boolean setSsl() {
-        return ssl;
+    public boolean isTlsEnabled() {
+        return tlsEnabled;
     }
 
     /**
-     * Sets the ssl boolean of this mapper.
+     * Sets whether the connection to the message mapping service should be secured
+     * using TLS.
+     * <p>
+     * The default value of this property is {@code true}.
      *
-     * @param ssl The boolean indicating whether the connection is secure.
+     * @param flag {@code true} if the connection to the mapper should be secured using TLS.
      * @throws NullPointerException if ssl is {@code null}.
      */
-    public void setSsl(final Boolean ssl) {
-        this.ssl = Objects.requireNonNull(ssl);
+    public void setTlsEnabled(final Boolean flag) {
+        this.tlsEnabled = Objects.requireNonNull(flag);
     }
 
     /**
@@ -106,15 +113,15 @@ public final class MapperEndpoint {
      * @param host The host on which the mapper service is listening
      * @param port The port on which the mapper service is listening
      * @param uri The uri on which the mapper service is listening
-     * @param ssl Whether or not this connection is secure
+     * @param tlsEnabled Whether or not this connection is secure
      * @return The constructed mapperEndpoint
      */
-    public static MapperEndpoint from(final String host, final int port, final String uri, final boolean ssl) {
+    public static MapperEndpoint from(final String host, final int port, final String uri, final boolean tlsEnabled) {
         final MapperEndpoint ep = new MapperEndpoint();
         ep.host = host;
         ep.port = port;
         ep.uri = uri;
-        ep.ssl = ssl;
+        ep.tlsEnabled = tlsEnabled;
         return ep;
     }
 }

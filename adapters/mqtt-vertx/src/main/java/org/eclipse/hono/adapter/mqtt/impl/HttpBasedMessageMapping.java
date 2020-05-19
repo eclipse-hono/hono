@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.mqtt.impl;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.adapter.mqtt.MqttConstants;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
@@ -25,27 +26,30 @@ import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.impl.headers.VertxHttpHeaders;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.mqtt.messages.MqttPublishMessage;
-import io.vertx.mqtt.messages.impl.MqttPublishMessageImpl;
 
 /**
- * A Vert.x based message mapping component. This component requests mapping from another server over HTTP(S) if this
+ * A message mapper that calls out to a service implementation using HTTP.
+ * <p>
+ * This component requests mapping from another server over HTTP(S) if this
  * is configured properly. The headers are overwritten with the result of the mapper (which includes the resourceId).
  * E.g.: when the deviceId is in the payload of the message, the deviceId can be deducted in the custom mapper and
  * the payload can be changed accordingly to the payload originally received by the gateway.
  */
 public final class HttpBasedMessageMapping implements MessageMapping {
 
-    private static final Logger log = LoggerFactory.getLogger(HttpBasedMessageMapping.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HttpBasedMessageMapping.class);
 
     private final WebClient webClient;
     private final MqttProtocolAdapterProperties mqttProtocolAdapterProperties;
@@ -58,99 +62,105 @@ public final class HttpBasedMessageMapping implements MessageMapping {
      *                                     mapper configurations.
      */
     public HttpBasedMessageMapping(final WebClient webClient, final MqttProtocolAdapterProperties mqttProtocolAdapterProperties) {
-        Objects.requireNonNull(webClient);
-        Objects.requireNonNull(mqttProtocolAdapterProperties);
-        this.webClient = webClient;
-        this.mqttProtocolAdapterProperties = mqttProtocolAdapterProperties;
+        this.webClient = Objects.requireNonNull(webClient);
+        this.mqttProtocolAdapterProperties = Objects.requireNonNull(mqttProtocolAdapterProperties);
     }
 
-    /**
-     * Fetches the mapper if configured and calls the external mapping service.
-     *
-     * @param ctx The mqtt context.
-     * @param targetAddress The resourceIdentifier with the current targetAddress.
-     * @param message Received message.
-     * @param registrationInfo information retrieved from the device registry.
-     * @return Mapped message
-     */
     @Override
-    public Future<MappedMessage> mapMessage(final MqttContext ctx, final ResourceIdentifier targetAddress,
-                                            final MqttPublishMessage message, final JsonObject registrationInfo) {
+    public Future<MappedMessage> mapMessage(
+            final MqttContext ctx,
+            final ResourceIdentifier targetAddress,
+            final JsonObject registrationInfo) {
+
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(targetAddress);
-        Objects.requireNonNull(message);
         Objects.requireNonNull(registrationInfo);
-        final Promise<MappedMessage> result = Promise.promise();
-        if (!registrationInfo.containsKey(RegistrationConstants.FIELD_MAPPER)) {
-            result.complete(new MappedMessage(ctx, targetAddress, message));
-            return result.future();
-        }
 
         final Object mapperObject = registrationInfo.getValue(RegistrationConstants.FIELD_MAPPER);
-        if (!(mapperObject instanceof String)) {
-            log.debug("Mapper configuration is a string. Not requesting mapping");
-            result.complete(new MappedMessage(ctx, targetAddress, message));
-            return result.future();
-        }
-        final String mapper = (String) mapperObject;
-        if (mapper.isBlank()) {
-            result.complete(new MappedMessage(ctx, targetAddress, message));
-            return result.future();
+        if (mapperObject == null) {
+            LOG.debug("no payload mapping configured for {}", ctx.authenticatedDevice());
+            return Future.succeededFuture(new MappedMessage(targetAddress, ctx.message()));
         }
 
-        final MapperEndpoint mapperEndpoint = mqttProtocolAdapterProperties.getMapperEndpoint(mapper);
-        if (mapperEndpoint == null) {
-            result.complete(new MappedMessage(ctx, targetAddress, message));
-            return result.future();
-        }
+        final Promise<MappedMessage> result = Promise.promise();
 
-        final MultiMap headers = new VertxHttpHeaders();
-        registrationInfo.iterator().forEachRemaining(stringObjectEntry -> {
-            final Object value = stringObjectEntry.getValue();
-            if (value instanceof String) {
-                headers.add(stringObjectEntry.getKey(), (String) value);
+        if (mapperObject instanceof String) {
+
+            final String mapper = (String) mapperObject;
+
+            if (mapper.isBlank()) {
+                LOG.debug("no payload mapping configured for {}", ctx.authenticatedDevice());
+                result.complete(new MappedMessage(targetAddress, ctx.message()));
             } else {
-                headers.add(stringObjectEntry.getKey(), Json.encode(value));
+                final MapperEndpoint mapperEndpoint = mqttProtocolAdapterProperties.getMapperEndpoint(mapper);
+                if (mapperEndpoint == null) {
+                    LOG.debug("no mapping endpoint [name: {}] found for {}", mapper, ctx.authenticatedDevice());
+                    result.complete(new MappedMessage(targetAddress, ctx.message()));
+                } else {
+                    mapMessageRequest(ctx, targetAddress, registrationInfo, mapperEndpoint, result);
+                }
+            }
+        } else {
+            LOG.debug("payload mapping configured for {} is not a string, ignoring ...");
+            result.complete(new MappedMessage(targetAddress, ctx.message()));
+        }
+
+        return result.future();
+    }
+
+    private void mapMessageRequest(
+            final MqttContext ctx,
+            final ResourceIdentifier targetAddress,
+            final JsonObject registrationInfo,
+            final MapperEndpoint mapperEndpoint,
+            final Handler<AsyncResult<MappedMessage>> resultHandler) {
+
+        final MultiMap headers = MultiMap.caseInsensitiveMultiMap();
+        registrationInfo.forEach(property -> {
+            final Object value = property.getValue();
+            if (value instanceof String) {
+                // prevent strings from being enclosed in quotes
+                headers.add(property.getKey(), (String) value);
+            } else {
+                headers.add(property.getKey(), Json.encode(value));
             }
         });
 
-        return mapMessageRequest(ctx, targetAddress, message, mapperEndpoint, headers);
-    }
-
-    Future<MappedMessage> mapMessageRequest(final MqttContext ctx, final ResourceIdentifier targetAddress,
-                                            final MqttPublishMessage message, final MapperEndpoint mapperEndpoint,
-                                            final MultiMap headers) {
         final Promise<MappedMessage> result = Promise.promise();
+
         webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
-                .putHeaders(headers)
-                .ssl(mapperEndpoint.ssl)
-                .sendBuffer(message.payload(), httpResponseAsyncResult -> {
-                    if (httpResponseAsyncResult.succeeded()) {
-                        final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
-                        if (httpResponse.statusCode() == 200) {
-                            final MqttPublishMessageImpl mqttPublishMessage = new MqttPublishMessageImpl(ctx.message().messageId(), ctx.message().qosLevel(),
-                                    ctx.message().isDup(), ctx.message().isRetain(), ctx.message().topicName(),
-                                    httpResponse.bodyAsBuffer().getByteBuf());
-                            final MultiMap responseHeaders = httpResponse.headers();
-                            String deviceId = targetAddress.getResourceId();
-                            if (responseHeaders.contains(MessageHelper.APP_PROPERTY_DEVICE_ID)) {
-                                deviceId = responseHeaders.get(MessageHelper.APP_PROPERTY_DEVICE_ID);
-                                log.debug("Received new deviceId from mapper: {}", deviceId);
+            .putHeaders(headers)
+            .ssl(mapperEndpoint.isTlsEnabled())
+            .expect(ResponsePredicate.SC_OK)
+            .sendBuffer(ctx.message().payload(), httpResponseAsyncResult -> {
+                if (httpResponseAsyncResult.succeeded()) {
+                    final HttpResponse<Buffer> httpResponse = httpResponseAsyncResult.result();
+                    final MqttPublishMessage mqttPublishMessage = MqttPublishMessage.create(
+                            ctx.message().messageId(),
+                            ctx.message().qosLevel(),
+                            ctx.message().isDup(),
+                            ctx.message().isRetain(),
+                            ctx.message().topicName(),
+                            httpResponse.bodyAsBuffer().getByteBuf());
+                    final MultiMap responseHeaders = httpResponse.headers();
+                    final String mappedDeviceId = Optional.ofNullable(responseHeaders.get(MessageHelper.APP_PROPERTY_DEVICE_ID))
+                            .map(id -> {
+                                LOG.debug("original {} has been mapped to [device-id: {}]", ctx.authenticatedDevice(), id);
                                 responseHeaders.remove(MessageHelper.APP_PROPERTY_DEVICE_ID);
-                            }
+                                return id;
+                            })
+                            .orElse(targetAddress.getResourceId());
 
-                            ctx.put(MqttConstants.MAPPER_DATA, responseHeaders);
+                    ctx.put(MqttConstants.MAPPER_DATA, responseHeaders);
 
-                            result.complete(
-                                    new MappedMessage(ctx, ResourceIdentifier.from(targetAddress,
-                                            targetAddress.getTenantId(), deviceId), mqttPublishMessage)
-                            );
-                            return;
-                        }
-                    }
-                    log.warn("Mapping failed for device {}", targetAddress.getResourceId());
-                    result.complete(new MappedMessage(ctx, targetAddress, message));
-                });
-        return result.future();
+                    result.complete(new MappedMessage(
+                            ResourceIdentifier.from(targetAddress.getEndpoint(), targetAddress.getTenantId(), mappedDeviceId),
+                            mqttPublishMessage)
+                    );
+                } else {
+                    LOG.debug("mapping of message published by {} failed", ctx.authenticatedDevice(), httpResponseAsyncResult.cause());
+                    result.complete(new MappedMessage(targetAddress, ctx.message()));
+                }
+                resultHandler.handle(result.future());
+            });
     }
 }

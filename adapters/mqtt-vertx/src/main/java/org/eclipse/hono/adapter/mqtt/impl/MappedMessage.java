@@ -13,39 +13,28 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
-import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
 /**
- * Structure to provide a mapped message.
+ * The result of mapping a message using the {@code MessageMapping} service.
  */
 final class MappedMessage {
-    private final MqttContext ctx;
+
     private final ResourceIdentifier resource;
     private final MqttPublishMessage message;
 
     /**
-     * Creates a new mappedMessage.
+     * Creates a new mapping result.
      *
      * @param ctx The original context of the received message.
      * @param resource The original ResourceIdentifier in which the deviceId may be altered by the mapper.
      * @param message The received message from the gateway/device in which the payload may be altered by the mapper.
      */
-    MappedMessage(final MqttContext ctx, final ResourceIdentifier resource, final MqttPublishMessage message) {
-        this.ctx = ctx;
-        this.resource = resource;
+    MappedMessage(final ResourceIdentifier targetAddress, final MqttPublishMessage message) {
+        this.resource = targetAddress;
         this.message = message;
-    }
-
-    /**
-     * Gets the context.
-     *
-     * @return the context
-     */
-    MqttContext getCtx() {
-        return ctx;
     }
 
     /**
