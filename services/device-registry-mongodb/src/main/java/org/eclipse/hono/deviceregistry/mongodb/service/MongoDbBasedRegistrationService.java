@@ -41,9 +41,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.ErrorCategory;
-import com.mongodb.MongoException;
-
 import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -233,14 +230,6 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                         .orElse(null));
     }
 
-    private boolean isDuplicateKeyError(final Throwable throwable) {
-        if (throwable instanceof MongoException) {
-            final MongoException mongoException = (MongoException) throwable;
-            return ErrorCategory.fromErrorCode(mongoException.getCode()) == ErrorCategory.DUPLICATE_KEY;
-        }
-        return false;
-    }
-
     private Future<OperationResult<Id>> processCreateDevice(final DeviceDto device, final Span span) {
 
         // the DTO contains either the device ID provided by the client
@@ -261,7 +250,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             Optional.of(device.getVersion()));
                 })
                 .recover(error -> {
-                    if (isDuplicateKeyError(error)) {
+                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
                         LOG.debug("device [{}] already exists for tenant [{}]", device.getDeviceId(),
                                 device.getTenantId(), error);
                         TracingHelper.logError(span, "device already exists");
