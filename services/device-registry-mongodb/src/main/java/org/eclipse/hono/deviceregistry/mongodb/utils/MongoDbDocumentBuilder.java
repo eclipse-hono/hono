@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.utils;
 
+import java.util.Objects;
+import java.util.Optional;
+
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -77,13 +80,15 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
-     * Sets the json object with the given version.
+     * Sets the json object with the given version if available.
      *
      * @param version The version of the document.
      * @return a reference to this for fluent use.
+     * @throws NullPointerException if version is {@code null}.
      */
-    public MongoDbDocumentBuilder withVersion(final String version) {
-        document.put(MongoDbDeviceRegistryUtils.FIELD_VERSION, version);
+    public MongoDbDocumentBuilder withVersion(final Optional<String> version) {
+        Objects.requireNonNull(version);
+        version.ifPresent(ver -> document.put(MongoDbDeviceRegistryUtils.FIELD_VERSION, ver));
         return this;
     }
 
