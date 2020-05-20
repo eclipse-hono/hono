@@ -13,45 +13,78 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
 import org.eclipse.hono.util.ResourceIdentifier;
 
-import io.vertx.mqtt.messages.MqttPublishMessage;
+import io.vertx.core.buffer.Buffer;
 
 /**
- * The result of mapping a message using the {@code MessageMapping} service.
+ * The result of mapping a message using a {@code MessageMapping} service.
  */
 final class MappedMessage {
 
-    private final ResourceIdentifier resource;
-    private final MqttPublishMessage message;
+    private final ResourceIdentifier targetAddress;
+    private final Buffer payload;
+    private final Map<String, String> additionalProperties = new HashMap<>();
 
     /**
      * Creates a new mapping result.
      *
      * @param ctx The original context of the received message.
-     * @param resource The original ResourceIdentifier in which the deviceId may be altered by the mapper.
-     * @param message The received message from the gateway/device in which the payload may be altered by the mapper.
+     * @throws NullPointerException if targetAddress is {@code null}.
      */
-    MappedMessage(final ResourceIdentifier targetAddress, final MqttPublishMessage message) {
-        this.resource = targetAddress;
-        this.message = message;
+    MappedMessage(final ResourceIdentifier targetAddress, final Buffer payload) {
+        this(targetAddress, payload, null);
     }
 
     /**
-     * Gets the resourceIdentifier.
-     *
-     * @return the resourceIdentifier
+     * Creates a new mapping result.
+     * 
+     * @param targetAddress The target address that the original message has been mapped to.
+     * @param payload The payload that the original message has been mapped to.
+     * @param additionalProperties Extra properties that should be included with the mapped message.
+     * @throws NullPointerException if targetAddress is {@code null}.
      */
-    ResourceIdentifier getResource() {
-        return resource;
+    MappedMessage(
+            final ResourceIdentifier targetAddress,
+            final Buffer payload,
+            final Map<String, String> additionalProperties) {
+
+        this.targetAddress = Objects.requireNonNull(targetAddress);
+        this.payload = Optional.ofNullable(payload).orElse(Buffer.buffer());
+        Optional.ofNullable(additionalProperties)
+            .ifPresent(props -> this.additionalProperties.putAll(additionalProperties));
     }
 
     /**
-     * Gets the message.
+     * Gets the address that the message should be forwarded to.
      *
-     * @return the actual message
+     * @return The address.
      */
-    MqttPublishMessage getMessage() {
-        return message;
+    ResourceIdentifier getTargetAddress() {
+        return targetAddress;
+    }
+
+    /**
+     * Gets the mapped payload.
+     *
+     * @return The payload.
+     */
+    Buffer getPayload() {
+        return payload;
+    }
+
+    /**
+     * Gets additional properties to be included with the mapped
+     * message.
+     * 
+     * @return The properties (may be empty).
+     */
+    Map<String, String> getAdditionalProperties() {
+        return additionalProperties;
     }
 }

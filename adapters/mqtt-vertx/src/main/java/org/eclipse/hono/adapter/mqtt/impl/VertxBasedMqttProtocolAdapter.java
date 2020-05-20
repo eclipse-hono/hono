@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.mqtt.AbstractVertxBasedMqttProtocolAdapter;
-import org.eclipse.hono.adapter.mqtt.MqttConstants;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
@@ -31,9 +30,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
-import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
+import io.vertx.mqtt.messages.MqttPublishMessage;
 
 
 /**
@@ -41,7 +40,9 @@ import io.vertx.core.json.Json;
  */
 public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttProtocolAdapter<MqttProtocolAdapterProperties> {
 
-    private MessageMapping messageMapping;
+    private static final String MAPPER_DATA = "mapper_data";
+
+    private MessageMapping<MqttContext> messageMapping;
 
     /**
      * {@inheritDoc}
@@ -63,7 +64,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
      * @throws NullPointerException if messageMapping is {@code null}.
      */
     @Autowired
-    public void setMessageMapping(final MessageMapping messageMappingService) {
+    public void setMessageMapping(final MessageMapping<MqttContext> messageMappingService) {
         Objects.requireNonNull(messageMappingService);
         this.messageMapping = messageMappingService;
     }
@@ -77,7 +78,16 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
         return mapTopic(ctx)
                 .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
                 .compose(targetAddress -> mapMessage(ctx, targetAddress))
-                .compose(mappedMessage -> uploadMessage(ctx, mappedMessage.getResource(), mappedMessage.getMessage()))
+                .compose(mappedMessage -> {
+                    final MqttPublishMessage mqttPublishMessage = MqttPublishMessage.create(
+                            ctx.message().messageId(),
+                            ctx.message().qosLevel(),
+                            ctx.message().isDup(),
+                            ctx.message().isRetain(),
+                            ctx.message().topicName(),
+                            mappedMessage.getPayload().getByteBuf());
+                    return uploadMessage(ctx, mappedMessage.getTargetAddress(), mqttPublishMessage);
+                })
                 .recover(t -> {
                     log.debug("discarding message [topic: {}] from {}",
                             ctx.message().topicName(), ctx.authenticatedDevice(), t);
@@ -94,23 +104,31 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 targetAddress.getResourceId(),
                 ctx.authenticatedDevice(),
                 ctx.getTracingContext())
-                .compose(registratonInfo -> messageMapping.mapMessage(ctx, targetAddress, registratonInfo));
+                .compose(registratonInfo -> messageMapping.mapMessage(ctx, targetAddress, registratonInfo))
+                .map(mappedMessage -> {
+                    ctx.put(MAPPER_DATA, mappedMessage.getAdditionalProperties());
+                    return mappedMessage;
+                });
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     protected void customizeDownstreamMessage(final Message downstreamMessage, final MqttContext ctx) {
 
-        final Object mapperData = ctx.get(MqttConstants.MAPPER_DATA);
-        if (mapperData instanceof MultiMap) {
-            for (final Map.Entry<String, String> entry : ((MultiMap) mapperData).entries()) {
-                final Object value = entry.getValue();
-                if (value instanceof String) {
-                    // prevent quotes around strings
-                    MessageHelper.addProperty(downstreamMessage, entry.getKey(), value);
-                } else {
-                    MessageHelper.addProperty(downstreamMessage, entry.getKey(), Json.encode(value));
-                }
-            }
+        final Object additionalProperties = ctx.get(MAPPER_DATA);
+        if (additionalProperties instanceof Map) {
+            ((Map<Object, Object>) additionalProperties).entrySet().stream()
+                .filter(entry -> entry.getKey() instanceof String)
+                .forEach(entry -> {
+                    final String key = (String) entry.getKey();
+                    final Object value = entry.getValue();
+                    if (value instanceof String) {
+                        // prevent quotes around strings
+                        MessageHelper.addProperty(downstreamMessage, key, value);
+                    } else {
+                        MessageHelper.addProperty(downstreamMessage, key, Json.encode(value));
+                    }
+                });
         }
     }
 

@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -64,10 +65,6 @@ public class HttpBasedMessageMappingTest {
      * A tenant identifier used for testing.
      */
     private static final String TEST_TENANT_ID = Constants.DEFAULT_TENANT;
-    /**
-     * A device used for testing.
-     */
-    private static final String TEST_DEVICE = "test-device";
 
     private MqttProtocolAdapterProperties config;
     private WebClient mapperWebClient;
@@ -84,22 +81,77 @@ public class HttpBasedMessageMappingTest {
     }
 
     /**
-     * Verifies the updated payload and deviceId is overwritten in the messageMapper.
+     * Verifies that the result returned by the mapping service contains the
+     * original payload and target address if no mapper has been defined for
+     * the gateway.
+     *
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @Test
+    public void testMapMessageSucceedsIfNoMapperIsSet(final VertxTestContext ctx) {
+
+        config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
+        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+
+        messageMapping.mapMessage(context, targetAddress, new JsonObject())
+            .onComplete(ctx.succeeding(mappedMessage -> {
+                ctx.verify(() -> {
+                    assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
+                    assertThat(mappedMessage.getPayload()).isEqualTo(message.payload());
+                    assertThat(mappedMessage.getAdditionalProperties()).isEmpty();
+                    verify(mapperWebClient, never()).post(anyInt(), anyString(), anyString());
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the result returned by the mapping service contains the
+     * original payload and target address if no mapper endpoint has been configured
+     * for the adapter.
+     *
+     * @param ctx The helper to use for running tests on vert.x.
+     */
+    @Test
+    public void testMapMessageSucceedsIfNoMapperEndpointIsConfigured(final VertxTestContext ctx) {
+
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
+        final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
+        final MqttContext context = newContext(message, new Device(TEST_TENANT_ID, "gateway"));
+
+        messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
+            .onComplete(ctx.succeeding(mappedMessage -> {
+                ctx.verify(() -> {
+                    assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
+                    assertThat(mappedMessage.getPayload()).isEqualTo(message.payload());
+                    assertThat(mappedMessage.getAdditionalProperties()).isEmpty();
+                    verify(mapperWebClient, never()).post(anyInt(), anyString(), anyString());
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the result returned by the mapping service contains the
+     * mapped payload, device ID and additional properties.
      *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @SuppressWarnings("unchecked")
     @Test
-    public void testMapperShouldUpdatePayloadAndDeviceId(final VertxTestContext ctx) {
+    public void testMapMessageSucceeds(final VertxTestContext ctx) {
 
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
-        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, TEST_DEVICE);
+        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final String newDeviceId = "new-device";
 
         final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
 
         final MultiMap responseHeaders = MultiMap.caseInsensitiveMultiMap();
         responseHeaders.add(MessageHelper.APP_PROPERTY_DEVICE_ID, newDeviceId);
+        responseHeaders.add("foo", "bar");
         final Buffer responseBody = Buffer.buffer("changed");
 
         final HttpResponse<Buffer> httpResponse = mock(HttpResponse.class);
@@ -115,8 +167,10 @@ public class HttpBasedMessageMappingTest {
         messageMapping.mapMessage(context, targetAddress, new JsonObject().put(RegistrationConstants.FIELD_MAPPER, "mapper"))
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
-                    assertThat(mappedMessage.getResource().getResourceId()).isEqualTo("new-device");
-                    assertThat(mappedMessage.getMessage().payload()).isEqualTo(responseBody);
+                    assertThat(mappedMessage.getTargetAddress().getResourceId()).isEqualTo("new-device");
+                    assertThat(mappedMessage.getPayload()).isEqualTo(responseBody);
+                    assertThat(mappedMessage.getAdditionalProperties()).doesNotContainKey(MessageHelper.APP_PROPERTY_DEVICE_ID);
+                    assertThat(mappedMessage.getAdditionalProperties()).containsEntry("foo", "bar");
                 });
                 ctx.completeNow();
             }));

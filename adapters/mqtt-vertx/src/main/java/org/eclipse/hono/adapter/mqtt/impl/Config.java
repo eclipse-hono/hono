@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
+import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -130,7 +131,7 @@ public class Config extends AbstractAdapterConfig {
      * @return Returns MessageMapping containing a webclient to perform mapper requests.
      */
     @Bean
-    public MessageMapping messageMapping() {
+    public MessageMapping<MqttContext> messageMapping() {
         final WebClient webClient = WebClient.create(vertx());
         return new HttpBasedMessageMapping(webClient, adapterProperties());
     }
