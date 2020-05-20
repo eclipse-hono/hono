@@ -27,7 +27,7 @@ info:
       try to understand the model and then translate this into the required
       programming language. Even if there would be no bugs in the code
       generators, that process would already only be an approximation. So
-      this model focuses on the description of the API, and doesn't tweak
+      this model focuses on the description of the API, and does not tweak
       the specification in a way to please code generators.
 
    contact:
@@ -513,7 +513,7 @@ components:
                description: |
                   The subject DN of the trusted root certificate in
                   the format defined by RFC 2253.
-                  CAs of the *same* tenant may share the same subject DN, e.g.
+                  CAs of the *same* tenant may share the same subject DN, for example
                   allowing for the definition of overlapping validity periods.
                   However, CAs of *different* tenants must not share the same
                   subject DN in order to allow for the unique look up of a tenant by
@@ -521,7 +521,7 @@ components:
                   If the `cert` property is used to provide an X.509 certificate
                   then the subject DN is determined from the certificate and this
                   property is ignored.
-                  Otherwise, i.e. if the `public-key` property is
+                  Otherwise, if the `public-key` property is
                   used, this property is mandatory.
             "public-key":
                type: string
@@ -540,7 +540,7 @@ components:
                   If the `cert` property is used to provide an
                   X.509 certificate then the algorithm is determined
                   from the certificate and this property is ignored.
-                  Otherwise, i.e. if the `public-key` property is
+                  Otherwise, if the `public-key` property is
                   used, this property must be set to the algorithm
                   used, if other than the default.
                default: RSA
@@ -554,7 +554,7 @@ components:
                   If the `cert` property is used to provide an
                   X.509 certificate then the point in time is
                   determined from the certificate and this property is ignored.
-                  Otherwise, i.e. if the `public-key` property is
+                  Otherwise, if the `public-key` property is
                   used, this property is mandatory.
             "not-after":
                type: string
@@ -565,7 +565,7 @@ components:
                   If the `cert` property is used to provide an
                   X.509 certificate then the point in time is
                   determined from the certificate and this property is ignored.
-                  Otherwise, i.e. if the `public-key` property is
+                  Otherwise, if the `public-key` property is
                   used, this property is mandatory.
             "cert":
                type: string
@@ -586,7 +586,7 @@ components:
                   Indicates whether this trusted certificate may be used for automatically provisioning devices.
                   If it is *true* and the feature is supported by the device registry, the device registry
                   automatically provisions unregistered devices that authenticate with a client certificate
-                  issued by this CA (i.e. creates registration and credentials).
+                  issued by this CA (that is, creates registration and credentials).
 
          example:
             subject-dn: "CN=devices,OU=iot,O=ACME"
