@@ -212,7 +212,7 @@
     <module>client-device-connection-infinispan</module>
     <module>demo-certs</module>
     <module>deploy</module>
-    <module>example</module>
+    <module>examples</module>
     <module>jmeter</module>
     <module>legal</module>
     <module>service-base</module>
