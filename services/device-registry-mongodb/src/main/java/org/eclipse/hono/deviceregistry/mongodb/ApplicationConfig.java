@@ -15,10 +15,13 @@ package org.eclipse.hono.deviceregistry.mongodb;
 
 import java.util.Optional;
 
+import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
@@ -183,6 +186,18 @@ public class ApplicationConfig {
         return MongoClient.createShared(vertx(), mongoDbConfigProperties().getMongoClientConfig());
     }
 
+
+    /**
+     * Exposes a password encoder to use for encoding clear text passwords
+     * and for matching password hashes.
+     *
+     * @return The encoder.
+     */
+    @Bean
+    public HonoPasswordEncoder passwordEncoder() {
+        return new SpringBasedHonoPasswordEncoder(credentialsServiceProperties().getMaxBcryptIterations());
+    }
+
     //
     //
     // Service properties
@@ -213,6 +228,19 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.tenant.svc")
     public MongoDbBasedTenantsConfigProperties tenantsServiceProperties() {
         return new MongoDbBasedTenantsConfigProperties();
+    }
+
+    /**
+     * Gets properties for configuring
+     * {@link org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService} which
+     * implements the <em>Credentials</em> API.
+     *
+     * @return The properties.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.credentials.svc")
+    public MongoDbBasedCredentialsConfigProperties credentialsServiceProperties() {
+        return new MongoDbBasedCredentialsConfigProperties();
     }
 
     //
@@ -279,7 +307,12 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedCredentialsService credentialsService() {
-        return new MongoDbBasedCredentialsService();
+        return new MongoDbBasedCredentialsService(
+                vertx(),
+                mongoClient(),
+                credentialsServiceProperties(),
+                passwordEncoder()
+        );
     }
 
     /**

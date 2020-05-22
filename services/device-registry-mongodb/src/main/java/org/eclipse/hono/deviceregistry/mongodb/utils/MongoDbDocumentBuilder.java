@@ -27,6 +27,10 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MongoDbDocumentBuilder {
 
+    private static final String FIELD_CREDENTIALS_AUTH_ID_KEY = String.format("%s.%s",
+            MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_AUTH_ID);
+    private static final String FIELD_CREDENTIALS_TYPE_KEY = String.format("%s.%s",
+            MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_TYPE);
     private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
             RegistryManagementConstants.FIELD_TENANT,
             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
@@ -99,5 +103,27 @@ public final class MongoDbDocumentBuilder {
      */
     public JsonObject document() {
         return document;
+    }
+
+    /**
+     * Sets the json object with the given credentials type.
+     *
+     * @param type The credentials type.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withType(final String type) {
+        document.put(FIELD_CREDENTIALS_TYPE_KEY, type);
+        return this;
+    }
+
+    /**
+     * Sets the json object with the given auth id.
+     *
+     * @param authId The auth id.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withAuthId(final String authId) {
+        document.put(FIELD_CREDENTIALS_AUTH_ID_KEY, authId);
+        return this;
     }
 }
