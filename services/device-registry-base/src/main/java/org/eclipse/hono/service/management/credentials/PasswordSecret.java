@@ -12,6 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.Objects;
+import java.util.Set;
+
+import org.eclipse.hono.auth.BCryptHelper;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
@@ -37,7 +41,7 @@ public class PasswordSecret extends CommonSecret {
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_SALT)
     private String salt;
 
-    public String getHashFunction() {
+    public final String getHashFunction() {
         return hashFunction;
     }
 
@@ -50,12 +54,12 @@ public class PasswordSecret extends CommonSecret {
      * @param hashFunction  The cryptographic hashing function to use.
      * @return              a reference to this for fluent use.
      */
-    public PasswordSecret setHashFunction(final String hashFunction) {
+    public final PasswordSecret setHashFunction(final String hashFunction) {
         this.hashFunction = hashFunction;
         return this;
     }
 
-    public String getPasswordHash() {
+    public final String getPasswordHash() {
         return passwordHash;
     }
 
@@ -68,12 +72,12 @@ public class PasswordSecret extends CommonSecret {
      * @param passwordHash  The cryptographic hash to set for this password.
      * @return              a reference to this for fluent use.
      */
-    public PasswordSecret setPasswordHash(final String passwordHash) {
+    public final PasswordSecret setPasswordHash(final String passwordHash) {
         this.passwordHash = passwordHash;
         return this;
     }
 
-    public String getPasswordPlain() {
+    public final String getPasswordPlain() {
         return passwordPlain;
     }
 
@@ -83,12 +87,12 @@ public class PasswordSecret extends CommonSecret {
      * @param passwordPlain  The UTF-8 encoded plain text password to set.
      * @return               a reference to this for fluent use.
      */
-    public PasswordSecret setPasswordPlain(final String passwordPlain) {
+    public final PasswordSecret setPasswordPlain(final String passwordPlain) {
         this.passwordPlain = passwordPlain;
         return this;
     }
 
-    public String getSalt() {
+    public final String getSalt() {
         return salt;
     }
 
@@ -98,7 +102,7 @@ public class PasswordSecret extends CommonSecret {
      * @param salt The Base64 encoding of the salt to use in the password hash.
      * @return     a reference to this for fluent use.
      */
-    public PasswordSecret setSalt(final String salt) {
+    public final PasswordSecret setSalt(final String salt) {
         this.salt = salt;
         return this;
     }
@@ -111,6 +115,21 @@ public class PasswordSecret extends CommonSecret {
                 .add("salt", this.salt);
     }
 
+    /**
+     * Checks if this secret's properties represent a <em>valid</em> state.
+     * <p>
+     * This implementation verifies that
+     * <ul>
+     * <li>the <em>notBefore</em> instant is before the <em>notAfter</em> instant and</li>
+     * <li>either the containsOnlySecretId method returns {@code true} or</li>
+     * <li>the <em>passwordPlain</em> property is {@code null} and the <em>hashFunction</em> and
+     * <em>passwordHash</em> properties are not {@code null}</li>
+     * </ul>
+     * Subclasses may override this method in order to perform
+     * additional checks.
+     * 
+     * @throws IllegalStateException if the secret is not valid.
+     */
     @Override
     public void checkValidity() {
         super.checkValidity();
@@ -129,9 +148,11 @@ public class PasswordSecret extends CommonSecret {
     }
 
     /**
-     * Asserts if the secret do not contain secret details and only an id.
+     * Checks if this secret contains an identifier only.
      *
-     * @return        true if an ID is present and no new secret detail is set.
+     * @return {@code true} if the <em>id</em> property is not {@code null} and the
+     *         <em>passwordPlain</em>, <em>hashFunction</em> and <em>passwordHash</em>
+     *         properties are {@code null}.
      */
     public boolean containsOnlySecretId() {
         return (!Strings.isNullOrEmpty(getId())
@@ -141,10 +162,15 @@ public class PasswordSecret extends CommonSecret {
     }
 
     /**
-     * Encodes the clear text password contained in the <em>pwd-plain</em> field.
+     * Encodes the clear text password contained in the <em>passwordPlain</em> field.
+     * <p>
+     * The hashFunction, passwordHash and salt fields are set to the values produced
+     * by the given encoder. The passwordPlain field is set to {@code null}.
+     * <p>
+     * This method does nothing if the <em>passwordPlain</em> field is {@code null} or empty.
      * 
      * @param encoder The password encoder to use.
-     * @return        a reference to this for fluent use.
+     * @return A reference to this for fluent use.
      */
     public PasswordSecret encode(final HonoPasswordEncoder encoder) {
         if (!Strings.isNullOrEmpty(passwordPlain)) {
@@ -157,4 +183,52 @@ public class PasswordSecret extends CommonSecret {
         return this;
     }
 
+    /**
+     * Checks if this secret uses a supported hash algorithm.
+     * <p>
+     * The check is successful if this secret
+     * <ol>
+     * <li>does not contain a hashed nor plain text password or</li>
+     * <li>if this secret contains a hashed password, the
+     * <ul>
+     * <li>hash algorithm is contained in the given white list and</li>
+     * <li>if the hash algorithm used is bcrypt, the {@link BCryptHelper#getIterations(String)}
+     * method returns a value that is &le; the max iterations.</li>
+     * </ul>
+     * </li>
+     * </ol>
+     *
+     * @param hashAlgorithmsWhitelist The list of supported hashing algorithms for pre-hashed passwords.
+     * @param maxBcryptIterations The maximum number of iterations to use for bcrypt password hashes.
+     * @throws IllegalStateException if this secret doesn't use a supported and valid hash algorithm.
+     * @throws NullPointerException if the white list is {@code null}.
+     */
+    public final void verifyHashAlgorithm(final Set<String> hashAlgorithmsWhitelist, final int maxBcryptIterations) {
+
+        Objects.requireNonNull(hashAlgorithmsWhitelist);
+
+        if (containsOnlySecretId()) {
+            return;
+        } else if (hashFunction != null) {
+
+            if (!hashAlgorithmsWhitelist.isEmpty() && !hashAlgorithmsWhitelist.contains(hashFunction)) {
+                throw new IllegalStateException(String.format("unsupported hashing algorithm [%s]", hashFunction));
+            }
+            switch (hashFunction) {
+            case RegistryManagementConstants.HASH_FUNCTION_BCRYPT:
+                try {
+                    if (BCryptHelper.getIterations(passwordHash) > maxBcryptIterations) {
+                        throw new IllegalStateException("BCrypt hash algorithm uses too many iterations, max is " + maxBcryptIterations);
+                    }
+                    break;
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalStateException("password hash is not a supported BCrypt hash", e);
+                }
+            default:
+                // no additional checks for other hash algorithms
+                break;
+            }
+        }
+        return;
+    }
 }
