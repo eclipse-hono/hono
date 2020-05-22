@@ -182,7 +182,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
     /**
      * {@inheritDoc}
      */
-    @Override protected Future<OperationResult<List<CommonCredential>>> processReadCredentials(
+    @Override
+    protected Future<OperationResult<List<CommonCredential>>> processReadCredentials(
             final DeviceKey deviceKey,
             final Span span) {
 
@@ -194,8 +195,10 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                     final List<CommonCredential> credentialsList = result
                             .getJsonArray(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS)
                             .stream()
-                            .map(credential -> removePasswordDetailsFromCredential((JsonObject) credential))
+                            .filter(JsonObject.class::isInstance)
+                            .map(JsonObject.class::cast)
                             .map(credential -> credential.mapTo(CommonCredential.class))
+                            .map(CommonCredential::stripPrivateInfo)
                             .collect(Collectors.toList());
 
                     return OperationResult.ok(
@@ -450,6 +453,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
             final Optional<String> resourceVersion,
             final List<CommonCredential> credentials,
             final Span span) {
+
         final JsonObject updateCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
                 .withTenantId(deviceKey.getTenantId())
@@ -459,20 +463,20 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         final CredentialsDto credentialsDto = new CredentialsDto(deviceKey.getTenantId(), deviceKey.getDeviceId(),
                 credentials, DeviceRegistryUtils.getUniqueIdentifier());
 
-        //If the credentials to be updated do not have any existing secret ids, the credentials document is replaced.
-        //Else the document is to be merged based on the secret ids and it is yet to be implemented.
-        if (!credentialsDto.hasSecretIds()) {
+        if (credentialsDto.requiresMerging()) {
+            // Merge provided secrets with existing secrets on record based on the secret IDs
+            // TODO: To implement - if secret meta data already exists.
+            LOG.warn("merging of secret data based on the given secret ids is not implemented");
+            TracingHelper.logError(span, "merging of secret data based on the given secret ids is not implemented");
+            return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+        } else {
+            // simply replace existing document (and secrets)
             mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(),
                     updateCredentialsQuery,
                     JsonObject.mapFrom(credentialsDto),
                     new FindOptions(),
                     new UpdateOptions().setReturningNewDocument(true),
                     updateCredentialsPromise);
-        } else {
-            // TODO: To implement - if secret meta data already exists.
-            LOG.warn("merging of secret data based on the given secret ids is not implemented");
-            TracingHelper.logError(span, "merging of secret data based on the given secret ids is not implemented");
-            return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
         }
 
         return updateCredentialsPromise.future()
@@ -482,7 +486,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                                 deviceKey.getDeviceId(), resourceVersion,
                                 getCredentialsDto(deviceKey));
                     } else {
-                        LOG.debug("successfully updated credentials for the device [{}}]", deviceKey.getDeviceId());
+                        LOG.debug("successfully updated credentials for device [tenant: {}, device-id: {}}]",
+                                deviceKey.getTenantId(), deviceKey.getDeviceId());
                         span.log("successfully updated credentials");
                         return Future.succeededFuture(
                                 OperationResult.ok(
@@ -494,30 +499,12 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 })
                 .recover(error -> {
                     if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
-                        LOG.debug("the composite key of auth-id and type for the given tenant[{}] must be unique",
-                                deviceKey.getTenantId(), error);
-                        TracingHelper.logError(span,
-                                "the composite key of auth-id and type for the given tenant must be unique");
+                        LOG.debug("credentials (type, auth-id) must be unique for device [tenant: {}, device-id: {}]",
+                                deviceKey.getTenantId(), deviceKey.getTenantId(), error);
+                        TracingHelper.logError(span, "credentials (type, auth-id) must be unique for device");
                         return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_CONFLICT));
                     }
                     return Future.failedFuture(error);
                 });
-    }
-
-    private JsonObject removePasswordDetailsFromCredential(final JsonObject credential) {
-
-        if (credential.getString(CredentialsConstants.FIELD_TYPE)
-                .equals(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)) {
-            credential.getJsonArray(CredentialsConstants.FIELD_SECRETS)
-                    .forEach(secret -> removePasswordDetailsFromSecret((JsonObject) secret));
-        }
-        return credential;
-    }
-
-    private void removePasswordDetailsFromSecret(final JsonObject secret) {
-        secret.remove(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_HASH);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_SALT);
-        secret.remove(CredentialsConstants.FIELD_SECRETS_PWD_PLAIN);
     }
 }

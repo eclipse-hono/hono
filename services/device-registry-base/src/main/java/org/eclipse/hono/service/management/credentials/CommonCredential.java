@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
+import com.google.common.base.Strings;
 
 /**
  * This class encapsulates information that is common across all credential types supported in Hono.
@@ -49,7 +50,14 @@ public abstract class CommonCredential {
      * 
      * @return The list of credentials, must not be {@code null}.
      */
-    protected abstract List<? extends CommonSecret> getSecrets();
+    public abstract List<? extends CommonSecret> getSecrets();
+
+    /**
+     * Gets the type of secrets these credentials contain.
+     * 
+     * @return The type name.
+     */
+    public abstract String getType();
 
     public String getAuthId() {
         return authId;
@@ -129,15 +137,31 @@ public abstract class CommonCredential {
     }
 
     /**
-     * Check if this credential is valid.
+     * Checks if these credentials' properties represent a consisten state.
      * <p>
-     * The credential is valid if it contains a non-null, non-empty authentication identifier.
+     * The check succeeds if the authId and type properties are neither {@code null} nor empty.
      * 
-     * @throws IllegalStateException if this credential does not contain a valid authentication identifier.
+     * @throws IllegalStateException if the check fails.
      */
     public void checkValidity() {
-        if (this.authId == null || this.authId.isEmpty()) {
+        if (Strings.isNullOrEmpty(authId)) {
             throw new IllegalStateException("missing auth ID");
+        } else if (Strings.isNullOrEmpty(getType())) {
+            throw new IllegalStateException("missing type");
         }
+    }
+
+    /**
+     * Removes non-public information from these credentials.
+     * <p>
+     * This can be used for example to prevent secrets from being exposed to
+     * external systems.
+     * <p>
+     * This default implementation does nothing.
+     * 
+     * @return This credentials object with all non-public information removed.
+     */
+    public CommonCredential stripPrivateInfo() {
+        return this;
     }
 }

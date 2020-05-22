@@ -231,4 +231,11 @@ public class PasswordSecret extends CommonSecret {
         }
         return;
     }
+
+    void stripPrivateInfo() {
+        hashFunction = null;
+        passwordPlain = null;
+        passwordHash = null;
+        salt = null;
+    }
 }

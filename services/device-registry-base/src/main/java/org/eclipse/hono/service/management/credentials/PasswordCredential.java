@@ -15,6 +15,9 @@ package org.eclipse.hono.service.management.credentials;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.eclipse.hono.util.RegistryManagementConstants;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -27,9 +30,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PasswordCredential extends CommonCredential {
 
+    static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD;
+
     @JsonProperty
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<PasswordSecret> secrets = new LinkedList<>();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonIgnore
+    public final String getType() {
+        return TYPE;
+    }
 
     @Override
     public List<PasswordSecret> getSecrets() {
@@ -50,6 +64,17 @@ public class PasswordCredential extends CommonCredential {
             throw new IllegalArgumentException("secrets cannot be empty");
         }
         this.secrets = secrets;
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Removes hash function, password hash, salt and plaintext password from all secrets.
+     */
+    @Override
+    public final PasswordCredential stripPrivateInfo() {
+        getSecrets().forEach(secret -> stripPrivateInfo());
         return this;
     }
 }

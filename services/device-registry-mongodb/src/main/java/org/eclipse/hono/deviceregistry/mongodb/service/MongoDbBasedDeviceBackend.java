@@ -149,6 +149,7 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
     public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
             final JsonObject clientContext,
             final Span span) {
+
         return credentialsService.get(tenantId, type, authId, clientContext, span)
                 .compose(result -> {
                     if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND

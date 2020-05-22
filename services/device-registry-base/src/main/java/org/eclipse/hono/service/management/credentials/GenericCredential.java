@@ -49,6 +49,7 @@ public class GenericCredential extends CommonCredential {
         return this;
     }
 
+    @Override
     public String getType() {
         return type;
     }

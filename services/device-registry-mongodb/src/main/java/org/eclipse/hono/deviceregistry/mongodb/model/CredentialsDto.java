@@ -23,10 +23,6 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CommonSecret;
-import org.eclipse.hono.service.management.credentials.GenericCredential;
-import org.eclipse.hono.service.management.credentials.PasswordCredential;
-import org.eclipse.hono.service.management.credentials.PskCredential;
-import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -45,24 +41,31 @@ public class CredentialsDto extends BaseDto {
 
     @JsonProperty(value = MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, required = true)
     private List<CommonCredential> credentials;
-    private boolean hasSecretIds;
+    private boolean requiresMerging;
 
     /**
      * Default constructor for serialisation/deserialization.
      */
     public CredentialsDto() {
-        // Explicit default constructor.
     }
 
     /**
-     * Creates a new data transfer object to store credentials information in mongodb.
-     *
+     * Creates a new instance for a list of credentials.
+     * <p>
+     * This constructor also makes sure that
+     * <ul>
+     * <li>none of the credentials have the same type and authentication identifier and</li>
+     * <li>that each secret has a unique identifier within its credentials object.</li>
+     * </ul>
+     * <p>
+     * These properties are supposed to be asserted before persisting this DTO.
+     * 
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
      * @param credentials The list of credentials.
      * @param version The version of the credentials to be sent as request header.
      * @throws NullPointerException if any of the parameters except credentials is {@code null}
-     * @throws IllegalArgumentException if validation of the given credentials fail.
+     * @throws ClientErrorException if any of the checks fail.
      */
     public CredentialsDto(
             final String tenantId,
@@ -75,9 +78,9 @@ public class CredentialsDto extends BaseDto {
 
         //Validate the given credentials, secrets and generate secret ids if not available.
         Optional.ofNullable(credentials)
-                .ifPresent(ok -> {
-                    validateForUniqueAuthIdAndType(credentials);
-                    validateSecretsAndGenerateIds(credentials);
+                .ifPresent(creds -> {
+                    assertTypeAndAuthId(creds);
+                    assertSecretIds(creds);
                 });
         setCredentials(credentials);
 
@@ -142,52 +145,17 @@ public class CredentialsDto extends BaseDto {
     }
 
     /**
-     * Checks whether the credentials to be updated already have secret ids.
+     * Checks if the secrets contained in this DTO need to be merged when updating
+     * existing credentials.
+     * <p>
+     * Otherwise the existing credentials can simply be replaced with the data contained
+     * in this DTO.
      *
-     * @return hasSecretIds {@code true} if any credential already has a secret identifier,
-     *                      otherwise {@code false}
+     * @return {@code true} if the secrets need to be merged.
      */
     @JsonIgnore
-    public boolean hasSecretIds() {
-        return hasSecretIds;
-    }
-
-    /**
-     * Sets whether the credentials to be updated already have secret ids.
-     *
-     * @param hasSecretIds {@code true} if any credential already has a secret identifier,
-     *                         otherwise {@code false}
-     */
-    @JsonIgnore
-    public void setHasSecretIds(final boolean hasSecretIds) {
-        this.hasSecretIds = hasSecretIds;
-    }
-
-    @JsonIgnore
-    private String getAuthType(final CommonCredential credential) {
-        if (credential instanceof GenericCredential) {
-            return ((GenericCredential) credential).getType();
-        } else if (credential instanceof PasswordCredential) {
-            return RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD;
-        } else if (credential instanceof PskCredential) {
-            return RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY;
-        } else if (credential instanceof X509CertificateCredential) {
-            return RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
-        }
-        return null;
-    }
-
-    @JsonIgnore
-    private List<? extends CommonSecret> getSecrets(final CommonCredential credential) {
-        if (credential instanceof PasswordCredential) {
-            return ((PasswordCredential) credential).getSecrets();
-        } else if (credential instanceof X509CertificateCredential) {
-            return ((X509CertificateCredential) credential).getSecrets();
-        } else if (credential instanceof PskCredential) {
-            return ((PskCredential) credential).getSecrets();
-        } else {
-            return ((GenericCredential) credential).getSecrets();
-        }
+    public boolean requiresMerging() {
+        return requiresMerging;
     }
 
     @JsonIgnore
@@ -195,40 +163,40 @@ public class CredentialsDto extends BaseDto {
         if (secret.getId() == null) {
             secret.setId(DeviceRegistryUtils.getUniqueIdentifier());
         } else {
-            this.setHasSecretIds(true);
+            this.requiresMerging = true;
         }
         return secret;
     }
 
     @JsonIgnore
-    private void validateForUniqueAuthIdAndType(final List<? extends CommonCredential> credentials) {
-            final long uniqueAuthIdAndTypeCount = credentials.stream()
-                    .map(credential -> credential.getAuthId() + getAuthType(credential))
-                    .distinct()
-                    .count();
+    private void assertTypeAndAuthId(final List<? extends CommonCredential> credentials) {
 
-            if (credentials.size() != uniqueAuthIdAndTypeCount) {
-                throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        "the composite key of auth-id and type must be unique");
-            }
+        final long uniqueAuthIdAndTypeCount = credentials.stream()
+            .map(credential -> String.format("%s::%s", credential.getType(), credential.getAuthId()))
+            .distinct()
+            .count();
+
+        if (credentials.size() > uniqueAuthIdAndTypeCount) {
+            throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "credentials must have unique (type, auth-id)");
+        }
     }
 
     @JsonIgnore
-    private void validateSecretsAndGenerateIds(final List<? extends CommonCredential> credentials) {
+    private void assertSecretIds(final List<? extends CommonCredential> credentials) {
 
         credentials.stream()
-                .map(this::getSecrets)
-                .filter(secrets -> secrets != null && !secrets.isEmpty())
-                .forEach(secrets -> {
-                    final long uniqueIdsCount = secrets.stream()
-                            .map(this::generateSecretId)
-                            .map(CommonSecret::getId)
-                            .distinct()
-                            .count();
-                    if (secrets.size() != uniqueIdsCount) {
-                        throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                                "secret ids must be unique for the secrets belonging to the same auth-id and type");
-                    }
-                });
+            .map(CommonCredential::getSecrets)
+            .forEach(secrets -> {
+                final long uniqueIdsCount = secrets.stream()
+                        .map(this::generateSecretId)
+                        .map(CommonSecret::getId)
+                        .distinct()
+                        .count();
+                if (secrets.size() > uniqueIdsCount) {
+                    throw new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "secret IDs must be unique within each credentials object");
+                }
+            });
     }
 }

@@ -88,8 +88,7 @@ public class CredentialsTest {
 
         assertEquals("psk", json.getString(RegistryManagementConstants.FIELD_TYPE));
 
-        final CommonCredential decodedCredential = Json.decodeValue(Json.encodeToBuffer(credential),
-                CommonCredential.class);
+        final CommonCredential decodedCredential = json.mapTo(CommonCredential.class);
         assertTrue(decodedCredential instanceof PskCredential);
     }
 
@@ -105,6 +104,24 @@ public class CredentialsTest {
         assertNull(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS));
 
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
+    }
+
+    /**
+     * Test encoding a generic secret.
+     */
+    @Test
+    public void testEncodeGenericCredential() {
+        final GenericCredential credential = new GenericCredential();
+        credential.setType("custom");
+
+        final JsonObject json = JsonObject.mapFrom(credential);
+        assertThat(json).isNotNull();
+        assertThat(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS)).isNull();
+
+        assertThat(json.getString(RegistryManagementConstants.FIELD_TYPE)).isEqualTo("custom");
+        final CommonCredential decodedCredential = json.mapTo(CommonCredential.class);
+        assertThat(decodedCredential).isInstanceOf(GenericCredential.class);
+
     }
 
     /**
@@ -214,13 +231,13 @@ public class CredentialsTest {
         final CommonCredential[] decode = Json.decodeValue(encode, CommonCredential[].class);
 
         // and assert
+        assertThat(decode[0]).isInstanceOf(PasswordCredential.class);
 
         final PasswordCredential decodeCredential = (PasswordCredential) decode[0];
 
-        assertThat(decodeCredential).isInstanceOf(PasswordCredential.class);
-        assertEquals(authId, decodeCredential.getAuthId());
+        assertThat(decodeCredential.getAuthId()).isEqualTo(authId);
         assertThat(decodeCredential.getSecrets()).hasSize(1);
         final PasswordSecret decodeSecret = decodeCredential.getSecrets().get(0);
-        assertEquals(decodeSecret.getNotAfter(), Instant.parse("1992-09-11T11:38:00Z"));
+        assertThat(decodeSecret.getNotAfter()).isEqualTo(Instant.parse("1992-09-11T11:38:00Z"));
     }
 }

@@ -15,6 +15,9 @@ package org.eclipse.hono.service.management.credentials;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.eclipse.hono.util.RegistryManagementConstants;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -28,9 +31,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class X509CertificateCredential extends CommonCredential {
 
+    static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_X509_CERT;
+
     @JsonProperty
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<X509CertificateSecret> secrets = new LinkedList<>();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonIgnore
+    public final String getType() {
+        return TYPE;
+    }
 
     @Override
     public List<X509CertificateSecret> getSecrets() {
