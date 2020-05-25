@@ -74,7 +74,7 @@ public class PasswordCredential extends CommonCredential {
      */
     @Override
     public final PasswordCredential stripPrivateInfo() {
-        getSecrets().forEach(secret -> stripPrivateInfo());
+        getSecrets().forEach(PasswordSecret::stripPrivateInfo);
         return this;
     }
 }
