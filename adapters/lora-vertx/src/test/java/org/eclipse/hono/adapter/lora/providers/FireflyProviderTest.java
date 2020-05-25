@@ -83,5 +83,4 @@ public class FireflyProviderTest {
         final LoraMessageType type = provider.extractMessageType(loraMessage);
         assertEquals(LoraMessageType.UNKNOWN, type);
     }
-
 }
