@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -100,48 +100,5 @@ public interface RegistrationClient extends RequestResponseClient {
             final SpanContext context) {
 
         return assertRegistration(deviceId, gatewayId);
-    }
-
-    /**
-     * Gets registration information for a device.
-     *
-     * @param deviceId The id of the device to check.
-     * @return A future indicating the result of the operation.
-     *         <p>
-     *         The future will succeed if a response with status 200 has been received from the
-     *         registration service. The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#get-registration-information">
-     *         Get Registration Information</a>.
-     *         <p>
-     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing
-     *         the (error) status code returned by the service.
-     * @throws NullPointerException if device ID is {@code null}.
-     * @see RequestResponseClient#setRequestTimeout(long)
-     */
-    Future<JsonObject> get(String deviceId);
-
-    /**
-     * Gets registration information for a device.
-     * <p>
-     * This default implementation simply returns the result of {@link #get(String)}.
-     *
-     * @param deviceId The id of the device to check.
-     * @param context The currently active OpenTracing span. An implementation
-     *         should use this as the parent for any span it creates for tracing
-     *         the execution of this operation.
-     * @return A future indicating the result of the operation.
-     *         <p>
-     *         The future will succeed if a response with status 200 has been received from the registration service.
-     *         The JSON object will then contain values as defined in
-     *         <a href="https://www.eclipse.org/hono/docs/api/device-registration/#get-registration-information"> Get
-     *         Registration Information</a>.
-     *         <p>
-     *         Otherwise, the future will fail with a {@link ServiceInvocationException} containing the (error) status
-     *         code returned by the service.
-     * @throws NullPointerException if device ID is {@code null}.
-     * @see RequestResponseClient#setRequestTimeout(long)
-     */
-    default Future<JsonObject> get(String deviceId, final SpanContext context) {
-        return get(deviceId);
     }
 }
