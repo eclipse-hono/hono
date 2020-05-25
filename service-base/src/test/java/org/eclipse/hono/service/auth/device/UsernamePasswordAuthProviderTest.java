@@ -21,7 +21,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -30,6 +32,7 @@ import org.eclipse.hono.client.CredentialsClient;
 import org.eclipse.hono.client.CredentialsClientFactory;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.jupiter.api.BeforeAll;
@@ -202,11 +205,68 @@ public class UsernamePasswordAuthProviderTest {
      *
      */
     @Test
-    public void testRetrievingCredentialsInUsernameSucceeds() {
-        final JsonObject originalCredentials = (new JsonObject()).put("username", "ZGV2aWNlQERFRkFVTFRfVEVOQU5UOnRoZS1zZWNyZXQ=").put("password", "");
+    public void testGetCredentialsRetrievesCredentialsFromUsername() {
+
+        final String usernameIncludingPassword = "device" + "@" + Constants.DEFAULT_TENANT + ":" + "the-secret";
+        final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8));
+
+        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
         final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
-        assertThat(credentials.getPassword()).isEqualTo("the-secret");
-        assertThat(credentials.getTenantId()).isEqualTo("DEFAULT_TENANT");
+
         assertThat(credentials.getAuthId()).isEqualTo("device");
+        assertThat(credentials.getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
+        assertThat(credentials.getPassword()).isEqualTo("the-secret");
+    }
+
+    /**
+     * Verifies that the provider handles a missing auth-id and tenant in Base64 encoding of credentials
+     * encoded in the username.
+     *
+     */
+    @Test
+    public void testGetCredentialsHandlesEmptyAuthId() {
+
+        final String usernameIncludingPassword = ":" + "the-secret";
+        final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8));
+
+        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
+        final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
+
+        assertThat(credentials).isNull();
+    }
+
+    /**
+     * Verifies that the provider handles a missing auth-id and tenant in Base64 encoding of credentials
+     * encoded in the username.
+     *
+     */
+    @Test
+    public void testGetCredentialsHandlesEmptyPassword() {
+
+        final String usernameIncludingPassword = "device" + "@" + Constants.DEFAULT_TENANT + ":";
+        final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8));
+
+        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
+        final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
+
+        assertThat(credentials.getAuthId()).isEqualTo("device");
+        assertThat(credentials.getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
+        assertThat(credentials.getPassword()).isEqualTo("");
+    }
+
+    /**
+     * Verifies that the provider handles malformed Base64 encoding of credentials encoded in the username.
+     *
+     */
+    @Test
+    public void testGetCredentialsHandlesMalformedBase64InUsername() {
+
+        final String usernameIncludingPassword = "device" + "@" + Constants.DEFAULT_TENANT + ":" + "the-secret";
+        final String encodedUsername = Base64.getEncoder().encodeToString(usernameIncludingPassword.getBytes(StandardCharsets.UTF_8)) + "not Base64";
+
+        final JsonObject originalCredentials = (new JsonObject()).put("username", encodedUsername).put("password", "");
+        final UsernamePasswordCredentials credentials = provider.getCredentials(originalCredentials);
+
+        assertThat(credentials).isNull();
     }
 }

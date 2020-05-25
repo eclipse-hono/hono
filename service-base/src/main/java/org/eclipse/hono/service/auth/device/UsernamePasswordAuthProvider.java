@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.service.auth.device;
 import java.net.HttpURLConnection;
 import java.util.Base64;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -91,41 +90,38 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      */
     @Override
     protected UsernamePasswordCredentials getCredentials(final JsonObject authInfo) {
+
         try {
             final String username = authInfo.getString("username");
             final String password = authInfo.getString("password");
             if (username == null || password == null) {
                 return null;
+            } else if (password.isEmpty()) {
+                return tryGetCredentialsEncodedInUsername(username);
             } else {
-                if (password.isEmpty()) {
-                    final Optional<UsernamePasswordCredentials> credentials = tryGetCredentialsEncodedInUsername(authInfo);
-                    if (credentials.isPresent()) {
-                        return credentials.get();
-                    }
-                }
                 return UsernamePasswordCredentials.create(username, password, config.isSingleTenant());
             }
-        } catch (ClassCastException e) {
+        } catch (final ClassCastException e) {
             return null;
         }
     }
 
-    private Optional<UsernamePasswordCredentials> tryGetCredentialsEncodedInUsername(final JsonObject authInfo) {
+    private UsernamePasswordCredentials tryGetCredentialsEncodedInUsername(final String username) {
+
         try {
-            final String decoded = new String(Base64.getDecoder().decode(authInfo.getString("username")));
+            final String decoded = new String(Base64.getDecoder().decode(username));
             final int colonIdx = decoded.indexOf(":");
-            if (colonIdx != -1) {
+            if (colonIdx > -1) {
                 final String user = decoded.substring(0, colonIdx);
                 final String pass = decoded.substring(colonIdx + 1);
-                final UsernamePasswordCredentials credentials = getCredentials((new JsonObject()).put("username", user).put("password", pass));
-                if (credentials != null) {
-                    return Optional.of(credentials);
-                }
+                return UsernamePasswordCredentials.create(user, pass, config.isSingleTenant());
+            } else {
+                return null;
             }
-        } catch (RuntimeException ex) {
-            log.error("Exception during retrieval of base64 encoded credentials in username.", ex);
+        } catch (final IllegalArgumentException ex) {
+            log.debug("error extracting username/password from username field", ex);
+            return null;
         }
-        return Optional.empty();
     }
 
     @Override

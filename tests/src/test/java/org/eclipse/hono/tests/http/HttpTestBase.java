@@ -254,6 +254,10 @@ public abstract class HttpTestBase {
                 .add(HttpHeaders.CONTENT_TYPE, "text/plain")
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+        final MultiMap requestHeadersWithEncodedCredentials = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.AUTHORIZATION, getBasicAuthWithEncodedCredentials(tenantId, deviceId, PWD))
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
         helper.registry
         .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
@@ -270,7 +274,7 @@ public abstract class HttpTestBase {
                     return httpClient.create(
                             getEndpointUri(),
                             Buffer.buffer("hello " + count),
-                            requestHeaders,
+                            count % 2 == 0 ? requestHeaders : requestHeadersWithEncodedCredentials,
                             response -> response.statusCode() == HttpURLConnection.HTTP_ACCEPTED
                                 && hasAccessControlExposedHeaders(response.headers()));
                 });
@@ -1287,4 +1291,22 @@ public abstract class HttpTestBase {
         return result.toString();
     }
 
+    /**
+     * Creates an HTTP Basic Authorization header value for a device.
+     * <p>
+     * The credentials are Base64 encoded in the Basic auth header's username segment.
+     * 
+     * @param tenant The tenant that the device belongs to.
+     * @param deviceId The device identifier.
+     * @param password The device's password.
+     * @return The header value.
+     */
+    protected static String getBasicAuthWithEncodedCredentials(final String tenant, final String deviceId, final String password) {
+
+        final StringBuilder result = new StringBuilder("Basic ");
+        final String username = IntegrationTestSupport.getUsername(deviceId, tenant) + ":" + password;
+        final String encodedUsername = Base64.getEncoder().encodeToString(username.getBytes(StandardCharsets.UTF_8));
+        result.append(Base64.getEncoder().encodeToString((encodedUsername + ":").getBytes(StandardCharsets.UTF_8)));
+        return result.toString();
+    }
 }
