@@ -32,7 +32,7 @@ public final class TelemetryConstants {
 
     /**
      * Checks if a given endpoint name is the Telemetry endpoint.
-     * 
+     *
      * @param ep The name to check.
      * @return {@code true} if the name is either {@link #TELEMETRY_ENDPOINT} or {@link #TELEMETRY_ENDPOINT_SHORT}.
      */

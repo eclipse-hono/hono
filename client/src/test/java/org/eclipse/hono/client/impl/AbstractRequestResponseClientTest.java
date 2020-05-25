@@ -112,7 +112,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that the client fails the handler for sending a request message
      * with a {@link ServerErrorException} if the link to the peer has no credit left.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -167,7 +167,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that the client fails the result handler if the peer rejects
      * the request message.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -201,7 +201,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that the client passes a response message to the handler registered for the request that
      * the response correlates with.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -233,7 +233,7 @@ public class AbstractRequestResponseClientTest  {
      * Verifies that the client cancels and fails a request for which no response
      * has been received after a certain amount of time. The request is then
      * failed with a {@link ServerErrorException} with a 503 status code.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -268,7 +268,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that a response handler is immediately failed with a
      * {@link ServerErrorException} when the sender link is not open (yet).
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -293,7 +293,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that a response handler is immediately failed with a
      * {@link ServerErrorException} when the receiver link is not open (yet).
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -314,7 +314,7 @@ public class AbstractRequestResponseClientTest  {
      * Verifies that the adapter puts the response from the service to the cache
      * using the default cache timeout if the response does not contain a
      * <em>no-cache</em> cache directive.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -343,7 +343,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that the adapter puts the response from the service to the cache
      * using the max age indicated by a response's <em>max-age</em> cache directive.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -372,7 +372,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that the adapter does not put the response from the service to the cache
      * if the response contains a <em>no-cache</em> cache directive.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -401,7 +401,7 @@ public class AbstractRequestResponseClientTest  {
     /**
      * Verifies that the adapter does not put a response from the service to the cache
      * that does not contain any cache directive but has a <em>non-cacheable</em> status code.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

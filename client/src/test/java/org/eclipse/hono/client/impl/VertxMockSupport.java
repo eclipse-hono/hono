@@ -29,7 +29,7 @@ public final class VertxMockSupport {
 
     /**
      * Matches any handler of given type, excluding nulls.
-     * 
+     *
      * @param <T> The handler type.
      * @return The value returned by {@link ArgumentMatchers#any(Class)}.
      */
@@ -41,7 +41,7 @@ public final class VertxMockSupport {
 
     /**
      * Creates mock object for a handler.
-     * 
+     *
      * @param <T> The handler type.
      * @return The value returned by {@link Mockito#mock(Class)}.
      */
@@ -53,7 +53,7 @@ public final class VertxMockSupport {
 
     /**
      * Argument captor for a handler.
-     * 
+     *
      * @param <T> The handler type.
      * @return The value returned by {@link ArgumentCaptor#forClass(Class)}.
      */

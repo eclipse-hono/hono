@@ -57,7 +57,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Adds a property to this tenant.
-     * 
+     *
      * @param name The property name.
      * @param value The property value.
      * @return This object for command chaining.
@@ -71,7 +71,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Gets this tenant's identifier.
-     * 
+     *
      * @return The identifier or {@code null} if not set.
      */
     @JsonIgnore
@@ -81,7 +81,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Sets this tenant's identifier.
-     * 
+     *
      * @param tenantId The identifier.
      * @return This tenant for command chaining.
      */
@@ -92,7 +92,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Checks if this tenant is enabled.
-     * 
+     *
      * @return {@code true} if this tenant is enabled.
      */
     @JsonIgnore
@@ -102,7 +102,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Sets whether this tenant is enabled.
-     * 
+     *
      * @param flag {@code true} if this tenant is enabled.
      * @return This tenant for command chaining.
      */
@@ -116,7 +116,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * devices of this tenant.
      * <p>
      * This method removes all existing trust anchors.
-     * 
+     *
      * @param publicKey The CA's public key.
      * @param subjectDn The CA's subject DN.
      * @return This tenant for command chaining.
@@ -174,7 +174,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * <p>
      * Once a non empty set of trust anchors has been created, it will be cached and
      * returned on subsequent invocations of this method.
-     * 
+     *
      * @return The set of trust anchors, may be empty.
      */
     @JsonIgnore
@@ -219,7 +219,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Checks whether auto-provisioning is enabled for a CA.
-     * 
+     *
      * @param subjectDn The subject DN of the CA to check.
      * @return {@code true} if auto-provisioning is enabled.
      * @throws NullPointerException if the parameter subjectDN is {@code null}.
@@ -315,7 +315,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Checks if a given protocol adapter is enabled for this tenant.
-     * 
+     *
      * @param typeName The type name of the adapter.
      * @return {@code true} if this tenant and the given adapter are enabled.
      */
@@ -346,7 +346,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * property specific to the given adapter type, then return its value provided it is &gt;= 0</li>
      * <li>otherwise, return {@link TenantConstants#DEFAULT_MAX_TTD}</li>
      * </ol>
-     * 
+     *
      * @param typeName The type of protocol adapter to get the TTD for.
      * @return The number of seconds.
      */
@@ -442,7 +442,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Gets the minimum message size in bytes.
-     * 
+     *
      * @return The minimum message size in bytes or {@link TenantConstants#DEFAULT_MINIMUM_MESSAGE_SIZE} if not set.
      */
     @JsonIgnore
@@ -453,7 +453,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Sets the minimum message size in bytes.
-     * 
+     *
      * @param payloadSize The payload size of the incoming message.
      * @return The TenantObject.
      * @throws IllegalArgumentException if the message payload size is negative.
@@ -468,7 +468,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Gets the default property values used for all devices of this tenant.
-     * 
+     *
      * @return The default properties or an empty JSON object if no default properties
      *         have been defined for this tenant.
      */
@@ -479,7 +479,7 @@ public final class TenantObject extends JsonBackedValueObject {
 
     /**
      * Sets the default property values to use for all devices of this tenant.
-     * 
+     *
      * @param defaultProperties The properties or an empty JSON object if no default properties
      *         have been defined for this tenant.
      * @return This tenant for command chaining.

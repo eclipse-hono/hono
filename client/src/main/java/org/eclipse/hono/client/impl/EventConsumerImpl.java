@@ -38,7 +38,7 @@ public class EventConsumerImpl extends AbstractConsumer implements MessageConsum
 
     /**
      * Creates a new event consumer for a tenant.
-     * 
+     *
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param eventConsumer The consumer to invoke with each event received.

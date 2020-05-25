@@ -38,7 +38,7 @@ public class Application {
 
     /**
      * Starts the connection.
-     * 
+     *
      * @param args Command line arguments passed on to the Spring Boot application.
      */
     public static void main(final String[] args) {

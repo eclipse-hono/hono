@@ -47,7 +47,7 @@ public class FileBasedAuthenticationServiceTest {
 
     /**
      * Loads permissions from file.
-     * 
+     *
      * @throws IOException if the permissions cannot be loaded.
      */
     @BeforeAll
@@ -69,7 +69,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service fails verification of plain credentials if no
      * username is given.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -81,7 +81,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service fails verification of plain credentials if no
      * password is given.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -93,7 +93,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service successfully issues a token on successful verification
      * of credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -108,7 +108,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service grants the requested <em>authorization identity</em> 
      * on successful verification of credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -124,7 +124,7 @@ public class FileBasedAuthenticationServiceTest {
      * Verifies that the service refuses to grant the requested <em>authorization identity</em>
      * on successful verification of credentials if the user is not authorized to assume another
      * identity than the authentication identity.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -139,7 +139,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service refuses to grant an non-existing <em>authorization identity</em>
      * on successful verification of credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -154,7 +154,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service fails verification of external credentials if no
      * subject DN is given.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -166,7 +166,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service successfully issues a token on successful verification
      * of external credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -181,7 +181,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service grants the requested <em>authorization identity</em> 
      * on successful verification of external credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -196,7 +196,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the service refuses to grant an non-existing <em>authorization identity</em>
      * on successful verification of external credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -212,7 +212,7 @@ public class FileBasedAuthenticationServiceTest {
      * Verifies that the service refuses to grant the requested <em>authorization identity</em>
      * on successful verification of external credentials if the user is not authorized to assume another
      * identity than the authentication identity.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -227,7 +227,7 @@ public class FileBasedAuthenticationServiceTest {
     /**
      * Verifies that the token issued by the service on successful verification
      * of credentials contains the user's authorities for executing operations.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

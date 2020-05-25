@@ -50,7 +50,7 @@ public abstract class AbstractCliClient {
 
     /**
      * Sets the Spring environment.
-     * 
+     *
      * @param env The environment.
      * @throws NullPointerException if environment is {@code null}.
      */
@@ -62,7 +62,7 @@ public abstract class AbstractCliClient {
 
     /**
      * Sets the vert.x instance.
-     * 
+     *
      * @param vertx The vert.x instance.
      * @throws NullPointerException if vert.x is {@code null}.
      */

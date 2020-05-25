@@ -51,7 +51,7 @@ public interface CreditBasedSender {
      * </pre>
      * <p>
      * Note that all the <em>send</em> methods fail if no credit is available.
-     * 
+     *
      * @param handler The handler to invoke when this sender has been replenished with credit.
      * @throws IllegalStateException if there already is a handler registered. Note that this means that this sender is
      *             already waiting for credit.

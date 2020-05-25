@@ -51,7 +51,7 @@ public interface TenantClient extends RequestResponseClient {
      * <p>
      * This default implementation simply returns the result of
      * {@link #get(String)}.
-     * 
+     *
      * @param tenantId The id of the tenant to retrieve details for.
      * @param context The currently active OpenTracing span. An implementation
      *         should use this as the parent for any span it creates for tracing
@@ -78,7 +78,7 @@ public interface TenantClient extends RequestResponseClient {
      * This method can e.g. be used when trying to authenticate a device based on
      * an X.509 client certificate. Using this method, the <em>issuer DN</em> from the
      * client's certificate can be used to determine the tenant that the device belongs to.
-     * 
+     *
      * @param subjectDn The <em>subject DN</em> of the trusted CA certificate
      *                  that has been configured for the tenant.
      * @return A future indicating the result of the operation.
@@ -104,7 +104,7 @@ public interface TenantClient extends RequestResponseClient {
      * <p>
      * This default implementation simply returns the result of
      * {@link #get(X500Principal)}.
-     * 
+     *
      * @param subjectDn The <em>subject DN</em> of the trusted CA certificate
      *                  that has been configured for the tenant.
      * @param context The currently active OpenTracing span. An implementation

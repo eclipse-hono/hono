@@ -55,7 +55,7 @@ public class TcpServer {
 
     /**
      * Sets the handler for client connections.
-     * 
+     *
      * @param handler The handler to process connections from clients.
      */
     public void setConnectHandler(final Handler<NetSocket> handler) {
@@ -64,7 +64,7 @@ public class TcpServer {
 
     /**
      * Starts the server listening on the configured address and port.
-     * 
+     *
      * @return A future indicating the outcome.
      */
     public Future<NetServer> start() {
@@ -95,7 +95,7 @@ public class TcpServer {
 
     /**
      * Stops the socket server.
-     * 
+     *
      * @return A future indicating the outcome.
      */
     public Future<?> stop() {

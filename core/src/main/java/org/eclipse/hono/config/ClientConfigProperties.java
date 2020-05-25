@@ -92,7 +92,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
 
     /**
      * Creates properties based on other properties.
-     * 
+     *
      * @param otherProperties The properties to copy.
      */
     public ClientConfigProperties(final ClientConfigProperties otherProperties) {
@@ -114,7 +114,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
 
     /**
      * Gets the name being indicated as part of the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
-     * 
+     *
      * @return The name or {@code null} if no name has been set.
      */
     public final String getName() {
@@ -123,7 +123,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
 
     /**
      * Sets the name to indicate as part of the <em>container-id</em> in the client's AMQP <em>Open</em> frame.
-     * 
+     *
      * @param name The name to set.
      */
     public final void setName(final String name) {
@@ -132,7 +132,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
 
     /**
      * Gets the name being indicated as the <em>hostname</em> in the client's AMQP <em>Open</em> frame.
-     * 
+     *
      * @return The host name or {@code null} if no host name has been set.
      */
     public final String getAmqpHostname() {
@@ -141,7 +141,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
 
     /**
      * Sets the name to indicate as the <em>hostname</em> in the client's AMQP <em>Open</em> frame.
-     * 
+     *
      * @param amqpHostname The host name to set.
      */
     public final void setAmqpHostname(final String amqpHostname) {
@@ -177,7 +177,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * latency involved with the communication link between the client and the service.
      * <p>
      * The default value of this property is {@link #DEFAULT_FLOW_LATENCY}.
-     * 
+     *
      * @param latency The number of milliseconds to wait.
      * @throws IllegalArgumentException if latency is negative.
      */
@@ -220,7 +220,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * latency involved with the communication link between the client and the service.
      * <p>
      * The default value of this property is {@link #DEFAULT_FLOW_LATENCY}.
-     * 
+     *
      * @param latency The number of milliseconds to wait.
      * @throws IllegalArgumentException if latency is negative.
      */
@@ -324,7 +324,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * <p>
      * The default value of this property is -1 which means that the client
      * will try forever.
-     * 
+     *
      * @return The number of attempts.
      */
     public int getReconnectAttempts() {
@@ -338,7 +338,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * <p>
      * The default value of this property is -1 which means that the client
      * will try forever.
-     * 
+     *
      * @param attempts The number of attempts to make.
      * @throws IllegalArgumentException if attempts is &lt; -1.
      */

@@ -44,7 +44,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
 
     /**
      * Create a new instance.
-     * 
+     *
      * @param tenantId The tenant id that the device belongs to.
      * @param authId The identity that the device wants to authenticate as.
      */
@@ -91,7 +91,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
      * <p>
      * This is either the value of the identity provided by the device (single tenant), or the <em>auth ID</em> part
      * parsed from the identity (multi tenant).
-     * 
+     *
      * @return The identity.
      */
     @Override
@@ -104,7 +104,7 @@ public class PreSharedKeyDeviceIdentity implements DeviceCredentials {
      * <p>
      * This is either the {@link Constants#DEFAULT_TENANT} (single tenant) or the <em>tenant ID</em> part parsed from
      * the identity (multi tenant).
-     * 
+     *
      * @return The tenant.
      */
     @Override

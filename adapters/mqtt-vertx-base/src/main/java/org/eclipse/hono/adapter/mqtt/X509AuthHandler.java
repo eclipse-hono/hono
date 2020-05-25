@@ -46,7 +46,7 @@ public class X509AuthHandler extends ExecutionContextAuthHandler<MqttContext> {
 
     /**
      * Creates a new handler.
-     * 
+     *
      * @param clientAuth The service to use for validating the client's certificate path.
      * @param authProvider The authentication provider to use for verifying
      *              the device identity.
@@ -70,7 +70,7 @@ public class X509AuthHandler extends ExecutionContextAuthHandler<MqttContext> {
      * property and</li>
      * <li>the device's MQTT client identifier in the {@link ExecutionContextAuthHandler#PROPERTY_CLIENT_IDENTIFIER} property</li>
      * </ul>
-     * 
+     *
      * @param context The MQTT context for the client's CONNECT packet.
      * @return A future indicating the outcome of the operation.
      *         The future will succeed with the client's credentials extracted from the CONNECT packet

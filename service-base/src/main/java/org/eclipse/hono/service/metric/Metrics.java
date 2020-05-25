@@ -24,7 +24,7 @@ public interface Metrics {
 
     /**
      * Reports a newly established connection with an authenticated device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @throws NullPointerException if tenant is {@code null}.
      */
@@ -32,7 +32,7 @@ public interface Metrics {
 
     /**
      * Reports a connection to an authenticated device being closed.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @throws NullPointerException if tenant is {@code null}.
      */
@@ -57,7 +57,7 @@ public interface Metrics {
 
     /**
      * Starts a new timer.
-     * 
+     *
      * @return The newly created timer.
      */
     Sample startTimer();
@@ -70,7 +70,7 @@ public interface Metrics {
      * <p>
      * The configured minimum message size is retrieved from the tenant 
      * configuration object.
-     * 
+     *
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
      * @param tenantObject The tenant configuration object or {@code null}.
@@ -100,7 +100,7 @@ public interface Metrics {
      * <p>
      * The configured minimum message size is retrieved from the tenant 
      * configuration object.
-     *     
+     *
      * @param type The type of message received, e.g. <em>telemetry</em> or <em>event</em>.
      * @param tenantId The tenant that the device belongs to.
      * @param tenantObject The tenant configuration object or {@code null}.

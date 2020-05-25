@@ -96,7 +96,7 @@ public class CredentialsHttpIT {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param ctx The test context.
      */
     @BeforeEach
@@ -112,7 +112,7 @@ public class CredentialsHttpIT {
 
     /**
      * Removes the device that have been added by the test.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterEach
@@ -123,7 +123,7 @@ public class CredentialsHttpIT {
 
     /**
      * Shuts down the client.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @AfterAll
@@ -133,7 +133,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verifies that the service accepts an add credentials request containing valid credentials.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -168,7 +168,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verifies that the service accepts an add credentials request containing a clear text password.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -198,7 +198,7 @@ public class CredentialsHttpIT {
     /**
      * Verifies that the service returns a 400 status code for an add credentials request with a Content-Type other than
      * application/json.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -218,7 +218,7 @@ public class CredentialsHttpIT {
     /**
      * Verifies that the service rejects a request to update a credentials set if the resource Version value is
      * outdated.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -242,7 +242,7 @@ public class CredentialsHttpIT {
     /**
      * Verifies that the service returns a 400 status code for an add credentials request with hashed password
      * credentials that use a BCrypt hash with more than the configured max iterations.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -272,7 +272,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verifies that the service returns a 400 status code for an add credentials request with an empty body.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -288,7 +288,7 @@ public class CredentialsHttpIT {
      * Verify that a json payload to add credentials that does not contain a {@link CredentialsConstants#FIELD_TYPE}
      * is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -300,7 +300,7 @@ public class CredentialsHttpIT {
      * Verify that a json payload to add credentials that does not contain a {@link CredentialsConstants#FIELD_AUTH_ID}
      * is not accepted and responded with {@link HttpURLConnection#HTTP_BAD_REQUEST}
      * and a non empty error response message.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -323,7 +323,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verifies that the service accepts an update credentials request for existing credentials.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -348,7 +348,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verifies that the service accepts an update credentials request for existing credentials.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -375,7 +375,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verifies that the service rejects an update request for non-existing credentials.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -393,7 +393,7 @@ public class CredentialsHttpIT {
     /**
      * Verify that a correctly added credentials record can be successfully looked up again by using the type and
      * authId.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -432,7 +432,7 @@ public class CredentialsHttpIT {
     /**
      * Verify that multiple (2) correctly added credentials records of the same authId can be successfully looked up by
      * single requests using their type and authId again.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -456,7 +456,7 @@ public class CredentialsHttpIT {
      * Verifies that the service returns all credentials registered for a given device regardless of authentication identifier.
      * <p>
      * The returned JsonArray must consist exactly the same credentials as originally added.
-     * 
+     *
      * @param context The vert.x test context.
      * @throws InterruptedException if registration of credentials is interrupted.
      */
@@ -479,7 +479,7 @@ public class CredentialsHttpIT {
      * Verifies that the service returns all credentials registered for a given device regardless of type.
      * <p>
      * The returned JsonArray must contain all the credentials previously added to the registry.
-     * 
+     *
      * @param context The vert.x test context.
      * @throws InterruptedException if registration of credentials is interrupted.
      */
@@ -510,7 +510,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verify that a correctly added credentials record is not found when looking it up again with a wrong type.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -524,7 +524,7 @@ public class CredentialsHttpIT {
 
     /**
      * Verify that a correctly added credentials record is not found when looking it up again with a wrong authId.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test

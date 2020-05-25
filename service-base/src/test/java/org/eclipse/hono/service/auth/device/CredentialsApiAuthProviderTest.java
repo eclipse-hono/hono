@@ -71,7 +71,7 @@ public class CredentialsApiAuthProviderTest {
     /**
      * Verifies that the auth provider propagates the exception reported by a failed invocation
      * of the credentials service.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -88,7 +88,7 @@ public class CredentialsApiAuthProviderTest {
     /**
      * Verifies that the auth provider fails an authentication request with a 401
      * {@code ClientErrorException} if the credentials cannot be parsed.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -108,7 +108,7 @@ public class CredentialsApiAuthProviderTest {
     /**
      * Verifies that the auth provider fails an authentication request with a 401
      * {@code ClientErrorException} if the auth-id is unknown.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -126,7 +126,7 @@ public class CredentialsApiAuthProviderTest {
 
     /**
      * Verifies that credentials validation fails if the credentials on record are disabled.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

@@ -39,7 +39,7 @@ public class DelegatingAuthenticationServiceConfig {
 
     /**
      * Exposes configuration properties for using a remote {@code AuthenticationService}.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -52,7 +52,7 @@ public class DelegatingAuthenticationServiceConfig {
     /**
      * Exposes a factory for connections to the authentication service
      * as a Spring bean.
-     * 
+     *
      * @param vertx The Vertx instance to use.
      * @return The connection factory.
      */
@@ -64,7 +64,7 @@ public class DelegatingAuthenticationServiceConfig {
 
     /**
      * Creates a helper for validating JWTs asserting a client's identity and authorities.
-     * 
+     *
      * @param vertx The Vertx instance to use.
      * @return The bean.
      */

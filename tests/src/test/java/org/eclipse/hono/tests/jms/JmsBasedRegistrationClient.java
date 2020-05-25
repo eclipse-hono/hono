@@ -55,7 +55,7 @@ public class JmsBasedRegistrationClient extends JmsBasedRequestResponseClient<Re
 
     /**
      * Creates a new client for a connection.
-     * 
+     *
      * @param connection The connection to the Device Registration service.
      * @param clientConfig The configuration properties for the connection to the
      *                     Device Registration service.
@@ -103,7 +103,7 @@ public class JmsBasedRegistrationClient extends JmsBasedRequestResponseClient<Re
 
     /**
      * Sends a request for an operation.
-     * 
+     *
      * @param operation The name of the operation to invoke or {@code null} if the message
      *                  should not have a subject.
      * @param applicationProperties Application properties to set on the request message or

@@ -55,7 +55,7 @@ public class HonoReceiver extends AbstractClient {
 
     /**
      * Creates a new receiver.
-     * 
+     *
      * @param sampler The sampler configuration.
      */
     public HonoReceiver(final HonoReceiverSampler sampler) {
@@ -82,7 +82,7 @@ public class HonoReceiver extends AbstractClient {
 
     /**
      * Starts this receiver.
-     * 
+     *
      * @return A future indicating the outcome of the startup process.
      */
     public CompletableFuture<Void> start() {
@@ -136,7 +136,7 @@ public class HonoReceiver extends AbstractClient {
 
     /**
      * Takes a sample.
-     * 
+     *
      * @param result The result to set the sampler's current statistics on.
      */
     public void sample(final SampleResult result) {
@@ -274,7 +274,7 @@ public class HonoReceiver extends AbstractClient {
 
     /**
      * Closes the connection to the AMQP Messaging Network.
-     * 
+     *
      * @return A future that successfully completes once the connection is closed.
      */
     public CompletableFuture<Void> close() {

@@ -62,7 +62,7 @@ public class MicrometerBasedMetricsTest {
 
     /**
      * Gets the Micrometer registries that the tests should be run against.
-     * 
+     *
      * @return The registries.
      */
     public static Stream<MeterRegistry> registries() {
@@ -155,7 +155,7 @@ public class MicrometerBasedMetricsTest {
     /**
      * Verifies that the payload size is calculated based on the configured minimum message size 
      * when reporting downstream telemetry messages.
-     * 
+     *
      * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest
@@ -226,7 +226,7 @@ public class MicrometerBasedMetricsTest {
 
     /**
      * Verifies that collecting the last message send time is disabled by default.
-     * 
+     *
      * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest
@@ -252,7 +252,7 @@ public class MicrometerBasedMetricsTest {
     /**
      * Verifies that when sending the first message for a tenant the timestamp is recorded and a timer is started to
      * check the timeout.
-     * 
+     *
      * @param registry The registry that the tests should be run against.
      */
     @SuppressWarnings("unchecked")
@@ -331,7 +331,7 @@ public class MicrometerBasedMetricsTest {
 
     /**
      * Verifies that sending messages updates the stored timestamp for the tenant.
-     * 
+     *
      * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest
@@ -355,7 +355,7 @@ public class MicrometerBasedMetricsTest {
 
     /**
      * Verifies that disconnecting updates the stored timestamp for the tenant.
-     * 
+     *
      * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest
@@ -379,7 +379,7 @@ public class MicrometerBasedMetricsTest {
 
     /**
      * Verifies that connecting updates the stored timestamp for the tenant.
-     * 
+     *
      * @param registry The registry that the tests should be run against.
      */
     @ParameterizedTest

@@ -48,7 +48,7 @@ public interface ConnectionEventProducer {
 
         /**
          * Provide the device message sender client provided by the caller.
-         * 
+         *
          * @return The instance of the message sender client which the {@link ConnectionEventProducer} method should
          *         use. This client has to be initialized and started.
          */
@@ -56,7 +56,7 @@ public interface ConnectionEventProducer {
         /**
          * Provides the tenant client which the {@link ConnectionEventProducer} should use to lookup the tenant
          * that the device connecting to a protocol adapter belongs to.
-         * 
+         *
          * @return The tenant client instance. This client has to be initialized and started.
          */
         TenantClientFactory getTenantClientFactory();
@@ -65,7 +65,7 @@ public interface ConnectionEventProducer {
 
     /**
      * Produce an event for a new connection.
-     * 
+     *
      * @param context Protocol adapter context.
      * @param remoteId The ID of the remote endpoint which connected (e.g. a remote address, port, client id, ...).
      * @param protocolAdapter The name of the protocol adapter sending this event. Must not be {@code null}.
@@ -80,7 +80,7 @@ public interface ConnectionEventProducer {
 
     /**
      * Produce an event for a closed connection.
-     * 
+     *
      * @param context Protocol adapter context.
      * @param remoteId The ID of the remote endpoint which disconnected. The same ID used in the call to
      *            {@link #connected(Context, String, String, Device, JsonObject)}

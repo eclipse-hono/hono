@@ -52,7 +52,7 @@ public class EventBusMessage {
 
     /**
      * Creates a new (request) message for an operation.
-     * 
+     *
      * @param operation The name of the operation.
      * @return The request message.
      * @throws NullPointerException if operation is {@code null}.
@@ -66,7 +66,7 @@ public class EventBusMessage {
      * <p>
      * The operation will be determined from the message's
      * <em>subject</em>.
-     * 
+     *
      * @param message The AMQP message.
      * @return The request message.
      * @throws NullPointerException if message is {@code null}.
@@ -82,7 +82,7 @@ public class EventBusMessage {
 
     /**
      * Creates a new (response) message for a status code.
-     * 
+     *
      * @param status The status code indicating the outcome of the operation.
      * @return The response message.
      */
@@ -104,7 +104,7 @@ public class EventBusMessage {
      * <li><em>replyToAddress</em></li>
      * <li><em>tenant</em></li>
      * </ul>
-     * 
+     *
      * @param status The status code indicating the outcome of the operation.
      * @return The response message.
      * @throws NullPointerException if request is {@code null}.
@@ -128,7 +128,7 @@ public class EventBusMessage {
      * <p>
      * Whether the created message represents a request or a response
      * is determined by the <em>status</em> and <em>operation</em> properties.
-     * 
+     *
      * @param json The JSON object.
      * @return The message.
      */
@@ -139,7 +139,7 @@ public class EventBusMessage {
     /**
      * Checks if this (response) message has all properties required
      * for successful delivery to the client.
-     * 
+     *
      * @return {@code true} if this message has {@code non-null} values for
      *         properties <em>operation</em>, <em>replyToAddress</em> and
      *         <em>correlationId</em>.
@@ -151,7 +151,7 @@ public class EventBusMessage {
 
     /**
      * Gets the operation to invoke.
-     * 
+     *
      * @return The operation of {@code null} if this is a response message.
      */
     public String getOperation() {
@@ -161,7 +161,7 @@ public class EventBusMessage {
     /**
      * Gets the status code indicating the outcome of the invocation
      * of the operation.
-     * 
+     *
      * @return The status code or {@code null} if this is a request message.
      */
     public Integer getStatus() {
@@ -188,7 +188,7 @@ public class EventBusMessage {
      * this (request) message should be sent.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param address The address.
      * @return This message for chaining.
      */
@@ -203,7 +203,7 @@ public class EventBusMessage {
      * <p>
      * The property will only be added if the AMQP message contains
      * a non-{@code null} <em>reply-to</em> property.
-     * 
+     *
      * @param msg The AMQP message to retrieve the value from.
      * @return This message for chaining.
      */
@@ -214,7 +214,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the reply-to address property.
-     * 
+     *
      * @return The value or {@code null} if not set.
      */
     public String getReplyToAddress() {
@@ -225,7 +225,7 @@ public class EventBusMessage {
      * Adds a property for the tenant identifier.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param tenantId The tenant identifier.
      * @return This message for chaining.
      */
@@ -239,7 +239,7 @@ public class EventBusMessage {
      * <p>
      * The property will only be added if the AMQP message contains
      * a non-{@code null} tenant identifier.
-     * 
+     *
      * @param msg The AMQP message to retrieve the value from.
      * @return This message for chaining.
      */
@@ -250,7 +250,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the tenant identifier property.
-     * 
+     *
      * @return The value or {@code null} if not set.
      */
     public String getTenant() {
@@ -261,7 +261,7 @@ public class EventBusMessage {
      * Adds a property for the device identifier.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param deviceId The device identifier.
      * @return This message for chaining.
      */
@@ -275,7 +275,7 @@ public class EventBusMessage {
      * <p>
      * The property will only be added if the AMQP message contains
      * a non-{@code null} device identifier.
-     * 
+     *
      * @param msg The AMQP message to retrieve the value from.
      * @return This message for chaining.
      */
@@ -286,7 +286,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the device identifier property.
-     * 
+     *
      * @return The value or {@code null} if not set.
      */
     public String getDeviceId() {
@@ -306,7 +306,7 @@ public class EventBusMessage {
      * Adds a property for the request/response payload.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param payload The payload.
      * @return This message for chaining.
      */
@@ -320,7 +320,7 @@ public class EventBusMessage {
      * <p>
      * The property will only be added if the AMQP message contains
      * a JSON payload.
-     * 
+     *
      * @param msg The AMQP message to retrieve the payload from.
      * @return This message for chaining.
      * @throws DecodeException if the payload of the AMQP message does not contain proper JSON.
@@ -332,7 +332,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the payload property.
-     * 
+     *
      * @return The value or {@code null} if not set.
      */
     public JsonObject getJsonPayload() {
@@ -341,7 +341,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the payload property.
-     * 
+     *
      * @param defaultValue The default value.
      * @return The value of the payload property or the given default
      *         value if not set.
@@ -355,7 +355,7 @@ public class EventBusMessage {
      * Adds a property for the gateway identifier.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param id The gateway identifier.
      * @return This message for chaining.
      */
@@ -369,7 +369,7 @@ public class EventBusMessage {
      * <p>
      * The property will only be added if the AMQP message contains
      * a non-{@code null} gateway identifier.
-     * 
+     *
      * @param msg The AMQP message to retrieve the value from.
      * @return This message for chaining.
      */
@@ -380,7 +380,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the gateway identifier property.
-     * 
+     *
      * @return The value or {@code null} if not set.
      */
     public String getGatewayId() {
@@ -391,7 +391,7 @@ public class EventBusMessage {
      * Adds a property for the cache directive.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param directive The cache directive.
      * @return This message for chaining.
      */
@@ -406,7 +406,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the cache directive property.
-     * 
+     *
      * @return The value or {@code null} if not set.
      */
     public String getCacheDirective() {
@@ -421,7 +421,7 @@ public class EventBusMessage {
      * <li>to the AMQP message's correlation identifier, if not {@code null}, or</li>
      * <li>to the AMQP message's message identifier, if not {@code null}.</li>
      * </ol>
-     * 
+     *
      * @param message The AMQP message to retrieve the value from.
      * @return This message for chaining.
      * @throws IllegalArgumentException if the message doesn't contain a correlation id
@@ -441,7 +441,7 @@ public class EventBusMessage {
      * Adds a property for the correlation identifier.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param id The correlation identifier.
      * @return This message for chaining.
      * @throws IllegalArgumentException if the identifier is neither a {@code String}
@@ -454,7 +454,7 @@ public class EventBusMessage {
 
     /**
      * Gets the value of the correlation identifier property.
-     * 
+     *
      * @return The value or {@code null} if not set.
      */
     public Object getCorrelationId() {
@@ -492,7 +492,7 @@ public class EventBusMessage {
      * Adds a property with a value.
      * <p>
      * The property will only be added if the value is not {@code null}.
-     * 
+     *
      * @param name The name of the property.
      * @param value the value to set.
      * @return This message for chaining.
@@ -511,7 +511,7 @@ public class EventBusMessage {
      * <p>
      * The property will only be added if the AMQP message contains
      * a non-{@code null} <em>application property</em> of the given name.
-     * 
+     *
      * @param name The name of the property.
      * @param msg The AMQP message to retrieve the value from.
      * @return This message for chaining.
@@ -526,7 +526,7 @@ public class EventBusMessage {
 
     /**
      * Gets a property value.
-     * 
+     *
      * @param key The name of the property.
      * @param <T> The type of the field.
      * @return The property value or {@code null} if no such property exists or is not of the expected type.
@@ -553,7 +553,7 @@ public class EventBusMessage {
      * <p>
      * Note: the span context instance will not get serialized when sending this event bus message over the vert.x event
      * bus!
-     * 
+     *
      * @param spanContext The {@code SpanContext} to set (may be null).
      */
     public void setSpanContext(final SpanContext spanContext) {
@@ -565,7 +565,7 @@ public class EventBusMessage {
      * <p>
      * The span context should be used as the parent context of each OpenTracing {@code Span} that is created as part of
      * processing this event bus message.
-     * 
+     *
      * @return {@code SpanContext} or {@code null}.
      */
     public SpanContext getSpanContext() {
@@ -577,7 +577,7 @@ public class EventBusMessage {
      * <p>
      * The {@link #fromJson(JsonObject)} method can be used to create
      * a {@code EventBusMethod} from its JSON representation.
-     * 
+     *
      * @return The JSOn object.
      */
     public JsonObject toJson() {
@@ -589,7 +589,7 @@ public class EventBusMessage {
      * <p>
      * Supported types for AMQP 1.0 correlation IDs are
      * {@code String}, {@code UnsignedLong}, {@code UUID} and {@code Binary}.
-     * 
+     *
      * @param id The identifier to encode.
      * @return The JSON representation of the identifier.
      * @throws NullPointerException if the correlation id is {@code null}.
@@ -624,7 +624,7 @@ public class EventBusMessage {
      * <p>
      * Supported types for AMQP 1.0 correlation IDs are
      * {@code String}, {@code UnsignedLong}, {@code UUID} and {@code Binary}.
-     * 
+     *
      * @param json The JSON representation of the identifier.
      * @return The correlation identifier.
      * @throws NullPointerException if the JSON is {@code null}.

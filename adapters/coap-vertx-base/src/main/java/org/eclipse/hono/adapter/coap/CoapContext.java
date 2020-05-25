@@ -49,7 +49,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Creates a new context for a CoAP request.
-     * 
+     *
      * @param request The CoAP exchange representing the request.
      * @return The context.
      * @throws NullPointerException if request is {@code null}.
@@ -61,7 +61,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Creates a new context for a CoAP request.
-     * 
+     *
      * @param request The CoAP exchange representing the request.
      * @param timer The object to use for measuring the time it takes to process the request.
      * @return The context.
@@ -78,7 +78,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Gets the CoAP exchange.
-     * 
+     *
      * @return The exchange.
      */
     public CoapExchange getExchange() {
@@ -87,7 +87,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Get payload of request.
-     * 
+     *
      * @return payload of request
      */
     public Buffer getPayload() {
@@ -113,7 +113,7 @@ public final class CoapContext extends MapBasedExecutionContext {
      * <li>Otherwise, the media type is <em>unknown/code</em> where code is the value of the content-format
      * option</li>
      * </ol>
-     * 
+     *
      * @return The media type or {@code null} if the request does not contain a content-format option.
      */
     public String getContentType() {
@@ -128,7 +128,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Gets the object used for measuring the time it takes to process this request.
-     * 
+     *
      * @return The timer or {@code null} if not set.
      */
     public Sample getTimer() {
@@ -137,7 +137,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Get CoAP query parameter.
-     * 
+     *
      * @param name parameter name
      * @return value of query parameter, or {@code null}, if not provided in request,
      */
@@ -162,7 +162,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Get command request id of response for command.
-     * 
+     *
      * @return command request id.
      */
     public String getCommandRequestId() {
@@ -175,7 +175,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Get command response status of response for command.
-     * 
+     *
      * @return status, or {@code null}, if not available.
      */
     public Integer getCommandResponseStatus() {
@@ -184,7 +184,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Check, if request represents a empty notification, just to check, if commands are available.
-     * 
+     *
      * @return {@code true}, if request is a empty notification, {@code false}, otherwise.
      */
     public boolean isEmptyNotification() {
@@ -193,7 +193,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Checks if the exchange's request has been sent using a CONfirmable message.
-     * 
+     *
      * @return {@code true} if the request message is CONfirmable.
      */
     public boolean isConfirmable() {
@@ -202,7 +202,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Sends a response with the response code to the device.
-     * 
+     *
      * @param responseCode The code to set in the response.
      */
     public void respondWithCode(final ResponseCode responseCode) {
@@ -211,7 +211,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Sends a response with the response code to the device.
-     * 
+     *
      * @param responseCode The code to set in the response.
      * @param description The message to include in the response body or {@code null} if
      *                    the response body should not include a description.
@@ -227,7 +227,7 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Sends a response to the device.
-     * 
+     *
      * @param response The response to sent.
      */
     public void respond(final Response response) {

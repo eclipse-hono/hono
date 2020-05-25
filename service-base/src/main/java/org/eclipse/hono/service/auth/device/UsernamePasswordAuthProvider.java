@@ -44,7 +44,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
 
     /**
      * Creates a new provider for a given configuration.
-     * 
+     *
      * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param config The configuration.
      * @param tracer The tracer instance.
@@ -57,7 +57,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
 
     /**
      * Creates a new provider for a given configuration.
-     * 
+     *
      * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param pwdEncoder The object to use for validating hashed passwords.
      * @param config The configuration.
@@ -82,7 +82,7 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * <p>
      * The JSON object passed in is required to contain a <em>username</em> and a
      * <em>password</em> property.
-     * 
+     *
      * @param authInfo The credentials provided by the device.
      * @return The {@link UsernamePasswordCredentials} instance created from the auth info or
      *         {@code null} if the auth info does not contain the required information.

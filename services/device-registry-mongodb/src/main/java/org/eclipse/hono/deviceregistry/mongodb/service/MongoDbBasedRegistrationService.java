@@ -75,7 +75,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
     /**
      * Creates a new service for configuration properties.
-     * 
+     *
      * @param vertx The vert.x instance to run on.
      * @param mongoClient The client for accessing the Mongo DB instance.
      * @param config The properties for configuring this service.

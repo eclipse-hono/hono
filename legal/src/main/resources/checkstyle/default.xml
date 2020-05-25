@@ -132,6 +132,12 @@
       <property name="scope" value="protected"/>
     </module>
     <module name="NonEmptyAtclauseDescription"/>
+    <module name="RegexpSinglelineJava">
+      <!-- prevent trailing whitespace(s) in empty JavaDoc lines -->
+      <property name="format" value="^\s*\*\s+$"/>
+      <property name="message" value="empty JavaDoc line contains trailing whitespace(s)"/>
+      <property name="ignoreComments" value="false"/>
+    </module>
   </module>
 
 </module>

@@ -90,7 +90,7 @@ public final class AuthenticationConstants {
 
     /**
      * Creates a message for authenticating a client using SASL.
-     * 
+     *
      * @param mechanism The SASL mechanism to use for authentication.
      * @param saslResponse The SASL response containing the authentication information provided by the client.
      * @return the message to be sent to the {@code AuthenticationService}.
@@ -105,7 +105,7 @@ public final class AuthenticationConstants {
     /**
      * Creates a message containing the JSON Web Token representing the successful authentication
      * of a client.
-     * 
+     *
      * @param token The token containing the client's authorization ID and authorities as claims.
      * @return The message.
      */
@@ -115,7 +115,7 @@ public final class AuthenticationConstants {
 
     /**
      * Extracts the <em>Common Name (CN)</em> from a subject Distinguished Name (DN).
-     * 
+     *
      * @param subject The distinguished name.
      * @return The common name or {@code null} if the subject does not contain a CN.
      */
@@ -133,10 +133,10 @@ public final class AuthenticationConstants {
      * <p>
      * <a href="https://tools.ietf.org/html/rfc4616">The specification for the SASL PLAIN mechanism</a> mandates the format
      * of the credentials to be of the form: {@code [authzid] UTF8NUL authcid UTF8NUL passwd}.
-     * 
+     *
      * @param saslResponse The SASL response to parse.
      * @return A String array containing the elements in the SASL response.
-     * 
+     *
      * @throws CredentialException If one the elements (authzid, authcid and pwd) is missing from the SASL response.
      */
     public static String[] parseSaslResponse(final byte[] saslResponse) throws CredentialException {

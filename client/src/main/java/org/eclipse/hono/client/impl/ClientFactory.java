@@ -54,7 +54,7 @@ class ClientFactory<T> {
      * Clears all state.
      * <p>
      * All pending creation requests are failed.
-     * 
+     *
      * @param v Dummy parameter required so that this
      *          method can be used as a {@code Handler<Void>}.
      */

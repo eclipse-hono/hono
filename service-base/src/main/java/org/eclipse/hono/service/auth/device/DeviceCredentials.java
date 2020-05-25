@@ -23,21 +23,21 @@ public interface DeviceCredentials {
 
     /**
      * Gets the type of credentials this instance represents.
-     * 
+     *
      * @return The type.
      */
     String getType();
 
     /**
      * Gets the identity that the device wants to authenticate as.
-     * 
+     *
      * @return The identity.
      */
     String getAuthId();
 
     /**
      * Gets the tenant that the device claims to belong to.
-     * 
+     *
      * @return The tenant.
      */
     String getTenantId();

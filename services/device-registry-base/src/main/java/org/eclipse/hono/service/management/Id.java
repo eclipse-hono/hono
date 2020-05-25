@@ -32,7 +32,7 @@ public final class Id {
 
     /**
      * Create a new ID.
-     * 
+     *
      * @param id The value of the id.
      * @return The new instance.
      */

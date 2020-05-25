@@ -100,7 +100,7 @@ public class RegistrationClientImplTest {
     /**
      * Verifies that on a cache miss the adapter retrieves registration information
      * from the Device Registration service and puts it to the cache.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -137,7 +137,7 @@ public class RegistrationClientImplTest {
     /**
      * Verifies that the client retrieves registration information from the
      * Device Registration service if no cache is configured.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -172,7 +172,7 @@ public class RegistrationClientImplTest {
 
     /**
      * Verifies that registration information is taken from cache.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

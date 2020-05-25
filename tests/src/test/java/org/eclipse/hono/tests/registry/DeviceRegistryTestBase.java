@@ -39,7 +39,7 @@ abstract class DeviceRegistryTestBase {
 
     /**
      * Gets the helper to use for running tests.
-     * 
+     *
      * @return The helper.
      */
     protected abstract IntegrationTestSupport getHelper();
@@ -47,7 +47,7 @@ abstract class DeviceRegistryTestBase {
     /**
      * Asserts that a given error is a {@link ServiceInvocationException}
      * with a particular error code.
-     * 
+     *
      * @param error The error.
      * @param expectedErrorCode The error code.
      * @throws AssertionError if the assertion fails.

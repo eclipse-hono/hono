@@ -29,7 +29,7 @@ public interface X509Authentication {
 
     /**
      * Validates a certificate path.
-     * 
+     *
      * @param path The certificate path to validate.
      * @param currentSpan The <em>OpenTracing</em> context in which the
      *                    validation should be executed, or {@code null}

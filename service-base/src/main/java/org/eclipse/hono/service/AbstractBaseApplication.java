@@ -73,7 +73,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
 
     /**
      * Sets the application configuration properties to use for this service.
-     * 
+     *
      * @param config The properties.
      * @throws NullPointerException if the properties are {@code null}.
      */
@@ -84,7 +84,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
 
     /**
      * Gets the application configuration properties used for this service.
-     * 
+     *
      * @return The properties.
      */
     protected final ApplicationConfigProperties getConfig() {
@@ -93,7 +93,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
 
     /**
      * Sets the health check server for this application.
-     * 
+     *
      * @param healthCheckServer The health check server.
      * @throws NullPointerException if healthCheckServer is {@code null}.
      */
@@ -107,7 +107,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      * <p>
      * Although the current implementation is empty, classes overriding this method must call the super method, as
      * future implementations may be different.
-     * 
+     *
      * @throws IllegalStateException May be thrown if the implementor considers the application in state that it cannot
      *             be started up.
      */
@@ -125,7 +125,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      * <li>invoke <em>postRegisterServiceVerticles</em> to perform any additional post deployment steps</li>
      * <li>start the health check server</li>
      * </ol>
-     * 
+     *
      * @param args The command line arguments provided to the application.
      */
     @Override
@@ -184,7 +184,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      * <p>
      * Although the current implementation only returns a succeeded future, overriding this method it is required to
      * call "super", in order to enable future changes.
-     * 
+     *
      * @return A future indicating success. Application start-up fails if the returned future fails.
      */
     protected Future<?> deployVerticles() {
@@ -204,7 +204,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
 
     /**
      * Stops this application in a controlled fashion.
-     * 
+     *
      * @param maxWaitTime The maximum time to wait for the server to shut down (in seconds).
      * @param shutdownHandler The handler to invoke with the result of the shutdown attempt.
      */
@@ -255,7 +255,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      * May be overridden to provide additional startup logic, e.g. deploying additional verticles.
      * <p>
      * This default implementation simply returns a succeeded future.
-     * 
+     *
      * @return A future indicating success. Application start-up fails if the returned future fails.
      */
     protected Future<?> postRegisterServiceVerticles() {
@@ -274,7 +274,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
 
     /**
      * Registers additional health checks.
-     * 
+     *
      * @param provider The provider of the health checks.
      */
     protected final void registerHealthchecks(final HealthCheckProvider provider) {

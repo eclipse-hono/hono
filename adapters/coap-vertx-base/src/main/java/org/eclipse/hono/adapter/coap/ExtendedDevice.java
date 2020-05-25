@@ -16,7 +16,7 @@ import org.eclipse.hono.auth.Device;
 
 /**
  * Extended hono device.
- * 
+ *
  * Tuple of hono devices, providing an authenticated device and optionally different device. For the gateway based
  * communication the authenticated device would be the gateway and the device will contain the hono device, which is the
  * origin of the associated message data. For direct communication both devices of the tuple are the same and used as
@@ -35,7 +35,7 @@ public class ExtendedDevice {
 
     /**
      * Create extended device.
-     * 
+     *
      * @param authenticatedDevice authenticated device. Maybe a gateway.
      * @param originDevice origin device. Maybe different or the same as the authenticatedDevice.
      */

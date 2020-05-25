@@ -78,7 +78,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
     /**
      * Creates a new sender.
-     * 
+     *
      * @param connection The connection to use for interacting with the server.
      * @param sender The sender link to send messages over.
      * @param tenantId The identifier of the tenant that the
@@ -176,7 +176,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
      * <p>
      * The message is sent according to the delivery semantics defined by
      * the Hono API this client interacts with.
-     * 
+     *
      * @param message The message to send.
      * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
      *              The span will be finished by this method and will contain an error log if
@@ -199,7 +199,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
     /**
      * Creates and starts a new OpenTracing {@code Span} for a message to be sent.
-     * 
+     *
      * @param message The message to create the span for.
      * @return The started span.
      * @throws NullPointerException if message is {@code null}.
@@ -211,7 +211,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     /**
      * Creates and starts a new OpenTracing {@code Span} for a message to be sent
      * in an existing context.
-     * 
+     *
      * @param context The context to create the span in. If {@code null}, then
      *                  the span is created without a parent.
      * @param message The message to create the span for.
@@ -222,7 +222,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
     /**
      * Gets the value of the <em>to</em> property to be used for messages produced by this sender.
-     * 
+     *
      * @param deviceId The identifier of the device that the message's content originates from.
      * @return The address.
      */
@@ -231,7 +231,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
     /**
      * Sends an AMQP 1.0 message to the peer this client is configured for
      * and waits for the outcome of the transfer.
-     * 
+     *
      * @param message The message to send.
      * @param currentSpan The <em>OpenTracing</em> span used to trace the sending of the message.
      *              The span will be finished by this method and will contain an error log if
@@ -326,7 +326,7 @@ public abstract class AbstractSender extends AbstractHonoClient implements Messa
 
     /**
      * Creates a log entry in the given span with the message id and information about the sender (credits, QOS).
-     * 
+     *
      * @param currentSpan The current span to log to.
      * @param messageId The message id.
      * @throws NullPointerException if currentSpan is {@code null}.

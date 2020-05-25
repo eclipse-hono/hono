@@ -56,7 +56,7 @@ public abstract class AbstractDelegatingRequestResponseEndpoint<S, T extends Ser
 
     /**
      * Gets the service that this endpoint delegates to.
-     * 
+     *
      * @return The service or {@code null} if not set.
      */
     protected final S getService() {

@@ -43,7 +43,7 @@ public final class AuthHandlerTools {
      * then its error code is used to fail the routing context, otherwise the status
      * code from the {@code HttpStatusException} is used. In all other cases, the
      * context is failed with a 500 error code.
-     * 
+     *
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.
      * @param authenticateHeader The value to return in the HTTP Authenticate header.

@@ -52,7 +52,7 @@ public class X509AuthHandler extends AuthHandlerImpl {
     /**
      * Creates a new handler for an authentication provider and a
      * Tenant service client.
-     * 
+     *
      * @param clientAuth The service to use for validating the client's certificate path.
      * @param authProvider The authentication provider to use for verifying
      *              the device identity.
@@ -91,7 +91,7 @@ public class X509AuthHandler extends AuthHandlerImpl {
      * Fails the context with the error code determined from an exception.
      * <p>
      * This method invokes {@link AuthHandlerTools#processException(RoutingContext, Throwable, String)}.
-     * 
+     *
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.
      */

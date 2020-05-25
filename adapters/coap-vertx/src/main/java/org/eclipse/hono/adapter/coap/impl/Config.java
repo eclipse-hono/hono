@@ -50,7 +50,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Creates a new COAP adapter instance.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_COAP_ADAPTER)
@@ -99,7 +99,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean

@@ -49,7 +49,7 @@ class VertxCoapResource implements Resource {
 
     /**
      * Wraps a resource.
-     * 
+     *
      * @param resource The resource to wrap.
      * @param adapterContext The vert.x context to run the request handler on.
      * @throws NullPointerException if any of the params are {@code null}.

@@ -264,7 +264,7 @@ public class ApplicationConfig {
     /**
      * Creates a new server for exposing the device registry's AMQP 1.0 based
      * endpoints.
-     * 
+     *
      * @return The server.
      */
     @Bean(name = BEAN_NAME_AMQP_SERVER)
@@ -343,7 +343,7 @@ public class ApplicationConfig {
 
     /**
      * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
-     * 
+     *
      * @return The handler.
      */
     @Bean
@@ -388,7 +388,7 @@ public class ApplicationConfig {
     /**
      * Creates a new server for exposing the device registry's AMQP 1.0 based
      * endpoints.
-     * 
+     *
      * @return The server.
      */
     @Bean(name = BEAN_NAME_HTTP_SERVER)

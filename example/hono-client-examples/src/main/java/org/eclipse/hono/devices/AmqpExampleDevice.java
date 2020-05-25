@@ -36,12 +36,12 @@ import io.vertx.core.json.JsonObject;
  * <li>Send an event message</li>
  * <li>Subscribe and wait for for commands</li>
  * </ol>
- * 
+ *
  * If it receives a request-response command, it sends a response.
  * <p>
  * <b>The used tenant, device and credentials need to be registered and enabled.</b> For details on how to do this,
  * refer to the <a href="https://www.eclipse.org/hono/getting-started/">Getting Started Guide</a>.
- * 
+ *
  * @see AmqpAdapterClientFactory
  * @see <a href="https://www.eclipse.org/hono/docs/dev-guide/amqp_adapter_client/">The AMQP Adapter Client
  *      documentation</a>

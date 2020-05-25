@@ -55,7 +55,7 @@ public class AutowiredTenantInformationService implements TenantInformationServi
 
     /**
      * Sets the backend service to delegate to.
-     * 
+     *
      * @param service The service.
      * @throws NullPointerException if service is {@code null}.
      */

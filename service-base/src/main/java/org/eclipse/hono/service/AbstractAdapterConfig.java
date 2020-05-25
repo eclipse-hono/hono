@@ -99,7 +99,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Creates properties for configuring the Connection Event producer.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -111,7 +111,7 @@ public abstract class AbstractAdapterConfig {
     /**
      * Configures the Connection Event producer that the adapter should use for reporting
      * devices connecting/disconnecting to/from the adapter.
-     * 
+     *
      * @param config The configuration properties for the producer.
      * @return The producer or {@code null} if the configured producer type is none or unsupported.
      */
@@ -590,7 +590,7 @@ public abstract class AbstractAdapterConfig {
 
     /**
      * Creates a new instance of {@link ResourceLimitChecks} based on prometheus metrics data.
-     * 
+     *
      * @return A ResourceLimitChecks instance.
      */
     @Bean

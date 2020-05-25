@@ -103,7 +103,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
     /**
      * Verifies that the registration service creates a file for persisting device registration
      * data if it does not exist yet.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @SuppressWarnings({ "unchecked" })
@@ -136,7 +136,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
     /**
      * Verifies that the registration service creates a file for persisting device registration
      * data if it does not exist yet during startup.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @SuppressWarnings({ "unchecked" })
@@ -170,7 +170,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
     /**
      * Verifies that the registration service fails to start if it cannot create the file for
      * persisting device registration data during startup.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @SuppressWarnings({ "unchecked" })
@@ -200,7 +200,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
     /**
      * Verifies that the registration service successfully starts up even if
      * the file to read device information from contains malformed JSON.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @SuppressWarnings({ "unchecked" })
@@ -459,7 +459,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
     /**
      * Verifies that setting the <em>saveToFile</em> configuration property to <em>false</em> prevents
      * the registration service to write its content to the file system periodically.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -485,7 +485,7 @@ public class FileBasedRegistrationServiceTest extends RegistrationServiceTests {
     /**
      * Verifies that setting the <em>saveToFile</em> configuration property to <em>false</em> prevents
      * the registration service to write its content to the file system during shutdown.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings({ "unchecked" })

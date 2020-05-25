@@ -30,7 +30,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * Get a generic response.
- * 
+ *
  * @param <T> Payload type.
  */
 public class Result<T> {
@@ -41,7 +41,7 @@ public class Result<T> {
 
     /**
      * Create a new instance.
-     * 
+     *
      * @param status The HTTP status code.
      * @param payload The payload, may be {@code null}.
      * @param cacheDirective The caching directive, may be {@link Optional#empty()}, but not {@code null}.
@@ -76,7 +76,7 @@ public class Result<T> {
 
     /**
      * Create new response.
-     * 
+     *
      * @param <T> Payload type.
      * @param <R> Response Type.
      * @param status Response status.
@@ -89,7 +89,7 @@ public class Result<T> {
 
     /**
      * Create new response.
-     * 
+     *
      * @param <T> Payload type.
      * @param status Response status.
      * @return New response of requested type.
@@ -100,7 +100,7 @@ public class Result<T> {
 
     /**
      * Create a response from the request.
-     * 
+     *
      * @param request The request to use as base.
      * @param payloadMapper The mapper for mapping the payload to the JSON object required by the
      *            {@link EventBusMessage}.
@@ -125,7 +125,7 @@ public class Result<T> {
      * Create {@link ToStringHelper} for this instance. <br>
      * Derived classes should call the super method, and add their own fields. Following this pattern derived classes do
      * not need to implement {@link #toString()}.
-     * 
+     *
      * @return A new instance of a {@link ToStringHelper}, filled with fields from this instance.
      */
     protected ToStringHelper toStringHelper() {

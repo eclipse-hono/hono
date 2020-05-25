@@ -67,7 +67,7 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
      * algorithm</li>
      * </ol>
      * and then invoke {@link #SpringBasedHonoPasswordEncoder(SecureRandom, int)}.
-     * 
+     *
      * @see "https://tersesystems.com/blog/2015/12/17/the-right-way-to-use-securerandom/"
      * @see "https://hackernoon.com/hack-how-to-use-securerandom-with-kubernetes-and-docker-a375945a7b21"
      */
@@ -86,7 +86,7 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
      * algorithm</li>
      * </ol>
      * and then invoke {@link #SpringBasedHonoPasswordEncoder(SecureRandom, int)}.
-     * 
+     *
      * @param bcryptStrength The strength to use for creating BCrypt hashes. Value must be
      *             &gt;= 4 and &lt;= 31. Note that a higher value will increase the time
      *             it takes to compute a hash. A value around 10 is considered a good compromise
@@ -100,7 +100,7 @@ public class SpringBasedHonoPasswordEncoder implements HonoPasswordEncoder {
 
     /**
      * Creates a new encoder for a random number generator.
-     * 
+     *
      * @param rng The random number generator to use.
      * @param bcryptStrength The strength to use for creating BCrypt hashes. Value must be
      *             &gt;= 4 and &lt;= 31. Note that a higher value will increase the time

@@ -59,7 +59,7 @@ public class CredentialsDto extends BaseDto {
      * </ul>
      * <p>
      * These properties are supposed to be asserted before persisting this DTO.
-     * 
+     *
      * @param tenantId The tenant identifier.
      * @param deviceId The device identifier.
      * @param credentials The list of credentials.

@@ -44,7 +44,7 @@ public class ResourceLimits {
 
     /**
      * Sets the maximum number of connected devices a tenant supports.
-     * 
+     *
      * @param maxConnections The maximum number of connections to set.
      * @return A reference to this for fluent use.
      * @throws IllegalArgumentException if the maximum connections is set to less than -1.
@@ -59,7 +59,7 @@ public class ResourceLimits {
 
     /**
      * Gets the maximum number of connected devices a tenant supports.
-     * 
+     *
      * @return The maximum number of connections or {@link TenantConstants#UNLIMITED_CONNECTIONS}
      *         if not set.
      */
@@ -70,7 +70,7 @@ public class ResourceLimits {
     /**
      * Sets the maximum time-to-live to use for events published by
      * devices of a tenant.
-     * 
+     *
      * @param maxTtl The time-to-live in seconds.
      * @return A reference to this for fluent use.
      * @throws IllegalArgumentException if the time-to-live is set to less than -1.
@@ -86,7 +86,7 @@ public class ResourceLimits {
     /**
      * Gets the maximum time-to-live to use for events published by
      * devices of a tenant.
-     * 
+     *
      * @return The time-to-live in seconds.
      */
     public long getMaxTtl() {
@@ -104,7 +104,7 @@ public class ResourceLimits {
 
     /**
      * Sets the data volume properties which are required for the message limit verification.
-     * 
+     *
      * @param dataVolume the data volume properties.
      * @return a reference to this for fluent use.
      */
@@ -135,7 +135,7 @@ public class ResourceLimits {
 
     /**
      * Sets the extension properties for this resource limits.
-     * 
+     *
      * @param extensions The extensions to set.
      * @return          a reference to this for fluent use.
      */
@@ -146,7 +146,7 @@ public class ResourceLimits {
 
     /**
      * Gets the extension properties for this resource limits.
-     * 
+     *
      * @return The extensions.
      */
     public final Map<String, Object> getExtensions() {

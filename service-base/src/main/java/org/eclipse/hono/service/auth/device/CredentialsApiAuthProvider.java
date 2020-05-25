@@ -57,7 +57,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
 
     /**
      * Creates a new authentication provider for a credentials client factory.
-     * 
+     *
      * @param credentialsClientFactory The factory.
      * @param tracer The tracer instance.
      * @throws NullPointerException if the factory or the tracer are {@code null}
@@ -69,7 +69,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
 
     /**
      * Gets a client for the Credentials service.
-     * 
+     *
      * @param tenantId The tenant to get the client for.
      * @return A future containing the client.
      */
@@ -79,7 +79,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
 
     /**
      * Retrieves credentials from the Credentials service.
-     * 
+     *
      * @param deviceCredentials The credentials provided by the device.
      * @param spanContext The {@code SpanContext} (may be {@code null}).
      * @return A future containing the credentials on record as retrieved from
@@ -136,7 +136,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
     /**
      * Verifies that the credentials provided by a device during the authentication
      * process match the credentials on record for that device.
-     * 
+     *
      * @param deviceCredentials The credentials provided by the device.
      * @param credentialsOnRecord The credentials to match against.
      * @param spanContext The OpenTracing context to use for tracking the operation.
@@ -189,7 +189,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
     /**
      * Verifies that the credentials provided by a device during the authentication
      * process match the credentials on record for that device.
-     * 
+     *
      * @param deviceCredentials The credentials provided by the device.
      * @param credentialsOnRecord The credentials on record.
      * @return A future that is succeeded with the authenticated device if the
@@ -223,7 +223,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * <p>
      * Subclasses need to create a concrete {@code DeviceCredentials} instance based on
      * the information contained in the JSON object.
-     * 
+     *
      * @param authInfo The credentials provided by the device.
      * @return The device credentials or {@code null} if the auth info does not contain
      *         the required information.

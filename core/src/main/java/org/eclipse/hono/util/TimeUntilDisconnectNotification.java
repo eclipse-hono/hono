@@ -62,7 +62,7 @@ public final class TimeUntilDisconnectNotification {
 
     /**
      * Gets the identifier of the tenant that the device belongs to.
-     * 
+     *
      * @return The identifier.
      */
     public String getTenantId() {
@@ -71,7 +71,7 @@ public final class TimeUntilDisconnectNotification {
 
     /**
      * Gets the identifier of the device that sent the TTD.
-     * 
+     *
      * @return The identifier.
      */
     public String getDeviceId() {
@@ -89,7 +89,7 @@ public final class TimeUntilDisconnectNotification {
 
     /**
      * Gets the time period that the device indicated to remain connected.
-     * 
+     *
      * @return The time period in seconds.
      */
     public Integer getTtd() {
@@ -98,7 +98,7 @@ public final class TimeUntilDisconnectNotification {
 
     /**
      * Gets the point in time until which the device will remain connected.
-     * 
+     *
      * @return The point in time.
      */
     public Instant getReadyUntil() {
@@ -107,7 +107,7 @@ public final class TimeUntilDisconnectNotification {
 
     /**
      * Gets the point in time that the message has been created at.
-     * 
+     *
      * @return The creation time.
      */
     public Instant getCreationTime() {

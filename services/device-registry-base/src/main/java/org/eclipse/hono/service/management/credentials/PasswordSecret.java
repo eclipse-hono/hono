@@ -50,7 +50,7 @@ public class PasswordSecret extends CommonSecret {
      * password and salt (if set).
      * <p>
      * Currently, Hono supports the <b>sha-256</b>, <b>sha-512</b> and <b>bcrypt</b> hash functions.
-     * 
+     *
      * @param hashFunction  The cryptographic hashing function to use.
      * @return              a reference to this for fluent use.
      */
@@ -68,7 +68,7 @@ public class PasswordSecret extends CommonSecret {
      * <p>
      * The password hash value is the result of applying one of Hono's supported hash functions
      * to the plain text password and salt (if set).
-     * 
+     *
      * @param passwordHash  The cryptographic hash to set for this password.
      * @return              a reference to this for fluent use.
      */
@@ -127,7 +127,7 @@ public class PasswordSecret extends CommonSecret {
      * </ul>
      * Subclasses may override this method in order to perform
      * additional checks.
-     * 
+     *
      * @throws IllegalStateException if the secret is not valid.
      */
     @Override
@@ -168,7 +168,7 @@ public class PasswordSecret extends CommonSecret {
      * by the given encoder. The passwordPlain field is set to {@code null}.
      * <p>
      * This method does nothing if the <em>passwordPlain</em> field is {@code null} or empty.
-     * 
+     *
      * @param encoder The password encoder to use.
      * @return A reference to this for fluent use.
      */

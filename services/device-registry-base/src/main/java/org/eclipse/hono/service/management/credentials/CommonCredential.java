@@ -47,14 +47,14 @@ public abstract class CommonCredential {
 
     /**
      * Get a list of secrets for this credential.
-     * 
+     *
      * @return The list of credentials, must not be {@code null}.
      */
     public abstract List<? extends CommonSecret> getSecrets();
 
     /**
      * Gets the type of secrets these credentials contain.
-     * 
+     *
      * @return The type name.
      */
     public abstract String getType();
@@ -65,7 +65,7 @@ public abstract class CommonCredential {
 
     /**
      * Sets the authentication identifier that the device uses for authenticating to protocol adapters.
-     * 
+     *
      * @param authId  The authentication identifier use for authentication.
      * @return        a reference to this for fluent use.
      */
@@ -80,7 +80,7 @@ public abstract class CommonCredential {
 
     /**
      * Sets the enabled property to indicate to protocol adapters whether this credential type should be use to authenticate devices.
-     * 
+     *
      * @param enabled  Whether this credential type should be used to authenticate devices.
      * @return         a reference to this for fluent use.
      */
@@ -123,7 +123,7 @@ public abstract class CommonCredential {
      * Adds a new extension entry to the device.
      * <p>
      * If an extension entry already exists for the specified key, the old value is replaced by the specified value.
-     * 
+     *
      * @param key The key of the entry.
      * @param value The value of the entry.
      * @return This instance, to allowed chained invocations.
@@ -140,7 +140,7 @@ public abstract class CommonCredential {
      * Checks if these credentials' properties represent a consisten state.
      * <p>
      * The check succeeds if the authId and type properties are neither {@code null} nor empty.
-     * 
+     *
      * @throws IllegalStateException if the check fails.
      */
     public void checkValidity() {
@@ -158,7 +158,7 @@ public abstract class CommonCredential {
      * external systems.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @return This credentials object with all non-public information removed.
      */
     public CommonCredential stripPrivateInfo() {

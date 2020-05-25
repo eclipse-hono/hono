@@ -34,7 +34,7 @@ public interface AuthTokenHelper {
      * <p>
      * Clients should always check if a token is expired before using any information
      * contained in the token.
-     *  
+     *
      * @return The duration.
      */
     Duration getTokenLifetime();
@@ -49,7 +49,7 @@ public interface AuthTokenHelper {
      * <li>expires after the {@linkplain #getTokenLifetime() configured expiration time}.</li>
      * <li>contains a signature of the claims.</li>
      * </ul>
-     * 
+     *
      * @param authorizationId The asserted identity.
      * @param authorities The granted authorities.
      * @return The compact encoding of the JWT.
@@ -58,7 +58,7 @@ public interface AuthTokenHelper {
 
     /**
      * Expands an encoded JWT token containing a signed <em>claims</em> body.
-     * 
+     *
      * @param token The compact encoding of the JWT token to expand.
      * @return The expanded token.
      * @throws JwtException if the token cannot be expanded, e.g. because its signature cannot

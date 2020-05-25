@@ -24,7 +24,7 @@ public class ClientErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a client error code.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 500.
      */
@@ -34,7 +34,7 @@ public class ClientErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a client error code and a detail message.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param msg The detail message.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 500.
@@ -45,7 +45,7 @@ public class ClientErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a client error code and a root cause.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param cause The root cause.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 500.
@@ -56,7 +56,7 @@ public class ClientErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a client error code, a detail message and a root cause.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param msg The detail message.
      * @param cause The root cause.

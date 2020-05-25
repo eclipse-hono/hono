@@ -178,7 +178,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * <p>
      * If not set explicitly, the {@code NoopTracer} from OpenTracing will
      * be used.
-     * 
+     *
      * @param opentracingTracer The tracer.
      */
     @Autowired(required = false)
@@ -190,7 +190,7 @@ public class HonoConnectionImpl implements HonoConnection {
     /**
      * Gets the OpenTracing {@code Tracer} to use for tracing the processing
      * of messages received from or sent to devices.
-     * 
+     *
      * @return The tracer.
      */
     @Override
@@ -216,7 +216,7 @@ public class HonoConnectionImpl implements HonoConnection {
     /**
      * Executes some code on the vert.x Context that has been used to establish the
      * connection to the peer.
-     * 
+     *
      * @param <T> The type of the result that the code produces.
      * @param codeToRun The code to execute. The code is required to either complete or
      *                  fail the future that is passed into the handler.
@@ -297,7 +297,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * Note that the result returned by this method is only meaningful
      * if running on the vert.x event loop context that this client has been
      * created on.
-     * 
+     *
      * @return {@code true} if the connection is established.
      */
     protected boolean isConnectedInternal() {
@@ -595,7 +595,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     /**
      * Log the connection error.
-     * 
+     *
      * @param connectionFailureCause The connection error to log, never is {@code null}.
      */
     private void logConnectionError(final Throwable connectionFailureCause) {
@@ -653,7 +653,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * This method simply invokes {@link HonoProtonHelper#closeAndFree(Context, ProtonLink, Handler)}
      * with this connection's vert.x context.
      *
@@ -676,7 +676,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * This method simply invokes {@link HonoProtonHelper#closeAndFree(Context, ProtonLink, long, Handler)}
      * with this connection's vert.x context.
      */
@@ -696,7 +696,7 @@ public class HonoConnectionImpl implements HonoConnection {
 
     /**
      * Creates a sender link.
-     * 
+     *
      * @param targetAddress The target address of the link. If the address is {@code null}, the
      *                      sender link will be established to the 'anonymous relay' and each
      *                      message must specify its destination address.

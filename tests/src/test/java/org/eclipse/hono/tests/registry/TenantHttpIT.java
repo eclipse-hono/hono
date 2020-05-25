@@ -76,7 +76,7 @@ public class TenantHttpIT {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param testInfo The test meta data.
      */
     @BeforeEach
@@ -87,7 +87,7 @@ public class TenantHttpIT {
 
     /**
      * Removes the credentials that have been added by the test.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterEach
@@ -100,7 +100,7 @@ public class TenantHttpIT {
 
     /**
      * Shuts down the client.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @AfterAll
@@ -111,7 +111,7 @@ public class TenantHttpIT {
     /**
      * Verifies that the service accepts an add tenant request containing a valid tenant structure
      * and that the response contains a <em>Location</em> header for the created resource.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -124,7 +124,7 @@ public class TenantHttpIT {
     /**
      * Verifies that a correctly filled JSON payload to add a tenant for an already existing record is
      * responded with {@link HttpURLConnection#HTTP_CONFLICT} and a non empty error response message.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -141,7 +141,7 @@ public class TenantHttpIT {
     /**
      * Verifies that the service returns a 400 status code for an add tenant request with a Content-Type
      * other than application/json.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -155,7 +155,7 @@ public class TenantHttpIT {
 
     /**
      * Verifies that the service successfully create a tenant from a request with an empty body.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -295,7 +295,7 @@ public class TenantHttpIT {
     /**
      * Verifies that the service returns a 400 status code for an add tenant request containing
      * a malformed trust configuration (i.e an invalid Base64 encoding value of the trust CA's certificate).
-     * 
+     *
      * @param context The Vert.x test context.
      */
     @Test

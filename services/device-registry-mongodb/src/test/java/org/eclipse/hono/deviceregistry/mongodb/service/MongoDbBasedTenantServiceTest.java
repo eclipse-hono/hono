@@ -89,7 +89,7 @@ class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
 
     /**
      * Cleans up the collection after tests.
-     * 
+     *
      * @param testContext The test context to use for running asynchronous tests.
      */
     @AfterEach

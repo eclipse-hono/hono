@@ -52,7 +52,7 @@ public final class Hostnames {
      * <p>
      * This method tries to get the hostname of the machine. It will try different approaches.
      * </p>
-     * 
+     *
      * @return The hostname, but never {@code null}.
      */
     public static String getHostname() {

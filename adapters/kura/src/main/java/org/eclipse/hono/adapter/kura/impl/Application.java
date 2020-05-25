@@ -32,7 +32,7 @@ public class Application extends AbstractApplication {
 
     /**
      * Starts the Kura Adapter application.
-     * 
+     *
      * @param args Command line arguments passed to the application.
      */
     public static void main(final String[] args) {

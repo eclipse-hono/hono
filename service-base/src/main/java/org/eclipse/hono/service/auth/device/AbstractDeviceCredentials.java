@@ -29,7 +29,7 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
 
     /**
      * Creates credentials for a tenant and authentication identifier.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param authId The identifier that the device uses for authentication.
      */
@@ -39,7 +39,7 @@ public abstract class AbstractDeviceCredentials implements DeviceCredentials {
 
     /**
      * Creates credentials for a tenant and authentication identifier.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param authId The identifier that the device uses for authentication.
      * @param clientContext The client context that can be used to get credentials from the Credentials API.

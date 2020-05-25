@@ -251,7 +251,7 @@ public final class Constants {
 
     /**
      * Gets the principal representing an authenticated peer.
-     * 
+     *
      * @param record The attachments to retrieve the principal from.
      * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
      *         if the client has not been authenticated or record is {@code null}.
@@ -268,7 +268,7 @@ public final class Constants {
 
     /**
      * Gets the principal representing a connection's client.
-     * 
+     *
      * @param con The connection to get the principal for.
      * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
      *         if the client has not been authenticated.
@@ -281,7 +281,7 @@ public final class Constants {
 
     /**
      * Gets the principal representing a connection's client.
-     * 
+     *
      * @param con The connection to get the principal for.
      * @param principal The principal representing the authenticated client.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -299,7 +299,7 @@ public final class Constants {
      * <ul>
      * <li>{@link #KEY_CONNECTION_ID}</li>
      * </ul>
-     * 
+     *
      * @param source The connection.
      * @param target The link.
      */
@@ -311,7 +311,7 @@ public final class Constants {
 
     /**
      * Gets the (surrogate) identifier of the AMQP connection that a link is part of.
-     * 
+     *
      * @param link The link to determine the connection id for.
      * @return The identifier retrieved from the link's <em>attachment</em> using key {@link #KEY_CONNECTION_ID}
      *         or {@code null} if the attachments do not contain a value for that a key.
@@ -322,7 +322,7 @@ public final class Constants {
 
     /**
      * Gets the (surrogate) identifier of an AMQP connection.
-     * 
+     *
      * @param connection The connection to determine the connection id for.
      * @return The identifier retrieved from the connection's <em>attachments</em> using key {@link #KEY_CONNECTION_ID}
      *         or {@code null} if the attachments do not contain a value for that a key.
@@ -336,7 +336,7 @@ public final class Constants {
      * <p>
      * The identifier will be added to the connection's <em>attachments</em> under key
      * {@link #KEY_CONNECTION_ID}.
-     * 
+     *
      * @param connection The connection to set id for.
      * @param id The identifier to set.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -348,7 +348,7 @@ public final class Constants {
 
     /**
      * Checks if a given tenant identifier is the {@code DEFAULT_TENANT}.
-     * 
+     *
      * @param tenantId The identifier to check.
      * @return {@code true} if the given identifier is equal to {@link #DEFAULT_TENANT}.
      */

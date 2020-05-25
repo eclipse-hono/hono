@@ -40,7 +40,7 @@ public final class TriTuple<A, B, C> {
 
     /**
      * Creates a new tuple for values of arbitrary type.
-     * 
+     *
      * @param one First value.
      * @param two Second value.
      * @param three Third value.

@@ -34,7 +34,7 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
 
     /**
      * Creates a new result for a status code.
-     * 
+     *
      * @param status The status code.
      * @return The result.
      */
@@ -44,7 +44,7 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
 
     /**
      * Creates a new result for a status code and a payload.
-     * 
+     *
      * @param status The status code.
      * @param payload The payload to include in the result.
      * @return The result.
@@ -55,7 +55,7 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
 
     /**
      * Creates a new result for a status code and a payload.
-     * 
+     *
      * @param status The status code.
      * @param payload The string representation of the JSON payload
      *                to include in the result (may be {@code null}).
@@ -72,7 +72,7 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
 
     /**
      * Creates a new result for a status code and a payload.
-     * 
+     *
      * @param status The status code.
      * @param payload The payload to include in the result.
      * @param cacheDirective Restrictions regarding the caching of the payload.
@@ -84,7 +84,7 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
 
     /**
      * Creates a new result for a status code and a payload.
-     * 
+     *
      * @param status The status code.
      * @param payload The payload to include in the result.
      * @param cacheDirective Restrictions regarding the caching of the payload.

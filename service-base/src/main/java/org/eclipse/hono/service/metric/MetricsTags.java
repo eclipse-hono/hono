@@ -68,7 +68,7 @@ public final class MetricsTags {
 
         /**
          * Gets a <em>Micrometer</em> tag for the component type.
-         * 
+         *
          * @return The tag.
          */
         public Tag asTag() {
@@ -77,7 +77,7 @@ public final class MetricsTags {
 
         /**
          * Gets this type's canonical name.
-         * 
+         *
          * @return The name.
          */
         public String getCanonicalName() {
@@ -86,9 +86,9 @@ public final class MetricsTags {
 
         /**
          * Gets the endpoint type from a string value.
-         * 
+         *
          * @param name The name of the endpoint type.
-         * 
+         *
          * @return The enum literal of the endpoint type. Returns {@link #UNKNOWN} if it cannot find the endpoint type.
          *         Never returns {@code null}.
          */
@@ -135,7 +135,7 @@ public final class MetricsTags {
 
         /**
          * Gets a <em>Micrometer</em> tag for the component type.
-         * 
+         *
          * @return The tag.
          */
         public Tag asTag() {
@@ -172,7 +172,7 @@ public final class MetricsTags {
 
         /**
          * Gets an outcome for an error.
-         * 
+         *
          * @param t The error.
          * @return The outcome.
          */
@@ -186,7 +186,7 @@ public final class MetricsTags {
 
         /**
          * Gets a <em>Micrometer</em> tag for the outcome.
-         * 
+         *
          * @return The tag.
          */
         public Tag asTag() {
@@ -227,7 +227,7 @@ public final class MetricsTags {
 
         /**
          * Gets a <em>Micrometer</em> tag for the TTD status.
-         * 
+         *
          * @return The tag or {@code null} if the status is {@link #NONE}.
          */
         public Tag asTag() {
@@ -267,7 +267,7 @@ public final class MetricsTags {
 
         /**
          * Gets the QoS for a level.
-         * 
+         *
          * @param level The level.
          * @return The corresponding quality of service.
          */
@@ -284,7 +284,7 @@ public final class MetricsTags {
 
         /**
          * Gets a <em>Micrometer</em> tag for the QoS level.
-         * 
+         *
          * @return The tag or {@code null} if the status is {@link #UNKNOWN}.
          */
         public Tag asTag() {
@@ -321,7 +321,7 @@ public final class MetricsTags {
 
         /**
          * Gets a <em>Micrometer</em> tag for the direction.
-         * 
+         *
          * @return The tag.
          */
         public Tag asTag() {
@@ -351,7 +351,7 @@ public final class MetricsTags {
 
     /**
      * Creates the default tag set for a protocol adapter.
-     * 
+     *
      * @param name The name of the protocol adapter.
      * @return A ready to use tag set.
      */
@@ -364,7 +364,7 @@ public final class MetricsTags {
 
     /**
      * Creates the default tag set for a service.
-     * 
+     *
      * @param name The name of the service.
      * @return A ready to use tag set.
      */
@@ -377,7 +377,7 @@ public final class MetricsTags {
 
     /**
      * Creates a tag for a tenant identifier.
-     * 
+     *
      * @param tenant The tenant.
      * @return The tag.
      * @throws NullPointerException if outcome is {@code null}.

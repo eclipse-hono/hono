@@ -58,7 +58,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
      * <p>
      * The client will be ready to use after invoking {@link #createLinks()} or
      * {@link #createLinks(Handler, Handler)} only.
-     * 
+     *
      * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
      */
@@ -68,7 +68,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Creates a new client for accessing the Device Registration service.
-     * 
+     *
      * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
      * @param sender The AMQP link to use for sending requests to the service.
@@ -85,7 +85,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Gets the AMQP <em>target</em> address to use for sending requests to Hono's Device Registration API endpoint.
-     * 
+     *
      * @param tenantId The tenant to upload data for.
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.
@@ -128,7 +128,7 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
 
     /**
      * Creates a new registration client for a tenant.
-     * 
+     *
      * @param cacheProvider A factory for cache instances for registration results. If {@code null}
      *                     the client will not cache any results from the Device Registration service.
      * @param con The connection to the server.

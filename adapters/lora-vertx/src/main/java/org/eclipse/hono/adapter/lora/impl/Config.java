@@ -55,7 +55,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Creates a new LoRa adapter instance.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_LORA_PROTOCOL_ADAPTER)

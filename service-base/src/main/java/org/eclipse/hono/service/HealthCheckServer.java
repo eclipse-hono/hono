@@ -20,7 +20,7 @@ public interface HealthCheckServer extends Lifecycle {
 
     /**
      * Registers the readiness and liveness checks of the given service.
-     * 
+     *
      * @param serviceInstance instance of the service which's checks should be registered.
      */
     void registerHealthCheckResources(HealthCheckProvider serviceInstance);

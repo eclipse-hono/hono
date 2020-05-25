@@ -34,7 +34,7 @@ public final class LoggingConnectionEventProducer implements ConnectionEventProd
 
     /**
      * Creates a producer for a set of configuration properties.
-     * 
+     *
      * @param config The properties.
      * @throws NullPointerException if properties is {@code null}.
      */

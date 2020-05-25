@@ -79,7 +79,7 @@ class TrustedCertificateAuthorityTest {
 
     /**
      * Decode "trusted-ca" section for an X.509 certificate.
-     * 
+     *
      * @throws CertificateEncodingException if the certificate cannot be encoded.
      */
     @Test
@@ -96,7 +96,7 @@ class TrustedCertificateAuthorityTest {
     /**
      * Verifies that the subject DN and key algorithm are
      * derived from a certificate instead of explicitly specified values.
-     * 
+     *
      * @throws CertificateEncodingException if the certificate cannot be encoded.
      */
     @Test

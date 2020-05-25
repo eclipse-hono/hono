@@ -40,7 +40,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Creates a new Kura protocol adapter instance.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_KURA_PROTOCOL_ADAPTER)
@@ -92,7 +92,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Exposes the Kura adapter's configuration properties as a Spring bean.
-     * 
+     *
      * @return The configuration properties.
      */
     @Bean
@@ -103,7 +103,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean
@@ -114,7 +114,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Provides the adapter metrics instance to use.
-     * 
+     *
      * @param registry The meter registry to use.
      * @return A new adapter metrics instance.
      */
@@ -125,7 +125,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Exposes a factory for creating Kura adapter instances.
-     * 
+     *
      * @return The factory bean.
      */
     @Bean

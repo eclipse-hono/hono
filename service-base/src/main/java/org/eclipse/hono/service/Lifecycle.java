@@ -26,7 +26,7 @@ public interface Lifecycle {
      * <p>
      * This method should be used to allocate any required resources.
      * However, no long running tasks should be executed.
-     * 
+     *
      * @return A future indicating the outcome of the startup process.
      */
     Future<Void> start();
@@ -36,7 +36,7 @@ public interface Lifecycle {
      * <p>
      * This method should be used to release any allocated resources.
      * However, no long running tasks should be executed.
-     * 
+     *
      * @return A future indicating the outcome of the shut down process.
      */
     Future<Void> stop();

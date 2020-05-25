@@ -64,7 +64,7 @@ public abstract class AbstractConfig {
 
     /**
      * Creates a new instance from another instance.
-     * 
+     *
      * @param other The other instance. All of the other instance's properties
      *              are copied to the newly created instance.
      */
@@ -84,7 +84,7 @@ public abstract class AbstractConfig {
 
     /**
      * Checks if a given port number is valid.
-     * 
+     *
      * @param port The port number.
      * @return {@code true} if port &gt;= 0 and port &lt;= 65535.
      */
@@ -94,7 +94,7 @@ public abstract class AbstractConfig {
 
     /**
      * Gets the character separating the segments of target addresses.
-     * 
+     *
      * @return The separator.
      */
     public final String getPathSeparator() {
@@ -105,7 +105,7 @@ public abstract class AbstractConfig {
      * Sets the character separating the segments of target addresses.
      * <p>
      * The default value of this property is {@link Constants#DEFAULT_PATH_SEPARATOR}.
-     * 
+     *
      * @param pathSeparator The separator to use.
      * @throws NullPointerException if the given character is {@code null}.
      */
@@ -115,7 +115,7 @@ public abstract class AbstractConfig {
 
     /**
      * Gets the path to the PKCS12 key store to load certificates of trusted CAs from.
-     * 
+     *
      * @return The absolute path to the key store or {@code null} if not set.
      */
     public final String getTrustStorePath() {
@@ -124,7 +124,7 @@ public abstract class AbstractConfig {
 
     /**
      * Sets the path to the PKCS12 key store to load certificates of trusted CAs from.
-     * 
+     *
      * @param trustStorePath The absolute path to the key store.
      */
     public final void setTrustStorePath(final String trustStorePath) {
@@ -133,7 +133,7 @@ public abstract class AbstractConfig {
 
     /**
      * Gets the password for accessing the PKCS12 key store containing the certificates of trusted CAs.
-     * 
+     *
      * @return The password or {@code null} if no password is set.
      * @see #getTrustStorePath()
      */
@@ -143,7 +143,7 @@ public abstract class AbstractConfig {
 
     /**
      * Sets the password for accessing the PKCS12 key store containing the certificates of trusted CAs.
-     * 
+     *
      * @param trustStorePassword The password to set.
      * @see #setTrustStorePath(String)
      */
@@ -157,7 +157,7 @@ public abstract class AbstractConfig {
 
     /**
      * Gets the trust options derived from the trust store properties.
-     * 
+     *
      * @return The trust options or {@code null} if trust store path is not set or not supported.
      * @throws IllegalArgumentException In the case the configured trust store is not present in the file system.
      */
@@ -210,7 +210,7 @@ public abstract class AbstractConfig {
     /**
      * Gets the absolute path to the PKCS12 key store containing the private key
      * and certificate chain that will be used for authentication to peers.
-     * 
+     *
      * @return The path or {@code null} if no path has been set.
      */
     public final String getKeyStorePath() {
@@ -220,7 +220,7 @@ public abstract class AbstractConfig {
     /**
      * Sets the absolute path to the PKCS12 key store containing the private key and certificate chain that should be
      * used for authentication to peers.
-     * 
+     *
      * @param keyStorePath The path.
      */
     public final void setKeyStorePath(final String keyStorePath) {
@@ -230,7 +230,7 @@ public abstract class AbstractConfig {
     /**
      * Gets the password for the PKCS12 key store containing the private key and certificate chain that should be used
      * for authentication to peers.
-     * 
+     *
      * @return The password or {@code null} if no password has been set.
      */
     public final String getKeyStorePassword() {
@@ -240,7 +240,7 @@ public abstract class AbstractConfig {
     /**
      * Sets the password for the PKCS12 key store containing the private key and certificate chain that should be used
      * for authentication to peers.
-     * 
+     *
      * @param keyStorePassword The password.
      */
     public final void setKeyStorePassword(final String keyStorePassword) {
@@ -253,7 +253,7 @@ public abstract class AbstractConfig {
 
     /**
      * Gets the key &amp; certificate options derived from the key store properties.
-     * 
+     *
      * @return The options or {@code null} if key store path or key path and cert path are not set or not supported.
      * @throws IllegalArgumentException In the case any of the configured files is not present in the file system.
      */
@@ -347,7 +347,7 @@ public abstract class AbstractConfig {
     /**
      * Gets the absolute path to the PEM file containing the X.509 certificate chain for the RSA private key that should
      * be used for authentication to peers.
-     * 
+     *
      * @return The path or {@code null} if no path has been set.
      */
     public final String getCertPath() {
@@ -361,7 +361,7 @@ public abstract class AbstractConfig {
      * In order to use a non-RSA type key (e.g. an ECC based key) a PKCS12 key store containing the key and certificate
      * chain should be configured by means of the {@link #setKeyStorePath(String)} and
      * {@link #setKeyStorePassword(String)} methods.
-     * 
+     *
      * @param certPath The path.
      */
     public final void setCertPath(final String certPath) {
@@ -371,7 +371,7 @@ public abstract class AbstractConfig {
     /**
      * Gets the absolute path to the PEM file containing the RSA private key that will be used for authentication to
      * peers.
-     * 
+     *
      * @return The path or {@code null} if no path has been set.
      */
     public final String getKeyPath() {
@@ -384,7 +384,7 @@ public abstract class AbstractConfig {
      * <p>
      * In order to use a non-RSA type key (e.g. an ECC based key) a PKCS12 key store containing the key should be
      * configured by means of the {@link #setKeyStorePath(String)} and {@link #setKeyStorePassword(String)} methods.
-     * 
+     *
      * @param keyPath The path.
      */
     public final void setKeyPath(final String keyPath) {
@@ -393,7 +393,7 @@ public abstract class AbstractConfig {
 
     /**
      * Specify the format of the trust store explicitly.
-     * 
+     *
      * @param trustStoreFormat The format to use when reading the trust store, may be {@code null} to trigger auto
      *            detection.
      */
@@ -403,7 +403,7 @@ public abstract class AbstractConfig {
 
     /**
      * Get the specified format of the trust store.
-     * 
+     *
      * @return The format or {@code null} if auto-detection should be tried.
      */
     public final FileFormat getTrustStoreFormat() {
@@ -412,7 +412,7 @@ public abstract class AbstractConfig {
 
     /**
      * Specify the format of the key material explicitly.
-     * 
+     *
      * @param keyFormat The format to use when reading the key material, may be {@code null} to trigger auto detection.
      */
     public final void setKeyFormat(final FileFormat keyFormat) {
@@ -421,7 +421,7 @@ public abstract class AbstractConfig {
 
     /**
      * Get the specified format of the key files.
-     * 
+     *
      * @return The format or {@code null} if auto-detection should be tried.
      */
     public final FileFormat getKeyFormat() {
@@ -434,7 +434,7 @@ public abstract class AbstractConfig {
      * By default, only <em>TLSv1.2</em> is enabled. Please refer to the
      * <a href="https://vertx.io/docs/vertx-core/java/#ssl">vert.x
      * documentation</a> for a list of supported values.
-     * 
+     *
      * @return The enabled protocols.
      */
     public final List<String> getSecureProtocols() {
@@ -450,7 +450,7 @@ public abstract class AbstractConfig {
      * <p>
      * Note that setting this property to an empty list effectively
      * disables TLS altogether.
-     * 
+     *
      * @param enabledProtocols The protocols.
      * @throws NullPointerException if protocols is {@code null}.
      */

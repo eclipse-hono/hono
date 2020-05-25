@@ -37,7 +37,7 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
      * in response to unauthenticated requests.
      * <p>
      * The default value is {@link #DEFAULT_REALM}.
-     * 
+     *
      * @return The realm name.
      */
     public final String getRealm() {
@@ -51,7 +51,7 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
      * in response to unauthenticated requests.
      * <p>
      * The default value is {@link #DEFAULT_REALM}.
-     * 
+     *
      * @param realm The realm name.
      * @throws NullPointerException if the realm is {@code null}.
      */

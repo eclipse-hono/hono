@@ -71,7 +71,7 @@ public class ReceiverTest {
 
     /**
      * Verifies that the receiver is started successfully with message.type=telemetry.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -90,7 +90,7 @@ public class ReceiverTest {
 
     /**
      * Verifies that the receiver is started successfully with message.type=event.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -108,7 +108,7 @@ public class ReceiverTest {
 
     /**
      * Verifies that the receiver is started successfully with message.type=all.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -127,7 +127,7 @@ public class ReceiverTest {
 
     /**
      * Verifies that the receiver fails to start when invalid value is passed to message.type.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test

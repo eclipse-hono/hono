@@ -32,7 +32,7 @@ public class RequestResponseResult<T> {
 
     /**
      * Creates a new result for a status code and payload.
-     * 
+     *
      * @param status The code indicating the outcome of processing the request.
      * @param payload The payload to convey to the sender of the request (may be {@code null}).
      * @param directive Restrictions regarding the caching of the payload by
@@ -58,7 +58,7 @@ public class RequestResponseResult<T> {
 
     /**
      * Gets the status code indicating the outcome of the request.
-     * 
+     *
      * @return The code.
      */
     public final int getStatus() {
@@ -67,7 +67,7 @@ public class RequestResponseResult<T> {
 
     /**
      * Gets the payload to convey to the sender of the request.
-     * 
+     *
      * @return The payload.
      */
     public final T getPayload() {
@@ -77,7 +77,7 @@ public class RequestResponseResult<T> {
     /**
      * Gets the cache directive specifying how the payload of this
      * response may be cached.
-     * 
+     *
      * @return The directive or {@code null} if not set.
      */
     public final CacheDirective getCacheDirective() {
@@ -87,7 +87,7 @@ public class RequestResponseResult<T> {
     /**
      * Gets the value of a property conveyed in this response message's
      * <em>application-properties</em>.
-     * 
+     *
      * @param <V> The expected value type.
      * @param key The key of the property.
      * @param type The expected value type.
@@ -105,7 +105,7 @@ public class RequestResponseResult<T> {
 
     /**
      * Gets read-only access to the response message's <em>application-properties</em>.
-     * 
+     *
      * @return The unmodifiable map of the application properties. Never returns {@code null}.
      */
     public final Map<String, Object> getApplicationProperties() {
@@ -114,7 +114,7 @@ public class RequestResponseResult<T> {
 
     /**
      * Checks if this result's status is <em>OK</em>.
-     * 
+     *
      * @return {@code true} if status == 200.
      */
     public final boolean isOk() {
@@ -123,7 +123,7 @@ public class RequestResponseResult<T> {
 
     /**
      * Checks if this result's status is <em>Not Found</em>.
-     * 
+     *
      * @return {@code true} if status == 404.
      */
     public final boolean isNotFound() {
@@ -133,7 +133,7 @@ public class RequestResponseResult<T> {
     /**
      * Checks if this result's status code represents
      * an error.
-     * 
+     *
      * @return {@code true} if the result contains an error code.
      */
     public final boolean isError() {

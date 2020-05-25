@@ -33,7 +33,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * A base class for implementing an authentication service supporting <a href="https://tools.ietf.org/html/rfc4616">
  * SASL PLAIN and EXTERNAL</a> mechanisms.
- * 
+ *
  * @param <T> The type of configuration properties this service supports.
  */
 public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthenticationService<T> {
@@ -132,7 +132,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
      * Verifies username/password credentials provided by a client in a SASL PLAIN response.
      * <p>
      * Subclasses should implement the actual verification of the given credentials in this method.
-     * 
+     *
      * @param authzid The identity the client wants to act as. If {@code null} the username is used.
      * @param authcid The username.
      * @param password The password.
@@ -146,7 +146,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
      * Verifies a Subject DN that has been provided by a client in a SASL EXTERNAL exchange.
      * <p>
      * Subclasses should implement the actual verification of the given credentials in this method.
-     * 
+     *
      * @param authzid The identity the client wants to act as. If {@code null} the granted authorization identity is derived from the subject DN.
      * @param subjectDn The Subject DN.
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,

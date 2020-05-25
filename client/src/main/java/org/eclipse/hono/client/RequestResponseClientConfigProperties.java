@@ -44,7 +44,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * The cache will be initialized with this size upon creation.
      * <p>
      * The default value is {@link #DEFAULT_RESPONSE_CACHE_MIN_SIZE}.
-     * 
+     *
      * @return The maximum number of results to keep in the cache.
      */
     public final int getResponseCacheMinSize() {
@@ -57,7 +57,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * The cache will be initialized with this size upon creation.
      * <p>
      * The default value is {@link #DEFAULT_RESPONSE_CACHE_MIN_SIZE}.
-     * 
+     *
      * @param size The maximum number of results to keep in the cache.
      * @throws IllegalArgumentException if size is &lt; 0.
      */
@@ -76,7 +76,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * are put to the cache.
      * <p>
      * The default value is {@link #DEFAULT_RESPONSE_CACHE_MAX_SIZE}.
-     * 
+     *
      * @return The maximum number of results to keep in the cache.
      */
     public final long getResponseCacheMaxSize() {
@@ -93,7 +93,7 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
      * Setting this property to 0 disables caching.
      * <p>
      * The default value is {@link #DEFAULT_RESPONSE_CACHE_MAX_SIZE}.
-     * 
+     *
      * @param size The maximum number of results to keep in the cache.
      * @throws IllegalArgumentException if size is &lt; 0.
      */

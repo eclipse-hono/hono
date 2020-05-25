@@ -109,7 +109,7 @@ public class TenantClientImplTest {
     /**
      * Verifies that the client retrieves registration information from the
      * Device Registration service if no cache is configured.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")

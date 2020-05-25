@@ -206,7 +206,7 @@ public class ServerConfig extends AbstractConfig {
      * operating system during startup.
      * <p>
      * Setting this property also sets the <em>insecurePortEnabled</em> property to {@code true}.
-     * 
+     *
      * @param port The port number.
      * @throws IllegalArgumentException if port &lt; 0 or port &gt; 65535.
      */

@@ -98,7 +98,7 @@ public final class HttpUtils {
     /**
      * Fails a routing context with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header
      * to a given number of seconds.
-     * 
+     *
      * @param ctx The vert.x routing context to fail.
      * @param retryAfterSeconds The number of seconds to set in the header.
      * @throws NullPointerException if routing context is {@code null}.
@@ -110,7 +110,7 @@ public final class HttpUtils {
     /**
      * Fails a routing context with HTTP status code 503 (Service Unavailable) and sets the <em>Retry-After</em> HTTP header
      * to a given number of seconds.
-     * 
+     *
      * @param ctx The vert.x routing context to fail.
      * @param retryAfterSeconds The number of seconds to set in the header.
      * @param detail The message to write to the response's body (may be {@code null}).
@@ -164,7 +164,7 @@ public final class HttpUtils {
      * <p>
      * This method does nothing if the context is already failed
      * or if the response has already ended.
-     * 
+     *
      * @param ctx The request context to fail.
      * @param error The reason for the failure.
      * @param headers HTTP headers to set on the response (may be {@code null}).
@@ -194,7 +194,7 @@ public final class HttpUtils {
 
     /**
      * Gets the value of the <em>Content-Type</em> HTTP header for a request.
-     * 
+     *
      * @param ctx The routing context containing the HTTP request.
      * @return The content type or {@code null} if the request doesn't contain a
      *         <em>Content-Type</em> header.
@@ -207,7 +207,7 @@ public final class HttpUtils {
 
     /**
      * Checks if a given request contains an empty notification.
-     * 
+     *
      * @param ctx The routing context containing the HTTP request.
      * @return {@code true} if the request contains an empty notification.
      */
@@ -330,7 +330,7 @@ public final class HttpUtils {
      * This method also sets the <em>content-length</em> header of the HTTP response
      * and sets the <em>content-type</em> header to {@link #CONTENT_TYPE_JSON_UTF8}
      * but does not end the response.
-     * 
+     *
      * @param response The HTTP response.
      * @param body The JSON object to serialize to the response body (may be {@code null}).
      * @throws NullPointerException if response is {@code null}.
@@ -365,7 +365,7 @@ public final class HttpUtils {
      * <p>
      * If the response is already ended or closed or the buffer is {@code null}, this method
      * does nothing.
-     * 
+     *
      * @param response The HTTP response.
      * @param buffer The Buffer to set as the response body (may be {@code null}).
      * @param contentType The type of the content. If {@code null}, a default value of
@@ -390,7 +390,7 @@ public final class HttpUtils {
      * Test if an HTTP status code is considered an error.
      * <p>
      * The test will consider everything in the range of 400 (inclusive) to 600 (exclusive) an error.
-     * 
+     *
      * @param status the status to test
      * @return {@code true} if the status is an "error", {@code false} otherwise.
      */

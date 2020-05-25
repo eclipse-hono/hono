@@ -50,7 +50,7 @@ public interface CredentialsService {
      * Gets credentials for a device.
      * <p>
      * This default implementation simply returns the result of {@link #get(String, String, String)}.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param type The type of credentials to get.
      * @param authId The authentication identifier of the device to get credentials for (may be {@code null}).

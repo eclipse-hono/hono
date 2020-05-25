@@ -47,7 +47,7 @@ public final class PrometheusBasedResourceLimitChecksConfig extends Authenticati
      * <p>
      * The default host is <em> localhost</em> and the default
      * port is <em>9090</em>.
-     * 
+     *
      */
     public PrometheusBasedResourceLimitChecksConfig() {
         super();

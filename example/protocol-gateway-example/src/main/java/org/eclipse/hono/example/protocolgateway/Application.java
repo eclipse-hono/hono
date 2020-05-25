@@ -58,7 +58,7 @@ public class Application {
 
     /**
      * Exposes client configuration for the TCP server of the example gateway as a Spring bean.
-     * 
+     *
      * @return The configuration.
      */
     @ConfigurationProperties(prefix = "gateway.tcp")
@@ -70,7 +70,7 @@ public class Application {
 
     /**
      * Exposes client configuration for the gateway's connection to Hono's AMQP adapter as a Spring bean.
-     * 
+     *
      * @return The configuration.
      */
     @ConfigurationProperties(prefix = "gateway.amqp")
@@ -89,7 +89,7 @@ public class Application {
 
     /**
      * Exposes a connection to the AMQP adapter as a Spring bean.
-     * 
+     *
      * @return The connection.
      */
     @Bean
@@ -100,7 +100,7 @@ public class Application {
 
     /**
      * Exposes a factory for clients for the AMQP adapter as a Spring bean.
-     * 
+     *
      * @return The factory.
      */
     @Bean

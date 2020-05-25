@@ -23,7 +23,7 @@ public interface Endpoint extends HealthCheckProvider, Lifecycle {
      * <p>
      * A service component uses this name to determine the {@code Endpoint} implementation that
      * is responsible for handling requests to establish a link with a target address starting with this name.
-     *  
+     *
      * @return The endpoint's name.
      */
     String getName();

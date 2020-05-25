@@ -92,7 +92,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param testInfo Meta info about the test being run.
      */
     @BeforeEach
@@ -229,7 +229,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     /**
      * Verifies that the adapter forwards one-way commands from
      * an application to a device.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
@@ -277,7 +277,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     /**
      * Verifies that the adapter forwards commands and responses hence and forth between
      * an application and a device that have been sent using the async API.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
@@ -369,7 +369,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     /**
      * Verifies that the adapter forwards commands and response hence and forth between
      * an application and a device.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
@@ -469,7 +469,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     /**
      * Verifies that the adapter rejects malformed command messages sent by applications.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
@@ -800,7 +800,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     /**
      * Registers a device and opens a connection to the AMQP adapter using
      * the device's credentials.
-     * 
+     *
      * @param tenantId The ID of the tenant that the device belongs to.
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The identifier of the device.

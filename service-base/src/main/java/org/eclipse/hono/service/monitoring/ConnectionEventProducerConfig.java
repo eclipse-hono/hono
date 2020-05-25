@@ -45,7 +45,7 @@ public final class ConnectionEventProducerConfig {
      * Sets the level to log information at if the <em>type</em> is {@code logging}.
      * <p>
      * The default value of this property is {@value #DEFAULT_LOG_LEVEL}.
-     * 
+     *
      * @param level The level to log at.
      * @throws NullPointerException if level is {@code null}.
      * @throws IllegalArgumentException if level is anything other than <em>debug</em> or <em>info</em>.
@@ -83,7 +83,7 @@ public final class ConnectionEventProducerConfig {
 
         /**
          * Gets a type for a type name.
-         * 
+         *
          * @param name The type's name.
          * @return The type.
          */

@@ -40,7 +40,7 @@ public class CoapOptionInjectExtractAdapter implements Binary {
      * <p>
      * The option is elective (bit 0 = 0), safe-to-forward (bit 1 = 1) and
      * must not be used as a cache-key (bits 2-4 = 1).
-     * 
+     *
      * @see <a href="https://tools.ietf.org/html/rfc7252#section-5.4.6">RFC 7252, Option Numbers</a>
      */
     public static final int OPTION_TRACE_CONTEXT = 0b1111110111111110; // 65022
@@ -53,7 +53,7 @@ public class CoapOptionInjectExtractAdapter implements Binary {
 
     /**
      * Creates a new carrier for extracting a trace context from CoAP options.
-     * 
+     *
      * @param options The CoAP options to extract the context from.
      * @throws NullPointerException if options is {@code null}.
      * @return The carrier to use for extraction.
@@ -71,7 +71,7 @@ public class CoapOptionInjectExtractAdapter implements Binary {
 
     /**
      * Creates a new carrier for injecting a trace context into CoAP options.
-     * 
+     *
      * @param options The CoAP options to inject the context to.
      * @throws NullPointerException if options is {@code null}.
      * @return The carrier to use for injection.
@@ -86,7 +86,7 @@ public class CoapOptionInjectExtractAdapter implements Binary {
     /**
      * Gets the CoAP option that contains the binary encoded trace context from
      * a request's set of options.
-     * 
+     *
      * @param optionSet The request option set.
      * @return The option.
      */

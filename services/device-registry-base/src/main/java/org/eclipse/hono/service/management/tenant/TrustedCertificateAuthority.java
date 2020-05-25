@@ -66,7 +66,7 @@ public class TrustedCertificateAuthority {
 
     /**
      * Checks if this object contains all required data.
-     * 
+     *
      * @return {@code true} if all required data is available.
      */
     @JsonIgnore
@@ -178,7 +178,7 @@ public class TrustedCertificateAuthority {
 
     /**
      * Sets the algorithm used by this authority's public key.
-     * 
+     *
      * @param keyAlgorithm The name of the algorithm.
      * @return A reference to this for fluent use.
      */
@@ -189,7 +189,7 @@ public class TrustedCertificateAuthority {
 
     /**
      * Gets the algorithm used by this authority's public key.
-     * 
+     *
      * @return The name of the algorithm.
      */
     public final String getKeyAlgorithm() {
@@ -236,7 +236,7 @@ public class TrustedCertificateAuthority {
 
     /**
      * Gets the latest instant in time that this CA may be used for authenticating a device.
-     * 
+     *
      * @return The instant or {@code null} if not set.
      */
     public final Instant getNotAfter() {

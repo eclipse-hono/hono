@@ -37,7 +37,7 @@ public class TelemetryConsumerImpl extends AbstractConsumer implements MessageCo
 
     /**
      * Creates a new telemetry data consumer for a tenant.
-     * 
+     *
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param telemetryConsumer The consumer to invoke with each telemetry message received.

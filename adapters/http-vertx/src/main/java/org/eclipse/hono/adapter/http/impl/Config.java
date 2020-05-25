@@ -39,7 +39,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Creates a new HTTP adapter instance.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_HTTP_PROTOCOL_ADAPTER)
@@ -112,7 +112,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean

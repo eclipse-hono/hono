@@ -67,7 +67,7 @@ class TenantServiceBasedX509AuthenticationTest {
     /**
      * Verifies that when the trust anchor is enabled for auto-provisioning the certificate is put into the JSON object
      * used to query the credentials from the credentials API.
-     * 
+     *
      * @throws GeneralSecurityException if the certificate can not be read.
      */
     @Test

@@ -25,7 +25,7 @@ public interface DisconnectListener<T> {
 
     /**
      * Invoked when the connection to a Hono service is lost unexpectedly.
-     * 
+     *
      * @param client The client representing the connection to the service.
      */
     void onDisconnect(T client);

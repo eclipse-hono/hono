@@ -53,7 +53,7 @@ public final class DeviceConnectionDurationTracker {
 
     /**
      * Reports the device connection duration and then updates the number of device connections with the given value.
-     * 
+     *
      * @param noOfDeviceConnections The number of device connections.
      * @return a reference to this for fluent use or {@code null} if the number of device connections is zero.
      * @throws IllegalArgumentException if the noOfDeviceConnections is negative.
@@ -101,7 +101,7 @@ public final class DeviceConnectionDurationTracker {
 
         /**
          * Creates an instance of the Builder for the given tenant.
-         * 
+         *
          * @param tenantId The tenant id that the devices belongs to.
          * @return an instance of the Builder.
          * @throws NullPointerException if the tenantId is {@code null}.
@@ -114,7 +114,7 @@ public final class DeviceConnectionDurationTracker {
 
         /**
          * Sets the recording interval for the device connection duration.
-         * 
+         *
          * @param recordingIntervalInMs The recording interval in milliseconds.
          * @return an instance of the Builder.
          * @throws IllegalArgumentException if the recording interval is negative.
@@ -129,7 +129,7 @@ public final class DeviceConnectionDurationTracker {
 
         /**
          * Sets the number of device connections.
-         * 
+         *
          * @param noOfDeviceConnections The number of device connections.
          * @return a reference to this for fluent use.
          * @throws IllegalArgumentException if the noOfDeviceConnections is negative.
@@ -156,7 +156,7 @@ public final class DeviceConnectionDurationTracker {
 
         /**
          * Sets the consumer to consume the calculated device connection duration.
-         * 
+         *
          * @param consumer The consumer that makes use of the calculated device connection duration.
          * @return a reference to this for fluent use.
          * @throws NullPointerException if the consumer is {@code null}.
@@ -168,7 +168,7 @@ public final class DeviceConnectionDurationTracker {
 
         /**
          * Returns an instance of the device connection duration tracker.
-         * 
+         *
          * @return an instance of the {@link DeviceConnectionDurationTracker}.
          */
         public DeviceConnectionDurationTracker start() {

@@ -30,7 +30,7 @@ public class JsonObjectInjectAdapter implements TextMap {
 
     /**
      * Creates an adapter for a JSON object.
-     * 
+     *
      * @param jsonObject The JSON object.
      */
     public JsonObjectInjectAdapter(final JsonObject jsonObject) {

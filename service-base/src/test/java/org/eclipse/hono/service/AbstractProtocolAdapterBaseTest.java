@@ -162,7 +162,7 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Verifies that an adapter that does not define a type name
      * cannot be started.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -190,7 +190,7 @@ public class AbstractProtocolAdapterBaseTest {
      * Verifies that the adapter connects to required services during
      * startup and invokes the <em>onCommandConnectionEstablished</em> and
      * <em>doStart</em> methods.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -227,7 +227,7 @@ public class AbstractProtocolAdapterBaseTest {
      * Verifies that the <em>onCommandConnectionLost</em> and
      * <em>onCommandConnectionEstablished</em> hooks are invoked
      * when the command connection is re-established.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -346,7 +346,7 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Verifies that the adapter successfully retrieves a registration assertion
      * for an existing device.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -376,7 +376,7 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Verifies that the adapter fails a request to get a registration assertion for
      * a non-existing device.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -407,7 +407,7 @@ public class AbstractProtocolAdapterBaseTest {
     /**
      * Verifies that the adapter fails a request to retrieve a token for a gateway that does not
      * belong to the same tenant as the device it wants to act on behalf of.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -700,7 +700,7 @@ public class AbstractProtocolAdapterBaseTest {
      * Verifies that the (default) ConnectionEvent API configured for a protocol adapter
      * sets the connection event message's TTL header value before forwarding the message
      * to downstream applications.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

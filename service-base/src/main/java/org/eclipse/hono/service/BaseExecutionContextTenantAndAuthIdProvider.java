@@ -35,7 +35,7 @@ import io.vertx.core.Future;
 
 /**
  * A base class for {@link ExecutionContextTenantAndAuthIdProvider} implementations.
- * 
+ *
  * @param <T> The type of execution context this provider supports.
  */
 public abstract class BaseExecutionContextTenantAndAuthIdProvider<T extends ExecutionContext> implements ExecutionContextTenantAndAuthIdProvider<T> {

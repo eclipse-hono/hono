@@ -76,7 +76,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Removes the device that has been added by the test.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterEach
@@ -87,7 +87,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Shuts down the client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterAll
@@ -97,7 +97,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that a device can be properly registered.
-     * 
+     *
      * @param ctx The vert.x test context
      */
     @Test
@@ -123,7 +123,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that a device can be registered if the request body does not contain a device identifier.
-     * 
+     *
      * @param ctx The vert.x test context
      */
     @Test
@@ -148,7 +148,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that a device can be registered only once.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -166,7 +166,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that a device cannot be registered if the request does not contain a content type.
-     * 
+     *
      * @param ctx The vert.x test context
      */
     @Test
@@ -185,7 +185,7 @@ public class DeviceRegistrationHttpIT {
     /**
      * Verifies that a device can be registered if the request
      * does not contain a body.
-     * 
+     *
      * @param ctx The vert.x test context
      */
     @Test
@@ -210,7 +210,7 @@ public class DeviceRegistrationHttpIT {
      * Verifies that the information that has been registered for a device
      * is contained in the result when retrieving registration information
      * for the device.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -232,7 +232,7 @@ public class DeviceRegistrationHttpIT {
     /**
      * Verifies that a request for registration information fails for
      * a device that is not registered.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -248,7 +248,7 @@ public class DeviceRegistrationHttpIT {
     /**
      * Verifies that a request for registration information fails for
      * a request that does not contain a device ID.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -264,7 +264,7 @@ public class DeviceRegistrationHttpIT {
     /**
      * Verifies that the registration information provided when updating
      * a device replaces the existing information.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -292,7 +292,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that an update request fails if the device does not exist.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -308,7 +308,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that an update request fails if it doesn't contain a device ID.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -323,7 +323,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that an update request fails if it contains no content type.
-     * 
+     *
      * @param context The vert.x test context.
      */
     @Test
@@ -343,7 +343,7 @@ public class DeviceRegistrationHttpIT {
     /**
      * Verifies that no registration info can be retrieved anymore
      * once a device has been deregistered.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -366,7 +366,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that a request to deregister a device fails if it doesn't contain a device ID.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -381,7 +381,7 @@ public class DeviceRegistrationHttpIT {
 
     /**
      * Verifies that a request to deregister a non-existing device fails.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

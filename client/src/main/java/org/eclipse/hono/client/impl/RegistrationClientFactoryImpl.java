@@ -38,7 +38,7 @@ public class RegistrationClientFactoryImpl extends AbstractHonoClientFactory imp
 
     /**
      * Creates a new factory for an existing connection.
-     * 
+     *
      * @param connection The connection to use.
      * @param cacheProvider The cache provider to use for creating caches for tenant objects
      *                      or {@code null} if tenant objects should not be cached.

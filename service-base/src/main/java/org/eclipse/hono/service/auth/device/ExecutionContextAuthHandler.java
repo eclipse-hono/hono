@@ -31,7 +31,7 @@ import io.vertx.ext.auth.User;
 
 /**
  * A base class for implementing auth handlers.
- * 
+ *
  * @param <T> The type of execution context this handler can authenticate.
  */
 public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> implements AuthHandler<T> {
@@ -53,7 +53,7 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
 
     /**
      * Creates a new handler for authenticating MQTT clients.
-     * 
+     *
      * @param authProvider The auth provider to use for verifying a client's credentials.
      */
     protected ExecutionContextAuthHandler(final AuthProvider authProvider) {

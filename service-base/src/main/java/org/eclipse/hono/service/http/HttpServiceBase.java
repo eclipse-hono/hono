@@ -89,7 +89,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Iterates over the endpoints registered with this service.
-     * 
+     *
      * @return The endpoints.
      */
     protected final Iterable<HttpEndpoint> endpoints() {
@@ -265,7 +265,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * <p>
      * This default implementation does not register any routes. Subclasses should override this
      * method in order to register any routes in addition to the ones added by the endpoints.
-     * 
+     *
      * @param router The router to add the custom routes to.
      */
     protected void addCustomRoutes(final Router router) {
@@ -473,7 +473,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * Iterates over all endpoints and registers their readiness checks with the handler.
      * <p>
      * Subclasses may override this method in order to register other/additional checks.
-     * 
+     *
      * @param handler The handler to register the checks with.
      */
     @Override
@@ -487,7 +487,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * Iterates over all endpoints and registers their liveness checks with the handler.
      * <p>
      * Subclasses may override this method in order to register other/additional checks.
-     * 
+     *
      * @param handler The handler to register the checks with.
      */
     @Override

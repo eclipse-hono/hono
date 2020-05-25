@@ -51,7 +51,7 @@ public class ApplicationConfig {
      * This method creates new Vert.x default options and invokes
      * {@link VertxProperties#configureVertx(VertxOptions)} on the object returned
      * by {@link #vertxProperties()}.
-     * 
+     *
      * @return The Vert.x instance.
      */
     @Bean
@@ -61,7 +61,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes configuration properties for Vert.x.
-     * 
+     *
      * @return The properties.
      */
     @ConfigurationProperties("hono.vertx")
@@ -72,7 +72,7 @@ public class ApplicationConfig {
 
     /**
      * Creates a new Authentication Server instance and exposes it as a Spring Bean.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER)
@@ -83,7 +83,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes a factory for Authentication Server instances as a Spring bean.
-     * 
+     *
      * @return The factory.
      */
     @Bean
@@ -117,7 +117,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -128,7 +128,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes this service's AMQP endpoint configuration properties as a Spring bean.
-     * 
+     *
      * @return The properties.
      */
     @Bean
@@ -139,7 +139,7 @@ public class ApplicationConfig {
 
     /**
      * Exposes a factory for JWTs asserting a client's identity as a Spring bean.
-     * 
+     *
      * @return The bean.
      */
     @Bean
@@ -158,7 +158,7 @@ public class ApplicationConfig {
      * Creates a helper for validating JWTs asserting a client's identity and authorities.
      * <p>
      * An instance of this bean is required for the {@code HonoSaslAuthenticationFactory}.
-     * 
+     *
      * @return The bean.
      */
     @Bean
@@ -175,7 +175,7 @@ public class ApplicationConfig {
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean

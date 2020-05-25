@@ -27,7 +27,7 @@ public interface ReconnectListener<T> {
     /**
      * Invoked after the connection to a Hono service has been re-established
      * after it had been lost unexpectedly.
-     * 
+     *
      * @param client The client representing the (re-established) connection to the service.
      */
     void onReconnect(T client);

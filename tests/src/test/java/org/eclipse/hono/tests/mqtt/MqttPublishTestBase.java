@@ -68,7 +68,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
     /**
      * Sends a message on behalf of a device to the MQTT adapter.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param payload The message to send.
@@ -85,7 +85,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
     /**
      * Handles the outcome of an attempt to publish a message.
-     * 
+     *
      * @param attempt The outcome of the attempt to send a PUBLISH message.
      * @param publishResult The overall outcome of publishing the message.
      */
@@ -112,7 +112,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * being sent is acceptable for the particular QoS used for publishing messages.
      * <p>
      * This default implementation asserts that received = sent.
-     * 
+     *
      * @param received The number of messages that have been received.
      * @param sent The number of messages that have been sent.
      * @param ctx The test context that will be failed if the ratio is not acceptable.
@@ -130,7 +130,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     /**
      * Gets the number of milliseconds that the message sending test cases
      * should wait for messages being received by the consumer.
-     * 
+     *
      * @return The number of milliseconds.
      */
     protected long getTimeToWait() {
@@ -149,7 +149,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     /**
      * Verifies that a number of messages published to Hono's MQTT adapter
      * using the standard topic names can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -181,7 +181,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     /**
      * Verifies that a number of messages published to Hono's MQTT adapter
      * using the short topic names can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -212,7 +212,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
     /**
      * Verifies that a number of messages published by a device authenticating with a client certificate can be
      * successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -333,7 +333,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * <p>
      * This default implementation does nothing. Subclasses should override this method to implement
      * reasonable checks.
-     * 
+     *
      * @param ctx The test context.
      * @param msg The message to perform checks on.
      */

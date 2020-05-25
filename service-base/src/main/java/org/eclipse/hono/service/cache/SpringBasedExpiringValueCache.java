@@ -27,7 +27,7 @@ import org.springframework.cache.Cache;
 
 /**
  * A cache for expiring values based on Spring's Cache abstraction.
- * 
+ *
  * @param <K> The type of keys that the cache supports.
  * @param <V> The type of values that the cache supports.
  */
@@ -39,7 +39,7 @@ public class SpringBasedExpiringValueCache<K, V> implements ExpiringValueCache<K
 
     /**
      * Creates a new cache.
-     * 
+     *
      * @param cache The Spring cache instance to use for storing values.
      */
     public SpringBasedExpiringValueCache(final Cache cache) {

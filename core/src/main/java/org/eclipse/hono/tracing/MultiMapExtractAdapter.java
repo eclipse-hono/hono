@@ -30,7 +30,7 @@ public class MultiMapExtractAdapter implements TextMap {
 
     /**
      * Creates an adapter for a {@code MultiMap} object.
-     * 
+     *
      * @param multiMap The {@code MultiMap} object.
      */
     public MultiMapExtractAdapter(final MultiMap multiMap) {

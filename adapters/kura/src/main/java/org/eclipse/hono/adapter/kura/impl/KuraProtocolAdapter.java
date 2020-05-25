@@ -36,7 +36,7 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
 
     /**
      * Gets this adapter's type name.
-     * 
+     *
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_KURA}
      */
     @Override

@@ -53,7 +53,7 @@ public class ReceiverStatistics {
 
     /**
      * Enable the statistics auto reset.
-     * 
+     *
      * Resets the overall statistics after one quiet interval. May take close to twice the interval since the last
      * received message.
      */
@@ -79,7 +79,7 @@ public class ReceiverStatistics {
 
     /**
      * Create new receiver statistics.
-     * 
+     *
      * @param receiver Receiver instance
      * @param vertx The vert.x instance.
      * @throws NullPointerException if vert.x or receiver is {@code null}.
@@ -93,7 +93,7 @@ public class ReceiverStatistics {
     /**
      * Starts this component.
      * <p>
-     * 
+     *
      * @return A future indicating the outcome of the startup process.
      */
     @PostConstruct
@@ -188,7 +188,7 @@ public class ReceiverStatistics {
 
         /**
          * Create new statistic instance.
-         * 
+         *
          * @param uptime current uptime in nanos
          */
         private Statistic(final long uptime) {
@@ -197,10 +197,10 @@ public class ReceiverStatistics {
 
         /**
          * Signal message received.
-         * 
+         *
          * If the statistic is bound to a period of time, the message may be rejected. This base implementation doesn't
          * offer that function, but a specialized implementation may override this method accordingly.
-         * 
+         *
          * @param uptime current uptime in nanos
          * @return {@code true}, if received message is processed by this statistic, {@code false}, if this statistic
          *         rejected to process the message.
@@ -227,7 +227,7 @@ public class ReceiverStatistics {
 
         /**
          * Check, if statistic has finished message processing.
-         * 
+         *
          * @param uptime current uptime in nanos
          * @return {@code false}, if this statistic is not finished yet, {@code true}, if it's finished.
          */
@@ -237,7 +237,7 @@ public class ReceiverStatistics {
 
         /**
          * Check, if statistic should be printed.
-         * 
+         *
          * @return {@code true}, if statistic is to be printed, {@code false}, otherwise.
          */
         public boolean isPrinting() {
@@ -254,7 +254,7 @@ public class ReceiverStatistics {
 
         /**
          * Create new time limited statistic instance.
-         * 
+         *
          * @param uptime current uptime in nanos
          */
         private PeriodStatistic(final long uptime, final long interval) {

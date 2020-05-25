@@ -38,7 +38,7 @@ import io.vertx.mqtt.messages.MqttPublishMessage;
 
 /**
  * Verifies behavior of {@link KuraProtocolAdapter}.
- * 
+ *
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
@@ -61,7 +61,7 @@ public class KuraProtocolAdapterTest {
     /**
      * Verifies that the adapter maps control messages with QoS 1 published from a Kura gateway to
      * the Event endpoint.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -85,7 +85,7 @@ public class KuraProtocolAdapterTest {
     /**
      * Verifies that the adapter maps control messages with QoS 0 published from a Kura gateway to
      * the Telemetry endpoint.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -111,7 +111,7 @@ public class KuraProtocolAdapterTest {
 
     /**
      * Verifies that the adapter recognizes control messages published to a topic with a custom control prefix.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -137,7 +137,7 @@ public class KuraProtocolAdapterTest {
     /**
      * Verifies that the adapter forwards data messages with QoS 0 published from a Kura gateway to
      * the Telemetry endpoint.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
@@ -163,7 +163,7 @@ public class KuraProtocolAdapterTest {
     /**
      * Verifies that the adapter forwards application messages with QoS 1 published from a Kura gateway to
      * the Event endpoint.
-     * 
+     *
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test

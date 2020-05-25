@@ -91,7 +91,7 @@ import io.vertx.proton.ProtonDelivery;
 
 /**
  * Verifies behavior of {@link AbstractVertxBasedHttpProtocolAdapter}.
- * 
+ *
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
@@ -179,7 +179,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     /**
      * Verifies that a client provided HTTP server is started instead of creating and starting a new http server.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @SuppressWarnings("unchecked")
@@ -206,7 +206,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     /**
      * Verifies that the <em>onStartupSuccess</em> method is invoked if the
      * HTTP server has been started successfully.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
@@ -230,7 +230,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
     /**
      * Verifies that the <em>onStartupSuccess</em> method is not invoked if a
      * client provided HTTP server fails to start.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
@@ -976,7 +976,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest {
 
     /**
      * Creates a protocol adapter for a given HTTP server.
-     * 
+     *
      * @param server The HTTP server to start.
      * @param onStartupSuccess The handler to invoke on successful startup.
      * @return The adapter.

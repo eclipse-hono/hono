@@ -64,7 +64,7 @@ public class CachingClientFactoryTest {
     /**
      * Verifies that a request to create a client fails if the given
      * supplier fails.
-     * 
+     *
      * @param ctx The helper to use for running async tests.
      */
     @Test
@@ -88,7 +88,7 @@ public class CachingClientFactoryTest {
     /**
      * Verifies that a concurrent request to create a client fails the given
      * future for tracking the attempt if the initial request doesn't complete.
-     * 
+     *
      * @param ctx The helper to use for running async tests.
      */
     @Test
@@ -162,7 +162,7 @@ public class CachingClientFactoryTest {
     /**
      * Verifies that a request to create a client is failed immediately when
      * the factory's clearState method is invoked.
-     * 
+     *
      * @param ctx The Vertx test context.
      */
     @Test

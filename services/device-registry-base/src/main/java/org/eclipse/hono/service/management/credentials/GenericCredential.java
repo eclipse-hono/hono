@@ -38,10 +38,10 @@ public class GenericCredential extends CommonCredential {
     /**
      * Sets the credentials type name reflecting the type of authentication mechanism a device will use
      * when authenticating to protocol adapters.
-     * 
+     *
      * @param type  The credential name type to set.
      * @return      a reference to this for fluent use.
-     * 
+     *
      * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#standard-credential-types">Standard Credential Types</a>
      */
     public GenericCredential setType(final String type) {
@@ -78,7 +78,7 @@ public class GenericCredential extends CommonCredential {
 
     /**
      * Sets the additional properties for this credential.
-     * 
+     *
      * @param additionalProperties  The additional properties for this credential.
      * @return                      a reference to this for fluent use.
      */

@@ -39,7 +39,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
 
     /**
      * Creates an event producer which will send events using a downstream sender.
-     * 
+     *
      * @param messageSenderSource A function to get a sender for a tenant.
      */
     protected AbstractMessageSenderConnectionEventProducer(

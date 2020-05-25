@@ -36,7 +36,7 @@ public abstract class StatusCodeMapper {
 
     /**
      * Checks if a given status code represents a successful invocation.
-     * 
+     *
      * @param statusCode The code to check.
      * @return {@code true} if the code is not {@code null} and 200 =&lt; code &lt; 300.
      */
@@ -46,7 +46,7 @@ public abstract class StatusCodeMapper {
 
     /**
      * Creates an exception for a generic result of a service invocation.
-     * 
+     *
      * @param result The result containing the status code.
      * @return The exception.
      * @throws NullPointerException if result is {@code null}.
@@ -59,7 +59,7 @@ public abstract class StatusCodeMapper {
 
     /**
      * Creates an exception for a registration result.
-     * 
+     *
      * @param result The result containing the status code.
      * @return The exception.
      * @throws NullPointerException if result is {@code null}.
@@ -74,7 +74,7 @@ public abstract class StatusCodeMapper {
 
     /**
      * Creates an exception for a status code and detail message.
-     * 
+     *
      * @param statusCode The status code.
      * @param detailMessage The detail message.
      * @return The exception.
@@ -100,7 +100,7 @@ public abstract class StatusCodeMapper {
 
     /**
      * Creates an exception for an AMQP error condition.
-     * 
+     *
      * @param error The error condition.
      * @return The exception.
      * @throws NullPointerException if error is {@code null}.
@@ -113,7 +113,7 @@ public abstract class StatusCodeMapper {
 
     /**
      * Creates an exception for an AMQP error condition.
-     * 
+     *
      * @param condition The error condition.
      * @param description The error description or {@code null} if not available.
      * @return The exception.

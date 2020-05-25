@@ -59,7 +59,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * If not set explicitly, the {@code NoopTracer} from OpenTracing will
      * be used.
-     * 
+     *
      * @param opentracingTracer The tracer.
      */
     @Autowired(required = false)
@@ -130,7 +130,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * An external systems management component can get the result of running these checks by means
      * of doing a HTTP GET /readiness.
-     * 
+     *
      * @param handler The handler to register the checks with.
      */
     @Override
@@ -143,7 +143,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * An external systems management component can get the result of running these checks by means
      * of doing a HTTP GET /liveness.
-     * 
+     *
      * @param handler The handler to register the checks with.
      */
     @Override
@@ -153,14 +153,14 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
 
     /**
      * Gets the default port number on which this service listens for encrypted communication (e.g. 5671 for AMQP 1.0).
-     * 
+     *
      * @return The port number.
      */
     public abstract int getPortDefaultValue();
 
     /**
      * Gets the default port number on which this service listens for unencrypted communication (e.g. 5672 for AMQP 1.0).
-     * 
+     *
      * @return The port number.
      */
     public abstract int getInsecurePortDefaultValue();
@@ -192,7 +192,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <li>if this service has been configured to listen on a secure port, the configured port number is returned, else</li>
      * <li>{@link Constants#PORT_UNCONFIGURED} is returned.</li>
      * </ol>
-     * 
+     *
      * @return The port number.
      */
     public final int getPort() {
@@ -214,7 +214,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <li>if this service has been configured to listen on an insecure port, the configured port number is returned, else</li>
      * <li>{@link Constants#PORT_UNCONFIGURED} is returned.</li>
      * </ol>
-     * 
+     *
      * @return The port number.
      */
     public final int getInsecurePort() {
@@ -269,7 +269,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * The port is determined by invoking {@code HonoConfigProperties#getPort(int)}
      * with the value returned by {@link #getPortDefaultValue()}.
-     * 
+     *
      * @return The port.
      */
     protected final int determineSecurePort() {
@@ -289,7 +289,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * The port is determined by invoking {@code HonoConfigProperties#getInsecurePort(int)}
      * with the value returned by {@link #getInsecurePortDefaultValue()}.
-     * 
+     *
      * @return The port.
      */
     protected final int determineInsecurePort() {
@@ -311,7 +311,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * Checks if this service has been configured to bind to the secure port during startup.
      * <p>
      * Subclasses may override this method in order to do more sophisticated checks.
-     *  
+     *
      * @return {@code true} if <em>config</em> contains a valid key and certificate.
      */
     protected boolean isSecurePortEnabled() {
@@ -355,7 +355,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * However, the trust anchor options returned by that method will only be added to the
      * given server options if its <em>ssl</em> flag is set to {@code true} and if its
      * <em>trustOptions</em> property is {@code null}.
-     * 
+     *
      * @param serverOptions The options to add configuration to.
      */
     protected final void addTlsTrustOptions(final NetServerOptions serverOptions) {
@@ -378,7 +378,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * <p>
      * Subclasses may override this method in order to e.g. use a
      * non-key store based trust manager.
-     * 
+     *
      * @return The trust options or {@code null} if authentication of devices
      *         based on certificates should be disabled.
      */

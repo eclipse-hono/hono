@@ -59,7 +59,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * This class provides support for implementing an AMQP 1.0 container hosting arbitrary
  * API {@link AmqpEndpoint}s. An endpoint can be used to handle messages being sent to and/or
  * received from an AMQP <em>node</em> represented by an address prefix.
- * 
+ *
  * @param <T> The type of configuration properties this service uses.
  */
 public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
@@ -86,7 +86,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Gets the default port number of the secure AMQP port.
-     * 
+     *
      * @return {@link Constants#PORT_AMQPS}
      */
     @Override
@@ -96,7 +96,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Gets the default port number of the non-secure AMQP port.
-     * 
+     *
      * @return {@link Constants#PORT_AMQP}
      */
     @Override
@@ -135,7 +135,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Gets the endpoint registered for handling a specific target address.
-     * 
+     *
      * @param targetAddress The address.
      * @return The endpoint for handling the address or {@code null} if no endpoint is registered
      *         for the target address.
@@ -146,7 +146,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Gets the endpoint registered for a given name.
-     * 
+     *
      * @param endpointName The name.
      * @return The endpoint registered under the given name or {@code null} if no endpoint has been registered
      *         under the name.
@@ -157,7 +157,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Iterates over the endpoints registered with this service.
-     * 
+     *
      * @return The endpoints.
      */
     protected final Iterable<AmqpEndpoint> endpoints() {
@@ -177,7 +177,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Sets the object to use for authorizing access to resources and operations.
-     * 
+     *
      * @param authService The authorization service to use.
      * @throws NullPointerException if the service is {@code null}.
      */
@@ -187,7 +187,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Gets the object used for authorizing access to resources and operations.
-     * 
+     *
      * @return The authorization service to use.
      */
     protected final AuthorizationService getAuthorizationService() {
@@ -212,7 +212,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * <p>
      * A connection is considered expired if the {@link HonoUser#isExpired()} method
      * of the user principal attached to the connection returns {@code true}.
-     * 
+     *
      * @param con The client connection.
      */
     protected final void closeExpiredConnection(final ProtonConnection con) {
@@ -235,7 +235,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * Invoked before binding listeners to the configured socket addresses.
      * <p>
      * Subclasses may override this method to do any kind of initialization work.
-     * 
+     *
      * @return A future indicating the outcome of the operation. The listeners will not
      *         be bound if the returned future fails.
      */
@@ -342,7 +342,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * and {@linkplain ServiceConfigProperties#getTrustOptions() trust options}.
      * <p>
      * Subclasses may override this method to set custom options.
-     * 
+     *
      * @return The options.
      */
     protected ProtonServerOptions createServerOptions() {
@@ -361,7 +361,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * </ul>
      * <p>
      * Subclasses may override this method to set custom options.
-     * 
+     *
      * @return The options.
      */
     protected ProtonServerOptions createInsecureServerOptions() {
@@ -458,7 +458,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * Closes a link for an unknown target address.
      * <p>
      * The link is closed with AMQP error code <em>amqp:not-found</em>.
-     * 
+     *
      * @param con The connection that the link belongs to.
      * @param link The link.
      * @param address The unknown target address.
@@ -475,7 +475,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * Creates a resource identifier for a given address.
-     * 
+     *
      * @param address The address. If this service is configured for
      *         a single tenant only then the address is assumed to <em>not</em> contain a tenant
      *         component.
@@ -587,7 +587,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * <p>
      * Subclasses should override this method in order to register service
      * specific handlers and/or to prevent registration of default handlers.
-     * 
+     *
      * @param connection The connection.
      */
     protected void setRemoteConnectionOpenHandler(final ProtonConnection connection) {
@@ -628,7 +628,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * has expired</li>
      * <li>sends the AMQP <em>open</em> frame to the peer</li>
      * </ol>
-     * 
+     *
      * @param connection The connection to open.
      */
     protected void processRemoteOpen(final ProtonConnection connection) {
@@ -655,7 +655,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * AMQP <em>open</em> frame.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param connection The connection being opened by the client.
      * @param desiredCapabilities The capabilities.
      */
@@ -727,7 +727,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * for all registered endpoints.
      * <p>
      * Subclasses should override this method to register more specific checks.
-     * 
+     *
      * @param handler The health check handler to register the checks with.
      */
     @Override
@@ -745,7 +745,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * for all registered endpoints.
      * <p>
      * Subclasses should override this method to register more specific checks.
-     * 
+     *
      * @param handler The health check handler to register the checks with.
      */
     @Override

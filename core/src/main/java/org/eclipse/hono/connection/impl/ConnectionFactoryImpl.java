@@ -55,7 +55,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
      * <p>
      * The <em>name</em> property of the configuration is used as the basis
      * for the local container name which is then appended with a UUID.
-     * 
+     *
      * @param vertx The Vert.x instance.
      * @param config The configuration parameters.
      * @throws NullPointerException if the parameters are {@code null}.
@@ -70,7 +70,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
      * <p>
      * If not set, a client instance will be created when any of the <em>connect</em>
      * methods is invoked.
-     * 
+     *
      * @param protonClient The client.
      * @throws NullPointerException if the client is {@code null}.
      */

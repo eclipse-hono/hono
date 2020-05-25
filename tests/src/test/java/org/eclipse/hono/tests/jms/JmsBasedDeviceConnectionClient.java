@@ -59,7 +59,7 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
 
     /**
      * Creates a new client for a connection.
-     * 
+     *
      * @param connection The connection to the Credentials service.
      * @param clientConfig The configuration properties for the connection to the
      *                     Credentials service.
@@ -193,7 +193,7 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseClien
 
     /**
      * Sends a request for an operation.
-     * 
+     *
      * @param operation The name of the operation to invoke or {@code null} if the message
      *                  should not have a subject.
      * @param applicationProperties Application properties to set on the request message or

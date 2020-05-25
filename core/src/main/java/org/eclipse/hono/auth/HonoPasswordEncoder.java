@@ -25,7 +25,7 @@ public interface HonoPasswordEncoder {
 
     /**
      * Computes a hash for a raw password.
-     * 
+     *
      * @param rawPassword The clear text password to encode.
      * @return A <em>secret</em> as defined by Hono's
      *         <a href="https://www.eclipse.org/hono/docs/api/credentials/#hashed-password">
@@ -36,7 +36,7 @@ public interface HonoPasswordEncoder {
 
     /**
      * Matches a given password against credentials on record.
-     * 
+     *
      * @param rawPassword The clear text password to match.
      * @param secret The <a href="https://www.eclipse.org/hono/docs/api/credentials/#hashed-password">
      *               hashed-password secret</a> to match against.

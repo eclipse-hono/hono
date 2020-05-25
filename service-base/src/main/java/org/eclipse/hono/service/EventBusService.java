@@ -111,7 +111,7 @@ public abstract class EventBusService extends AbstractVerticle {
 
     /**
      * Gets the event bus address that this service listens on for incoming requests.
-     * 
+     *
      * @return The address.
      */
     protected abstract String getEventBusAddress();
@@ -198,7 +198,7 @@ public abstract class EventBusService extends AbstractVerticle {
      * Implementations should therefore use {@link EventBusMessage#getResponse(int)}
      * for creating the response message based on the request (which contains the
      * reply-to address).
-     * 
+     *
      * @param request The request message.
      * @return A future indicating the outcome of the service invocation.
      *         The future will succeed with the response to be sent to the
@@ -211,7 +211,7 @@ public abstract class EventBusService extends AbstractVerticle {
 
     /**
      * Gets a property value of a given type from a JSON object.
-     * 
+     *
      * @param clazz Type class of the type
      * @param payload The object to get the property from.
      * @param field The name of the property.
@@ -267,7 +267,7 @@ public abstract class EventBusService extends AbstractVerticle {
      * The returned JSON object contains the given payload (if not {@code null}).
      * If the given payload does not contain an <em>enabled</em> property, then
      * it is added with value {@code true} to the returned object.
-     * 
+     *
      * @param payload The payload from the request message.
      * @return The payload (never {@code null}).
      */
@@ -289,7 +289,7 @@ public abstract class EventBusService extends AbstractVerticle {
      * <p>
      * The result or exception of the given future will be used to set a {@link Tags#HTTP_STATUS} tag on the span
      * and to set a {@link Tags#ERROR} tag in case of an exception or a result with error status.
-     * 
+     *
      * @param span The span to finish.
      * @param resultFuture The future to be composed.
      * @return The composed future.

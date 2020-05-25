@@ -26,7 +26,7 @@ public final class HonoSamplerUtils {
     /**
      * Parses string value and returns an integer value. If input string value is null, then provided default integer
      * value is returned.
-     * 
+     *
      * @param stringValue The string value that need to be converted as an integer.
      * @param defaultValue The default value to be used, in case the stringValue is null
      * @return The converted integer value

@@ -85,7 +85,7 @@ import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
 /**
  * A base class for implementing Vert.x based Hono protocol adapters for publishing events &amp; telemetry data using
  * MQTT.
- * 
+ *
  * @param <T> The type of configuration properties this adapter supports/requires.
  */
 public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtocolAdapterProperties>
@@ -113,7 +113,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Sets the authentication handler to use for authenticating devices.
-     * 
+     *
      * @param authHandler The handler to use.
      * @throws NullPointerException if handler is {@code null}.
      */
@@ -180,7 +180,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Subclasses may either set the auth handler explicitly using
      * {@link #setAuthHandler(AuthHandler)} or override this method in order to
      * create a custom auth handler.
-     * 
+     *
      * @return The handler.
      */
     protected AuthHandler<MqttContext> createAuthHandler() {
@@ -211,7 +211,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Sets the MQTT server to use for handling secure MQTT connections.
-     * 
+     *
      * @param server The server.
      * @throws NullPointerException if the server is {@code null}.
      */
@@ -226,7 +226,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Sets the MQTT server to use for handling non-secure MQTT connections.
-     * 
+     *
      * @param server The server.
      * @throws NullPointerException if the server is {@code null}.
      */
@@ -366,7 +366,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Invoked when a client sends its <em>CONNECT</em> packet.
      * <p>
      * Authenticates the client (if required) and registers handlers for processing messages published by the client.
-     * 
+     *
      * @param endpoint The MQTT endpoint representing the client.
      */
     final void handleEndpointConnection(final MqttEndpoint endpoint) {
@@ -465,7 +465,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * {@link #close(MqttEndpoint, Device, CommandSubscriptionsManager, OptionalInt)}. Registers a publish handler on
      * the endpoint which invokes {@link #onPublishedMessage(MqttContext)} for each message being published by the
      * client. Accepts the connection request.
-     * 
+     *
      * @param endpoint The MQTT endpoint representing the client.
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
@@ -838,7 +838,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Forwards a message to the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      * @param resource The resource that the message should be forwarded to.
      * @param message The message to send.
@@ -882,7 +882,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Forwards a telemetry message to the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
@@ -942,7 +942,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Forwards an event to the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      * @param tenant The tenant of the device that has produced the data.
      * @param deviceId The id of the device that has produced the data.
@@ -1180,7 +1180,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     /**
      * Closes a connection to a client.
-     * 
+     *
      * @param endpoint The connection to close.
      * @param authenticatedDevice Optional authenticated device information, may be {@code null}.
      * @param cmdSubscriptionsManager The CommandSubscriptionsManager to track command subscriptions, unsubscriptions
@@ -1233,7 +1233,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Subclasses should override this method in order to release any device specific resources.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param endpoint The connection to be closed.
      */
     protected void onClose(final MqttEndpoint endpoint) {
@@ -1289,7 +1289,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * <li>the content type of the payload</li>
      * </ul>
      * and then invoke one of the <em>upload*</em> methods to send the message downstream.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published. The
      *            {@link MqttContext#topic()} method will return a non-null resource identifier
      *            for the topic that the message has been published to.
@@ -1307,7 +1307,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * <p>
      * Subclasses may override this method in order to customize the message before it is sent, e.g. adding custom
      * properties.
-     * 
+     *
      * @param downstreamMessage The message that will be sent downstream.
      * @param ctx The context in which the MQTT message has been published.
      */
@@ -1320,7 +1320,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * This default implementation does nothing.
      * <p>
      * Subclasses should override this method in order to e.g. update metrics counters.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      */
     protected void onMessageSent(final MqttContext ctx) {
@@ -1336,7 +1336,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * This default implementation does nothing.
      * <p>
      * Subclasses should override this method in order to e.g. update metrics counters.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      */
     protected void onMessageUndeliverable(final MqttContext ctx) {

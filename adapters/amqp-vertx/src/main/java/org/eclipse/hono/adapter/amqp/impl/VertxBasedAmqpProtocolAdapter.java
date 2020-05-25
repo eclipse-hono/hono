@@ -297,7 +297,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     /**
      * Handles a remote peer's request to open a connection.
-     * 
+     *
      * @param con The connection to be opened.
      */
     protected void onConnectRequest(final ProtonConnection con) {
@@ -428,7 +428,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     /**
      * Sets the AMQP server for handling insecure AMQP connections.
-     * 
+     *
      * @param server The insecure server instance.
      * @throws NullPointerException If the server is {@code null}.
      */
@@ -447,7 +447,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * If not explicitly set using this method (and the adapter is enable for device authentication) a 
      * {@code AmqpAdapterSaslAuthenticatorFactory}, configured to use an auth provider based on a username
      * and password, will be created during startup.
-     * 
+     *
      * @param authFactory The SASL authenticator factory.
      * @throws NullPointerException if the authFactory is {@code null}.
      */
@@ -480,7 +480,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     /**
      * Invoked when a client closes the connection with this server.
-     * 
+     *
      * @param con The connection to close.
      * @param res The client's close frame.
      */
@@ -517,7 +517,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * <p>
      * If the attach frame contains a target address, this method simply closes the link,
      * otherwise, it accepts and opens the link.
-     * 
+     *
      * @param conn The connection through which the request is initiated.
      * @param receiver The receiver link for receiving the data.
      */
@@ -668,7 +668,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * <li><em>rejected</em> if the message could not be processed due to a problem caused by the device.</li>
      * <li><em>released</em> if the message could not be forwarded to a downstream consumer.</li>
      * </ul>
-     * 
+     *
      * @param ctx The context for the message.
      * @return A future indicating the outcome of processing the message.
      *         The future will succeed if the message has been processed successfully, otherwise it
@@ -710,7 +710,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *  <li>the source address cannot be parsed or does not point to the command endpoint or</li>
      *  <li>the AMQP adapter is disabled for the tenant that the device belongs to.</li>
      * </ul>
-     * 
+     *
      * @param connection The AMQP connection to the device.
      * @param sender The link to use for sending commands to the device.
      */
@@ -1020,7 +1020,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * Forwards a message received from a device to downstream consumers.
      * <p>
      * This method also handles disposition updates.
-     * 
+     *
      * @param context The context that the message has been received in.
      * @param resource The resource that the message should be uploaded to.
      * @param currentSpan The currently active OpenTracing span that is used to
@@ -1198,7 +1198,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     /**
      * Closes the specified receiver link.
-     * 
+     *
      * @param link The link to close.
      */
     private <T extends ProtonLink<T>> void onLinkDetach(final ProtonLink<T> link) {
@@ -1211,7 +1211,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * <p>
      * Also checks if the delivery semantics in use are appropriate for the
      * targeted endpoint.
-     * 
+     *
      * @param ctx The message to check.
      *
      * @return A succeeded future if validation was successful.

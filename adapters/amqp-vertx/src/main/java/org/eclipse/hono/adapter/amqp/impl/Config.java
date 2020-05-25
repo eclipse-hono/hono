@@ -38,7 +38,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Creates an AMQP protocol adapter instance.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_AMQP_PROTOCOL_ADAPTER)
@@ -84,7 +84,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Exposes the configuration properties of the AMQP adapter as a Spring bean.
-     * 
+     *
      * @return The configuration properties.
      */
     @Bean
@@ -96,7 +96,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Exposes a factory for creating AMQP adapter instances.
-     * 
+     *
      * @return The factory bean.
      */
     @Bean
@@ -108,7 +108,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean

@@ -38,7 +38,7 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
     /**
      * Creates credentials for a tenant and subject DN.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param subjectDn The subject DN of the device's client certificate.
      * @return The credentials.
@@ -53,7 +53,7 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
     /**
      * Creates credentials for a tenant and subject DN.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param subjectDn The subject DN of the device's client certificate.
      * @param clientContext The client context that can be used to get credentials from the Credentials API.
@@ -71,7 +71,7 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
     /**
      * Creates credentials for a tenant and subject DN.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param subjectDn The subject DN of the device's client certificate.
      * @return The credentials.
@@ -86,7 +86,7 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
     /**
      * Creates credentials for a tenant and subject DN.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param subjectDn The subject DN of the device's client certificate.
      * @param clientContext The client context that can be used to get credentials from the Credentials API.
@@ -104,7 +104,7 @@ public class SubjectDnCredentials extends AbstractDeviceCredentials {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @return Always {@link CredentialsConstants#SECRETS_TYPE_X509_CERT}.
      */
     @Override

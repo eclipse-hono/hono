@@ -24,14 +24,14 @@ public interface ExpiringValue<T> {
 
     /**
      * Gets the value.
-     * 
+     *
      * @return The value.
      */
     T getValue();
 
     /**
      * Checks if the value has already expired.
-     * 
+     *
      * @return {@code true} if the value has expired based on the current system time,
      *         {@code false} otherwise.
      */
@@ -39,7 +39,7 @@ public interface ExpiringValue<T> {
 
     /**
      * Checks if the value has already expired.
-     * 
+     *
      * @param refInstant The reference point in time to check expiration against.
      * @return {@code true} if the value has expired based on the given instant,
      *         {@code false} otherwise.

@@ -38,7 +38,7 @@ public class EventSenderImpl extends AbstractDownstreamSender {
 
     /**
      * Creates a event sender instance for a given connection and proton sender.
-     * 
+     *
      * @param con The open connection to the Hono server.
      * @param sender The sender link to send events over.
      * @param tenantId The tenant that the events will be published for.

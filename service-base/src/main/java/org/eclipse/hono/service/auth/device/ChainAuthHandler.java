@@ -29,7 +29,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A handler for authenticating an {@link ExecutionContext} using arbitrary mechanisms.
- * 
+ *
  * @param <T> The type of execution context this handler can authenticate.
  */
 public class ChainAuthHandler<T extends ExecutionContext> extends ExecutionContextAuthHandler<T> {
@@ -45,7 +45,7 @@ public class ChainAuthHandler<T extends ExecutionContext> extends ExecutionConte
 
     /**
      * Appends a handler implementing a specific authentication mechanism.
-     * 
+     *
      * @param handler The handler to append.
      * @return This handler for command chaining.
      * @throws NullPointerException if handler is {@code null}.
@@ -58,7 +58,7 @@ public class ChainAuthHandler<T extends ExecutionContext> extends ExecutionConte
     /**
      * Iterates over the list of auth handlers in order to extract credentials
      * from the context.
-     * 
+     *
      * @return A succeeded future with the credentials or a failed future if
      *         none of the registered handlers was able to extract credentials.
      */

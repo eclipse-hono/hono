@@ -71,7 +71,7 @@ public abstract class MqttTestBase {
 
     /**
      * Sets up the helper.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
@@ -83,7 +83,7 @@ public abstract class MqttTestBase {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param testInfo The JUnit test info.
      */
     @BeforeEach
@@ -94,7 +94,7 @@ public abstract class MqttTestBase {
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @AfterEach
@@ -118,7 +118,7 @@ public abstract class MqttTestBase {
 
     /**
      * Closes the AMQP 1.0 Messaging Network client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterAll
@@ -129,7 +129,7 @@ public abstract class MqttTestBase {
 
     /**
      * Registers a device and opens a connection to the MQTT adapter using the device's credentials.
-     * 
+     *
      * @param tenantId The id of the tenant that the device belongs to.
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
@@ -162,7 +162,7 @@ public abstract class MqttTestBase {
 
     /**
      * Opens a connection to the MQTT adapter using given credentials.
-     * 
+     *
      * @param username The username to use for authentication.
      * @param password The password to use for authentication.
      * @return A future that will be completed with the CONNACK packet received
@@ -192,7 +192,7 @@ public abstract class MqttTestBase {
 
     /**
      * Opens a connection to the MQTT adapter using an X.509 client certificate.
-     * 
+     *
      * @param cert The client certificate to use for authentication.
      * @return A future that will be completed with the CONNACK packet received
      *         from the adapter or failed with a {@link MqttConnectionException}

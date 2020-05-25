@@ -49,7 +49,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
     /**
      * Sets the configuration properties to use for connecting
      * to the AMQP org.eclipse.hono.cli.app.adapter.
-     * 
+     *
      * @param props The properties.
      * @throws NullPointerException if properties are {@code null}.
      */
@@ -61,7 +61,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
     /**
      * Creates anonymous sender link on the established connection
      * to the AMQP org.eclipse.hono.cli.app.adapter.
-     * 
+     *
      * @return A future containing the sender. The future will be succeeded
      *         once the link is open.
      * @throws IllegalStateException if the connection to the org.eclipse.hono.cli.app.adapter is
@@ -81,7 +81,7 @@ public abstract class AmqpCliClient extends AbstractCliClient {
 
     /**
      * Connects to the AMQP org.eclipse.hono.cli.app.adapter.
-     * 
+     *
      * @return A future containing the established connection. The future will
      *         be succeeded once the connection is open.
      */

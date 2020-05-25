@@ -410,7 +410,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Creates a new helper instance.
-     * 
+     *
      * @param vertx The vert.x instance.
      * @throws NullPointerException if vert.x is {@code null}.
      */
@@ -424,7 +424,7 @@ public final class IntegrationTestSupport {
      * Checks if this method is executed on a test environment.
      * <p>
      * Evaluates system property <em>test.env</em>.
-     * 
+     *
      * @return {@code true} if this is a test environment.
      */
     public static boolean isTestEnvironment() {
@@ -447,7 +447,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Creates properties for connecting to the AMQP Messaging Network.
-     * 
+     *
      * @return The properties.
      */
     public static ClientConfigProperties getMessagingNetworkProperties() {
@@ -463,7 +463,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Creates properties for connecting to the AMQP protocol adapter.
-     * 
+     *
      * @param username The username to use for authenticating to the adapter.
      * @param password The password to use for authenticating to the adapter.
      * @return The properties.
@@ -481,7 +481,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Creates properties for connecting to the device registry.
-     * 
+     *
      * @param username The username to use for authenticating to the device registry.
      * @param password The password to use for authenticating to the device registry.
      * @return The properties.
@@ -498,7 +498,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Gets payload of a particular size.
-     * 
+     *
      * @param size The number of bytes that the payload should contain.
      * @return The payload.
      */
@@ -512,7 +512,7 @@ public final class IntegrationTestSupport {
      * Connects to the AMQP 1.0 Messaging Network.
      * <p>
      * Also creates an HTTP client for accessing the Device Registry.
-     * 
+     *
      * @return A future indicating the outcome of the operation.
      */
     public Future<?> init() {
@@ -524,7 +524,7 @@ public final class IntegrationTestSupport {
      * Connects to the AMQP 1.0 Messaging Network.
      * <p>
      * Also creates an HTTP client for accessing the Device Registry.
-     * 
+     *
      * @param downstreamProps The properties for connecting to the AMQP Messaging
      *                           Network.
      * @return A future indicating the outcome of the operation.
@@ -553,7 +553,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Checks if the Device Registry supports devices connecting via gateways.
-     * 
+     *
      * @return {@code true} if the registry supports gateway mode.
      */
     public boolean isGatewayModeSupported() {
@@ -563,7 +563,7 @@ public final class IntegrationTestSupport {
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     public void deleteObjects(final VertxTestContext ctx) {
@@ -591,7 +591,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Closes the connections to the AMQP 1.0 Messaging Network.
-     * 
+     *
      * @return A future indicating the outcome of the operation.
      */
     public Future<?> disconnect() {
@@ -607,7 +607,7 @@ public final class IntegrationTestSupport {
     /**
      * Gets a random tenant identifier and adds it to the list
      * of tenants to be deleted after the current test has finished.
-     * 
+     *
      * @return The identifier.
      * @see #deleteObjects(VertxTestContext)
      */
@@ -620,7 +620,7 @@ public final class IntegrationTestSupport {
     /**
      * Gets a random device identifier and adds it to the list
      * of devices to be deleted after the current test has finished.
-     * 
+     *
      * @param tenantId The tenant that he device belongs to.
      * @return The identifier.
      * @see #deleteObjects(VertxTestContext)
@@ -634,7 +634,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Registers a new device for a tenant that is connected via the given gateway.
-     * 
+     *
      * @param tenantId The tenant that the gateway and device belong to.
      * @param gatewayId The gateway identifier.
      * @param timeoutSeconds The number of seconds to wait for the setup to succeed.
@@ -666,7 +666,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Registers a new device for a tenant that is connected via the given gateway.
-     * 
+     *
      * @param tenantId The tenant that the gateway and device belong to.
      * @param gatewayId The gateway identifier.
      * @return A future indicating the outcome of the operation.
@@ -686,7 +686,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Sends a command to a device.
-     * 
+     *
      * @param notification The empty notification indicating the device's readiness to receive a command.
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
@@ -714,7 +714,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Sends a command to a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param command The name of the command to send.
@@ -761,7 +761,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Sends a one-way command to a device.
-     * 
+     *
      * @param notification The empty notification indicating the device's readiness to receive a command.
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
@@ -789,7 +789,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Sends a one-way command to a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param command The name of the command to send.
@@ -959,7 +959,7 @@ public final class IntegrationTestSupport {
      * <p>
      * The returned identifier can be used as the <em>username</em> with
      * Hono's protocol adapters that support username/password authentication.
-     * 
+     *
      * @param deviceId The device identifier.
      * @param tenant The tenant that the device belongs to.
      * @return The authentication identifier.
@@ -970,7 +970,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Gets a hash for a password using a given digest based hash function.
-     * 
+     *
      * @param hashFunction The hash function.
      * @param salt The salt.
      * @param clearTextPassword The password.
@@ -990,7 +990,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Gets a hash for a password using the bcrypt hash function.
-     * 
+     *
      * @param clearTextPassword The password.
      * @return The hashed password.
      */
@@ -1000,7 +1000,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Generates a certificate object and initializes it with the data read from a file.
-     * 
+     *
      * @param path The file-system path to load the certificate from.
      * @return A future with the generated certificate on success.
      */
@@ -1020,7 +1020,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Creates a new EC based private/public key pair.
-     * 
+     *
      * @return The key pair.
      * @throws GeneralSecurityException if the JVM doesn't support ECC.
      */
@@ -1040,7 +1040,7 @@ public final class IntegrationTestSupport {
 
     /**
      * Create a new password credential, suitable for use in the integration test environment.
-     * 
+     *
      * @param authId The auth ID to use.
      * @param password The password to use.
      * @return The new instance.

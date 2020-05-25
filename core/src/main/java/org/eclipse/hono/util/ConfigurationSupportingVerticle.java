@@ -18,9 +18,9 @@ import io.vertx.core.AbstractVerticle;
 
 /**
  * A base class for implementing <em>Verticle</em>s.
- * 
+ *
  * This class provides support for accessing configuration properties.
- * 
+ *
  * @param <T> The type of configuration properties this verticle supports.
  *
  */
@@ -30,7 +30,7 @@ public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticl
 
     /**
      * Sets the specific object instance to use for configuring this <em>Verticle</em>.
-     * 
+     *
      * @param props The properties.
      */
     protected final void setSpecificConfig(final T props) {
@@ -46,7 +46,7 @@ public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticl
      * This method mainly exists so that subclasses can annotate its concrete implementation
      * with Spring annotations like {@code Autowired} and/or {@code Qualifier} to get injected
      * a particular bean instance.
-     * 
+     *
      * @param configuration The configuration properties.
      * @throws NullPointerException if configuration is {@code null}.
      */
@@ -54,7 +54,7 @@ public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticl
 
     /**
      * Gets the properties that this <em>Verticle</em> has been configured with.
-     * 
+     *
      * @return The properties or {@code null} if not set.
      */
     public final T getConfig() {

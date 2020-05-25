@@ -62,7 +62,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * <p>
      * Note that {@link #initialize(CommandTargetMapper, BasicDeviceConnectionClientFactory)} has to have been called
      * already, otherwise a failed future is returned.
-     * 
+     *
      * @param tenantId The tenant to consume commands from.
      * @param deviceId The device for which the consumer will be created.
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
@@ -138,7 +138,7 @@ public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecyc
      * It is the responsibility of the calling code to properly close the
      * link by invoking {@link CommandResponseSender#close(Handler)}
      * once the sender is no longer needed anymore.
-     * 
+     *
      * @param tenantId The ID of the tenant to send the command responses for.
      * @param replyId The ID used to build the reply address as {@code command_response/tenantId/replyId}.
      * @return A future that will complete with the sender once the link has been established.

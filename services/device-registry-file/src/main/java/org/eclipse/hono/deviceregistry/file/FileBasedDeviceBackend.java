@@ -62,7 +62,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
 
     /**
      * Create a new instance.
-     * 
+     *
      * @param registrationService an implementation of registration service.
      * @param credentialsService an implementation of credentials service.
      * @throws NullPointerException if any of the services are {@code null}.
@@ -308,7 +308,7 @@ public class FileBasedDeviceBackend implements AutoProvisioningEnabledDeviceBack
 
     /**
      * Creator for {@link ToStringHelper}.
-     * 
+     *
      * @return A new instance for this instance.
      */
     protected ToStringHelper toStringHelper() {

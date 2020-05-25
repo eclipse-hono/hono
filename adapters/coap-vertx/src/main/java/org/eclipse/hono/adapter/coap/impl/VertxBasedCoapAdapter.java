@@ -46,7 +46,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_COAP}
      */
     @Override
@@ -56,7 +56,7 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
 
     /**
      * Gets a device identity for a CoAP request.
-     * 
+     *
      * @param exchange The CoAP exchange with URI and/or peer's principal.
      * @return The device identity.
      */

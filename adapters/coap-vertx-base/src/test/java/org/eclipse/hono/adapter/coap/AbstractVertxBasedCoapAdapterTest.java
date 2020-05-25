@@ -184,7 +184,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
     /**
      * Verifies that the <em>onStartupSuccess</em> method is invoked if the coap server has been started successfully.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
@@ -207,7 +207,7 @@ public class AbstractVertxBasedCoapAdapterTest {
 
     /**
      * Verifies that the adapter registers resources as part of the start-up process.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
@@ -239,7 +239,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     /**
      * Verifies that the resources registered with the adapter are always
      * executed on the adapter's vert.x context.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
@@ -311,7 +311,7 @@ public class AbstractVertxBasedCoapAdapterTest {
     /**
      * Verifies that the <em>onStartupSuccess</em> method is not invoked if a client provided coap server fails to
      * start.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test
@@ -899,12 +899,12 @@ public class AbstractVertxBasedCoapAdapterTest {
 
     /**
      * Creates a protocol adapter for a given HTTP server.
-     * 
+     *
      * @param server The coap server.
      * @param complete {@code true}, if that adapter should be created with all Hono service clients set, {@code false}, if the
      *            adapter should be created, and all Hono service clients set, but the credentials client is not set.
      * @param onStartupSuccess The handler to invoke on successful startup.
-     * 
+     *
      * @return The adapter.
      */
     private AbstractVertxBasedCoapAdapter<CoapAdapterProperties> getAdapter(

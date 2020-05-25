@@ -52,7 +52,7 @@ public abstract class AbstractClient {
 
     /**
      * Closes the vert.x instance.
-     * 
+     *
      * @return A future that will succeed once the instance is closed.
      */
     protected final Future<Void> closeVertx() {

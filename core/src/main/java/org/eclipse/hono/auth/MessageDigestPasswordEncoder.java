@@ -40,7 +40,7 @@ public class MessageDigestPasswordEncoder implements PasswordEncoder {
      * <p>
      * This constructor invokes {@link #MessageDigestPasswordEncoder(String, SecureRandom)}
      * with a newly created {@code SecureRandom}.
-     * 
+     *
      * @param hashFunction The hash function to use.
      * @throws IllegalArgumentException if the JVM does not support the hash function.
      */

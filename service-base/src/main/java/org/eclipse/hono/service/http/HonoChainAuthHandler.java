@@ -31,7 +31,7 @@ public class HonoChainAuthHandler extends ChainAuthHandlerImpl {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * Delegates error handling to {@link AuthHandlerTools#processException(RoutingContext, Throwable, String)}
      * in order to handle server errors properly.
      */

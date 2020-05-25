@@ -27,7 +27,7 @@ public interface AmqpEndpoint extends Endpoint {
 
     /**
      * Handles a client's request to establish a link with Hono for sending messages to a given target address.
-     * 
+     *
      * @param connection The AMQP connection that the link is part of.
      * @param receiver The link to be established.
      * @param targetAddress The (remote) target address from the client's AMQP <em>ATTACH</em> message.
@@ -49,7 +49,7 @@ public interface AmqpEndpoint extends Endpoint {
      * This method is called whenever a connection got closed. Either actively but a call to disconnect, or by a
      * broken/lost connection.
      * </p>
-     * 
+     *
      * @param connection The connection which got closed.
      */
     void onConnectionClosed(ProtonConnection connection);

@@ -75,7 +75,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * in downstream messages.
      * <p>
      * The default value of this property is {@code false}.
-     * 
+     *
      * @return {@code true} if the properties should be included.
      */
     public final boolean isJmsVendorPropsEnabled() {
@@ -103,7 +103,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * </ul>
      * <p>
      * The default value of this property is {@code false}.
-     * 
+     *
      * @param flag {@code true} if the properties should be included.
      */
     public final void setJmsVendorPropsEnabled(final boolean flag) {
@@ -121,7 +121,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * is particularly useful for defining a content type for devices connected via MQTT
      * which does not provide a standard way of setting a content type.</li>
      * </ul>
-     * 
+     *
      * @return {@code true} if the adapter should use default values.
      */
     public final boolean isDefaultsEnabled() {
@@ -139,7 +139,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * is particularly useful for defining a content type for devices connected via MQTT
      * which does not provide a standard way of setting a content type.</li>
      * </ul>
-     * 
+     *
      * @param flag {@code true} if the adapter should use default values.
      */
     public final void setDefaultsEnabled(final boolean flag) {
@@ -175,7 +175,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * <p>
      * The default value of this property is 0 which lets the protocol adapter
      * determine an appropriate value based on e.g. available memory and CPU resources.
-     * 
+     *
      * @return The number of connections.
      */
     public final int getMaxConnections() {
@@ -188,7 +188,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * <p>
      * Setting this property to 0 (the default value) will let the protocol adapter
      * determine an appropriate value based on e.g. available memory and CPU resources.
-     * 
+     *
      * @param maxConnections The number of connections.
      * @throws IllegalArgumentException if the number is &lt; 0.
      */
@@ -201,7 +201,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
 
     /**
      * Checks if a connection limit has been configured.
-     * 
+     *
      * @return {@code true} if the maximum number of connections is &gt; 0.
      */
     public final boolean isConnectionLimitConfigured() {

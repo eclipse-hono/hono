@@ -180,7 +180,7 @@ public abstract class RequestResponseApiConstants {
 
     /**
      * Creates an AMQP (response) message for conveying an erroneous outcome of an operation.
-     * 
+     *
      * @param status The status code.
      * @param errorDescription An (optional) error description which will be put to a <em>Data</em>
      *                         section.

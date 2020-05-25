@@ -96,7 +96,7 @@ public class DeviceConnectionClientImplTest {
     /**
      * Verifies that the client retrieves the result of the <em>get-last-known-gateway</em> operation from the
      * Device Connection service.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

@@ -44,7 +44,7 @@ public abstract class BaseDto {
 
     /**
      * Gets the version of the document.
-     * 
+     *
      * @return The version of the document.
      */
     public final String getVersion() {
@@ -53,7 +53,7 @@ public abstract class BaseDto {
 
     /**
      * Sets the version of the document.
-     * 
+     *
      * @param version The version of the document or {@code null} if not set.
      * @throws NullPointerException if the version is {@code null}.
      */
@@ -72,7 +72,7 @@ public abstract class BaseDto {
 
     /**
      * Sets the date and time of last modification.
-     * 
+     *
      * @param updatedOn The date and time of last modification.
      * @throws NullPointerException if the last modification date and time is {@code null}.
      */

@@ -49,7 +49,7 @@ public abstract class HonoSamplerUI extends AbstractSamplerGui {
      * Adds a component for configuring an option to the GUI.
      * <p>
      * The component will be added to the bottom of the existing options panel.
-     * 
+     *
      * @param component The component to add.
      */
     protected final void addOption(final JComponent component) {
@@ -63,7 +63,7 @@ public abstract class HonoSamplerUI extends AbstractSamplerGui {
 
     /**
      * Gets a panel wrapping a choice field.
-     * 
+     *
      * @param labeledChoice The choice to wrap.
      * @return The panel.
      */

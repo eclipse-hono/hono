@@ -28,10 +28,10 @@ public class MicrometerBasedCoapAdapterMetrics extends MicrometerBasedMetrics im
 
     /**
      * Create a new metrics instance for COAP adapters.
-     * 
+     *
      * @param registry The meter registry to use.
      * @param vertx The Vert.x instance to use.
-     * 
+     *
      * @throws NullPointerException if either parameter is {@code null}.
      */
     @Autowired

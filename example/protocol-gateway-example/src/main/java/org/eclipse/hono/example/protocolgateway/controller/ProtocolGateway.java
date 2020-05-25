@@ -67,7 +67,7 @@ public class ProtocolGateway {
 
     /**
      * Creates a new service for a client factory.
-     * 
+     *
      * @param factory The factory for creating clients for Hono's AMQP adapter.
      * @param server The TCP server that devices connect to.
      * @param tenant The tenant that this gateway can accept device connections for.
@@ -84,7 +84,7 @@ public class ProtocolGateway {
 
     /**
      * Starts up the protocol gateway.
-     * 
+     *
      * @return A future indicating the outcome of starting the gateway.
      */
     @PostConstruct
@@ -277,7 +277,7 @@ public class ProtocolGateway {
 
     /**
      * Subscribes to commands for a device.
-     * 
+     *
      * @param deviceId The device to subscribe for.
      * @param socket The socket to use for sending commands to the device.
      * @return A future indicating the outcome.

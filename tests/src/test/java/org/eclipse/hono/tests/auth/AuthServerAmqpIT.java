@@ -70,7 +70,7 @@ public class AuthServerAmqpIT {
     /**
      * Verifies that a client having authority <em>READ</em> on resource <em>cbs</em> can
      * successfully retrieve a token.
-     * 
+     *
      * @param ctx The test context.
      */
     @Test
@@ -86,7 +86,7 @@ public class AuthServerAmqpIT {
 
     /**
      * Verifies that an unauthenticated client can not retrieve a token.
-     * 
+     *
      * @param ctx The test context.
      */
     @Test
@@ -102,7 +102,7 @@ public class AuthServerAmqpIT {
 
     /**
      * Verifies that an unauthenticated client can not retrieve a token.
-     * 
+     *
      * @param ctx The test context.
      */
     @Test

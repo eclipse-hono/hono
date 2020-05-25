@@ -160,7 +160,7 @@ public class ApplicationConfig {
 
     /**
      * Creates an instance of the file based service for managing device connection information.
-     * 
+     *
      * @return The service.
      */
     @Bean
@@ -193,7 +193,7 @@ public class ApplicationConfig {
     /**
      * Creates a new server for exposing the device registry's AMQP 1.0 based
      * endpoints.
-     * 
+     *
      * @return The server.
      */
     @Bean

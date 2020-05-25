@@ -46,7 +46,7 @@ public class AmqpContext extends MapBasedExecutionContext {
      * <p>
      * This constructor <b>does not</b> validate the message address. It is the responsibility of the caller to make
      * sure that the message address is valid.
-     * 
+     *
      * @param delivery The delivery of the message.
      * @param message The AMQP 1.0 message. The message must contain a valid address.
      * @param authenticatedDevice The device that authenticates to the adapter or {@code null} if the device is unauthenticated.
@@ -84,7 +84,7 @@ public class AmqpContext extends MapBasedExecutionContext {
 
     /**
      * Gets the size of the message's payload.
-     * 
+     *
      * @return The size in bytes.
      */
     final int getPayloadSize() {
@@ -111,7 +111,7 @@ public class AmqpContext extends MapBasedExecutionContext {
 
     /**
      * Gets the AMQP 1.0 message sent by the client.
-     * 
+     *
      * @return The AMQP 1.0 message.
      */
     final Message getMessage() {
@@ -147,7 +147,7 @@ public class AmqpContext extends MapBasedExecutionContext {
 
     /**
      * Determines if the AMQP 1.0 device is authenticated to the adapter.
-     * 
+     *
      * @return True if the device is authenticated or false otherwise.
      */
     final boolean isDeviceAuthenticated() {
@@ -166,7 +166,7 @@ public class AmqpContext extends MapBasedExecutionContext {
     /**
      * Sets the object to use for measuring the time it takes to
      * process this request.
-     * 
+     *
      * @param timer The timer.
      */
     final void setTimer(final Sample timer) {
@@ -176,7 +176,7 @@ public class AmqpContext extends MapBasedExecutionContext {
     /**
      * Gets the object used for measuring the time it takes to
      * process this request.
-     * 
+     *
      * @return The timer or {@code null} if not set.
      */
     final Sample getTimer() {

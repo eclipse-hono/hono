@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 
 /**
  * A versioned entry.
- * 
+ *
  * @param <T> The payload type.
  */
 public class Versioned<T> {
@@ -30,7 +30,7 @@ public class Versioned<T> {
 
     /**
      * Created a new versioned entry.
-     * 
+     *
      * @param version The version.
      * @param value The value.
      */
@@ -41,7 +41,7 @@ public class Versioned<T> {
 
     /**
      * Create a new versioned entry, with a new version.
-     * 
+     *
      * @param value The value.
      */
     public Versioned(final T value) {
@@ -58,7 +58,7 @@ public class Versioned<T> {
 
     /**
      * Create new version, in case of a version match.
-     * 
+     *
      * @param resourceVersion The expected version.
      * @param newContent The new content supplier.
      * @return If the expected version was empty, or the expected version matches the current version, a new instance
@@ -77,7 +77,7 @@ public class Versioned<T> {
 
     /**
      * Tests if this version matches the provided version.
-     * 
+     *
      * @param resourceVersion The provided version to check, may be {@link Optional#empty()}.
      * @return {@code true} if the provided version to check is empty or matches the current version, {@code false}
      *         otherwise.

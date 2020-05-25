@@ -37,7 +37,7 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
 
     /**
      * Creates a new result for a status code.
-     * 
+     *
      * @param status The status code.
      * @return The result.
      */
@@ -47,7 +47,7 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
 
     /**
      * Creates a new result for a status code and a payload.
-     * 
+     *
      * @param status The status code.
      * @param payload The payload to include in the result.
      * @return The result.
@@ -59,7 +59,7 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
 
     /**
      * Creates a new result for a status code and payload.
-     * 
+     *
      * @param status The status code.
      * @param contentType A media type describing the payload or {@code null} if unknown.
      * @param payload The payload to include in the result.
@@ -75,7 +75,7 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
 
     /**
      * Creates a new result for a status code and payload.
-     * 
+     *
      * @param status The status code.
      * @param contentType A media type describing the payload or {@code null} if unknown.
      * @param payload The payload to include in the result.
@@ -94,7 +94,7 @@ public final class BufferResult extends RequestResponseResult<Buffer> {
 
     /**
      * Gets the type of the payload.
-     * 
+     *
      * @return The media type describing the payload or {@code null} if unknown.
      */
     public String getContentType() {

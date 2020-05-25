@@ -28,7 +28,7 @@ public class SigfoxProtocolAdapterProperties extends HttpProtocolAdapterProperti
      * Set a custom TTD value which is being used when an ack is required.
      * <p>
      * This defaults to the Sigfox default of 20 seconds. Only change this when you know what you are doing.
-     * 
+     *
      * @param ttdWhenAckRequired The custom value to set the TTD to. Must not be negative. It may be zero, in which case
      *            the adapter will never wait for command.
      * @throws IllegalArgumentException If the value is negative.

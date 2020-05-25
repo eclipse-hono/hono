@@ -45,7 +45,7 @@ public class CommandEndpointConfiguration {
 
     /**
      * Creates a new configuration.
-     * 
+     *
      * @param subscriberRole The way in which to subscribe for commands.
      */
     public CommandEndpointConfiguration(final SubscriberRole subscriberRole) {
@@ -63,7 +63,7 @@ public class CommandEndpointConfiguration {
 
     /**
      * Gets the name of the command endpoint used by devices.
-     * 
+     *
      * @return The command endpoint name.
      */
     public final String getSouthboundEndpoint() {
@@ -110,7 +110,7 @@ public class CommandEndpointConfiguration {
     /**
      * Gets the name of the endpoint that applications use for sending
      * commands to devices.
-     * 
+     *
      * @return The endpoint name.
      */
     public final String getNorthboundEndpoint() {
@@ -119,7 +119,7 @@ public class CommandEndpointConfiguration {
 
     /**
      * Gets the target address to use in command messages sent to devices.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device identifier.
      * @return The target address.
@@ -132,7 +132,7 @@ public class CommandEndpointConfiguration {
     /**
      * Gets the target address to use in a sender link for sending commands
      * to devices.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @return The target address.
      */

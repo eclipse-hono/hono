@@ -51,7 +51,7 @@ public final class ValidityOnlyTrustManagerFactory extends SimpleTrustManagerFac
 
         /**
          * {@inheritDoc}
-         * 
+         *
          * Always throws {@code UnsupportedOperationException}.
          */
         @Override

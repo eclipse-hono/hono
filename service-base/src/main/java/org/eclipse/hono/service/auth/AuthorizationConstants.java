@@ -51,7 +51,7 @@ public final class AuthorizationConstants {
 
     /**
      * Creates a message for checking a subject's authority on a given resource.
-     * 
+     *
      * @param subject The subject to check authorization for.
      * @param resource The resource on which to check the permission.
      * @param permission The authority to check.

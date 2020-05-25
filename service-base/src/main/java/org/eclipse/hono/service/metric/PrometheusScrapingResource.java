@@ -41,7 +41,7 @@ public class PrometheusScrapingResource implements Handler<Router> {
 
     /**
      * Creates a new resource for a registry.
-     * 
+     *
      * @param registry The registry.
      * @throws NullPointerException if the registry is {@code null}.
      */
@@ -51,7 +51,7 @@ public class PrometheusScrapingResource implements Handler<Router> {
 
     /**
      * Scrapes the registry.
-     * 
+     *
      * @param event The request.
      */
     private void scrape(final RoutingContext event) {
@@ -61,7 +61,7 @@ public class PrometheusScrapingResource implements Handler<Router> {
 
     /**
      * Registers this resource.
-     * 
+     *
      * @param router The router to register on.
      */
     @Override

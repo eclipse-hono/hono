@@ -207,7 +207,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     /**
      * Cleans up fixture.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterAll
@@ -371,7 +371,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
 
     /**
      * Verifies that an adapter rejects connections when the connection limit is exceeded.
-     * 
+     *
      * @param ctx The helper to use for running async tests on vertx.
      */
     @Test

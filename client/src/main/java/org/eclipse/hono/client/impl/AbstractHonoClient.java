@@ -67,7 +67,7 @@ public abstract class AbstractHonoClient {
 
     /**
      * Creates a client for a connection.
-     * 
+     *
      * @param connection The connection to use.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
@@ -79,7 +79,7 @@ public abstract class AbstractHonoClient {
      * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
      * <p>
      * This method does <em>not</em> finish the span.
-     * 
+     *
      * @param span The span to mark.
      * @param error The exception that has occurred. If the exception is a
      *              {@link ServiceInvocationException} then a {@link Tags#HTTP_STATUS}
@@ -106,7 +106,7 @@ public abstract class AbstractHonoClient {
      * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
      * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
      * </ul>
-     * 
+     *
      * @param parent The existing span. If not {@code null} then the new span will have a
      *                     {@link References#CHILD_OF} reference to the existing span.
      * @param operationName The operation name that the span should be created for.
@@ -127,7 +127,7 @@ public abstract class AbstractHonoClient {
      * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
      * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
      * </ul>
-     * 
+     *
      * @param parent The existing span. If not {@code null} then the new span will have a
      *                     {@link References#FOLLOWS_FROM} reference to the existing span.
      * @param operationName The operation name that the span should be created for.
@@ -154,7 +154,7 @@ public abstract class AbstractHonoClient {
      * <p>
      * The result of this method should only be considered reliable
      * if this client is open.
-     * 
+     *
      * @param capability The capability to check support for.
      * @return {@code true} if the capability is included in the list of
      *         capabilities that the peer has offered during link

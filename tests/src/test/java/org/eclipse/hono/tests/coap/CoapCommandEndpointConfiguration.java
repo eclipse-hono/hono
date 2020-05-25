@@ -27,7 +27,7 @@ public final class CoapCommandEndpointConfiguration extends CommandEndpointConfi
 
     /**
      * Creates a new configuration.
-     * 
+     *
      * @param subscriberRole The way in which to subscribe for commands.
      */
     public CoapCommandEndpointConfiguration(final SubscriberRole subscriberRole) {

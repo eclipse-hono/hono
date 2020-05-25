@@ -31,7 +31,7 @@ public enum Activity {
 
     /**
      * Gets the single character representation for this activity.
-     * 
+     *
      * @return The first character of this activity's name.
      */
     public char getCode() {

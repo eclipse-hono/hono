@@ -39,7 +39,7 @@ public class Application extends AbstractApplication {
 
     /**
      * Sets the authentication service implementation this server is based on.
-     * 
+     *
      * @param authService The service implementation.
      * @throws NullPointerException if service is {@code null}.
      */
@@ -50,7 +50,7 @@ public class Application extends AbstractApplication {
 
     /**
      * Deploys the (file-based) authentication service implementation.
-     * 
+     *
      * @param maxInstances Ignored. This application always deploys a single instance of
      *                     the authentication service.
      */
@@ -75,7 +75,7 @@ public class Application extends AbstractApplication {
 
     /**
      * Starts the Authentication Server.
-     * 
+     *
      * @param args command line arguments to pass to the server.
      */
     public static void main(final String[] args) {

@@ -53,7 +53,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Gets the number of receivers as integer.
-     * 
+     *
      * @return The number of receivers to wait for as integer or {@code 0}
      * if the value cannot be parsed as integer.
      */
@@ -67,7 +67,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Sets the number of receivers to wait for.
-     * 
+     *
      * @param waitForReceivers Number of receivers to wait for (e.g. from other threads).
      */
     public void setWaitForReceivers(final String waitForReceivers) {
@@ -76,7 +76,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Gets the timeout to wait for receivers as integer.
-     * 
+     *
      * @return The timeout to wait for receivers in milliseconds or {@code 0}
      * if the value cannot be parsed as integer.
      */
@@ -90,7 +90,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Sets the timeout to wait for receivers in milliseconds.
-     * 
+     *
      * @param waitForReceiversTimeout The timeout in milliseconds encoded as string.
      */
     public void setWaitForReceiversTimeout(final String waitForReceiversTimeout) {
@@ -109,7 +109,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Gets the timeout for sending a message in milliseconds.
-     * 
+     *
      * @return The timeout for sending a message in milliseconds or the default timeout
      * if the value is empty.
      */
@@ -120,7 +120,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Sets the timeout for sending a message.
-     * 
+     *
      * @param sendTimeout The timeout in milliseconds encoded as string.
      */
     public void setSendTimeout(final String sendTimeout) {
@@ -133,7 +133,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Sets the device id.
-     * 
+     *
      * @param deviceId The device ID to use.
      */
     public void setDeviceId(final String deviceId) {
@@ -146,7 +146,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Sets whether or not to add the current timestamp in the payload.
-     * 
+     *
      * @param isSetSenderTime {@code true} to add the current timestamp at the point of sending.
      */
     public void setSetSenderTime(final boolean isSetSenderTime) {
@@ -157,7 +157,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
      * Gets whether to wait for the result of sending the message.
      * <p>
      * If this option has not been set, {@code true} is returned.
-     * 
+     *
      * @return {@code true} in order to wait for the delivery result.
      */
     public boolean isWaitForDeliveryResult() {
@@ -175,7 +175,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Gets the number of messages to send per sample run.
-     * 
+     *
      * @return number of messages.
      */
     public String getMessageCountPerSamplerRun() {
@@ -210,7 +210,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Sets the content type.
-     * 
+     *
      * @param contentType The MIME type of the payload.
      */
     public void setContentType(final String contentType) {
@@ -223,7 +223,7 @@ public class HonoSenderSampler extends HonoSampler implements ThreadListener {
 
     /**
      * Sets the payload data to send.
-     * 
+     *
      * @param data The payload data.
      */
     public void setData(final String data) {

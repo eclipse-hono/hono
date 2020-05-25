@@ -44,7 +44,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     public static final int DEFAULT_DTLS_RETRANSMISSION_TIMEOUT = 2000;
     /**
      * The default exchange lifetime in milliseconds.
-     * 
+     *
      * According <a href= "https://tools.ietf.org/html/rfc7252#page-30"> RFC 7252 - 4.8. Transmission Parameters</a> the
      * default value is 247 seconds. Such a large time requires also a huge amount of heap. That time includes a
      * processing time of 100s and retransmissions of CON messages. Therefore a practical value could be much smaller.
@@ -72,7 +72,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * a username into the auth-id and tenant.
      * <p>
      * The default value of this property is {@link #DEFAULT_ID_SPLIT_REGEX}.
-     * 
+     *
      * @return The regex.
      */
     public final String getIdSplitRegex() {
@@ -84,7 +84,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * a username into the auth-id and tenant.
      * <p>
      * The default value of this property is {@link #DEFAULT_ID_SPLIT_REGEX}.
-     * 
+     *
      * @param idSplitRegex The regex.
      * @throws NullPointerException if regex is {@code null}.
      */
@@ -96,7 +96,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Gets the absolute path to a properties file containing
      * network configuration properties that should be used for
      * all CoAP endpoints.
-     * 
+     *
      * @return The path.
      */
     public final String getNetworkConfig() {
@@ -107,7 +107,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Sets the absolute path to a properties file containing
      * network configuration properties that should be used for
      * all CoAP endpoints..
-     * 
+     *
      * @param path The path to the properties file.
      */
     public final void setNetworkConfig(final String path) {
@@ -122,7 +122,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The properties contained in this file will overwrite
      * properties of the same name read from the file indicated
      * by {@link #getNetworkConfig()}.
-     * 
+     *
      * @return The path.
      */
     public final String getSecureNetworkConfig() {
@@ -137,7 +137,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The properties contained in this file will overwrite
      * properties of the same name read from the file indicated
      * by {@link #getNetworkConfig()}.
-     * 
+     *
      * @param path The path.
      */
     public final void setSecureNetworkConfig(final String path) {
@@ -152,7 +152,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The properties contained in this file will overwrite
      * properties of the same name read from the file indicated
      * by {@link #getNetworkConfig()}.
-     * 
+     *
      * @return The path.
      */
     public final String getInsecureNetworkConfig() {
@@ -167,7 +167,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The properties contained in this file will overwrite
      * properties of the same name read from the file indicated
      * by {@link #getNetworkConfig()}.
-     * 
+     *
      * @param path The path.
      */
     public final void setInsecureNetworkConfig(final String path) {
@@ -181,7 +181,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * as well as inbound (receiving).
      * <p>
      * The default value of this property is {@value #DEFAULT_CONNECTOR_THREADS}.
-     * 
+     *
      * @return The number of threads.
      */
     public final int getConnectorThreads() {
@@ -195,7 +195,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * as well as inbound (receiving).
      * <p>
      * The default value of this property is {@value #DEFAULT_CONNECTOR_THREADS}.
-     * 
+     *
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
      */
@@ -211,7 +211,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * protocol layer.
      * <p>
      * The default value of this property is {@value #DEFAULT_COAP_THREADS}.
-     * 
+     *
      * @return The number of threads.
      */
     public final int getCoapThreads() {
@@ -223,7 +223,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * protocol layer.
      * <p>
      * The default value of this property is {@value #DEFAULT_COAP_THREADS}.
-     * 
+     *
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
      */
@@ -239,7 +239,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * connection layer.
      * <p>
      * The default value of this property is {@value #DEFAULT_DTLS_THREADS}.
-     * 
+     *
      * @return The number of threads.
      */
     public final int getDtlsThreads() {
@@ -251,7 +251,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * connection layer.
      * <p>
      * The default value of this property is {@value #DEFAULT_DTLS_THREADS}.
-     * 
+     *
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
      */
@@ -269,7 +269,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * The default value of this property is {@link #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT},
      * {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
-     * 
+     *
      * @return The timeout in milliseconds.
      */
     public final int getDtlsRetransmissionTimeout() {
@@ -283,7 +283,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * The default value of this property is {@link #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT},
      * {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
-     * 
+     *
      * @param dtlsRetransmissionTimeout timeout in milliseconds to retransmit a flight.
      * @throws IllegalArgumentException if dtlsRetransmissionTimeout is &lt; 1.
      */
@@ -301,7 +301,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * The default value of this property is {@link #DEFAULT_EXCHANGE_LIFETIME}, {@value #DEFAULT_EXCHANGE_LIFETIME}
      * milliseconds.
-     * 
+     *
      * @return The exchange lifetime in milliseconds.
      */
     public final int getExchangeLifetime() {
@@ -315,7 +315,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * The default value of this property is {@link #DEFAULT_EXCHANGE_LIFETIME}, {@value #DEFAULT_EXCHANGE_LIFETIME}
      * milliseconds.
-     * 
+     *
      * @param exchangeLifetime the exchange lifetime in milliseconds to keep the request for deduplication.
      * @throws IllegalArgumentException if exchangeLifetime is &lt; 1.
      */
@@ -332,7 +332,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * When messages are kept for deduplication, parts of the message could be offloaded to reduce the heap consumption.
      * <p>
      * The default value of this property is {@link #DEFAULT_MESSAGE_OFFLOADING}, {@value #DEFAULT_MESSAGE_OFFLOADING}.
-     * 
+     *
      * @return {@code true} enable message offloading, {@code false} disable message offloading.
      */
     public final boolean isMessageOffloadingEnabled() {
@@ -345,7 +345,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * When messages are kept for deduplication, parts of the message could be offloaded to reduce the heap consumption.
      * <p>
      * The default value of this property is {@link #DEFAULT_MESSAGE_OFFLOADING}, {@value #DEFAULT_MESSAGE_OFFLOADING}.
-     * 
+     *
      * @param messageOffloading {@code true} enable message offloading, {@code false} disable message offloading.
      */
     public final void setMessageOffloadingEnabled(final boolean messageOffloading) {

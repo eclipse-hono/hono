@@ -57,7 +57,7 @@ import io.vertx.proton.ProtonSender;
  * An abstract base class for implementing endpoints that implement a request response pattern.
  * <p>
  * It is used e.g. in the implementation of the device registration and the credentials API endpoints.
- * 
+ *
  * @param <T> The type of configuration properties this endpoint uses.
  */
 public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties> extends AbstractAmqpEndpoint<T> {
@@ -79,7 +79,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     /**
      * Gets the address on the vert.x event bus to which service invocation
      * requests should be sent.
-     * 
+     *
      * @return The address.
      */
     protected abstract String getEventBusServiceAddress();
@@ -87,7 +87,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
     /**
      * Creates the message to send to the service implementation
      * via the vert.x event bus in order to invoke an operation.
-     * 
+     *
      * @param requestMessage The AMQP message representing the service invocation request.
      * @param targetAddress The address the message is sent to.
      * @param clientPrincipal The principal representing the client identity and its authorities.
@@ -109,7 +109,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
     /**
      * Gets the object to use for making authorization decisions.
-     * 
+     *
      * @return The service.
      */
     public final AuthorizationService getAuthorizationService() {
@@ -120,7 +120,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * Sets the object to use for making authorization decisions.
      * <p>
      * If not set a {@link ClaimsBasedAuthorizationService} instance is used.
-     * 
+     *
      * @param authService The service.
      */
     @Autowired(required = false)
@@ -194,7 +194,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * operation} indicated by the message's <em>subject</em> or</li>
      * <li>its payload cannot be parsed</li>
      * </ul>
-     * 
+     *
      * @param con The connection with the client.
      * @param receiver The link over which the message has been received.
      * @param targetAddress The address the message is sent to.
@@ -311,13 +311,13 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
 
     /**
      * Checks if the client is authorized to execute a given operation.
-     * 
+     *
      * This method is invoked for every request message received from a client.
      * <p>
      * This default implementation simply delegates to {@link AuthorizationService#isAuthorized(HonoUser, ResourceIdentifier, String)}.
      * <p>
      * Subclasses may override this method in order to do more sophisticated checks.
-     * 
+     *
      * @param clientPrincipal The client.
      * @param resource The resource the message belongs to.
      * @param message The message for which the authorization shall be checked.
@@ -351,7 +351,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * <p>
      * This default implementation simply returns a succeeded future containing the
      * original response.
-     * 
+     *
      * @param clientPrincipal The client's identity and authorities.
      * @param response The response to send to the client.
      * @return A future indicating the outcome.
@@ -490,7 +490,7 @@ public abstract class RequestResponseEndpoint<T extends ServiceConfigProperties>
      * <p>
      * Subclasses should override this method if the service they provide an endpoint for
      * uses a different reply-to address format.
-     * 
+     *
      * @param replyToAddress The address to check.
      * @return {@code true} if the address is valid.
      */

@@ -247,7 +247,7 @@ public class AbstractServiceBaseTest {
 
     /**
      * Verifies that only TLSv1.2 is enabled by default.
-     * 
+     *
      */
     @Test
     public void testAddTlsKeyCertOptionsDisablesAllProtocolVersionsButTls12() {
@@ -269,7 +269,7 @@ public class AbstractServiceBaseTest {
 
     /**
      * Verifies that only the configured TLS protocols are enabled.
-     * 
+     *
      */
     @Test
     public void testAddTlsKeyCertOptionsDisablesTlsProtocolVersions() {

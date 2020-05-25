@@ -40,7 +40,7 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
 
     /**
      * Creates a new provider for a given configuration.
-     * 
+     *
      * @param credentialsClientFactory The factory to use for creating a Credentials service client.
      * @param config The configuration.
      * @param tracer The tracer instance.
@@ -63,7 +63,7 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * <p>
      * Any additional properties that might be present in the JSON object 
      * are copied into the client context of the returned credentials.
-     * 
+     *
      * @param authInfo The authentication information provided by the device.
      * @return The credentials or {@code null} if the authentication information
      *         does not contain a tenant ID and subject DN.

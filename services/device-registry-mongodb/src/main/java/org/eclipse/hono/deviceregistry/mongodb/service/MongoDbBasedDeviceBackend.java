@@ -48,7 +48,7 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
 
     /**
      * Creates a new instance.
-     * 
+     *
      * @param registrationService an implementation of registration service.
      * @param credentialsService an implementation of credentials service.
      */
@@ -224,7 +224,7 @@ public class MongoDbBasedDeviceBackend implements AutoProvisioningEnabledDeviceB
 
     /**
      * Creator for {@link ToStringHelper}.
-     * 
+     *
      * @return A new instance for this instance.
      */
     protected ToStringHelper toStringHelper() {

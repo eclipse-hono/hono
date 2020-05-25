@@ -69,7 +69,7 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
 
     /**
      * Creates a new factory using a specific authentication service instance.
-     * 
+     *
      * @param authService The object to return on invocations of {@link #create()}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */

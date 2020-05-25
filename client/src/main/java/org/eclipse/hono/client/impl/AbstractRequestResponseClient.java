@@ -65,7 +65,7 @@ import io.vertx.proton.ProtonSender;
  * <p>
  * Subclasses only need to implement some abstract helper methods (see the method descriptions) and their own
  * API specific methods. This allows for implementation classes that focus on the API specific code.
- * 
+ *
  * @param <R> The type of result this client expects the peer to return.
  *
  */
@@ -113,7 +113,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <p>
      * The client will be ready to use after invoking {@link #createLinks()} or
      * {@link #createLinks(Handler, Handler)} only.
-     * 
+     *
      * @param connection The connection to the service.
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
@@ -203,7 +203,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a request-response client for a sender and receiver link.
-     * 
+     *
      * @param connection The connection to the service.
      * @param tenantId The tenant that the client should be scoped to or {@code null} if the
      *                 client should not be scoped to a tenant.
@@ -224,7 +224,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Sets a cache for responses received from the service.
-     * 
+     *
      * @param cache The cache or {@code null} if no responses should be cached.
      */
     public final void setResponseCache(final ExpiringValueCache<Object, R> cache) {
@@ -265,7 +265,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * client to run out of memory.
      * <p>
      * The default value of this property is 200 milliseconds.
-     * 
+     *
      * @param timoutMillis The number of milliseconds after which a request is considered to have timed out.
      * @throws IllegalArgumentException if the value is &lt; 0
      */
@@ -367,7 +367,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates the sender and receiver links to the peer for sending requests
      * and receiving responses.
-     * 
+     *
      * @return A future indicating the outcome. The future will succeed if the links
      *         have been created.
      * @throws NullPointerException if con is {@code null}.
@@ -379,7 +379,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Creates the sender and receiver links to the peer for sending requests
      * and receiving responses.
-     * 
+     *
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.
      * @param receiverCloseHook A handler to invoke if the peer closes the receiver link unexpectedly.
      * @return A future indicating the outcome. The future will succeed if the links
@@ -423,7 +423,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * If the client has specified a cache key for the response when sending the request, then the
      * {@link #addToCache(Object, RequestResponseResult)} method is invoked
      * in order to add the response to the configured cache.
-     * 
+     *
      * @param delivery The handle for accessing the message's disposition.
      * @param message The response message.
      */
@@ -464,7 +464,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Cancels an outstanding request with a given result.
-     * 
+     *
      * @param correlationId The identifier of the request to cancel.
      * @param result The result to pass to the result handler registered for the correlation ID.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -543,7 +543,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <p>
      * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)} with {@code null} for the
      * properties parameter.
-     * 
+     *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param payload The payload to include in the request message as an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request.
@@ -565,7 +565,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <p>
      * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, String, Handler, Object, Span)} with
      * {@code null} for the properties, content type and cache key parameters.
-     * 
+     *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param payload The payload to include in the request message as an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request.
@@ -589,7 +589,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <p>
      * This method simply invokes {@link #createAndSendRequest(String, Map, Buffer, Handler)}
      * with {@code null} for the properties parameter.
-     * 
+     *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param payload The payload to include in the request message as a an AMQP Value section.
      * @param resultHandler The handler to notify about the outcome of the request.
@@ -610,7 +610,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <p>
      * This method uses the {@link #getDefaultMessageTargetAddress()} method to determine the value of the message's
      * <em>to</em> property.
-     * 
+     *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
      * @param payload The payload to include in the request message as a an AMQP Value section.
@@ -675,7 +675,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * This method first checks if the sender has any credit left. If not, the result handler is failed immediately.
      * Otherwise, the request message is sent and a timer is started which fails the result handler,
      * if no response is received within <em>requestTimeout</em> milliseconds.
-     * 
+     *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param properties The headers to include in the request message as AMQP application properties.
      * @param payload The payload to include in the request message as a an AMQP Value section.
@@ -766,7 +766,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <p>
      * In case of an error the {@code Tags.HTTP_STATUS} tag of the span is set accordingly.
      * However, the span is never finished by this method.
-     * 
+     *
      * @param action The operation that the request is supposed to trigger/invoke.
      * @param address The address to send the message to.
      * @param properties The headers to include in the request message as AMQP application properties.
@@ -814,7 +814,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * if no response is received within <em>requestTimeoutMillis</em> milliseconds.
      * <p>
      * The given span is never finished by this method.
-     * 
+     *
      * @param request The message to send.
      * @param resultHandler The handler to notify about the outcome of the request.
      * @param cacheKey The key to use for caching the response (if the service allows caching).
@@ -929,7 +929,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Checks if this client's sender and receiver links are open.
-     * 
+     *
      * @return {@code true} if a request can be sent to and a response can be received
      * from the peer.
      */
@@ -951,7 +951,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Checks if this client supports caching of results.
-     * 
+     *
      * @return {@code true} if caching is supported.
      */
     protected final boolean isCachingEnabled() {
@@ -1014,7 +1014,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * <li>else if the response contains a <em>no-cache</em> directive, the response
      * is not put to the cache.</li>
      * </ol>
-     * 
+     *
      * @param key The key to use for the response.
      * @param response The response to cache.
      * @throws NullPointerException if response is {@code null}.
@@ -1058,7 +1058,7 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
     /**
      * Checks if an AMQP message contains the result of the successful invocation
      * of an operation.
-     * 
+     *
      * @param status The status code from the message.
      * @param contentType A media type describing the payload or {@code null} if unknown.
      * @param payload The payload from the response (may be {@code null}).

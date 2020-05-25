@@ -337,7 +337,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * This method returns {@code null} by default.
      * <p>
      * Subclasses may override this method in order to return an appropriate handler.
-     * 
+     *
      * @return The handler or {@code null}.
      */
     protected TenantTraceSamplingHandler getTenantTraceSamplingHandler() {
@@ -862,7 +862,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * a response could be sent.
      * <p>
      * The handler will close the message consumer and increment the metric for expired TTDs.
-     * 
+     *
      * @param ctx The context to retrieve cookies and the HTTP response from.
      * @param messageConsumer The message consumer to receive a command. If {@code null}, no handler is added.
      * @param tenantId The tenant that the device belongs to.

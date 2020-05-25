@@ -44,7 +44,7 @@ public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
      * by a Kura gateway is a <em>control</em> message.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONTROL_PREFIX}.
-     * 
+     *
      * @return The prefix.
      */
     public final String getControlPrefix() {
@@ -56,7 +56,7 @@ public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
      * by a Kura gateway is a <em>control</em> message.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONTROL_PREFIX}.
-     * 
+     *
      * @param prefix The prefix to set.
      */
     public final void setControlPrefix(final String prefix) {
@@ -68,7 +68,7 @@ public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
      * forwarded downstream.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONTENT_TYPE_KURA_CONTROL_MSG}.
-     * 
+     *
      * @return The content type.
      */
     public final String getCtrlMsgContentType() {
@@ -80,7 +80,7 @@ public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
      * forwarded downstream.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONTENT_TYPE_KURA_CONTROL_MSG}.
-     * 
+     *
      * @param contentType The content type to set.
      */
     public final void setCtrlMsgContentType(final String contentType) {
@@ -92,7 +92,7 @@ public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
      * forwarded downstream.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONTENT_TYPE_KURA_DATA_MSG}.
-     * 
+     *
      * @return The content type.
      */
     public final String getDataMsgContentType() {
@@ -104,7 +104,7 @@ public class KuraAdapterProperties extends MqttProtocolAdapterProperties {
      * forwarded downstream.
      * <p>
      * The default value of this property is {@link #DEFAULT_CONTENT_TYPE_KURA_DATA_MSG}.
-     * 
+     *
      * @param contentType The content type to set.
      */
     public final void setDataMsgContentType(final String contentType) {

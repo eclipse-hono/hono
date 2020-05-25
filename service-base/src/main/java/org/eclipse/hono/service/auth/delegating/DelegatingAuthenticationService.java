@@ -84,7 +84,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
 
     /**
      * Sets the factory to use for connecting to the authentication server.
-     * 
+     *
      * @param connectionFactory The factory.
      * @throws NullPointerException if the factory is {@code null}.
      */
@@ -106,7 +106,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
      * can be resolved via DNS.
      * <p>
      * If no DNS resolver is available, then no check will be registered.
-     * 
+     *
      * @param readinessHandler The health check handler to register the checks with.
      */
     @Override

@@ -103,7 +103,7 @@ public interface TenantService {
      * client's certificate can be used to determine the tenant that the device belongs to.
      * <p>
      * This default implementation simply returns the result of {@link #get(X500Principal)}.
-     * 
+     *
      * @param subjectDn The <em>subject DN</em> of the trusted CA certificate
      *                  that has been configured for the tenant.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!

@@ -51,7 +51,7 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantRe
 
     /**
      * Creates a new client for a connection.
-     * 
+     *
      * @param connection The connection to the Tenant service.
      * @param clientConfig The configuration properties for the connection to the
      *                     Tenant service.
@@ -90,7 +90,7 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantRe
     /**
      * Sends a request for retrieving tenant information using arbitrary
      * search criteria.
-     * 
+     *
      * @param searchCriteria The search criteria.
      * @return A future indicating the outcome of the operation.
      */
@@ -101,7 +101,7 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseClient<TenantRe
     /**
      * Sends a request for retrieving tenant information using arbitrary
      * search criteria.
-     * 
+     *
      * @param operation The name of the operation to invoke.
      * @param searchCriteria The search criteria.
      * @return A future indicating the outcome of the operation.

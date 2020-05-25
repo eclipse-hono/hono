@@ -52,7 +52,7 @@ public interface ConnectionFactory {
 
     /**
      * Gets the name of the role that the server plays from the client's perspective.
-     * 
+     *
      * @return The name or {@code null} if not set.
      */
     default String getServerRole() {

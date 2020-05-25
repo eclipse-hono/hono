@@ -42,7 +42,7 @@ public class GenericMessageSenderImpl extends AbstractHonoClient implements Mess
 
     /**
      * Creates a sender.
-     * 
+     *
      * @param con The connection to the Hono server.
      * @param sender The sender link to send messages over.
      */
@@ -56,7 +56,7 @@ public class GenericMessageSenderImpl extends AbstractHonoClient implements Mess
 
     /**
      * Creates a new sender for sending messages.
-     * 
+     *
      * @param con The connection to the peer.
      * @param targetAddress The target address of the sender.
      * @param closeHook The handler to invoke when the Hono server closes the sender. The sender's
@@ -147,7 +147,7 @@ public class GenericMessageSenderImpl extends AbstractHonoClient implements Mess
     /**
      * Sends an AMQP 1.0 message to the peer this client is configured for
      * and waits for the outcome of the transfer.
-     * 
+     *
      * @param message The message to send.
      * @return A future indicating the outcome of transferring the message.
      *         <p>

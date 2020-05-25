@@ -43,7 +43,7 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationS
 
     /**
      * Creates a new endpoint for a Vertx instance.
-     * 
+     *
      * @param vertx The Vertx instance.
      */
     @Autowired
@@ -88,7 +88,7 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<AuthenticationS
      * <p>
      * This implementation does nothing.
      * </p>
-     * 
+     *
      * @param connection The connection which got closed.
      */
     @Override

@@ -35,7 +35,7 @@ public class MessageAnnotationsInjectAdapter implements TextMap {
 
     /**
      * Creates an adapter for a message.
-     * 
+     *
      * @param message The message.
      * @param propertiesMapName The name of the annotation of type map that contains the properties.
      * @throws NullPointerException if any of the parameters are {@code null}.

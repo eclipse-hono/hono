@@ -61,7 +61,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * Sets the service to use for checking existence of tenants.
      * <p>
      * If not set, tenant existence will not be verified.
-     * 
+     *
      * @param tenantInformationService The tenant information service.
      * @throws NullPointerException if service is {@code null};
      */
@@ -314,7 +314,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * The returned JSON object may contain the {@link RegistrationConstants#FIELD_VIA} property of the device's
      * registration information and may also contain <em>default</em> values registered for the device under key
      * {@link RegistrationConstants#FIELD_PAYLOAD_DEFAULTS}.
-     * 
+     *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to create the assertion token for.
      * @param registrationInfo The device registration information.

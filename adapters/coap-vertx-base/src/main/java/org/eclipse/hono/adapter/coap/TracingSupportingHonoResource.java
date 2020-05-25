@@ -55,7 +55,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
 
     /**
      * Creates a new resource that supports tracing of request processing.
-     * 
+     *
      * @param tracer The OpenTracing tracer.
      * @param resourceName The resource name.
      * @param adapterName The name of the protocol adapter that this resource is exposed on.
@@ -131,7 +131,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * <p>
      * This default implementation sends a response back to the client
      * with response code {@link ResponseCode#NOT_IMPLEMENTED}.
-     * 
+     *
      * @param exchange The CoAP exchange to process.
      * @param currentSpan The OpenTracing span used to track the processing of the request.
      * @return A future indicating the outcome of processing the request.
@@ -148,7 +148,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * <p>
      * This default implementation sends a response back to the client
      * with response code {@link ResponseCode#NOT_IMPLEMENTED}.
-     * 
+     *
      * @param exchange The CoAP exchange to process.
      * @param currentSpan The OpenTracing span used to track the processing of the request.
      * @return A future indicating the outcome of processing the request.

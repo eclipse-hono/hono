@@ -48,7 +48,7 @@ public class DataVolume {
 
     /**
      * Sets the point in time on which the data volume limit came into effect.
-     * 
+     *
      * @param effectiveSince the point in time on which the data volume limit came into effect
      *                       and it comply to the {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME}.
      * @return  a reference to this for fluent use.

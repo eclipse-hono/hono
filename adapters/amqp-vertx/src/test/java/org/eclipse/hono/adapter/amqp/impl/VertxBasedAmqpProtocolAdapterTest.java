@@ -204,7 +204,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that a client provided Proton server instance is used and started by the adapter instead of
      * creating/starting a new one.
-     * 
+     *
      * @param ctx The test context to use for running asynchronous tests.
      */
     @SuppressWarnings("unchecked")
@@ -281,7 +281,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that a request to upload a pre-settled telemetry message results
      * in the downstream sender not waiting for the consumer's acknowledgment.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -369,7 +369,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that a request to upload an "unsettled" telemetry message from a device that belongs to a tenant for which the AMQP
      * adapter is disabled fails and that the device is notified when the message cannot be processed.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -415,7 +415,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
     /**
      * Verifies that a request from a gateway to upload an event on behalf of a device that belongs
      * to another tenant than the gateway fails.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -927,7 +927,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
      * Verifies that a telemetry message is rejected due to the limit exceeded.
-     * 
+     *
      * @param ctx The test context to use for running asynchronous tests.
      */
     @Test
@@ -1280,7 +1280,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
      * Gets an AMQP adapter configured to use a given server.
-     * 
+     *
      * @return The AMQP adapter instance.
      */
     private VertxBasedAmqpProtocolAdapter givenAnAmqpAdapter() {
@@ -1290,7 +1290,7 @@ public class VertxBasedAmqpProtocolAdapterTest {
 
     /**
      * Creates a protocol adapter for a given AMQP Proton server.
-     * 
+     *
      * @param server The AMQP Proton server.
      * @return The AMQP adapter instance.
      */

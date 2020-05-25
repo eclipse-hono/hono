@@ -27,7 +27,7 @@ public interface IntegrationTestApplicationClientFactory extends ApplicationClie
 
     /**
      * Creates a new factory for a connection.
-     * 
+     *
      * @param connection The connection to Hono.
      * @return the factory.
      */
@@ -39,7 +39,7 @@ public interface IntegrationTestApplicationClientFactory extends ApplicationClie
      * Creates a new sender on this client's connection and context.
      * <p>
      * Note that this method returns a newly created sender on each invocation.
-     * 
+     *
      * @param targetAddress The target address to create the sender for.
      * @return The sender.
      */

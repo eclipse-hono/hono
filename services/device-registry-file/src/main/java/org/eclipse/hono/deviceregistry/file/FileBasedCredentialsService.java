@@ -93,7 +93,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
 
     /**
      * Creates a new service instance.
-     * 
+     *
      * @param vertx The vert.x instance to run on.
      * @throws NullPointerException if vertx is {@code null}.
      */

@@ -70,7 +70,7 @@ public class ConnectionFactoryImplTest {
 
     /**
      * Verifies that the given result handler is invoked if a connection attempt fails.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

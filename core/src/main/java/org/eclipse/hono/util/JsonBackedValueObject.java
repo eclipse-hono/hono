@@ -37,7 +37,7 @@ abstract class JsonBackedValueObject {
      * Gets a map of this tenant's properties that should be included
      * in serialization to JSON in addition to the explicitly annotated
      * properties.
-     * 
+     *
      * @return The properties.
      */
     @JsonAnyGetter
@@ -47,7 +47,7 @@ abstract class JsonBackedValueObject {
 
     /**
      * Gets a property value.
-     * 
+     *
      * @param name The property name.
      * @param clazz The target type.
      * @param <T> The type of the property.
@@ -60,7 +60,7 @@ abstract class JsonBackedValueObject {
 
     /**
      * Gets a property value.
-     * 
+     *
      * @param name The property name.
      * @param defaultValue A default value to return if the property is {@code null}.
      * @param <T> The type of the property.
@@ -74,7 +74,7 @@ abstract class JsonBackedValueObject {
 
     /**
      * Gets a property value.
-     * 
+     *
      * @param parent The JSON to get the property value from.
      * @param name The property name.
      * @param clazz The target type.
@@ -88,7 +88,7 @@ abstract class JsonBackedValueObject {
 
     /**
      * Gets a property value.
-     * 
+     *
      * @param parent The JSON to get the property value from.
      * @param name The property name.
      * @param defaultValue A default value to return if the property is {@code null} or is of an unexpected type.

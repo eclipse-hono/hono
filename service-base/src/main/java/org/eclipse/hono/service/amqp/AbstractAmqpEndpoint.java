@@ -32,7 +32,7 @@ import io.vertx.proton.ProtonSender;
 
 /**
  * Base class for AMQP based Hono endpoints.
- * 
+ *
  * @param <T> The type of configuration properties this endpoint understands.
  */
 public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implements AmqpEndpoint {
@@ -44,7 +44,7 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
 
     /**
      * Creates an endpoint for a Vertx instance.
-     * 
+     *
      * @param vertx The Vertx instance to use.
      * @throws NullPointerException if vertx is {@code null};
      */
@@ -54,7 +54,7 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
 
     /**
      * Sets configuration properties.
-     * 
+     *
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */

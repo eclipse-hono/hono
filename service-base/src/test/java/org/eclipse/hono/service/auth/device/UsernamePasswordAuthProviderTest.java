@@ -95,7 +95,7 @@ public class UsernamePasswordAuthProviderTest {
     /**
      * Verifies that the provider fails to authenticate a device when not
      * running on a vert.x Context.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -110,7 +110,7 @@ public class UsernamePasswordAuthProviderTest {
     /**
      * Verifies that the provider succeeds to validate matching credentials when
      * running on a vert.x Context.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -131,7 +131,7 @@ public class UsernamePasswordAuthProviderTest {
 
     /**
      * Verifies that the provider fails to validate wrong credentials.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -153,7 +153,7 @@ public class UsernamePasswordAuthProviderTest {
     /**
      * Verifies that credentials validation fails if none of the secrets on record are
      * valid any more.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -174,7 +174,7 @@ public class UsernamePasswordAuthProviderTest {
     /**
      * Verifies that credentials validation fails if none of the secrets on record are
      * valid yet.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

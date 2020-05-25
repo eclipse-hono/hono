@@ -23,7 +23,7 @@ public class ServerErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a server error code.
-     * 
+     *
      * @param errorCode The code representing the error that occurred.
      * @throws IllegalArgumentException if the code is not &ge; 500 and &lt; 600.
      */
@@ -33,7 +33,7 @@ public class ServerErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a server error code and a detail message.
-     * 
+     *
      * @param errorCode The code representing the error that occurred.
      * @param msg The detail message.
      * @throws IllegalArgumentException if the code is not &ge; 500 and &lt; 600.
@@ -44,7 +44,7 @@ public class ServerErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a server error code and a root cause.
-     * 
+     *
      * @param errorCode The code representing the error that occurred.
      * @param cause The root cause.
      * @throws IllegalArgumentException if the code is not &ge; 500 and &lt; 600.
@@ -55,7 +55,7 @@ public class ServerErrorException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for a server error code, a detail message and a root cause.
-     * 
+     *
      * @param errorCode The code representing the error that occurred.
      * @param msg The detail message.
      * @param cause The root cause.

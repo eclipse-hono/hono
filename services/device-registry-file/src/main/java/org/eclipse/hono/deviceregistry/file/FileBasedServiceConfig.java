@@ -62,7 +62,7 @@ public class FileBasedServiceConfig {
 
     /**
      * Creates an instance of the file based service for managing tenant information.
-     * 
+     *
      * @param vertx The vert.x instance to run on.
      * @return The service.
      */
@@ -107,7 +107,7 @@ public class FileBasedServiceConfig {
     /**
      * Creates an instance of the file based service for managing device registration information
      * and credentials.
-     * 
+     *
      * @param vertx The vert.x instance to run on.
      * @return The service.
      */
@@ -147,7 +147,7 @@ public class FileBasedServiceConfig {
     /**
      * Creates a new server for exposing the HTTP based Device Registry Management API
      * endpoints.
-     * 
+     *
      * @return The server.
      */
     @Bean

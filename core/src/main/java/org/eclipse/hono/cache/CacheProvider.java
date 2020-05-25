@@ -22,13 +22,13 @@ public interface CacheProvider {
      * Gets a new instance of a cache by name.
      * <p>
      * It is up to the provider how the cache instance is created, or it creates a new or returns an existing one.
-     * 
+     *
      * @param cacheName the name of the cache to get. Must not be {@code null}.
      * @param <K> The type of keys that the cache supports.
      * @param <V> The type of values that the cache supports.
-     * 
+     *
      * @return The new cache instance, may be {@code null} if no cache with that name can be provided.
-     * 
+     *
      * @throws NullPointerException if the cache name is {@code null}.
      */
     <K, V> ExpiringValueCache<K, V> getCache(String cacheName);

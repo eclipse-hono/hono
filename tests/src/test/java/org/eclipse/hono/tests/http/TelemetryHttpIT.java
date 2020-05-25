@@ -59,7 +59,7 @@ public class TelemetryHttpIT extends HttpTestBase {
     /**
      * Verifies that a number of telemetry messages uploaded to Hono's HTTP adapter
      * using QoS 1 can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */

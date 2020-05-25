@@ -52,7 +52,7 @@ public class HonoClientImplIT {
     /**
      * Verifies that a connection attempt where no credentials are given fails after two retries with a
      * ClientErrorException with status code 401.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -78,7 +78,7 @@ public class HonoClientImplIT {
     /**
      * Verifies that a connection attempt where the TLS handshake cannot be finished successfully fails after two
      * retries with a ClientErrorException with status code 400.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

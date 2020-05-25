@@ -94,7 +94,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Creates a new client for a host and port.
-     * 
+     *
      * @param vertx The vert.x instance to use.
      * @param host The host to invoke the operations on.
      * @param port The port that the service is bound to.
@@ -176,7 +176,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #getTenant(String, int)} with {@link HttpURLConnection#HTTP_OK} as the expected
      * status code.
-     * 
+     *
      * @param tenantId The tenant to get information for.
      * @return A future indicating the outcome of the operation. The future will contain the response payload if the
      *         request succeeded. Otherwise the future will fail with a {@link ServiceInvocationException}.
@@ -187,7 +187,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Gets configuration information for a tenant.
-     * 
+     *
      * @param tenantId The tenant to get information for.
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will contain the response payload if the
@@ -202,7 +202,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Updates configuration information for a tenant.
-     * 
+     *
      * @param tenantId The tenant to update information for.
      * @param requestPayload The payload to set, as specified by the Tenant management API.
      * @param expectedStatusCode The status code indicating a successful outcome.
@@ -222,7 +222,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #removeTenant(String, int)} with {@link HttpURLConnection#HTTP_NO_CONTENT} as
      * the expected status code.
-     * 
+     *
      * @param tenantId The tenant to remove.
      * @return A future indicating the outcome of the operation. The future will succeed if the tenant has been removed.
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
@@ -234,7 +234,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Removes configuration information for a tenant.
-     * 
+     *
      * @param tenantId The tenant to remove.
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will succeed if the response contained the
@@ -255,7 +255,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #registerDevice(String, String, Device)} with an empty JSON object as
      * additional data.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @return A future indicating the outcome of the operation. The future will succeed if the registration information
@@ -273,7 +273,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #registerDevice(String, String, Device, int)} with
      * {@link HttpURLConnection#HTTP_CREATED} as the expected status code.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param device Additional properties to register with the device.
@@ -292,7 +292,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #registerDevice(String, String, Device, String, int)} with
      * <em>application/json</em> as the content type.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param data Additional properties to register with the device.
@@ -310,7 +310,7 @@ public final class DeviceRegistryHttpClient {
      * Adds registration information for a device.
      * <p>
      * The device will be enabled by default if not specified otherwise in the additional data.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param device Additional properties to register with the device.
@@ -343,7 +343,7 @@ public final class DeviceRegistryHttpClient {
      * This method simply invokes {@link #updateDevice(String, String, JsonObject, String, int)} with
      * <em>application/json</em> as the content type and {@link HttpURLConnection#HTTP_NO_CONTENT} as the expected
      * status code.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param data Additional properties to register with the device.
@@ -357,7 +357,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Updates registration information for a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param data Additional properties to register with the device.
@@ -381,7 +381,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Gets registration information for a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @return A future indicating the outcome of the operation. The future will contain the response payload if the
@@ -397,7 +397,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Removes registration information for a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @return A future indicating the outcome of the operation. The future will succeed if the registration information
@@ -418,7 +418,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #addCredentials(String, String, Collection, int)} with
      * {@link HttpURLConnection#HTTP_CREATED} as the expected status code.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device credentials belongs to.
      * @param secrets The secrets to add.
@@ -437,7 +437,7 @@ public final class DeviceRegistryHttpClient {
      * This method simply invokes {@link #addCredentials(String, String, Collection, String, int)} with
      * <em>application/json</em> as the content type and {@link HttpURLConnection#HTTP_CREATED} as the expected status
      * code.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device credentials belongs to.
      * @param secrets The secrets to add.
@@ -453,7 +453,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Add credentials for a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device credentials belongs to.
      * @param secrets The secrets to add.
@@ -495,7 +495,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Gets all credentials registered for a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @return A future indicating the outcome of the operation. The future will contain the response payload if the
@@ -511,7 +511,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Gets credentials of a specific type for a device.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param authId The authentication identifier of the device.
      * @param type The type of credentials to retrieve.
@@ -534,7 +534,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #updateCredentials(String, String, Collection, int)} with
      * {@link HttpURLConnection#HTTP_NO_CONTENT} as the expected status code.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param credentialsSpec The JSON object to be sent in the request body.
@@ -634,7 +634,7 @@ public final class DeviceRegistryHttpClient {
 
     /**
      * Execute an update credentials request, with raw payload.
-     * 
+     *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param payload The raw payload.
@@ -664,7 +664,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * This method simply invokes {@link #addDeviceForTenant(String, Tenant, String, Device, String)} with no extra
      * data.
-     * 
+     *
      * @param tenantId The ID of the tenant to create.
      * @param tenant The tenant payload as specified by the Tenant management API.
      * @param deviceId The identifier of the device to add to the tenant.
@@ -682,7 +682,7 @@ public final class DeviceRegistryHttpClient {
      * Creates a tenant and adds a device to it with a given password.
      * <p>
      * The password will be added as a hashed password using the device identifier as the authentication identifier.
-     * 
+     *
      * @param tenantId The ID of the tenant to create.
      * @param tenant The tenant payload as specified by the Tenant management API.
      * @param deviceId The identifier of the device to add.
@@ -712,7 +712,7 @@ public final class DeviceRegistryHttpClient {
      * Adds a device with a given password to an existing tenant.
      * <p>
      * The password will be added as a hashed password using the device identifier as the authentication identifier.
-     * 
+     *
      * @param tenantId The identifier of the tenant to add the device to.
      * @param deviceId The identifier of the device to add.
      * @param password The password to use for the device's credentials.
@@ -731,7 +731,7 @@ public final class DeviceRegistryHttpClient {
      * Adds a device with a given password to an existing tenant.
      * <p>
      * The password will be added as a hashed password using the device identifier as the authentication identifier.
-     * 
+     *
      * @param tenantId The identifier of the tenant to add the device to.
      * @param deviceId The identifier of the device to add.
      * @param data The data to register for the device.
@@ -761,7 +761,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * The device will be registered with a set of <em>x509-cert</em> credentials using the client certificate's subject
      * DN as authentication identifier.
-     * 
+     *
      * @param tenantId The identifier of the tenant to add the secret to.
      * @param tenant The tenant payload as specified by the Tenant management API.
      * @param deviceId The identifier of the device to add to the tenant.
@@ -796,7 +796,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * The device will be registered with a set of <em>psk</em> credentials using the device identifier as the
      * authentication identifier and PSK identity.
-     * 
+     *
      * @param tenantId The identifier of the tenant to add the secret to.
      * @param tenant The tenant payload as specified by the Tenant management API.
      * @param deviceId The identifier of the device to add to the tenant.
@@ -814,7 +814,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * The device will be registered with a set of <em>psk</em> credentials using the device identifier as the
      * authentication identifier and PSK identity.
-     * 
+     *
      * @param tenantId The identifier of the tenant to add the secret to.
      * @param tenant The tenant payload as specified by the Tenant management API.
      * @param deviceId The identifier of the device to add to the tenant.
@@ -853,7 +853,7 @@ public final class DeviceRegistryHttpClient {
      * <p>
      * The key will be added as a <em>psk</em> secret using the device identifier as the authentication identifier and
      * PSK identity.
-     * 
+     *
      * @param tenantId The identifier of the tenant to add the device to.
      * @param deviceId The identifier of the device to add.
      * @param key The shared key.

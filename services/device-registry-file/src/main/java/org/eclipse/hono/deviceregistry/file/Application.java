@@ -92,7 +92,7 @@ public class Application extends AbstractBaseApplication {
 
     /**
      * Registers the health checks set using {@link #setHealthCheckProviders(List)}.
-     * 
+     *
      * @return A succeeded future.
      */
     @Override
@@ -104,7 +104,7 @@ public class Application extends AbstractBaseApplication {
 
     /**
      * Starts the example Device Registry.
-     * 
+     *
      * @param args command line arguments to pass to the server.
      */
     public static void main(final String[] args) {

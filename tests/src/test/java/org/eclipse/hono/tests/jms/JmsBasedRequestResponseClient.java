@@ -104,7 +104,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates the AMQP links for sending and receiving messages to/from the server.
-     * 
+     *
      * @throws JMSException if the links cannot be established.
      */
     protected void createLinks() throws JMSException {
@@ -132,7 +132,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates an empty message for binary payload.
-     * 
+     *
      * @return The message.
      * @throws JMSException if the message could not be created.
      */
@@ -142,7 +142,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a message for JSON payload.
-     * 
+     *
      * @param payload The payload of the message.
      * @return The message.
      * @throws JMSException if the message could not be created.
@@ -154,7 +154,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Creates a message for binary payload.
-     * 
+     *
      * @param payload The payload of the message or {@code null} if an empty message should be created.
      * @return The message.
      * @throws JMSException if the message could not be created.
@@ -165,7 +165,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Sends a request JMS message.
-     * 
+     *
      * @param message The request message to send.
      * @return A future indicating the outcome of the operation.
      */
@@ -307,7 +307,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
     }
 
     /**
-     * 
+     *
      * @param status The status code from the response message.
      * @param payload The payload from the response message's body.
      * @param cacheDirective The cache-directive or {@code null} if the response
@@ -366,7 +366,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Gets the cache directive from a response message.
-     * 
+     *
      * @param message The message.
      * @return The directive or {@code null} if the message does not contain the corresponding property.
      */
@@ -378,7 +378,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Gets the status code indicating the outcome of an operation from a response message.
-     * 
+     *
      * @param message The message.
      * @return The status code or {@code 500} if the message does not contain the corresponding property.
      */
@@ -392,7 +392,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Gets a String valued property from a JMS message.
-     * 
+     *
      * @param message The message.
      * @param name The property name.
      * @return The property value or {@code null} if the message does not contain the corresponding property.
@@ -407,7 +407,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Gets the correlation ID from a response message.
-     * 
+     *
      * @param message The message.
      * @return The ID or {@code null} if the message does not contain the corresponding property.
      */
@@ -421,7 +421,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Gets the message ID from a JMS message.
-     * 
+     *
      * @param message The message.
      * @return The ID or {@code null} if the message does not contain the corresponding property.
      */
@@ -435,7 +435,7 @@ public abstract class JmsBasedRequestResponseClient<R extends RequestResponseRes
 
     /**
      * Converts an exception to a Hono specific {@code ServiceInvocationException}.
-     * 
+     *
      * @param cause The exception to convert.
      * @return The Hono specific exception.
      */

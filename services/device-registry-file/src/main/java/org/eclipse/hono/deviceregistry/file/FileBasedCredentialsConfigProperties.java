@@ -46,7 +46,7 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
      * password hashes.
      * <p>
      * The default value of this property is 10.
-     * 
+     *
      * @return The maximum number.
      */
     public int getMaxBcryptIterations() {
@@ -58,7 +58,7 @@ public final class FileBasedCredentialsConfigProperties extends AbstractFileBase
      * password hashes.
      * <p>
      * The default value of this property is 10.
-     * 
+     *
      * @param iterations The maximum number.
      * @throws IllegalArgumentException if iterations is &lt; 4 or &gt; 31.
      */

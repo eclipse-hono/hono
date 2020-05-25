@@ -49,7 +49,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Creates a new SigFox adapter instance.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_SIGFOX_PROTOCOL_ADAPTER)

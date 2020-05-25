@@ -33,7 +33,7 @@ public class ServerOptionsPanel extends VerticalPanel {
     /**
      * Creates a new panel for configuring options required to
      * connect to an AMQP server.
-     * 
+     *
      * @param title The title of the panel.
      */
     public ServerOptionsPanel(final String title) {
@@ -52,7 +52,7 @@ public class ServerOptionsPanel extends VerticalPanel {
 
     /**
      * Sets the host to use.
-     * 
+     *
      * @param hostname The hostname to use.
      */
     public void setHost(final String hostname) {
@@ -65,7 +65,7 @@ public class ServerOptionsPanel extends VerticalPanel {
 
     /**
      * Sets the port to use.
-     * 
+     *
      * @param port The port to use.
      */
     public void setPort(final String port) {
@@ -78,7 +78,7 @@ public class ServerOptionsPanel extends VerticalPanel {
 
     /**
      * Sets the user to use.
-     * 
+     *
      * @param username The user name to use.
      */
     public void setUser(final String username) {
@@ -91,7 +91,7 @@ public class ServerOptionsPanel extends VerticalPanel {
 
     /**
      * Sets the password to use.
-     * 
+     *
      * @param pwd The password to use.
      */
     public void setPwd(final String pwd) {
@@ -104,7 +104,7 @@ public class ServerOptionsPanel extends VerticalPanel {
 
     /**
      * Sets the path of the trust store.
-     * 
+     *
      * @param path The path to the trust store.
      */
     public void setTrustStorePath(final String path) {

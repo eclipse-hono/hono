@@ -94,7 +94,7 @@ public class TenantAmqpIT extends TenantApiTests {
 
     /**
      * Prints the test name.
-     * 
+     *
      * @param testInfo The test info.
      */
     @BeforeEach

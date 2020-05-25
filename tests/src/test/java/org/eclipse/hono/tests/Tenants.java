@@ -59,11 +59,11 @@ public final class Tenants {
 
     /**
      * Create a new tenant, based on a trust anchor.
-     * 
+     *
      * @param subjectDn The subject DN of the trust anchor.
      * @param publicKey The public key for the anchor.
      * @param algorithm The public key algorithm.
-     * 
+     *
      * @return The new tenant. Never returns {@code null}.
      */
     public static Tenant createTenantForTrustAnchor(final String subjectDn, final byte[] publicKey, final String algorithm) {
@@ -77,13 +77,13 @@ public final class Tenants {
 
     /**
      * Create a new tenant, based on a trust anchor.
-     * 
+     *
      * @param subjectDn The subject DN of the trust anchor.
      * @param publicKey The public key for the anchor.
      * @param algorithm The public key algorithm.
      * @param notBefore The earliest instant that the trust anchor may be used.
      * @param notAfter The latest instant that the trust anchor may be used.
-     * 
+     *
      * @return The new tenant. Never returns {@code null}.
      * @throws NullPointerException if any of the arguments other than algorithm are {@code null}.
      */

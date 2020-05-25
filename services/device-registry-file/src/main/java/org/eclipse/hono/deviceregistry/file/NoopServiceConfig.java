@@ -35,7 +35,7 @@ public class NoopServiceConfig {
 
     /**
      * Creates an instance of the dummy service for managing tenant information.
-     * 
+     *
      * @return The service.
      */
     @Bean
@@ -45,7 +45,7 @@ public class NoopServiceConfig {
 
     /**
      * Creates an instance of the dummy service for managing device registration information.
-     * 
+     *
      * @return The service.
      */
     @Bean
@@ -55,7 +55,7 @@ public class NoopServiceConfig {
 
     /**
      * Creates an instance of the dummy service for managing device credentials.
-     * 
+     *
      * @return The service.
      */
     @Bean

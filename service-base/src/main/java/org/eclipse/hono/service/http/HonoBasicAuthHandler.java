@@ -39,7 +39,7 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
 
     /**
      * Creates a new handler for an auth provider and a realm name.
-     * 
+     *
      * @param authProvider The provider to use for validating credentials.
      * @param realm The realm name.
      * @param tracer The tracer to use.
@@ -53,7 +53,7 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl {
      * Fails the context with the error code determined from an exception.
      * <p>
      * This method invokes {@link AuthHandlerTools#processException(RoutingContext, Throwable, String)}.
-     * 
+     *
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.
      */

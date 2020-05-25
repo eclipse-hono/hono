@@ -30,7 +30,7 @@ public class MapBasedExecutionContext implements ExecutionContext {
 
     /**
      * Creates an empty execution context.
-     * 
+     *
      * @return The new context.
      */
     public static ExecutionContext empty() {
@@ -39,7 +39,7 @@ public class MapBasedExecutionContext implements ExecutionContext {
 
     /**
      * Creates an execution context for given set of properties.
-     * 
+     *
      * @param props The properties to add to the new context.
      * @return The new context.
      */
@@ -80,7 +80,7 @@ public class MapBasedExecutionContext implements ExecutionContext {
 
     /**
      * Gets the properties stored in this context.
-     * 
+     *
      * @return An unmodifiable view on this context's properties.
      */
     public final Map<String, Object> asMap() {

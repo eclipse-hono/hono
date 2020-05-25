@@ -40,7 +40,7 @@ public final class TenantDto extends BaseDto {
 
     /**
      * Creates a tenant DTO from tenant id, a version, an updated timestamp and a {@link Tenant}.
-     * 
+     *
      * @param tenantId The tenant id.
      * @param tenant The tenant.
      * @param version The version of tenant to be sent as request header.

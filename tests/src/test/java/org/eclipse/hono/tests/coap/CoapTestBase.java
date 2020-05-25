@@ -133,7 +133,7 @@ public abstract class CoapTestBase {
 
     /**
      * Sets up clients.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
@@ -145,7 +145,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates the endpoint configuration variants for Command &amp; Control scenarios.
-     * 
+     *
      * @return The configurations.
      */
     static Stream<CoapCommandEndpointConfiguration> commandAndControlVariants() {
@@ -158,7 +158,7 @@ public abstract class CoapTestBase {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param testInfo The test meta data.
      * @throws UnknownHostException if the CoAP adapter's host name cannot be resolved.
      */
@@ -179,7 +179,7 @@ public abstract class CoapTestBase {
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @AfterEach
@@ -190,7 +190,7 @@ public abstract class CoapTestBase {
 
     /**
      * Closes the AMQP 1.0 Messaging Network client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterAll
@@ -202,7 +202,7 @@ public abstract class CoapTestBase {
     /**
      * Creates the client to use for uploading data to the insecure endpoint
      * of the CoAP adapter.
-     * 
+     *
      * @return The client.
      */
     protected CoapClient getCoapClient() {
@@ -212,7 +212,7 @@ public abstract class CoapTestBase {
     /**
      * Creates the client to use for uploading data to the secure endpoint
      * of the CoAP adapter.
-     * 
+     *
      * @param deviceId The device to add a shared secret for.
      * @param tenant The tenant that the device belongs to.
      * @param sharedSecret The secret shared with the CoAP server.
@@ -227,7 +227,7 @@ public abstract class CoapTestBase {
     /**
      * Creates the client to use for uploading data to the secure endpoint
      * of the CoAP adapter.
-     * 
+     *
      * @param pskStoreToUse The store to retrieve shared secrets from.
      * @return The client.
      */
@@ -255,7 +255,7 @@ public abstract class CoapTestBase {
     /**
      * Gets the name of the resource that unauthenticated devices
      * or gateways should use for uploading data.
-     * 
+     *
      * @param tenant The tenant.
      * @param deviceId The device ID.
      * @return The resource name.
@@ -265,14 +265,14 @@ public abstract class CoapTestBase {
     /**
      * Gets the name of the resource that authenticated devices
      * should use for uploading data.
-     * 
+     *
      * @return The resource name.
      */
     protected abstract String getPostResource();
 
     /**
      * Gets the CoAP message type to use for requests to the adapter.
-     * 
+     *
      * @return The type.
      */
     protected abstract Type getMessageType();
@@ -281,7 +281,7 @@ public abstract class CoapTestBase {
      * Triggers the establishment of a downstream sender
      * for a tenant so that subsequent messages will be
      * more likely to be forwarded.
-     * 
+     *
      * @param client The CoAP client to use for sending the request.
      * @param request The request to send.
      * @return A succeeded future.
@@ -311,7 +311,7 @@ public abstract class CoapTestBase {
 
     /**
      * Asserts the status code of a failed CoAP request.
-     * 
+     *
      * @param ctx The test context to verify the status for.
      * @param expectedStatus The expected status.
      * @param t The exception to verify.
@@ -326,7 +326,7 @@ public abstract class CoapTestBase {
     /**
      * Verifies that a number of messages uploaded to Hono's CoAP adapter
      * can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -354,7 +354,7 @@ public abstract class CoapTestBase {
     /**
      * Verifies that a number of messages uploaded to Hono's CoAP adapter using TLS_PSK based authentication can be
      * successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -383,7 +383,7 @@ public abstract class CoapTestBase {
     /**
      * Verifies that a number of messages uploaded to the CoAP adapter via a gateway
      * using TLS_PSK can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -537,7 +537,7 @@ public abstract class CoapTestBase {
     /**
      * Verifies that the adapter fails to authenticate a device if the shared key registered
      * for the device does not match the key used by the device in the DTLS handshake.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -679,7 +679,7 @@ public abstract class CoapTestBase {
     /**
      * Verifies that the CoAP adapter delivers a command to a device and accepts
      * the corresponding response from the device.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -927,7 +927,7 @@ public abstract class CoapTestBase {
      * <p>
      * This default implementation does nothing. Subclasses should override this method to implement
      * reasonable checks.
-     * 
+     *
      * @param ctx The test context.
      * @param msg The message to perform checks on.
      */
@@ -940,7 +940,7 @@ public abstract class CoapTestBase {
      * <p>
      * This default implementation always returns a succeeded future.
      * Subclasses should override this method to implement reasonable checks.
-     * 
+     *
      * @param responseOptions The CoAP options from the response.
      * @return A future indicating the outcome of the checks.
      */
@@ -950,7 +950,7 @@ public abstract class CoapTestBase {
 
     /**
      * Gets a handler for CoAP responses.
-     * 
+     *
      * @param responseHandler The handler to invoke with the outcome of the request. the handler will be invoked with a
      *            succeeded result if the response contains a 2.04 (Changed) code. Otherwise it will be invoked with a
      *            result that is failed with a {@link CoapResultException}.
@@ -962,7 +962,7 @@ public abstract class CoapTestBase {
 
     /**
      * Gets a handler for CoAP responses.
-     * 
+     *
      * @param responseHandler The handler to invoke with the outcome of the request. the handler will be invoked with a
      *            succeeded result if the response contains the expected code. Otherwise it will be invoked with a
      *            result that is failed with a {@link CoapResultException}.
@@ -995,7 +995,7 @@ public abstract class CoapTestBase {
     /**
      * Sends some (optional) messages before uploading the batch of
      * real test messages.
-     * 
+     *
      * @param client The CoAP client to use for sending the messages.
      * @return A succeeded future upon completion.
      */
@@ -1012,7 +1012,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a URI for a resource that uses the <em>coap</em> scheme.
-     * 
+     *
      * @param resource The resource path.
      * @return The URI.
      */
@@ -1023,7 +1023,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a URI for a resource that uses the <em>coaps</em> scheme.
-     * 
+     *
      * @param resource The resource path.
      * @return The URI.
      */
@@ -1055,7 +1055,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a CoAP request using the <em>coap</em> scheme.
-     * 
+     *
      * @param code The CoAP request code.
      * @param resource the resource path.
      * @param msgNo The message number.
@@ -1071,7 +1071,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a CoAP request using the <em>coap</em> scheme.
-     * 
+     *
      * @param code The CoAP request code.
      * @param type The message type.
      * @param resource the resource path.
@@ -1092,7 +1092,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a CoAP request using the <em>coaps</em> scheme.
-     * 
+     *
      * @param code The CoAP request code.
      * @param resource the resource path.
      * @param msgNo The message number.
@@ -1108,7 +1108,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a CoAP request using the <em>coaps</em> scheme.
-     * 
+     *
      * @param endpointConfig The endpoint configuration.
      * @param requestDeviceId The identifier of the device to publish data for.
      * @param msgNo The message number.
@@ -1127,7 +1127,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a CoAP request using the <em>coaps</em> scheme.
-     * 
+     *
      * @param code The CoAP request code.
      * @param type The message type.
      * @param resource the resource path.
@@ -1146,7 +1146,7 @@ public abstract class CoapTestBase {
 
     /**
      * Creates a CoAP request using the <em>coaps</em> scheme.
-     * 
+     *
      * @param code The CoAP request code.
      * @param type The message type.
      * @param resource the resource path.

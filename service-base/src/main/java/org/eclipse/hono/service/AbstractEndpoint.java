@@ -49,7 +49,7 @@ public abstract class AbstractEndpoint implements Endpoint {
 
     /**
      * Creates an endpoint for a Vertx instance.
-     * 
+     *
      * @param vertx The Vertx instance to use.
      * @throws NullPointerException if vertx is {@code null};
      */
@@ -84,7 +84,7 @@ public abstract class AbstractEndpoint implements Endpoint {
      * during startup.
      * <p>
      * This implementation always completes the start future.
-     * 
+     *
      * @param startPromise Completes if startup succeeded.
      */
     protected void doStart(final Promise<Void> startPromise) {
@@ -103,7 +103,7 @@ public abstract class AbstractEndpoint implements Endpoint {
      * during shutdown.
      * <p>
      * This implementation always completes the stop future.
-     * 
+     *
      * @param stopPromise Completes if shutdown succeeded.
      */
     protected void doStop(final Promise<Void> stopPromise) {

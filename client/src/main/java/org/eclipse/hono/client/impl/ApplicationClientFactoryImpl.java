@@ -44,7 +44,7 @@ public class ApplicationClientFactoryImpl extends AbstractHonoClientFactory impl
 
     /**
      * Creates a new factory for an existing connection.
-     * 
+     *
      * @param connection The connection to use.
      */
     public ApplicationClientFactoryImpl(final HonoConnection connection) {

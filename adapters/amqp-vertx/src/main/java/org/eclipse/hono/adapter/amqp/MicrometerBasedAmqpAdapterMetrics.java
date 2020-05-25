@@ -28,10 +28,10 @@ public class MicrometerBasedAmqpAdapterMetrics extends MicrometerBasedMetrics im
 
     /**
      * Create a new metrics instance for the AMQP adapter.
-     * 
+     *
      * @param registry The meter registry to use.
      * @param vertx The Vert.x instance to use.
-     * 
+     *
      * @throws NullPointerException if either parameter is {@code null}.
      */
     @Autowired

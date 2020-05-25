@@ -50,7 +50,7 @@ public final class HonoProtonHelper {
      * <p>
      * The resources maintained for the link will be freed up after the given handler has
      * been invoked.
-     * 
+     *
      * @param <T> The type of link.
      * @param link The link to set the handler on.
      * @param handler The handler to invoke.
@@ -82,7 +82,7 @@ public final class HonoProtonHelper {
      * <p>
      * The resources maintained for the link will be freed up after the given handler has
      * been invoked.
-     * 
+     *
      * @param <T> The type of link.
      * @param link The link to set the handler on.
      * @param handler The handler to invoke.
@@ -115,7 +115,7 @@ public final class HonoProtonHelper {
      * The default handler sends a <em>detach</em> frame if the link has not been closed
      * locally already and then frees up the resources maintained for the link by invoking
      * its <em>free</em> method.
-     * 
+     *
      * @param <T> The type of link.
      * @param link The link to set the handler on.
      * @throws NullPointerException if link is {@code null}.
@@ -138,7 +138,7 @@ public final class HonoProtonHelper {
      * <p>
      * The default handler sends an <em>end</em> frame and then frees up the resources
      * maintained for the session by invoking its <em>free</em> method.
-     * 
+     *
      * @param session The session to set the handler on.
      * @throws NullPointerException if session is {@code null}.
      */
@@ -152,7 +152,7 @@ public final class HonoProtonHelper {
 
     /**
      * Checks if a link is established.
-     * 
+     *
      * @param link The link to check.
      * @return {@code true} if the link has been established.
      */
@@ -168,7 +168,7 @@ public final class HonoProtonHelper {
 
     /**
      * Executes some code on a given context.
-     * 
+     *
      * @param <T> The type of the result that the code produces.
      * @param requiredContext The context to run the code on.
      * @param codeToRun The code to execute. The code is required to either complete or

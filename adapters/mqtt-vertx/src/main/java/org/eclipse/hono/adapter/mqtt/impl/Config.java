@@ -41,7 +41,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Creates a new MQTT protocol adapter instance.
-     * 
+     *
      * @return The new instance.
      */
     @Bean(name = BEAN_NAME_VERTX_BASED_MQTT_PROTOCOL_ADAPTER)
@@ -93,7 +93,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Exposes the MQTT adapter's configuration properties as a Spring bean.
-     * 
+     *
      * @return The configuration properties.
      */
     @Bean
@@ -104,7 +104,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Customizer for meter registry.
-     * 
+     *
      * @return The new meter registry customizer.
      */
     @Bean
@@ -115,7 +115,7 @@ public class Config extends AbstractAdapterConfig {
 
     /**
      * Exposes a factory for creating MQTT adapter instances.
-     * 
+     *
      * @return The factory bean.
      */
     @Bean

@@ -67,7 +67,7 @@ public class EventConsumerImplTest {
     /**
      * Verifies that the message delivery for a received event is forwarded to the
      * registered event consumer.
-     * 
+     *
      * @param ctx The test context.
      */
     @Test

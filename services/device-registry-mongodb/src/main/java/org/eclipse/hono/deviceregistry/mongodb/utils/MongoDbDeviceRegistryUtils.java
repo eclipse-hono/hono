@@ -84,7 +84,7 @@ public final class MongoDbDeviceRegistryUtils {
 
     /**
      * Maps the given error to an {@link OperationResult} containing the appropriate HTTP status code.
-     * 
+     *
      * @param error The error.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *             implementation should log (error) events on this span and it may set tags and use this span as the

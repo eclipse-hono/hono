@@ -89,7 +89,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     /**
      * Sets the factory to use for creating tokens asserting a client's identity and authorities.
-     * 
+     *
      * @param tokenFactory The factory.
      * @throws NullPointerException if factory is {@code null}.
      */
@@ -122,7 +122,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     /**
      * Loads permissions from <em>permissionsPath</em>.
-     * 
+     *
      * @throws IOException if the permissions cannot be read.
      * @throws IllegalStateException if no permissions resource path is set.
      */

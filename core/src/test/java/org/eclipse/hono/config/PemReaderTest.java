@@ -35,7 +35,7 @@ public class PemReaderTest {
 
     /**
      * Verifies that the reader can read a PKCS8 encoded certificate.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -52,7 +52,7 @@ public class PemReaderTest {
 
     /**
      * Verifies that the reader can read a PKCS8 encoded private key.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -66,7 +66,7 @@ public class PemReaderTest {
 
     /**
      * Verifies that the reader can read a PKCS1 encoded private key.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -80,7 +80,7 @@ public class PemReaderTest {
 
     /**
      * Verifies that the reader can read a PKCS1 encoded public key.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -94,7 +94,7 @@ public class PemReaderTest {
 
     /**
      * Verifies that the reader ignores non resolvable paths.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -105,7 +105,7 @@ public class PemReaderTest {
 
     /**
      * Bogus payload in the middle.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -115,7 +115,7 @@ public class PemReaderTest {
 
     /**
      * Missing END statement.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -125,7 +125,7 @@ public class PemReaderTest {
 
     /**
      * Only end END statement.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -135,7 +135,7 @@ public class PemReaderTest {
 
     /**
      * Duplicate BEGIN.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test
@@ -145,7 +145,7 @@ public class PemReaderTest {
 
     /**
      * Missing BEGIN.
-     * 
+     *
      * @throws IOException if the test fails.
      */
     @Test

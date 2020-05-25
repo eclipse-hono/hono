@@ -47,7 +47,7 @@ public class AbstractApplication extends AbstractBaseApplication {
      * Adds the factories to use for creating service instances to
      * deploy the Vert.x container during startup.
      * <p>
-     * 
+     *
      * @param factories The service factories.
      * @throws NullPointerException if factories is {@code null}.
      */
@@ -65,7 +65,7 @@ public class AbstractApplication extends AbstractBaseApplication {
      * verticles.
      * <p>
      * This default implementation simply returns a succeeded future.
-     * 
+     *
      * @param maxInstances The number of service verticle instances to deploy.
      * @return A future indicating success. Application start-up fails if the returned future fails.
      */
@@ -75,7 +75,7 @@ public class AbstractApplication extends AbstractBaseApplication {
 
     /**
      * Deploys the service instances.
-     * 
+     *
      * @param maxInstances The number of instances to deploy.
      * @return A future indicating the outcome of the operation. The future will
      *         be succeeded if the service instances have been deployed successfully.
@@ -107,7 +107,7 @@ public class AbstractApplication extends AbstractBaseApplication {
      * Invoked before a service instance object gets deployed to vert.x.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param serviceInstance The instance.
      */
     protected void preDeploy(final AbstractServiceBase<?> serviceInstance) {
@@ -118,7 +118,7 @@ public class AbstractApplication extends AbstractBaseApplication {
      * Invoked after a service instance object has been deployed successfully to vert.x.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param serviceInstance The instance.
      */
     protected void postDeploy(final AbstractServiceBase<?> serviceInstance) {

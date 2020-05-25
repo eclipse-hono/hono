@@ -66,7 +66,7 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
 
     /**
      * Logs the name of the current test.
-     * 
+     *
      * @param info The test meta data.
      */
     @BeforeEach

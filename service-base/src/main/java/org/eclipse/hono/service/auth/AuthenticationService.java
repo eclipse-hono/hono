@@ -60,7 +60,7 @@ public interface AuthenticationService {
      * authenticationResultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "unauthorized")));
      * </pre>
      * In the case of a server error, a {@code ServerErrorException} with a corresponding status code should be used.
-     * 
+     *
      * @param authRequest The authentication information provided by the client in the SASL exchange.
      * @param authenticationResultHandler The handler to invoke with the authentication result. If authentication succeeds,
      *                                    the result contains the authenticated user. Otherwise the failed result

@@ -47,7 +47,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Creates a new context for a published message.
-     * 
+     *
      * @param publishedMessage The MQTT message to process.
      * @param deviceEndpoint The endpoint representing the device
      *                       that has published the message.
@@ -63,7 +63,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Creates a new context for a published message.
-     * 
+     *
      * @param publishedMessage The published MQTT message.
      * @param deviceEndpoint The endpoint representing the device
      *                       that has published the message.
@@ -100,7 +100,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Creates a new context for a connection attempt.
-     * 
+     *
      * @param endpoint The endpoint representing the client's connection attempt.
      * @return The context.
      * @throws NullPointerException if endpoint is {@code null}.
@@ -113,7 +113,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Gets the MQTT message to process.
-     * 
+     *
      * @return The message.
      */
     public MqttPublishMessage message() {
@@ -123,7 +123,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     /**
      * Gets the MQTT endpoint over which the message has been
      * received.
-     * 
+     *
      * @return The endpoint.
      */
     public MqttEndpoint deviceEndpoint() {
@@ -133,7 +133,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     /**
      * Gets the identity of the authenticated device
      * that has published the message.
-     * 
+     *
      * @return The identity or {@code null} if the device has not
      *         been authenticated.
      */
@@ -143,7 +143,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Gets the content type of the message payload.
-     * 
+     *
      * @return The type or {@code null} if the content type is unknown.
      */
     public String contentType() {
@@ -152,7 +152,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Sets the content type of the message payload.
-     * 
+     *
      * @param contentType The type or {@code null} if the content type is unknown.
      */
     public void setContentType(final String contentType) {
@@ -161,7 +161,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Gets the topic that the message has been published to.
-     * 
+     *
      * @return The topic or {@code null} if the topic could not be
      *         parsed into a resource identifier.
      */
@@ -172,7 +172,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     /**
      * Gets the tenant that the device belongs to that published
      * the message.
-     * 
+     *
      * @return The tenant identifier or {@code null} if the device is
      *         not authenticated and the message's topic does not contain
      *         a tenant identifier.
@@ -191,7 +191,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     /**
      * Gets the property bag object from the <em>property-bag</em>
      * set in the message's topic.
-     * 
+     *
      * @return The property bag object or {@code null} if
      *         there is no property bag set in the topic.
      */
@@ -204,7 +204,7 @@ public final class MqttContext extends MapBasedExecutionContext {
      * <p>
      * The name is determined from the endpoint path segment of the
      * topic that the message has been published to.
-     * 
+     *
      * @return The endpoint or {@code null} if the message does not
      *         contain a topic.
      */
@@ -214,7 +214,7 @@ public final class MqttContext extends MapBasedExecutionContext {
 
     /**
      * Checks if the message has been published using QoS 1.
-     * 
+     *
      * @return {@code true} if the message has been published using QoS 1.
      */
     public boolean isAtLeastOnce() {
@@ -238,7 +238,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     /**
      * Sets the object to use for measuring the time it takes to
      * process this request.
-     * 
+     *
      * @param timer The timer.
      */
     public void setTimer(final Sample timer) {
@@ -248,7 +248,7 @@ public final class MqttContext extends MapBasedExecutionContext {
     /**
      * Gets the object used for measuring the time it takes to
      * process this request.
-     * 
+     *
      * @return The timer or {@code null} if not set.
      */
     public Sample getTimer() {

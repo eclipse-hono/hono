@@ -77,7 +77,7 @@ public class DownstreamSenderFactoryImplTest {
     /**
      * Verifies that a concurrent request to create a sender fails the given future for tracking the attempt if the
      * initial request doesn't complete.
-     * 
+     *
      * @param ctx The helper to use for running async tests.
      */
     @Test

@@ -74,7 +74,7 @@ public abstract class AmqpAdapterTestBase {
     /**
      * Create a HTTP client for accessing the device registry (for registering devices and credentials) and
      * an AMQP 1.0 client for consuming messages from the messaging network.
-     * 
+     *
      * @param ctx The Vert.x test context.
      */
     @BeforeAll
@@ -94,7 +94,7 @@ public abstract class AmqpAdapterTestBase {
 
     /**
      * Shut down the client connected to the messaging network.
-     * 
+     *
      * @param ctx The Vert.x test context.
      */
     @AfterAll
@@ -109,7 +109,7 @@ public abstract class AmqpAdapterTestBase {
 
     /**
      * Creates a sender based on the connection to the AMQP adapter.
-     * 
+     *
      * @param target The target address to create the sender for or {@code null}
      *               if an anonymous sender should be created.
      * @return A future succeeding with the created sender.
@@ -151,8 +151,8 @@ public abstract class AmqpAdapterTestBase {
 
     /**
      * Connects to the AMQP protocol adapter using a username and password.
-     * 
-     * 
+     *
+     *
      * @param username The username to use for authentication.
      * @param password The password to use for authentication.
      * @return A succeeded future containing the established connection.
@@ -176,7 +176,7 @@ public abstract class AmqpAdapterTestBase {
 
     /**
      * Connects to the AMQP protocol adapter using a client certificate.
-     * 
+     *
      * @param clientCertificate The certificate to use for authentication.
      * @return A succeeded future containing the established connection.
      */

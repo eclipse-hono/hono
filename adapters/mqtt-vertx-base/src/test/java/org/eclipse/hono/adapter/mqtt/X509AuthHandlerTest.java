@@ -70,7 +70,7 @@ public class X509AuthHandlerTest {
     /**
      * Verifies that the handler includes the MQTT client identifier in the authentication
      * information retrieved from a device's CONNECT packet.
-     * 
+     *
      * @param ctx The vert.x test context.
      * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
      */
@@ -110,7 +110,7 @@ public class X509AuthHandlerTest {
     /**
      * Verifies that the handler returns the status code conveyed in a
      * failed Tenant service invocation in the response.
-     * 
+     *
      * @param ctx The vert.x test context.
      * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
      */

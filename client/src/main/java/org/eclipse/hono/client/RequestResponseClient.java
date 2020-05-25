@@ -45,7 +45,7 @@ public interface RequestResponseClient extends CreditBasedSender {
      * When setting this property to 0, requests do not time out at all. Note that this will
      * allow for unanswered requests piling up in the client, which eventually may cause the
      * client to run out of memory.
-     * 
+     *
      * @param timoutMillis The number of milliseconds after which a request is considered to have timed out.
      * @throws IllegalArgumentException if the value is &lt; 0
      */

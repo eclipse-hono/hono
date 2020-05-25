@@ -38,7 +38,7 @@ public abstract class AbstractCredentialsService implements CredentialsService {
      * Sets the service to use for checking existence of tenants.
      * <p>
      * If not set, tenant existence will not be verified.
-     * 
+     *
      * @param tenantInformationService The tenant information service.
      * @throws NullPointerException if service is {@code null};
      */

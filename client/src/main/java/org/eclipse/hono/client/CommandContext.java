@@ -62,7 +62,7 @@ public class CommandContext extends MapBasedExecutionContext {
 
     /**
      * Creates a context for a command.
-     * 
+     *
      * @param command The command to be processed.
      * @param delivery The delivery corresponding to the message.
      * @param currentSpan The OpenTracing span to use for tracking the processing of the command.
@@ -82,7 +82,7 @@ public class CommandContext extends MapBasedExecutionContext {
 
     /**
      * Gets the command to process.
-     * 
+     *
      * @return The command.
      */
     public Command getCommand() {
@@ -100,7 +100,7 @@ public class CommandContext extends MapBasedExecutionContext {
 
     /**
      * Gets the OpenTracing span to use for tracking the processing of the command.
-     * 
+     *
      * @return The span.
      */
     public Span getCurrentSpan() {
@@ -154,7 +154,7 @@ public class CommandContext extends MapBasedExecutionContext {
      * <p>
      * This method also finishes the OpenTracing span returned by
      * {@link #getCurrentSpan()}.
-     * 
+     *
      * @param errorCondition The error condition to send in the disposition frame (may be {@code null}).
      */
     public void reject(final ErrorCondition errorCondition) {

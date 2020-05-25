@@ -23,7 +23,7 @@ public interface ExecutionContext {
 
     /**
      * Gets the value for a key.
-     * 
+     *
      * @param <T> The type of the value.
      * @param key The key to get the value for.
      * @return The value or {@code null} if the key is unknown.
@@ -32,7 +32,7 @@ public interface ExecutionContext {
 
     /**
      * Gets the value for a key.
-     * 
+     *
      * @param <T> The type of the value.
      * @param key The key to get the value for.
      * @param defaultValue The value to return if the key is unknown.
@@ -42,7 +42,7 @@ public interface ExecutionContext {
 
     /**
      * Sets a value for a key.
-     * 
+     *
      * @param key The key.
      * @param value The value.
      */
@@ -51,7 +51,7 @@ public interface ExecutionContext {
     /**
      * Sets the <em>OpenTracing</em> context to use for
      * tracking the processing of this context.
-     * 
+     *
      * @param context The context.
      */
     void setTracingContext(SpanContext context);
@@ -59,7 +59,7 @@ public interface ExecutionContext {
     /**
      * Gets the <em>OpenTracing</em> context that is used to
      * track the processing of this context.
-     * 
+     *
      * @return The context or {@code null} if no tracing context is set.
      */
     SpanContext getTracingContext();

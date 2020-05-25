@@ -52,7 +52,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * Sets the maximum size of a message payload this server accepts from clients.
      * <p>
      * The default value of this property is 2048 (bytes).
-     * 
+     *
      * @param bytes The maximum number of bytes.
      * @throws IllegalArgumentException if bytes is &lt; 128.
      */
@@ -163,7 +163,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * when the client opens a sender link to this service.
      * <p>
      * The default value of this property is {@link #DEFAULT_RECEIVER_LINK_CREDITS}.
-     * 
+     *
      * @return The number of credits.
      */
     public final int getReceiverLinkCredit() {
@@ -223,7 +223,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * message on the vert.x event bus.
      * <p>
      * The default value of this property is {@link #DEFAULT_SEND_TIMEOUT_IN_MS}.
-     * 
+     *
      * @return The send timeout value in milliseconds.
      */
     public final long getSendTimeOut() {
@@ -235,7 +235,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * message on the vert.x event bus.
      * <p>
      * The default value of this property is {@link #DEFAULT_SEND_TIMEOUT_IN_MS}.
-     * 
+     *
      * @param sendTimeOutInMs The send timeout value in milliseconds.
      * @throws IllegalArgumentException if the timeout value is less than {@link #MIN_SEND_TIMEOUT_IN_MS}.
      */

@@ -52,7 +52,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * over the connection with a device.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_FRAME_SIZE_BYTES}.
-     * 
+     *
      * @return The frame size.
      */
     public final int getMaxFrameSize() {
@@ -64,7 +64,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * over the connection with a device.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_FRAME_SIZE_BYTES}.
-     * 
+     *
      * @param maxFrameSize The frame size.
      * @throws IllegalArgumentException if the frame size is less than 512 (minimum value
      *           defined by AMQP 1.0 spec).
@@ -82,7 +82,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * in the session.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_SESSION_FRAMES}.
-     * 
+     *
      * @return The number of frames.
      */
     public final int getMaxSessionFrames() {
@@ -95,7 +95,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * in the session.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_SESSION_FRAMES}.
-     * 
+     *
      * @param maxSessionFrames The number of frames.
      * @throws IllegalArgumentException if the number is less than 1.
      */
@@ -108,7 +108,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
 
     /**
      * Gets the maximum AMQP session window size.
-     * 
+     *
      * @return The product of maxFrameSize and maxSessionFrames.
      */
     public final int getMaxSessionWindowSize() {
@@ -120,7 +120,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * before the connection should be considered stale and thus be closed.
      * <p>
      * The default value of this property is {@link #DEFAULT_IDLE_TIMEOUT_MILLIS}.
-     * 
+     *
      * @param timeout The timeout in milliseconds. Setting this value to zero
      *                prevents the adapter from detecting and closing stale connections.
      * @throws IllegalArgumentException if timeout is negative.
@@ -137,7 +137,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * before the connection is considered stale and thus be closed.
      * <p>
      * The default value of this property is {@link #DEFAULT_IDLE_TIMEOUT_MILLIS}.
-     * 
+     *
      * @return The time interval in milliseconds.
      */
     public final int getIdleTimeout() {
@@ -149,7 +149,7 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
      * device is closed.
      * <p>
      * The default value of this property is {@link #DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT}.
-     * 
+     *
      * @return The wait time in milliseconds.
      */
     public long getSendMessageToDeviceTimeout() {
@@ -158,9 +158,9 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
 
     /**
      * Sets the time to wait for a delivery update from a device before the AMQP sender link is closed.
-     * 
+     *
      * @param sendMessageToDeviceTimeout The timeout value in milliseconds.
-     * 
+     *
      * @throws IllegalArgumentException if the timeout value is negative.
      */
     public final void setSendMessageToDeviceTimeout(final long sendMessageToDeviceTimeout) {

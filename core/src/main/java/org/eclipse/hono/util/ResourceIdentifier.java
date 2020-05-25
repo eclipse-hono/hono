@@ -115,7 +115,7 @@ public final class ResourceIdentifier {
 
     /**
      * Gets the element at a given index of the resource path.
-     * 
+     *
      * @param index The index (starting from zero).
      * @return The element at the index.
      * @throws ArrayIndexOutOfBoundsException if the resource path's length is shorter than the index.
@@ -126,7 +126,7 @@ public final class ResourceIdentifier {
 
     /**
      * Gets the number of elements in the resource path.
-     * 
+     *
      * @return The resource path length.
      */
     public int length() {
@@ -326,7 +326,7 @@ public final class ResourceIdentifier {
 
     /**
      * Checks if this resource identifier contains the event endpoint.
-     * 
+     *
      * @return {@code true} if this resource's endpoint is either
      *         {@link EventConstants#EVENT_ENDPOINT} or {@link EventConstants#EVENT_ENDPOINT_SHORT}.
      */

@@ -36,7 +36,7 @@ import io.vertx.ext.web.RoutingContext;
  * This class has been copied from the <a href="https://github.com/opentracing-contrib/java-vertx-web">
  * OpenTracing Vert.x Web Instrumentation</a> project.
  * It has been adapted to support Opentracing 0.33 and slightly adapted to Hono's code style guide.
- * 
+ *
  * @author Pavol Loffay
  */
 public class TracingHandler implements Handler<RoutingContext> {
@@ -50,7 +50,7 @@ public class TracingHandler implements Handler<RoutingContext> {
 
     /**
      * Creates a new handler for an OpenTracing Tracer.
-     * 
+     *
      * @param tracer The tracer to use for tracking the processing of HTTP requests.
      */
     public TracingHandler(final Tracer tracer) {
@@ -59,7 +59,7 @@ public class TracingHandler implements Handler<RoutingContext> {
 
     /**
      * Creates a new handler for an OpenTracing Tracer.
-     * 
+     *
      * @param tracer The tracer to use for tracking the processing of HTTP requests.
      * @param decorators The decorators to invoke before and after each HTTP request
      *                   gets processed.
@@ -80,7 +80,7 @@ public class TracingHandler implements Handler<RoutingContext> {
 
     /**
      * Handles an HTTP request.
-     * 
+     *
      * @param routingContext The routing context for the request.
      */
     protected void handlerNormal(final RoutingContext routingContext) {
@@ -117,7 +117,7 @@ public class TracingHandler implements Handler<RoutingContext> {
 
     /**
      * Handles a failed HTTP request.
-     * 
+     *
      * @param routingContext The routing context for the request.
      */
     protected void handlerFailure(final RoutingContext routingContext) {

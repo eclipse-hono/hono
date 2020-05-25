@@ -107,7 +107,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
     /**
      * Gets the disconnect handler which will be invoked on loss of
      * connection.
-     * 
+     *
      * @return The handler.
      */
     public Handler<ProtonConnection> getDisconnectHandler() {
@@ -117,7 +117,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
     /**
      * Gets the handler which will be invoked when the peer closes
      * the connection.
-     * 
+     *
      * @return The handler.
      */
     public Handler<AsyncResult<ProtonConnection>> getCloseHandler() {
@@ -127,7 +127,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
     /**
      * Sets the number of connection attempts that this factory should fail
      * before succeeding.
-     * 
+     *
      * @param attempts The number of attempts.
      * @return This factory for command chaining.
      * @see #awaitFailure()
@@ -139,7 +139,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
 
     /**
      * Sets the number of successful invocations of the connect method that this factory should expect.
-     * 
+     *
      * @param attempts The number of attempts.
      * @return This factory for command chaining.
      * @see #await()
@@ -151,7 +151,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
 
     /**
      * Sets the root cause that this factory should fail connection attempts with.
-     * 
+     *
      * @param cause The root cause.
      * @return This factory for command chaining.
      */
@@ -163,7 +163,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
     /**
      * Waits for the expected number of succeeding connection attempts to
      * occur.
-     * 
+     *
      * @return {@code true} if the expected number of attempts have succeeded.
      */
     public boolean await() {
@@ -179,7 +179,7 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
     /**
      * Waits for the expected number of failing connection attempts to
      * occur.
-     *  
+     *
      * @return {@code true} if the expected number of attempts have failed.
      */
     public boolean awaitFailure() {

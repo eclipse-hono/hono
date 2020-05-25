@@ -81,7 +81,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * <p>
      * This default implementation does nothing. Subclasses should override this method to implement
      * reasonable checks.
-     * 
+     *
      * @param ctx The test context.
      * @param msg The message to perform checks on.
      */
@@ -100,14 +100,14 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
     /**
      * Gets the endpoint name.
-     * 
+     *
      * @return The name of the endpoint.
      */
     protected abstract String getEndpointName();
 
     /**
      * Logs a message before running a test case.
-     * 
+     *
      * @param testInfo Meta information about the test being run.
      */
     @BeforeEach
@@ -118,7 +118,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     /**
      * Disconnect the AMQP 1.0 client connected to the AMQP Adapter and close senders and consumers.
      * Also delete all random tenants and devices generated during the execution of a test case.
-     * 
+     *
      * @param context The Vert.x test context.
      */
     @AfterEach
@@ -130,7 +130,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     /**
      * Verifies that a message containing a payload which has the <em>emtpy notification</em>
      * content type is rejected by the adapter.
-     * 
+     *
      * @param context The Vert.x context for running asynchronous tests.
      * @throws InterruptedException if test is interrupted while running.
      */
@@ -174,7 +174,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
     /**
      * Verifies that the AMQP Adapter rejects (closes) AMQP links that contain a target address.
-     * 
+     *
      * @param context The Vert.x test context.
      */
     @Test
@@ -328,7 +328,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
     /**
      * Upload a number of messages to Hono's Telemetry/Event APIs.
-     * 
+     *
      * @param messageSending The Vert.x test context to use for tracking the messages being received.
      * @param receiverFactory The factory to use for creating the receiver for consuming
      *                        messages from the messaging network.
@@ -414,7 +414,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param tenantId The tenant to register with the device registry.
      * @param deviceId The device to add to the tenant identified by tenantId.
      * @param disableTenant If true, disable the protocol adapter for the tenant.
-     * 
+     *
      * @return A future succeeding with the created sender.
      */
     private Future<ProtonSender> setupProtocolAdapter(

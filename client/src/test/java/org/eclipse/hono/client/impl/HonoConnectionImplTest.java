@@ -109,7 +109,7 @@ public class HonoConnectionImplTest {
     /**
      * Verifies that the client tries to connect a limited
      * number of times only.
-     * 
+     *
      * @param ctx The vert.x test client.
      */
     @Test
@@ -201,7 +201,7 @@ public class HonoConnectionImplTest {
 
     /**
      * Verifies that the client tries to re-establish a lost connection to a server.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -235,7 +235,7 @@ public class HonoConnectionImplTest {
 
     /**
      * Verifies that the client repeatedly tries to connect until a connection is established.
-     * 
+     *
      * @param ctx The test context.
      */
     @Test
@@ -264,7 +264,7 @@ public class HonoConnectionImplTest {
     /**
      * Verifies that the client tries to re-connect to a server instance if the
      * connection is closed by the peer.
-     * 
+     *
      * @param ctx The test context.
      *
      */
@@ -299,7 +299,7 @@ public class HonoConnectionImplTest {
 
     /**
      * Verifies that it fails to connect after client was shutdown.
-     * 
+     *
      * @param ctx The test context.
      *
      */
@@ -469,7 +469,7 @@ public class HonoConnectionImplTest {
 
     /**
      * Verifies that the client does not try to re-connect to a server instance if the client was shutdown.
-     * 
+     *
      * @param ctx The test context.
      *
      */
@@ -578,7 +578,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a receiver fails with a
      * {@code ServiceInvocationException} if the remote peer refuses
      * to open the link with an error condition.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -593,7 +593,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a receiver fails with a
      * {@code ClientErrorException} if the remote peer refuses
      * to open the link without an error condition.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -652,7 +652,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a receiver fails with a
      * {@code ServerErrorException} if the remote peer doesn't
      * send its attach frame in time.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -727,7 +727,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a sender fails with a
      * {@code ServiceInvocationException} if the remote peer refuses
      * to open the link with an error condition.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -745,7 +745,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a sender fails with a
      * {@code ClientErrorException} if the remote peer refuses
      * to open the link without an error condition.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -800,7 +800,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a sender fails with a
      * {@code ServerErrorException} if the remote peer doesn't
      * send its attach frame in time.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -830,7 +830,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a sender for a {@code null} target address
      * fails with a {@code ServerErrorException} if the remote peer doesn't
      * support the anonymous terminus.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -860,7 +860,7 @@ public class HonoConnectionImplTest {
      * Verifies that the attempt to create a sender fails with a
      * {@code ServerErrorException} if the remote peer sends a
      * {@code null} target in its attach frame.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

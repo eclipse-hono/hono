@@ -30,7 +30,7 @@ public class Application extends AbstractApplication {
 
     /**
      * Starts the LoRa Adapter application.
-     * 
+     *
      * @param args Command line args passed to the application.
      */
     public static void main(final String[] args) {

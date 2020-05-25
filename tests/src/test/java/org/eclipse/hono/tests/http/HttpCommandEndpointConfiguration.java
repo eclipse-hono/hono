@@ -26,7 +26,7 @@ public final class HttpCommandEndpointConfiguration extends CommandEndpointConfi
 
     /**
      * Creates a new configuration.
-     * 
+     *
      * @param subscriberRole The way in which to subscribe for commands.
      */
     public HttpCommandEndpointConfiguration(final SubscriberRole subscriberRole) {

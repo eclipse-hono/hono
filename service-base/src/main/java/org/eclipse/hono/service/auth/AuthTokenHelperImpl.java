@@ -43,7 +43,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
 
     /**
      * Creates a helper for creating tokens.
-     * 
+     *
      * @param vertx The vertx instance to use for accessing the file system.
      * @param config The configuration properties to determine the signing key material from.
      * @return The helper.
@@ -58,7 +58,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
 
     /**
      * Creates a helper for validating registration assertions.
-     * 
+     *
      * @param vertx The vertx instance to use for accessing the file system.
      * @param config The configuration properties to determine the signing key material from.
      * @return The helper.
@@ -73,7 +73,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
 
     /**
      * Creates a helper for creating/validating HmacSHA256 based registration assertions.
-     * 
+     *
      * @param sharedSecret The shared secret.
      * @param tokenExpirationSeconds The number of seconds after which tokens created expire.
      * @return The helper.

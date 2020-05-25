@@ -59,7 +59,7 @@ public final class CrudHttpClient {
 
     /**
      * Creates a new client for a host and port.
-     * 
+     *
      * @param vertx The vert.x instance to use.
      * @param defaultHost The host to invoke the operations on by default.
      * @param defaultPort The port to send requests to by default.
@@ -71,7 +71,7 @@ public final class CrudHttpClient {
 
     /**
      * Creates a new client for a host and port.
-     * 
+     *
      * @param vertx The vert.x instance to use.
      * @param options The client options to use for connecting to servers.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -91,7 +91,7 @@ public final class CrudHttpClient {
 
     /**
      * Gets options for a resource using an HTTP OPTIONS request.
-     * 
+     *
      * @param uri The resource URI.
      * @param requestHeaders The headers to include in the request.
      * @param successPredicate A predicate on the returned HTTP status code for determining success.
@@ -110,7 +110,7 @@ public final class CrudHttpClient {
 
     /**
      * Gets options for a resource using an HTTP OPTIONS request.
-     * 
+     *
      * @param requestOptions The options to use for the request.
      * @param requestHeaders The headers to include in the request.
      * @param successPredicate A predicate on the returned HTTP status code for determining success.
@@ -151,7 +151,7 @@ public final class CrudHttpClient {
      * Creates a resource using an HTTP POST request.
      * <p>
      * The content type in the request is set to <em>application/json</em>.
-     * 
+     *
      * @param uri The URI to post to.
      * @param body The body to post.
      * @param successPredicate A predicate on the HTTP response for determining success.
@@ -165,7 +165,7 @@ public final class CrudHttpClient {
 
     /**
      * Creates a resource using an HTTP POST request.
-     * 
+     *
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param contentType The content type to set in the request (may be {@code null}).
@@ -186,7 +186,7 @@ public final class CrudHttpClient {
 
     /**
      * Creates a resource using an HTTP POST request.
-     * 
+     *
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param contentType The content type to set in the request (may be {@code null}).
@@ -212,7 +212,7 @@ public final class CrudHttpClient {
 
     /**
      * Creates a resource using an HTTP POST request.
-     * 
+     *
      * @param uri The URI to post to.
      * @param body The body to post (may be {@code null}).
      * @param requestHeaders The headers to include in the request (may be {@code null}).
@@ -239,7 +239,7 @@ public final class CrudHttpClient {
 
     /**
      * Creates a resource using an HTTP POST request.
-     * 
+     *
      * @param requestOptions The options to use for the request.
      * @param body The body to post (may be {@code null}).
      * @param requestHeaders The headers to include in the request (may be {@code null}).
@@ -294,7 +294,7 @@ public final class CrudHttpClient {
      * Updates a resource using an HTTP PUT request.
      * <p>
      * The content type in the request is set to <em>application/json</em>.
-     * 
+     *
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param successPredicate A predicate on the returned HTTP status code for determining success.
@@ -322,7 +322,7 @@ public final class CrudHttpClient {
 
     /**
      * Updates a resource using an HTTP PUT request.
-     * 
+     *
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param contentType The content type to set in the request.
@@ -354,7 +354,7 @@ public final class CrudHttpClient {
 
     /**
      * Updates a resource using an HTTP PUT request.
-     * 
+     *
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param contentType The content type to set in the request.
@@ -375,7 +375,7 @@ public final class CrudHttpClient {
 
     /**
      * Updates a resource using an HTTP PUT request.
-     * 
+     *
      * @param uri The resource to update.
      * @param body The content to update the resource with.
      * @param requestHeaders The headers to include in the request.
@@ -431,7 +431,7 @@ public final class CrudHttpClient {
 
     /**
      * Updates a resource using an HTTP PUT request.
-     * 
+     *
      * @param requestOptions The options to use for the request.
      * @param body The content to update the resource with.
      * @param requestHeaders The headers to include in the request.
@@ -483,7 +483,7 @@ public final class CrudHttpClient {
 
     /**
      * Retrieves a resource representation using an HTTP GET request.
-     * 
+     *
      * @param uri The resource to retrieve.
      * @param successPredicate A predicate on the returned HTTP status code for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}. In that case the
@@ -499,7 +499,7 @@ public final class CrudHttpClient {
 
     /**
      * Retrieves a resource representation using an HTTP GET request.
-     * 
+     *
      * @param requestOptions The options to use for the request.
      * @param successPredicate A predicate on the returned HTTP status code for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}. In that case the
@@ -535,7 +535,7 @@ public final class CrudHttpClient {
 
     /**
      * Deletes a resource using an HTTP DELETE request.
-     * 
+     *
      * @param uri The resource to delete.
      * @param successPredicate A predicate on the returned HTTP status code for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}.
@@ -551,7 +551,7 @@ public final class CrudHttpClient {
 
     /**
      * Deletes a resource using an HTTP DELETE request.
-     * 
+     *
      * @param requestOptions The options to use for the request.
      * @param successPredicate A predicate on the returned HTTP status code for determining success.
      * @return A future that will succeed if the predicate evaluates to {@code true}.

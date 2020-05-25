@@ -31,7 +31,7 @@ public final class BCryptHelper {
 
     /**
      * Gets the number of iterations used in a BCrypt hash.
-     * 
+     *
      * @param bcryptedPassword The hash to extract the iterations from.
      * @return The number of iterations.
      * @throws IllegalArgumentException if the hash is not a valid BCrypt hash

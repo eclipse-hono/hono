@@ -30,7 +30,7 @@ public class Application extends AbstractApplication {
 
     /**
      * Starts the AMQP Adapter application.
-     * 
+     *
      * @param args
      *            The command-line arguments.
      */

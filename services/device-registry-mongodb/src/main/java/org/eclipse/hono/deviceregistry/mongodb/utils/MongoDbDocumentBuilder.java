@@ -98,7 +98,7 @@ public final class MongoDbDocumentBuilder {
 
     /**
      * Returns the json document.
-     * 
+     *
      * @return the json document.
      */
     public JsonObject document() {

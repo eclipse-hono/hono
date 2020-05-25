@@ -51,7 +51,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
 
     /**
      * Sets whether or not to use the sender time.
-     * 
+     *
      * @param useSenderTime {@code true} in order to use the sender time. 
      */
     public void setUseSenderTime(final boolean useSenderTime) {
@@ -64,7 +64,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
 
     /**
      * Sets the number of messages to prefetch.
-     * 
+     *
      * @param prefetch The number of messages to prefetch, encoded as String.
      */
     public void setPrefetch(final String prefetch) {
@@ -77,7 +77,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
 
     /**
      * Sets the name of the sender time in the payload.
-     * 
+     *
      * @param variableName The name of the variable the sender time uses in the payload.
      */
     public void setSenderTimeVariableName(final String variableName) {
@@ -90,7 +90,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
 
     /**
      * Sets if the payload contains the sender time.
-     * 
+     *
      * @param senderTimeInPayload {@code true} if the payload contains the sender time.
      */
     public void setSenderTimeInPayload(final boolean senderTimeInPayload) {
@@ -103,7 +103,7 @@ public class HonoReceiverSampler extends HonoSampler implements TestBean, Thread
 
     /**
      * Sets the number of re-connect attempts.
-     * 
+     *
      * @param reconnectAttempts The number of attempts as string. 
      */
     public void setReconnectAttempts(final String reconnectAttempts) {

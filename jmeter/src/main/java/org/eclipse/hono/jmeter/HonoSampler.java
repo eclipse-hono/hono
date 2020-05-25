@@ -56,7 +56,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Applies the options to the local UI.
-     * 
+     *
      * @param serverOptions The options to apply.
      */
     public void modifyServerOptions(final ServerOptionsPanel serverOptions) {
@@ -69,7 +69,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Apply the local UI options to the provided object.
-     * 
+     *
      * @param serverOptions The options to change.
      */
     public void configureServerOptions(final ServerOptionsPanel serverOptions) {
@@ -86,7 +86,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the path of the trust store.
-     * 
+     *
      * @param trustStorePath The path to the trust store.
      */
     public void setTrustStorePath(final String trustStorePath) {
@@ -99,7 +99,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the host to use.
-     * 
+     *
      * @param host The hostname to use.
      */
     public void setHost(final String host) {
@@ -112,7 +112,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the user to use.
-     * 
+     *
      * @param user The user name to use.
      */
     public void setUser(final String user) {
@@ -125,7 +125,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the password to use.
-     * 
+     *
      * @param pwd The password to use.
      */
     public void setPwd(final String pwd) {
@@ -134,7 +134,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Returns the port number as int.
-     * 
+     *
      * @return The port number as int.
      */
     public int getPortAsInt() {
@@ -152,7 +152,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the port to use.
-     * 
+     *
      * @param port The port to use.
      */
     public void setPort(final String port) {
@@ -165,7 +165,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the AMQP container name to use.
-     * 
+     *
      * @param container The container name to use.
      */
     public void setContainer(final String container) {
@@ -178,7 +178,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the tenant name to use.
-     * 
+     *
      * @param tenant The tenant name to use.
      */
     public void setTenant(final String tenant) {
@@ -191,7 +191,7 @@ public abstract class HonoSampler extends AbstractSampler {
 
     /**
      * Sets the endpoint type to use.
-     * 
+     *
      * @param endpoint The endpoint type to use.
      */
     public void setEndpoint(final Endpoint endpoint) {

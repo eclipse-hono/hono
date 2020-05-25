@@ -31,7 +31,7 @@ public class JsonObjectExtractAdapter implements TextMap {
 
     /**
      * Creates an adapter for a JSON object.
-     * 
+     *
      * @param jsonObject The JSON object.
      */
     public JsonObjectExtractAdapter(final JsonObject jsonObject) {

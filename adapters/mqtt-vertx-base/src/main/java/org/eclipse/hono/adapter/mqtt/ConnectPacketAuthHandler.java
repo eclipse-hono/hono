@@ -43,7 +43,7 @@ public class ConnectPacketAuthHandler extends ExecutionContextAuthHandler<MqttCo
 
     /**
      * Creates a new handler for a Hono client based auth provider.
-     * 
+     *
      * @param authProvider The provider to use for verifying a device's credentials.
      * @param tracer The tracer instance.
      */

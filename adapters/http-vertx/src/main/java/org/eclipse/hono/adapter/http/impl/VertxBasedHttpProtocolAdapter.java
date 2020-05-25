@@ -69,7 +69,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      * <p>
      * If not set explicitly using this method, a {@code UsernamePasswordAuthProvider}
      * will be created during startup.
-     * 
+     *
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
@@ -83,7 +83,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
      * <p>
      * If not set explicitly using this method, a {@code SubjectDnAuthProvider}
      * will be created during startup.
-     * 
+     *
      * @param provider The provider to use.
      * @throws NullPointerException if provider is {@code null}.
      */
@@ -110,7 +110,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @return {@link Constants#PROTOCOL_ADAPTER_TYPE_HTTP}
      */
     @Override

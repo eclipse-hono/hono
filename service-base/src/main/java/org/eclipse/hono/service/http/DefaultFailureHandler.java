@@ -46,7 +46,7 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
      * <p>
      * This method simply delegates to the next handler if the response is already
      * ended or the context is not failed.
-     * 
+     *
      * @param ctx The failing routing context.
      */
     @Override

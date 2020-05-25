@@ -31,7 +31,7 @@ import io.vertx.core.Future;
 
 /**
  * Interface that adds automatic device provisioning to the DeviceBackend.
- * 
+ *
  * @see <a href="https://www.eclipse.org/hono/docs/dev/concepts/device-provisioning/#automatic-device-provisioning">
  *      Automatic Device Provisioning</a>
  */
@@ -39,7 +39,7 @@ public interface AutoProvisioningEnabledDeviceBackend extends DeviceBackend {
 
     /**
      * Registers a device together with a set of credentials for the given client certificate.
-     * 
+     *
      *
      * @param tenantId The tenant to which the device belongs.
      * @param clientCertificate The X.509 certificate of the device to be provisioned.

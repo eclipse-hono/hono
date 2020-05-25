@@ -57,7 +57,7 @@ public class Adapter {
     /**
      * Sets whether devices should be able to connect to Hono
      * using this protocol adapter.
-     * 
+     *
      * @param enabled {@code true} if devices should be able to connect.
      * @return This instance, to allow chained invocations.
      */
@@ -69,7 +69,7 @@ public class Adapter {
     /**
      * Checks whether devices are able to connect to Hono
      * using this protocol adapter.
-     * 
+     *
      * @return {@code true} if devices are able to connect.
      */
     public final Boolean isEnabled() {
@@ -112,7 +112,7 @@ public class Adapter {
      * Sets the extension properties for this adapter.
      * <p>
      * Existing extension properties are completely replaced by the new properties.
-     * 
+     *
      * @param extensions The extension properties.
      * @return This instance, to allow chained invocations.
      */
@@ -126,7 +126,7 @@ public class Adapter {
 
     /**
      * Gets the extension properties of this tenant.
-     * 
+     *
      * @return An unmodifiable view on the extension properties.
      */
     public final Map<String, Object> getExtensions() {

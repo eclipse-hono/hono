@@ -49,7 +49,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
     /**
      * Gets a client for the Tenant service that has access to all tenants.
-     * 
+     *
      * @return The client.
      */
     protected abstract TenantClient getAdminClient();
@@ -57,14 +57,14 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
     /**
      * Gets a client for the Tenant service that has access to the
      * {@link Constants#DEFAULT_TENANT} only.
-     * 
+     *
      * @return The client.
      */
     protected abstract TenantClient getRestrictedClient();
 
     /**
      * Verifies that an existing tenant can be retrieved.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
@@ -240,7 +240,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
 
     /**
      * Creates a random RSA public key.
-     * 
+     *
      * @return The key.
      */
     public static PublicKey getRandomPublicKey() {

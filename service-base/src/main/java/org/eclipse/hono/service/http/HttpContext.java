@@ -31,7 +31,7 @@ public class HttpContext implements ExecutionContext {
 
     /**
      * Creates a new HttpContext.
-     * 
+     *
      * @param routingContext The RoutingContext to wrap.
      * @throws NullPointerException if routingContext is {@code null}.
      */
@@ -41,7 +41,7 @@ public class HttpContext implements ExecutionContext {
 
     /**
      * Gets the wrapped RoutingContext.
-     * 
+     *
      * @return The RoutingContext.
      */
     public RoutingContext getRoutingContext() {

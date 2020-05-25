@@ -33,7 +33,7 @@ public class CoapErrorResponse {
 
     /**
      * Check, if reported error cause indicates a temporary error.
-     * 
+     *
      * @param cause reported error cause
      * @return {@code true}, if error is temporary and the client may retry its action, {@code false}, otherwise, when
      *         the client should not repeat this action.
@@ -47,7 +47,7 @@ public class CoapErrorResponse {
 
     /**
      * Respond the coap exchange with the provide error cause.
-     * 
+     *
      * @param exchange coap exchange to be responded
      * @param cause error cause
      * @return The response code included in the CoAP response.
@@ -58,9 +58,9 @@ public class CoapErrorResponse {
 
     /**
      * Respond the coap exchange with the provide error cause.
-     * 
+     *
      * Convert http-code into coap-code, if available. Add cause message as payload for response.
-     * 
+     *
      * @param exchange coap exchange to be responded
      * @param cause error cause
      * @param defaultCode default response code, if a more specific response code is not available.
@@ -84,7 +84,7 @@ public class CoapErrorResponse {
 
     /**
      * Respond the coap exchange with the provide error cause.
-     * 
+     *
      * @param exchange coap exchange to be responded
      * @param message error message sent as payload.
      * @param code response code.
@@ -98,7 +98,7 @@ public class CoapErrorResponse {
 
     /**
      * Gets a CoAP response code for an error.
-     * 
+     *
      * @param cause The cause of the error.
      * @param defaultCode The default CoAP response code to use if the error cannot be mapped.
      * @return The CoAP response code.

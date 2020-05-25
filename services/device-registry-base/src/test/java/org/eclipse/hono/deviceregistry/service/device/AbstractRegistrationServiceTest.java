@@ -82,7 +82,7 @@ public class AbstractRegistrationServiceTest {
     /**
      * Verifies that the service returns a 404 status code for a request for asserting the registration
      * of a device that belongs to a non-existing tenant.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -103,7 +103,7 @@ public class AbstractRegistrationServiceTest {
     /**
      * Verifies that the service returns a 404 status code for a request for asserting the registration
      * of a non-existing device.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -124,7 +124,7 @@ public class AbstractRegistrationServiceTest {
     /**
      * Verifies that the service returns a 404 status code for a request for asserting the registration
      * of a disabled device.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -145,7 +145,7 @@ public class AbstractRegistrationServiceTest {
     /**
      * Verifies that the service returns a 403 status code for a request for asserting the registration
      * of a device via a non-existing gateway.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -173,7 +173,7 @@ public class AbstractRegistrationServiceTest {
     /**
      * Verifies that the service returns a 403 status code for a request for asserting the registration
      * of a device via a disabled gateway.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

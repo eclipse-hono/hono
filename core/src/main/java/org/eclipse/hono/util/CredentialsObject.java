@@ -54,7 +54,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * <p>
      * Note that an instance created using this constructor does
      * not contain any secrets.
-     * 
+     *
      * @param deviceId The device to which the credentials belong.
      * @param authId The authentication identifier of the credentials.
      * @param type The type of credentials.
@@ -75,7 +75,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Adds a property to this tenant.
-     * 
+     *
      * @param name The property name.
      * @param value The property value.
      * @return This credentials object for command chaining.
@@ -89,7 +89,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Gets the identifier of the device that these credentials belong to.
-     * 
+     *
      * @return The identifier or {@code null} if not set.
      */
     @JsonIgnore
@@ -99,7 +99,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Sets the identifier of the device that these credentials belong to.
-     * 
+     *
      * @param deviceId The identifier.
      * @return This credentials object for method chaining.
      */
@@ -111,7 +111,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Gets the type of these credentials.
-     * 
+     *
      * @return The type or {@code null} if not set.
      */
     @JsonIgnore
@@ -121,7 +121,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Sets the type of these credentials.
-     * 
+     *
      * @param type The credentials type.
      * @return This credentials object for method chaining.
      */
@@ -133,7 +133,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Gets the authentication identifier that these credentials are used for.
-     * 
+     *
      * @return The identifier or {@code null} if not set.
      */
     @JsonIgnore
@@ -143,7 +143,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Sets the authentication identifier that these these credentials are used for.
-     * 
+     *
      * @param authId The identifier.
      * @return This credentials object for method chaining.
      */
@@ -157,7 +157,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * Checks whether these credentials are enabled.
      * <p>
      * The default value is {@code true}.
-     * 
+     *
      * @return {@code true} if these credentials can be used for authenticating devices.
      */
     @JsonIgnore
@@ -169,7 +169,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * Sets whether these credentials are enabled.
      * <p>
      * The default value is {@code true}.
-     * 
+     *
      * @param enabled {@code true} if these credentials can be used for authenticating devices.
      * @return This credentials object for method chaining.
      */
@@ -183,7 +183,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * Gets this credentials' secret(s).
      * <p>
      * The elements of the returned list are of type {@code JsonObject}.
-     * 
+     *
      * @return The (potentially empty) list of secrets.
      */
     @JsonIgnore
@@ -198,7 +198,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Adds a secret.
-     * 
+     *
      * @param secret The secret to set.
      * @return This credentials object for method chaining.
      */
@@ -211,7 +211,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Adds a secret.
-     * 
+     *
      * @param secret The secret to set.
      * @return This credentials object for method chaining.
      */
@@ -222,7 +222,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Checks if this credentials object is in a consistent state.
-     * 
+     *
      * @throws IllegalStateException if any of the properties have invalid/inconsistent values.
      *                  The exception's message property may contain a description of the
      *                  problem.
@@ -234,7 +234,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Checks if this credentials object is in a consistent state.
-     * 
+     *
      * @param secretValidator A custom check that is performed for each secret. The validator
      *                        should throw an exception to indicate a failure to
      *                        validate the secret.
@@ -256,7 +256,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
     /**
      * Checks if this credentials object contains secrets that comply with the Credentials
      * API specification.
-     * 
+     *
      * @throws IllegalStateException if no secrets are set or any of the secrets' not-before
      *         and not-after properties are malformed.
      */
@@ -267,7 +267,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
     /**
      * Checks if this credentials object contains secrets that comply with the Credentials
      * API specification.
-     * 
+     *
      * @param secretValidator a custom check that is performed for each secret in addition
      *                        to the standard checks. The validator
      *                        should throw an exception to indicate a failure to
@@ -353,7 +353,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * <p>
      * A secret is considered valid if the current instant of time falls
      * into its validity period.
-     *  
+     *
      * @return The secrets.
      */
     @JsonIgnore
@@ -367,7 +367,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * <p>
      * A secret is considered valid if the current instant of time falls
      * into its validity period.
-     * 
+     *
      * @param <T> The type of the property that the candidate secrets are
      *            projected on.
      * @param projection A function to apply to each candidate secret. This function
@@ -397,7 +397,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Checks if a given instant of time falls into a secret's validity period.
-     * 
+     *
      * @param secret The secret to check against.
      * @param instant The instant of time.
      * @return {@code true} if the instant falls into the secret's validity period.
@@ -411,7 +411,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Gets the <em>not before</em> instant of a secret.
-     * 
+     *
      * @param secret The secret.
      * @return The instant or {@code null} if not-before is not set or
      *         uses an invalid time stamp format.
@@ -426,7 +426,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Gets the <em>not after</em> instant of a secret.
-     * 
+     *
      * @param secret The secret.
      * @return The instant or {@code null} if not-after is not set or
      *         uses an invalid time stamp format.
@@ -465,7 +465,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
     /**
      * Creates an otherwise empty secret for a <em>not-before</em> and
      * a <em>not-after</em> instant.
-     * 
+     *
      * @param notBefore The point in time from which on the credentials are valid
      *            or {@code null} if there is no such constraint.
      * @param notAfter The point in time until the credentials are valid
@@ -498,7 +498,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * The credentials created are of type <em>hashed-password</em>.
      * The {@linkplain #setAuthId(String) authentication identifier} will be set to
      * the given username.
-     * 
+     *
      * @param deviceId The device identifier.
      * @param username The username.
      * @param passwordHash The password hash.
@@ -536,7 +536,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * The credentials created are of type <em>hashed-password</em>.
      * The {@linkplain #setAuthId(String) authentication identifier} will be set to
      * the given username.
-     * 
+     *
      * @param deviceId The device identifier.
      * @param username The username.
      * @param clearTextPassword The password.
@@ -564,7 +564,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Creates a hashed-password secret for a password hash.
-     * 
+     *
      * @param passwordHash The Base64 encoded password hash.
      * @param hashAlgorithm The algorithm used for creating the password hash.
      * @param notBefore The point in time from which on the secret is valid.
@@ -595,7 +595,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Creates a hashed-password secret for a password hash.
-     * 
+     *
      * @param passwordHash The Base64 encoded password hash.
      * @param hashAlgorithm The algorithm used for creating the password hash.
      * @param notBefore The point in time from which on the secret is valid.
@@ -629,7 +629,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     /**
      * Creates a hashed-password secret for a clear text password.
-     * 
+     *
      * @param clearTextpassword The password.
      * @param notBefore The point in time from which on the secret is valid.
      * @param notAfter The point in time until the secret is valid.
@@ -655,7 +655,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * Creates a credentials object for a device and auth ID.
      * <p>
      * The credentials created are of type <em>psk</em>.
-     * 
+     *
      * @param deviceId The device identifier.
      * @param authId The authentication identifier.
      * @param key The shared key.
@@ -689,7 +689,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * {@linkplain #setAuthId(String) authentication identifier} will be set to
      * the certificate's subject DN using the serialization format defined
      * by <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
-     * 
+     *
      * @param deviceId The device identifier.
      * @param certificate The device's client certificate.
      * @param notBefore The point in time from which on the credentials are valid.
@@ -716,7 +716,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      * {@linkplain #setAuthId(String) authentication identifier} will be set to
      * the subject DN using the serialization format defined by
      * <a href="https://tools.ietf.org/html/rfc2253#section-2">RFC 2253, Section 2</a>.
-     * 
+     *
      * @param deviceId The device identifier.
      * @param subjectDn The subject DN.
      * @param notBefore The point in time from which on the credentials are valid.

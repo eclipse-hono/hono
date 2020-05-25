@@ -53,7 +53,7 @@ public class TenantObjectTest {
 
     /**
      * Sets up static fixture.
-     * 
+     *
      * @throws IOException if the trust store could not be read.
      * @throws GeneralSecurityException if the trust store could not be read.
      */
@@ -122,7 +122,7 @@ public class TenantObjectTest {
 
     /**
      * Verifies that a trust anchor can be deserialized from a Base64 encoded public key.
-     * 
+     *
      * @throws GeneralSecurityException if the trust anchor cannot be deserialized.
      */
     @Test
@@ -238,7 +238,7 @@ public class TenantObjectTest {
 
     /**
      * Verifies that the trust anchor uses the configured trusted CA's public key and subject DN.
-     * 
+     *
      * @throws GeneralSecurityException if the certificate cannot be DER encoded.
      */
     @Test
@@ -255,7 +255,7 @@ public class TenantObjectTest {
 
     /**
      * Verifies that trust anchors are added correctly.
-     * 
+     *
      * @throws GeneralSecurityException if certificates cannot be created.
      * @throws IOException if certificates can not be created.
      */
@@ -413,7 +413,7 @@ public class TenantObjectTest {
 
     /**
      * Test if the "auto provisioning enabled" field can be null.
-     * 
+     *
      * @throws Exception in case the certificate generation fails.
      */
     @Test

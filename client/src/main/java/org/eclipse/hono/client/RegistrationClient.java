@@ -29,7 +29,7 @@ public interface RegistrationClient extends RequestResponseClient {
 
     /**
      * Asserts that a device is registered and <em>enabled</em>.
-     * 
+     *
      * @param deviceId The ID of the device to get the assertion for.
      * @return A future indicating the result of the operation.
      *         <p>
@@ -47,7 +47,7 @@ public interface RegistrationClient extends RequestResponseClient {
 
     /**
      * Asserts that a device is registered and <em>enabled</em>.
-     * 
+     *
      * @param deviceId The ID of the device to get the assertion for.
      * @param gatewayId The gateway that wants to act on behalf of the device.
      *                  <p>
@@ -72,7 +72,7 @@ public interface RegistrationClient extends RequestResponseClient {
      * Asserts that a device is registered and <em>enabled</em>.
      * <p>
      * This default implementation simply returns the result of {@link #assertRegistration(String, String)}.
-     * 
+     *
      * @param deviceId The ID of the device to get the assertion for.
      * @param gatewayId The gateway that wants to act on behalf of the device.
      *                  <p>

@@ -66,7 +66,7 @@ public abstract class JwtHelper {
 
     /**
      * Creates a new helper for a vertx instance.
-     * 
+     *
      * @param vertx The vertx instance to use for loading key material from the file system.
      */
     protected JwtHelper(final Vertx vertx) {
@@ -75,7 +75,7 @@ public abstract class JwtHelper {
 
     /**
      * Gets the bytes representing the UTF8 encoding of a secret.
-     * 
+     *
      * @param secret The string to get the bytes for.
      * @return The bytes.
      */
@@ -85,7 +85,7 @@ public abstract class JwtHelper {
 
     /**
      * Sets the secret to use for signing tokens asserting the registration status of devices.
-     * 
+     *
      * @param secret The secret to use.
      * @throws NullPointerException if secret is {@code null}.
      * @throws IllegalArgumentException if the secret is &lt; 32 bytes.
@@ -101,7 +101,7 @@ public abstract class JwtHelper {
     /**
      * Sets the path to a PKCS8 PEM file containing the RSA private key to use for signing tokens asserting the
      * registration status of devices.
-     * 
+     *
      * @param keyPath The absolute path to the file.
      * @throws NullPointerException if the path is {@code null}.
      * @throws IllegalArgumentException if the key cannot be read from the file.
@@ -123,7 +123,7 @@ public abstract class JwtHelper {
     /**
      * Sets the path to a PEM file containing a certificate holding a public key to use for validating the signature of
      * tokens asserting the registration status of devices.
-     * 
+     *
      * @param keyPath The absolute path to the file.
      * @throws NullPointerException if the path is {@code null}.
      * @throws IllegalArgumentException if the key cannot be read from the file.
@@ -146,7 +146,7 @@ public abstract class JwtHelper {
      * Gets the duration being used for calculating the <em>exp</em> claim of tokens created by this class.
      * <p>
      * Clients should always check if a token is expired before using any information contained in the token.
-     * 
+     *
      * @return The duration.
      */
     public final Duration getTokenLifetime() {
@@ -155,7 +155,7 @@ public abstract class JwtHelper {
 
     /**
      * Checks if a token is expired.
-     * 
+     *
      * @param token The token to check.
      * @param allowedClockSkewSeconds The allowed clock skew in seconds.
      * @return {@code true} if the token is expired according to the current system time (including allowed skew).
@@ -167,7 +167,7 @@ public abstract class JwtHelper {
 
     /**
      * Checks if a token is expired.
-     * 
+     *
      * @param token The token to check.
      * @param now The instant of time the token's expiration time should be checked against.
      * @return {@code true} if the token is expired according to the given instant of time.
@@ -186,7 +186,7 @@ public abstract class JwtHelper {
 
     /**
      * Gets the value of the <em>exp</em> claim of a JWT.
-     * 
+     *
      * @param token The token.
      * @return The expiration.
      * @throws NullPointerException if the token is {@code null}.
@@ -225,7 +225,7 @@ public abstract class JwtHelper {
 
     /**
      * Creates a helper that can be used for creating and verifying signatures of JWTs.
-     * 
+     *
      * @param <T> The type of helper to create.
      * @param sharedSecret The shared secret to use for signatures.
      * @param tokenExpiration The number of seconds after which the tokens created by this
@@ -247,7 +247,7 @@ public abstract class JwtHelper {
 
     /**
      * Creates a helper that can be used for creating signed JWTs.
-     * 
+     *
      * @param <T> The type of helper to create.
      * @param config The key material to use for signing.
      * @param instanceSupplier The supplier to invoke for creating the new helper instance.
@@ -279,7 +279,7 @@ public abstract class JwtHelper {
 
     /**
      * Creates a helper that can be used for verifying signatures of JWTs.
-     * 
+     *
      * @param <T> The type of helper to create.
      * @param config The key material to use for verifying signatures.
      * @param instanceSupplier The supplier to invoke for creating the new helper instance.

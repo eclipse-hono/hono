@@ -43,7 +43,7 @@ final class MappedMessage {
 
     /**
      * Creates a new mapping result.
-     * 
+     *
      * @param targetAddress The target address that the original message has been mapped to.
      * @param payload The payload that the original message has been mapped to.
      * @param additionalProperties Extra properties that should be included with the mapped message.
@@ -81,7 +81,7 @@ final class MappedMessage {
     /**
      * Gets additional properties to be included with the mapped
      * message.
-     * 
+     *
      * @return The properties (may be empty).
      */
     Map<String, String> getAdditionalProperties() {

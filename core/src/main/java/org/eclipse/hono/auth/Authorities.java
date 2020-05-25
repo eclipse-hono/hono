@@ -25,7 +25,7 @@ public interface Authorities {
 
     /**
      * Checks if these authorities include claims allowing an intended activity on a resource.
-     * 
+     *
      * @param resourceId The resource.
      * @param intent The intended activity on the resource
      * @return {@code true} if the activity is allowed.
@@ -34,7 +34,7 @@ public interface Authorities {
 
     /**
      * Checks if these authorities include claims allowing execution of an operation of a resource.
-     * 
+     *
      * @param resourceId The resource.
      * @param operation The operation to execute.
      * @return {@code true} if execution is allowed.
@@ -43,7 +43,7 @@ public interface Authorities {
 
     /**
      * Gets the authorities as a map of claims.
-     * 
+     *
      * @return The claims.
      */
     Map<String, Object> asMap();

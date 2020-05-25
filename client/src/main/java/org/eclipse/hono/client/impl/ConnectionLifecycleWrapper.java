@@ -24,7 +24,7 @@ import io.vertx.core.Handler;
 /**
  * ConnectionLifecycle base class that delegates all method invocations to a given
  * ConnectionLifecycle instance.
- * 
+ *
  * @param <T> The type of connection.
  */
 public abstract class ConnectionLifecycleWrapper<T> implements ConnectionLifecycle<T> {

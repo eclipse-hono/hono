@@ -267,7 +267,7 @@ public class TenantTest {
 
     /**
      * Decode "trusted-ca" section for an X.509 certificate.
-     * 
+     *
      * @throws CertificateException if the self signed certificate cannot be encoded.
      */
     @Test

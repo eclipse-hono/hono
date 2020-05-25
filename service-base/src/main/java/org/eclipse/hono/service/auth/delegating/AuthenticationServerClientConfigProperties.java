@@ -32,7 +32,7 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
 
     /**
      * Gets the properties for determining key material for validating user tokens.
-     * 
+     *
      * @return The properties.
      */
     public final SignatureSupportingConfigProperties getValidation() {

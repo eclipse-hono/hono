@@ -49,7 +49,7 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
 
     /**
      * Creates a new decorator for default and custom tags.
-     * 
+     *
      * @param customTags The tags that should be set on spans for incoming requests.
      * @throws NullPointerException if tags is {@code null}.
      */

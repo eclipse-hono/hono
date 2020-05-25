@@ -29,7 +29,7 @@ public interface X509CertificateChainValidator {
 
     /**
      * Validates a certificate path based on a trust anchor.
-     * 
+     *
      * @param chain The certificate chain to validate. The end certificate
      *              must be at position 0.
      * @param trustAnchor The trust anchor to use for validating the chain.
@@ -42,7 +42,7 @@ public interface X509CertificateChainValidator {
 
     /**
      * Validates a certificate path based on a list of trust anchors.
-     * 
+     *
      * @param chain The certificate chain to validate. The end certificate
      *              must be at position 0.
      * @param trustAnchors The list of trust anchors to use for validating the chain.

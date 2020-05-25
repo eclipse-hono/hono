@@ -34,7 +34,7 @@ public interface AuthHandler<T extends ExecutionContext> {
      * <p>
      * Implementations should be able to extract the required info for the
      * auth provider in the format the provider expects.
-     * 
+     *
      * @param context The execution context.
      * @return The credentials.
      * @throws NullPointerException if the context is {@code null}
@@ -43,7 +43,7 @@ public interface AuthHandler<T extends ExecutionContext> {
 
     /**
      * Authenticates a device.
-     * 
+     *
      * @param context The execution context.
      * @return The authenticated device.
      * @throws NullPointerException if the context is {@code null}
@@ -53,7 +53,7 @@ public interface AuthHandler<T extends ExecutionContext> {
     /**
      * Gets the auth provider that can be used to validate the credentials
      * parsed by this handler.
-     * 
+     *
      * @return The provider.
      */
     AuthProvider getAuthProvider();

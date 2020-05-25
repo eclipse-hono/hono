@@ -42,7 +42,7 @@ class HonoProtonHelperTest {
     /**
      * Verifies that code is scheduled to be executed on a given Context
      * other than the current Context.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")

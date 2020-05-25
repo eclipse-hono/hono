@@ -32,7 +32,7 @@ public final class AmqpErrorException extends RuntimeException {
 
     /**
      * Creates a new exception for an error and description.
-     * 
+     *
      * @param error The AMQP error to convey in this exception.
      * @param description A textual description of the context the error occurred in.
      */
@@ -43,7 +43,7 @@ public final class AmqpErrorException extends RuntimeException {
 
     /**
      * Creates a new exception for an error and description.
-     * 
+     *
      * @param error The AMQP error to convey in this exception.
      * @param description A textual description of the context the error occurred in.
      */
@@ -54,7 +54,7 @@ public final class AmqpErrorException extends RuntimeException {
 
     /**
      * Gets the AMQP error conveyed in this exception.
-     * 
+     *
      * @return The error.
      */
     public Symbol getError() {
@@ -63,7 +63,7 @@ public final class AmqpErrorException extends RuntimeException {
 
     /**
      * Gets an AMQP {@link ErrorCondition} based on this exception's error and description.
-     * 
+     *
      * @return The condition.
      */
     public ErrorCondition asErrorCondition() {

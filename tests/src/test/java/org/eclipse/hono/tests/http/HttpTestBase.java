@@ -141,7 +141,7 @@ public abstract class HttpTestBase {
 
     /**
      * Sets up clients.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
@@ -160,7 +160,7 @@ public abstract class HttpTestBase {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param testInfo Meta info about the test being run.
      */
     @BeforeEach
@@ -186,7 +186,7 @@ public abstract class HttpTestBase {
     /**
      * Deletes all temporary objects from the Device Registry which
      * have been created during the last test execution.
-     * 
+     *
      * @param ctx The vert.x context.
      */
     @AfterEach
@@ -200,7 +200,7 @@ public abstract class HttpTestBase {
 
     /**
      * Closes the AMQP 1.0 Messaging Network client.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterAll
@@ -211,7 +211,7 @@ public abstract class HttpTestBase {
 
     /**
      * Creates the endpoint configuration variants for Command &amp; Control scenarios.
-     * 
+     *
      * @return The configurations.
      */
     static Stream<HttpCommandEndpointConfiguration> commandAndControlVariants() {
@@ -224,7 +224,7 @@ public abstract class HttpTestBase {
 
     /**
      * Gets the (relative) URI of the endpoint to send requests to.
-     * 
+     *
      * @return The URI.
      */
     protected abstract String getEndpointUri();
@@ -241,7 +241,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that a number of messages uploaded to Hono's HTTP adapter
      * using HTTP Basic auth can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -283,7 +283,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that a number of messages uploaded to the HTTP adapter via a gateway using HTTP Basic auth can be
      * successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -337,7 +337,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that a number of messages uploaded to Hono's HTTP adapter using client certificate based authentication
      * can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -415,7 +415,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that the adapter rejects connection attempts from an unknown device for which auto-provisioning is
      * disabled.
-     * 
+     *
      * @param ctx The test context.
      */
     @Test
@@ -583,7 +583,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that the adapter fails to authenticate a device if the device's client certificate's signature cannot be
      * validated using the trust anchor that is registered for the tenant that the device belongs to.
-     * 
+     *
      * @param ctx The vert.x test context.
      * @throws GeneralSecurityException if the tenant's trust anchor cannot be generated
      */
@@ -801,7 +801,7 @@ public abstract class HttpTestBase {
      * Verifies that for two consecutive upload requests containing a TTD, sent in close succession so that the command
      * triggered by the first request isn't sent before the adapter has received the second upload request, the HTTP
      * adapter returns the command as response to the second upload request.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test is interrupted before having completed.
      */
@@ -922,7 +922,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that the HTTP adapter returns empty responses when sending consecutive requests
      * for uploading telemetry data or events with a TTD but no command is pending for the device.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -982,7 +982,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding
      * response from the device.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -1109,7 +1109,7 @@ public abstract class HttpTestBase {
     /**
      * Verifies that the HTTP adapter delivers a command to a device and accepts the corresponding
      * response from the device.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -1253,7 +1253,7 @@ public abstract class HttpTestBase {
      * <p>
      * This default implementation does nothing. Subclasses should override this method to implement
      * reasonable checks.
-     * 
+     *
      * @param msg The message to perform checks on.
      */
     protected void assertAdditionalMessageProperties(final Message msg) {
@@ -1277,7 +1277,7 @@ public abstract class HttpTestBase {
 
     /**
      * Creates an HTTP Basic Authorization header value for a device.
-     * 
+     *
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The device identifier.
      * @param password The device's password.
@@ -1295,7 +1295,7 @@ public abstract class HttpTestBase {
      * Creates an HTTP Basic Authorization header value for a device.
      * <p>
      * The credentials are Base64 encoded in the Basic auth header's username segment.
-     * 
+     *
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The device identifier.
      * @param password The device's password.

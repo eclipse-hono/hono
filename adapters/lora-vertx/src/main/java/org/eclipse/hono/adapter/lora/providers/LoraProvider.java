@@ -46,7 +46,7 @@ public interface LoraProvider {
 
     /**
      * Extracts the type from the incoming message of the LoRa Provider.
-     * 
+     *
      * @param loraMessage from which the type should be extracted.
      * @return LoraMessageType the type of this message
      */
@@ -56,7 +56,7 @@ public interface LoraProvider {
 
     /**
      * The content type this provider will accept.
-     * 
+     *
      * @return MIME Content Type. E.g. "application/json"
      */
     default String acceptedContentType() {
@@ -65,7 +65,7 @@ public interface LoraProvider {
 
     /**
      * The HTTP method this provider will accept incoming data.
-     * 
+     *
      * @return MIME Content Type. E.g. "application/json"
      */
     default HttpMethod acceptedHttpMethod() {
@@ -74,7 +74,7 @@ public interface LoraProvider {
 
     /**
      * Extracts the device id from an incoming message of the LoRa Provider.
-     * 
+     *
      * @param loraMessage from which the device id should be extracted.
      * @return Device ID of the concerned device
      * @throws LoraProviderMalformedPayloadException if device Id cannot be extracted.
@@ -83,7 +83,7 @@ public interface LoraProvider {
 
     /**
      * Extracts the payload from an incoming message of the LoRa Provider.
-     * 
+     *
      * @param loraMessage from which the payload should be extracted.
      * @return Payload
      * @throws LoraProviderMalformedPayloadException if payload cannot be extracted.

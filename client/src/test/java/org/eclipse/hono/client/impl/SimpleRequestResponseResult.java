@@ -36,7 +36,7 @@ public final class SimpleRequestResponseResult extends RequestResponseResult<Buf
 
     /**
      * Creates a new instance for a status code and payload.
-     * 
+     *
      * @param status The status code.
      * @param payload The payload.
      * @param cacheDirective Restrictions regarding the caching of the payload by

@@ -32,7 +32,7 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
 
     /**
      * Creates a new result for a status code.
-     * 
+     *
      * @param status The status code indicating the outcome of the request.
      * @param <T> The type of the payload that is conveyed in the result.
      * @return The result.
@@ -46,7 +46,7 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
      * <p>
      * This method simply invokes {@link #from(int, Object, CacheDirective)}
      * with {@link CacheDirective#noCacheDirective()}.
-     * 
+     *
      * @param status The status code indicating the outcome of the request.
      * @param payload The payload to convey to the sender of the request.
      * @param <T> The type of the payload that is conveyed in the result.
@@ -58,7 +58,7 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
 
     /**
      * Creates a new result for a status code and payload.
-     * 
+     *
      * @param status The status code indicating the outcome of the request.
      * @param payload The payload to convey to the sender of the request.
      * @param cacheDirective Restrictions regarding the caching of the payload by
@@ -72,7 +72,7 @@ public final class CredentialsResult<T> extends RequestResponseResult<T> {
 
     /**
      * Creates a new result for a status code and payload.
-     * 
+     *
      * @param status The status code indicating the outcome of the request.
      * @param payload The payload to convey to the sender of the request.
      * @param cacheDirective Restrictions regarding the caching of the payload by

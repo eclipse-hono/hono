@@ -134,7 +134,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     /**
      * Verifies that the adapter forwards on-way commands from
      * an application to a device.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
@@ -336,7 +336,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     /**
      * Verifies that the adapter rejects malformed command messages sent by applications.
-     * 
+     *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.

@@ -28,7 +28,7 @@ public interface DownstreamSender extends MessageSender {
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
-     * 
+     *
      * @param deviceId The id of the device.
      *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.
@@ -61,7 +61,7 @@ public interface DownstreamSender extends MessageSender {
 
     /**
      * Sends a message for a given device to the endpoint configured for this client.
-     * 
+     *
      * @param deviceId The id of the device.
      *                 <p>
      *                 This parameter will be used as the value for the message's application property <em>device_id</em>.

@@ -31,7 +31,7 @@ public final class DeviceRegistryTestUtils {
 
     /**
      * Reads the contents from a file using this class' class loader.
-     * 
+     *
      * @param resourceName The name of the resource to load.
      * @return The contents of the file.
      * @throws IOException if the file cannot be read.

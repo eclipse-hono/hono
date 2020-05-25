@@ -18,7 +18,7 @@ import java.time.Instant;
 
 /**
  * A cache for values that have a limited validity period.
- * 
+ *
  * @param <K> The type of keys that the cache supports.
  * @param <V> The type of values that the cache supports.
  */
@@ -28,7 +28,7 @@ public interface ExpiringValueCache<K, V> {
      * Puts a value to the cache.
      * <p>
      * Any previous value for the key will be replaced with the new one.
-     * 
+     *
      * @param key The key under which the value is stored.
      * @param value The value to store.
      * @param expirationTime The point in time after which the value should be
@@ -42,7 +42,7 @@ public interface ExpiringValueCache<K, V> {
      * Puts a value to the cache.
      * <p>
      * Any previous value for the key will be replaced with the new one.
-     * 
+     *
      * @param key The key under which the value is stored.
      * @param value The value to store.
      * @param maxAge The duration (starting from now) after which the
@@ -54,7 +54,7 @@ public interface ExpiringValueCache<K, V> {
 
     /**
      * Gets a value from the cache.
-     * 
+     *
      * @param key The key to get the value for.
      * @return The value or {@code null} if no value exists for the key or
      *         if the value is expired.

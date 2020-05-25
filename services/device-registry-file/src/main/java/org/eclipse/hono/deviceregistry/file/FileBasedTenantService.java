@@ -70,7 +70,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
 
     /**
      * Creates a new service instance.
-     * 
+     *
      * @param vertx The vert.x instance to run on.
      * @throws NullPointerException if vertx is {@code null}.
      */
@@ -81,7 +81,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
 
     /**
      * Sets the configuration properties for this service.
-     * 
+     *
      * @param configuration The properties.
      */
     @Autowired
@@ -91,7 +91,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
 
     /**
      * Gets the configuration properties for this service.
-     * 
+     *
      * @return The properties.
      */
     protected FileBasedTenantsConfigProperties getConfig() {

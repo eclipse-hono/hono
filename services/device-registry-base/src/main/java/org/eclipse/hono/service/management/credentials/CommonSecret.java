@@ -49,7 +49,7 @@ public abstract class CommonSecret {
 
     /**
      * Sets the enabled property to indicate to protocol adapters whether to use this secret during authentication.
-     * 
+     *
      * @param enabled  Whether this secret type should be used to authenticate devices.
      * @return         a reference to this for fluent use.
      */
@@ -85,7 +85,7 @@ public abstract class CommonSecret {
 
     /**
      * Gets the latest instant in time that this secret may be used for authenticating a device.
-     * 
+     *
      * @return The end date/time in which this secret is valid.
      */
     public Instant getNotAfter() {

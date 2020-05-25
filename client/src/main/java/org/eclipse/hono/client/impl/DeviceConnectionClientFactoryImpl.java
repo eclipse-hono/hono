@@ -36,7 +36,7 @@ public class DeviceConnectionClientFactoryImpl extends AbstractHonoClientFactory
 
     /**
      * Creates a new factory for an existing connection.
-     * 
+     *
      * @param connection The connection to use.
      * @throws NullPointerException if connection is {@code null}
      */

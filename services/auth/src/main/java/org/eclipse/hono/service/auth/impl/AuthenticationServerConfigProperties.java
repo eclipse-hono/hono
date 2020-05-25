@@ -35,7 +35,7 @@ public class AuthenticationServerConfigProperties {
 
     /**
      * Gets the properties for determining key material for creating tokens.
-     * 
+     *
      * @return The properties.
      */
     public final SignatureSupportingConfigProperties getSigning() {
@@ -44,7 +44,7 @@ public class AuthenticationServerConfigProperties {
 
     /**
      * Gets the properties for determining key material for validating tokens issued by this service.
-     * 
+     *
      * @return The properties.
      */
     public final SignatureSupportingConfigProperties getValidation() {
@@ -55,7 +55,7 @@ public class AuthenticationServerConfigProperties {
      * Get the resource that the authorization rules should be loaded from.
      * <p>
      * If not set the default permissions will be loaded from <em>classpath:permissions.json</em>.
-     * 
+     *
      * @return The resource.
      */
     public final Resource getPermissionsPath() {
@@ -66,7 +66,7 @@ public class AuthenticationServerConfigProperties {
      * Set the resource that the authorization rules should be loaded from.
      * <p>
      * If not set the default permissions will be loaded from <em>classpath:permissions.json</em>.
-     * 
+     *
      * @param permissionsResource The resource.
      * @throws NullPointerException if the resource is {@code null}.
      */

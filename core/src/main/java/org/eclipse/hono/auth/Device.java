@@ -41,7 +41,7 @@ public class Device implements Principal {
      * <p>
      * The token is expected to contain the device identifier in the <em>sub</em> claim and
      * the tenant identifier in the <em>ten</em> claim.
-     * 
+     *
      * @param token The token asserting the device's identity.
      * @throws NullPointerException if the token does not contain a tenant and device identifier.
      */
@@ -59,7 +59,7 @@ public class Device implements Principal {
 
     /**
      * Creates a new device for a tenant and device identifier.
-     * 
+     *
      * @param tenantId The tenant.
      * @param deviceId The device identifier.
      * @throws NullPointerException if any of the params is {@code null}.
@@ -107,7 +107,7 @@ public class Device implements Principal {
 
     /**
      * Gets the identifier of the tenant this device belongs to.
-     * 
+     *
      * @return The identifier.
      */
     public final String getTenantId() {
@@ -116,7 +116,7 @@ public class Device implements Principal {
 
     /**
      * Gets this device's identifier.
-     * 
+     *
      * @return The identifier.
      */
     public final String getDeviceId() {

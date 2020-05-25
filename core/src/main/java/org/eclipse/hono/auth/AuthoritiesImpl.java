@@ -52,7 +52,7 @@ public final class AuthoritiesImpl implements Authorities {
 
     /**
      * Creates authorities from claims from a JWT.
-     * 
+     *
      * @param claims The claims object to retrieve authorities from.
      * @return The authorities.
      * @throws NullPointerException if claims is {@code null}.
@@ -89,7 +89,7 @@ public final class AuthoritiesImpl implements Authorities {
 
     /**
      * Adds an authority to execute an operation.
-     * 
+     *
      * @param resource The resource the operation belongs to.
      * @param operation The operation.
      * @return This instance for command chaining.
@@ -100,7 +100,7 @@ public final class AuthoritiesImpl implements Authorities {
 
     /**
      * Adds an authority to execute an operation.
-     * 
+     *
      * @param endpoint The endpoint segment of the resource the operation belongs to.
      * @param tenant The tenant segment of the resource the operation belongs to.
      * @param operation The operation.
@@ -113,7 +113,7 @@ public final class AuthoritiesImpl implements Authorities {
 
     /**
      * Adds an authority to perform one or more activities on a resource.
-     * 
+     *
      * @param resource The resource.
      * @param activities The activities.
      * @return This instance for command chaining.
@@ -124,7 +124,7 @@ public final class AuthoritiesImpl implements Authorities {
 
     /**
      * Adds an authority to perform one or more activities on a resource.
-     * 
+     *
      * @param endpoint The endpoint segment of the resource.
      * @param tenant The tenant segment of the resource.
      * @param activities The activities.
@@ -141,7 +141,7 @@ public final class AuthoritiesImpl implements Authorities {
 
     /**
      * Adds all authorities contained in another object to this instance.
-     * 
+     *
      * @param authoritiesToAdd The object containing the authorities to add.
      * @return This instance for command chaining.
      */

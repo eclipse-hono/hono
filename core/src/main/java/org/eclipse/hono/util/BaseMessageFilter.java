@@ -42,7 +42,7 @@ public class BaseMessageFilter {
      * <li>{@link MessageHelper#APP_PROPERTY_TENANT_ID} - the ID of the tenant as indicated by the link target's second segment.</li>
      * <li>{@link MessageHelper#APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant and the device ID.</li>
      * </ul>
-     * 
+     *
      * @param linkTarget The resource path to check the message's properties against for consistency.
      * @param msg The AMQP 1.0 message to perform the checks on.
      * @return {@code true} if the message passes all checks.
@@ -61,7 +61,7 @@ public class BaseMessageFilter {
 
      /**
       * Checks if an AMQP message contains a valid device identifier.
-      * 
+      *
       * @param linkTarget The resource path to check the message's properties against for consistency.
       * @param msg The AMQP 1.0 message to perform the checks on.
       * @return {@code true} if the following conditions are met:
@@ -88,7 +88,7 @@ public class BaseMessageFilter {
 
      /**
       * Checks if an AMQP message contains either a message ID or a correlation ID.
-      * 
+      *
       * @param msg The message.
       * @return {@code true} if the message has an ID that can be used for correlation.
       */

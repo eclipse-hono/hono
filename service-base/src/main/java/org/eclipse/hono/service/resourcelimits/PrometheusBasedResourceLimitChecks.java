@@ -252,7 +252,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      * If the mode is set as <em>days</em> then the data usage is calculated 
      * based on the number of days set using {@link TenantConstants#FIELD_PERIOD_NO_OF_DAYS} 
      * and compared with the maxBytes.
-     * 
+     *
      * @param tenant The tenant configuration to check the limit against.
      * @param payloadSize The message payload size in bytes.
      * @param spanContext The currently active OpenTracing span context that is used to
@@ -543,7 +543,7 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
      *   }
      * }
      * </pre>
-     * 
+     *
      * @param response The response object.
      * @return The extracted value.
      * @see <a href="https://prometheus.io/docs/prometheus/latest/querying/api/">Prometheus HTTP API</a>

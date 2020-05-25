@@ -69,7 +69,7 @@ import io.vertx.proton.ProtonSession;
 public class RequestResponseEndpointTest {
 
     /**
-     * 
+     *
      */
     private static final String EVENT_BUS_ADDRESS = "requests";
     private static final ResourceIdentifier resource = ResourceIdentifier.from("endpoint", Constants.DEFAULT_TENANT, null);

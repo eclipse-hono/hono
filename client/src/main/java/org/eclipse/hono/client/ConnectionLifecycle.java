@@ -42,7 +42,7 @@ public interface ConnectionLifecycle<T> {
 
     /**
      * Adds a listener to be notified when the connection is lost unexpectedly.
-     * 
+     *
      * @param listener The listener to add.
      */
     void addDisconnectListener(DisconnectListener<T> listener);
@@ -50,7 +50,7 @@ public interface ConnectionLifecycle<T> {
     /**
      * Adds a listener to be notified when the connection has been re-established after
      * it had been lost unexpectedly.
-     * 
+     *
      * @param listener The listener to add.
      */
     void addReconnectListener(ReconnectListener<T> listener);

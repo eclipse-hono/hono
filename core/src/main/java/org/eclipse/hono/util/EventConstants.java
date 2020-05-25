@@ -42,7 +42,7 @@ public final class EventConstants {
 
     /**
      * Checks if a given endpoint name is the Event endpoint.
-     * 
+     *
      * @param ep The name to check.
      * @return {@code true} if the name is either {@link #EVENT_ENDPOINT} or {@link #EVENT_ENDPOINT_SHORT}.
      */
@@ -52,7 +52,7 @@ public final class EventConstants {
 
     /**
      * Checks if a given content type is the empty notification type.
-     * 
+     *
      * @param contentType The content type to check.
      * @return {@code true} if the given type is the empty notification type.
      */

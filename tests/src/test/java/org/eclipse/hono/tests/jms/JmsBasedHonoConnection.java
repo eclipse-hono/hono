@@ -70,7 +70,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a new connection to a server.
-     * 
+     *
      * @param clientConfig The configuration properties for connecting to the server.
      * @return The connected client.
      */
@@ -165,7 +165,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates an anonymous message producer.
-     * 
+     *
      * @return The producer.
      * @throws JMSException if the producer could not be created.
      */
@@ -175,7 +175,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a message producer for a destination.
-     * 
+     *
      * @param destination The destination. 
      * @return The producer.
      * @throws JMSException if the producer could not be created.
@@ -186,7 +186,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a message producer for a destination.
-     * 
+     *
      * @param destination The destination. 
      * @return The producer.
      * @throws JMSException if the producer could not be created.
@@ -203,7 +203,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a consumer for telemetry messages.
-     * 
+     *
      * @param tenantId The tenant to create the consumer for.
      * @return The consumer.
      * @throws JMSException if the consumer could not be created.
@@ -214,7 +214,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a message consumer for a destination.
-     * 
+     *
      * @param destination The destination. 
      * @return The consumer.
      * @throws JMSException if the consumer could not be created.
@@ -225,7 +225,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a message consumer for a destination.
-     * 
+     *
      * @param destination The destination. 
      * @return The consumer.
      * @throws JMSException if the consumer could not be created.
@@ -261,7 +261,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
      * <p>
      * The returned message contains the UTF-8 encoding of the given string in its payload.
      * The device ID is put into property {@link MessageHelper#APP_PROPERTY_DEVICE_ID}.
-     * 
+     *
      * @param payload The payload.
      * @param deviceId The identifier of the device that is subject to the message or {@code null}
      *                 if the message is not subjected to a device.
@@ -279,7 +279,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a new message for a payload.
-     * 
+     *
      * @param payload The payload of the message or {@code null} if an empty message should be created.
      * @return The message.
      * @throws JMSException if the message could not be created.
@@ -299,7 +299,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a new destination for an address.
-     * 
+     *
      * @param address The address to create the destination for.
      * @return The destination.
      */
@@ -309,7 +309,7 @@ public class JmsBasedHonoConnection implements ConnectionLifecycle<JmsBasedHonoC
 
     /**
      * Creates a new destination for an endpoint and tenant.
-     * 
+     *
      * @param endpoint The endpoint.
      * @param tenantId The tenant identifier.
      * @return The destination.

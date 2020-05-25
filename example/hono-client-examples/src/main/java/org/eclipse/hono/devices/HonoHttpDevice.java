@@ -168,7 +168,7 @@ public class HonoHttpDevice {
 
     /**
      * Send a message to Hono HTTP adapter. Delay any successful response by 1000 milliseconds.
-     * 
+     *
      * @param request The request to send.
      * @return The HTTP response headers.
      */

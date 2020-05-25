@@ -31,7 +31,7 @@ public final class FileBasedRegistrationConfigProperties extends AbstractFileBas
      * Gets the maximum number of devices that can be registered for each tenant.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_DEVICES_PER_TENANT}.
-     * 
+     *
      * @return The maximum number of devices.
      */
     public int getMaxDevicesPerTenant() {
@@ -42,7 +42,7 @@ public final class FileBasedRegistrationConfigProperties extends AbstractFileBas
      * Sets the maximum number of devices that can be registered for each tenant.
      * <p>
      * The default value of this property is {@link #DEFAULT_MAX_DEVICES_PER_TENANT}.
-     * 
+     *
      * @param maxDevices The maximum number of devices.
      * @throws IllegalArgumentException if the number of devices is &lt;= 0.
      */

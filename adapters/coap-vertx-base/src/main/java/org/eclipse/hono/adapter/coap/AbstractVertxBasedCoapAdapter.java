@@ -86,7 +86,7 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * Provides support for exposing Hono's southbound Telemetry &amp; Event
  * API by means of CoAP resources.
- * 
+ *
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
@@ -111,7 +111,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Sets the service to use for resolving an authenticated CoAP client to a Hono device.
-     * 
+     *
      * @param deviceIdentityResolver The resolver to use.
      */
     public final void setHonoDeviceResolver(final ApplicationLevelInfoSupplier deviceIdentityResolver) {
@@ -121,7 +121,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Sets the service to use for looking up pre-shared keys for clients authenticating using PSK
      * based ciphers in a DTLS handshake.
-     * 
+     *
      * @param pskStore The service to use.
      */
     public final void setPskStore(final PskStore pskStore) {
@@ -140,7 +140,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Gets the object for reporting this adapter's metrics.
-     * 
+     *
      * @return The metrics.
      */
     protected final CoapAdapterMetrics getMetrics() {
@@ -150,7 +150,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Sets the CoAP resources that should be added to the CoAP server
      * managed by this class.
-     * 
+     *
      * @param resources The resources.
      * @throws NullPointerException if resources is {@code null}.
      */
@@ -200,7 +200,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * <p>
      * If no server is set using this method, then a server instance is created during startup of this adapter based on
      * the <em>config</em> properties.
-     * 
+     *
      * @param server The coap server.
      * @throws NullPointerException if server is {@code null}.
      */
@@ -414,7 +414,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * Invoked before the coap server is started.
      * <p>
      * May be overridden by sub-classes to provide additional startup handling.
-     * 
+     *
      * @return A future indicating the outcome of the operation. The start up process fails if the returned future
      *         fails.
      */
@@ -450,7 +450,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getSecureNetworkConfig()}.</li>
      * </ol>
-     * 
+     *
      * @return The network configuration for the secure endpoint.
      */
     protected Future<NetworkConfig> getSecureNetworkConfig() {
@@ -468,7 +468,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getInsecureNetworkConfig()}.</li>
      * </ol>
-     * 
+     *
      * @return The network configuration for the insecure endpoint.
      */
     protected Future<NetworkConfig> getInsecureNetworkConfig() {
@@ -480,7 +480,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Loads Californium configuration properties from a file.
-     * 
+     *
      * @param fileName The absolute path to the properties file.
      * @param networkConfig The configuration to apply the properties to.
      * @return The updated configuration.
@@ -510,7 +510,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * properties.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param downstreamMessage The message that will be sent downstream.
      * @param context The context representing the request to be processed.
      */
@@ -546,7 +546,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     /**
      * Invoked after the Adapter has been shutdown successfully. May be overridden by sub-classes to provide further
      * shutdown handling.
-     * 
+     *
      * @return A future that has to be completed when this operation is finished.
      */
     protected Future<Void> postShutdown() {
@@ -555,7 +555,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Gets an authenticated device's identity for a CoAP request.
-     * 
+     *
      * @param device The device that the data in the request payload originates from.
      *               If {@code null}, the origin of the data is assumed to be the authenticated device.
      * @param exchange The CoAP exchange with the authenticated device's principal.
@@ -593,7 +593,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Forwards the body of a CoAP request to the south bound Telemetry API of the AMQP 1.0 Messaging Network.
-     * 
+     *
      * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param originDevice message's origin device
@@ -617,7 +617,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     /**
      * Forwards the body of a CoAP request to the south bound Event API of the AMQP 1.0 Messaging Network.
-     * 
+     *
      * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param originDevice message's origin device
@@ -648,7 +648,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      * <p>
      * Depending on the outcome of the attempt to upload the message, the CoAP response code is set as
      * described by the <a href="https://www.eclipse.org/hono/docs/user-guide/coap-adapter/">CoAP adapter user guide</a>
-     * 
+     *
      * @param context The context representing the request to be processed.
      * @param authenticatedDevice authenticated device
      * @param device message's origin device

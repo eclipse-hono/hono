@@ -78,7 +78,7 @@ public class Tenant {
 
     /**
      * Checks if this object contains all required data.
-     * 
+     *
      * @return {@code true} if all required data is available.
      */
     @JsonIgnore
@@ -92,7 +92,7 @@ public class Tenant {
     /**
      * Sets whether devices of this tenant should be able to connect
      * to Hono.
-     * 
+     *
      * @param enabled {@code true} if devices should be able to connect.
      * @return This instance, to allow chained invocations.
      */
@@ -104,7 +104,7 @@ public class Tenant {
     /**
      * Checks whether devices of this tenant are able to connect
      * to Hono.
-     * 
+     *
      * @return {@code true} if devices are able to connect.
      */
     public final Boolean isEnabled() {
@@ -115,7 +115,7 @@ public class Tenant {
      * Sets the extension properties for this tenant.
      * <p>
      * Existing extension properties are completely replaced by the new properties.
-     * 
+     *
      * @param extensions The extension properties.
      * @return This instance, to allow chained invocations.
      */
@@ -147,7 +147,7 @@ public class Tenant {
 
     /**
      * Gets the extension properties of this tenant.
-     * 
+     *
      * @return An unmodifiable view on the extension properties.
      */
     public final Map<String, Object> getExtensions() {
@@ -158,7 +158,7 @@ public class Tenant {
      * Sets the default properties to use for devices belonging to this tenant.
      * <p>
      * Existing default properties are completely replaced by the new properties.
-     * 
+     *
      * @param defaults The default properties.
      * @return This instance, to allow chained invocations.
      */
@@ -172,7 +172,7 @@ public class Tenant {
 
     /**
      * Gets the default properties used for devices belonging to this tenant.
-     * 
+     *
      * @return An unmodifiable view on the default properties.
      */
     public final Map<String, Object> getDefaults() {
@@ -221,7 +221,7 @@ public class Tenant {
 
     /**
      * Adds protocol adapter configuration properties specific to this Tenant.
-     * 
+     *
      * @param configuration The configuration properties to add.
      * @return This instance, to allow chained invocations.
      */
@@ -270,7 +270,7 @@ public class Tenant {
 
     /**
      * Gets resource limits defined for this tenant.
-     * 
+     *
      * @return The resource limits or {@code null} if not set.
      */
     public final ResourceLimits getResourceLimits() {
@@ -279,7 +279,7 @@ public class Tenant {
 
     /**
      * Sets the resource limits for this tenant.
-     * 
+     *
      * @param resourceLimits The resource limits to set.
      * @return This instance, to allow chained invocations.
      */
@@ -310,7 +310,7 @@ public class Tenant {
 
     /**
      * Gets the trusted certificate authorities of this tenant.
-     * 
+     *
      * @return  The authorities or {@code null} if not set.
      */
     public List<TrustedCertificateAuthority> getTrustedCertificateAuthorities() {
@@ -319,7 +319,7 @@ public class Tenant {
 
     /**
      * Sets the trusted certificate authority to use for authenticating devices of this tenant.
-     * 
+     *
      * @param trustedCertificateAuthorities The trust configurations to set.
      * @return This instance, to allow chained invocations.
      */
@@ -332,7 +332,7 @@ public class Tenant {
 
     /**
      * Gets the subject DNs of this tenant's trusted certificate authorities.
-     * 
+     *
      * @return The subject DNs.
      */
     @JsonIgnore
@@ -345,7 +345,7 @@ public class Tenant {
 
     /**
      * Checks if this tenant trusts a certificate authority with a given subject DN.
-     * 
+     *
      * @param subjectDn The subject DN to check for.
      * @return {@code true} if this tenant trusts a certificate authority with the given
      *         subject DN.

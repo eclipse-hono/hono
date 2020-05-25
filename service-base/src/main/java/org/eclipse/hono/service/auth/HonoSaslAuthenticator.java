@@ -65,7 +65,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
     /**
      * Creates a new authenticator.
-     * 
+     *
      * @param authService The service to use for authenticating client.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */

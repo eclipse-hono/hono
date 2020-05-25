@@ -172,7 +172,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     /**
      * Creates a JSON object containing search criteria for Credentials.
-     * 
+     *
      * @param type The type of credentials to get.
      * @param authId The authentication ID to get credentials for.
      * @return The search criteria.
@@ -226,7 +226,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     /**
      * Gets the hash function of a hashed-password secret.
-     * 
+     *
      * @param secret The secret.
      * @return The hash function.
      * @throws NullPointerException if secret is {@code null}.
@@ -247,7 +247,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     /**
      * Gets the password hash of a hashed-password secret.
-     * 
+     *
      * @param secret The secret.
      * @return The Base64 encoded password hash.
      * @throws NullPointerException if secret is {@code null}.
@@ -268,7 +268,7 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
 
     /**
      * Gets the password salt of a hashed-password secret.
-     * 
+     *
      * @param secret The secret.
      * @return The Base64 encoded password salt or {@code null} if no salt is used.
      * @throws NullPointerException if secret is {@code null}.

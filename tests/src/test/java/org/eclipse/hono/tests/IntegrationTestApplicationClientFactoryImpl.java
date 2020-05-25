@@ -31,7 +31,7 @@ public class IntegrationTestApplicationClientFactoryImpl extends ApplicationClie
 
     /**
      * Creates a new client.
-     * 
+     *
      * @param connection The connection to Hono.
      */
     public IntegrationTestApplicationClientFactoryImpl(final HonoConnection connection) {

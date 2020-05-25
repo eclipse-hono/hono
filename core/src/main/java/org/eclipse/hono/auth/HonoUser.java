@@ -25,7 +25,7 @@ public interface HonoUser extends Principal {
 
     /**
      * Gets this user's granted authorities.
-     * 
+     *
      * @return The authorities.
      */
     Authorities getAuthorities();
@@ -33,14 +33,14 @@ public interface HonoUser extends Principal {
     /**
      * Gets a JSON Web Token representing this user's
      * claims.
-     * 
+     *
      * @return The compact encoding of the token.
      */
     String getToken();
 
     /**
      * Checks if the validity period of this user's asserted claims has expired.
-     * 
+     *
      * @return {@code true} if the claims have expired and this user's <em>authorities</em>
      *         should be considered invalid.
      */
@@ -48,7 +48,7 @@ public interface HonoUser extends Principal {
 
     /**
      * Gets the point in time after which this user's authorities should be considered invalid.
-     * 
+     *
      * @return The expiration time.
      */
     Instant getExpirationTime();

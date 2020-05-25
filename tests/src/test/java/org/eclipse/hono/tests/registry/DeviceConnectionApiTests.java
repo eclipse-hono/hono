@@ -44,7 +44,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
     /**
      * Gets a client for interacting with the Device Connection service.
-     * 
+     *
      * @param tenant The tenant to scope the client to.
      * @return The client.
      */

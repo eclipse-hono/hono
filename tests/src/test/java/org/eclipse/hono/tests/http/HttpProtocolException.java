@@ -21,7 +21,7 @@ import io.vertx.core.Future;
 
 /**
  * An exception explicitly for HTTP protocol adapter errors.
- * 
+ *
  */
 public class HttpProtocolException extends ServiceInvocationException {
 
@@ -29,7 +29,7 @@ public class HttpProtocolException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for an error code, a detail message and a root cause.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param msg The detail message.
      * @param cause The root cause.
@@ -41,7 +41,7 @@ public class HttpProtocolException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for an error code and a detail message.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param msg The detail message.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
@@ -52,7 +52,7 @@ public class HttpProtocolException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for an error code and a root cause.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param cause The root cause.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
@@ -63,7 +63,7 @@ public class HttpProtocolException extends ServiceInvocationException {
 
     /**
      * Creates a new exception for an error code.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
      */
@@ -95,7 +95,7 @@ public class HttpProtocolException extends ServiceInvocationException {
      * later on asserts that this is really the case. Not using that construct would make it impossible in the final
      * {@code asyncAssertFailure} block to differentiate between an error from the {@code addDeviceForTenant} method or
      * the actual HTTP call to the protocol adapter.
-     * 
+     *
      * @param <T> The return type of the future.
      * @param t The error to transform.
      * @return A completed future with the transformed error.
@@ -110,7 +110,7 @@ public class HttpProtocolException extends ServiceInvocationException {
 
     /**
      * Assert that an error is an HTTP protocol adapter error and has the expected status code.
-     * 
+     *
      * @param expectedStatusCode The expected status code.
      * @param actualError The error to test.
      */

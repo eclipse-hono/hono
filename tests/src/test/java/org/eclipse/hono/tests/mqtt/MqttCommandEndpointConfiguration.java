@@ -30,7 +30,7 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
 
     /**
      * Creates a new configuration.
-     * 
+     *
      * @param subscriberRole The way in which to subscribe for commands.
      * @param useLegacyTopicFilter {@code true} if the device uses the legacy topic filter for subscribing to commands.
      */
@@ -77,7 +77,7 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
 
     /**
      * Gets the name of the topic that a device uses for publishing the response to a command.
-     * 
+     *
      * @param deviceId The identifier of the device.
      * @param requestId The request identifier from the command.
      * @param status The status code indicating the outcome of processing the command.

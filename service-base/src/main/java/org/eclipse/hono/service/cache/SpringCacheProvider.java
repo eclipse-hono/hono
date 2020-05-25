@@ -29,7 +29,7 @@ public class SpringCacheProvider implements CacheProvider {
 
     /**
      * Create a new instance based on the provided {@link CacheManager} instance.
-     * 
+     *
      * @param manager the cache manager to use, must not be {@code null}
      */
     public SpringCacheProvider(final CacheManager manager) {

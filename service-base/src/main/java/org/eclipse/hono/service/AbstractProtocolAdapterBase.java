@@ -310,7 +310,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Note that subclasses are not required to actually emit connection events.
      * In particular, adapters for connection-less protocols like e.g. HTTP will
      * most likely not emit such events.
-     * 
+     *
      * @param connectionEventProducer The instance which will handle the production of connection events. Depending on
      *            the setup this could be a simple log message or an event using the Hono Event API.
      * @throws NullPointerException if the producer is {@code null}.
@@ -351,7 +351,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * device of a given tenant.
      * <p>
      * Protocol adapters may override this method to e.g. use a static value for all tenants.
-     * 
+     *
      * @param tenant The tenant that the device belongs to.
      * @param deviceTtd The TTD value provided by the device in seconds.
      * @return A succeeded future that contains {@code null} if device TTD is {@code null}, or otherwise the lesser of
@@ -427,7 +427,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Note that the connections will most likely not have been established when the
      * returned future completes. The {@link #isConnected()} method can be used to
      * determine the current connection status.
-     * 
+     *
      * @return A future indicating the outcome of the startup process. the future will
      *         fail if the {@link #getTypeName()} method returns {@code null} or an empty string
      *         or if any of the service clients are not set. Otherwise the future will succeed.
@@ -555,7 +555,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Checks if this adapter is enabled for a given tenant.
-     * 
+     *
      * @param tenantConfig The tenant to check for.
      * @return A succeeded future if this adapter is enabled for the tenant.
      *         Otherwise the future will be failed with a {@link ClientErrorException}
@@ -752,7 +752,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Checks whether a given device is registered and enabled.
-     * 
+     *
      * @param device The device to check.
      * @param context The currently active OpenTracing span that is used to
      *                    trace the retrieval of the assertion or {@code null}
@@ -841,7 +841,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * by default.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param commandConnection The lost connection.
      */
     protected void onCommandConnectionLost(final HonoConnection commandConnection) {
@@ -860,7 +860,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * for all devices.
      * <p>
      * This default implementation does nothing.
-     * 
+     *
      * @param commandConnection The (re-)established connection.
      */
     protected void onCommandConnectionEstablished(final HonoConnection commandConnection) {
@@ -1274,7 +1274,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * Adds Hono specific properties to an AMQP 1.0 message.
      * <p>
      * This method simply delegates to {@link #addProperties(Message, ResourceIdentifier, String, TenantObject, JsonObject, Integer, Duration)}.
-     * 
+     *
      * @param msg The message to add the properties to.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
@@ -1312,7 +1312,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * This method simply delegates to {@link MessageHelper#addProperties(Message, ResourceIdentifier,
      * String, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}.
-     * 
+     *
      * @param msg The message to add the properties to.
      * @param target The target address of the message or {@code null} if the message's
      *               <em>to</em> property contains the target address. The target
@@ -1364,7 +1364,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Registers a check that succeeds if this component is connected to the services it depends on.
-     * 
+     *
      * @see #isConnected()
      */
     @Override
@@ -1393,7 +1393,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Triggers the creation of a <em>connected</em> event.
-     * 
+     *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
      * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
@@ -1433,7 +1433,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
      * with a TTD of {@code -1}.
-     * 
+     *
      * @param tenant The tenant that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
      * @param authenticatedDevice The authenticated device or {@code null}.
@@ -1459,7 +1459,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * This method invokes {@link #sendTtdEvent(String, String, Device, Integer, SpanContext)}
      * with a TTD of {@code 0}.
-     * 
+     *
      * @param tenant The tenant that the device belongs to, who owns the device.
      * @param deviceId The device for which the TTD is reported.
      * @param authenticatedDevice The authenticated device or {@code null}.
@@ -1577,7 +1577,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * <p>
      * This implementation returns the options returned by {@link AbstractConfig#getTrustOptions()} if not {@code null}.
      * Otherwise, it returns trust options for verifying a client certificate's validity period.
-     * 
+     *
      * @return The trust options.
      */
     @Override
@@ -1620,7 +1620,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
     /**
      * Gets the manager to use for connection limits.
-     * 
+     *
      * @return The manager. May be {@code null}.
      */
     public final ConnectionLimitManager getConnectionLimitManager() {
@@ -1629,7 +1629,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the manager to use for connection limits.
-     * 
+     *
      * @param connectionLimitManager The implementation that manages the connection limit.
      */
     public final void setConnectionLimitManager(final ConnectionLimitManager connectionLimitManager) {

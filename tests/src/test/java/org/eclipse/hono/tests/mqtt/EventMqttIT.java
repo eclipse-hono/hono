@@ -95,7 +95,7 @@ public class EventMqttIT extends MqttPublishTestBase {
     /**
      * Verifies that an event from a device for which a default TTL has been
      * specified cannot be consumed after the TTL has expired.
-     * 
+     *
      * @param ctx The vert.x test context.
      * @throws InterruptedException if test execution gets interrupted.
      */

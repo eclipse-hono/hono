@@ -32,7 +32,7 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
 
     /**
      * Gets a builder for this configuration.
-     * 
+     *
      * @return A builder that can be used to create a cache.
      */
     public final ConfigurationBuilder getConfigurationBuilder() {
@@ -41,7 +41,7 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
 
     /**
      * Sets the properties related to the connection pool.
-     * 
+     *
      * @param poolProperties The properties.
      */
     public final void setConnectionPool(final Map<String, String> poolProperties) {
@@ -54,7 +54,7 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
 
     /**
      * Sets the properties related to the SASL based authentication.
-     * 
+     *
      * @param saslProperties The properties.
      */
     public final void setSaslProperties(final Map<String, String> saslProperties) {
@@ -66,7 +66,7 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
 
     /**
      * Sets the properties related to cluster configuration.
-     * 
+     *
      * @param cluster The properties.
      */
     public final void setCluster(final Map<String, String> cluster) {

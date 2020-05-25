@@ -56,7 +56,7 @@ public class HttpContextTenantAndAuthIdProvider extends BaseExecutionContextTena
 
     /**
      * Creates a new HttpContextTenantAndAuthIdProvider.
-     * 
+     *
      * @param config The configuration.
      * @param tenantClientFactory The factory to use for creating a Tenant service client.
      * @param tenantIdContextParamName The name of the HttpContext parameter name that provides the tenant id in case of

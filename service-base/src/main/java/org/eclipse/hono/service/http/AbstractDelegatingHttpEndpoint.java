@@ -57,7 +57,7 @@ public abstract class AbstractDelegatingHttpEndpoint<S, T extends ServiceConfigP
 
     /**
      * Gets the service that this endpoint delegates to.
-     * 
+     *
      * @return The service or {@code null} if not set.
      */
     protected final S getService() {

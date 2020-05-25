@@ -65,7 +65,7 @@ public class Device {
 
     /**
      * Creates a new instance cloned from an existing instance.
-     * 
+     *
      * @param other The device to copy from.
      */
     public Device(final Device other) {
@@ -102,7 +102,7 @@ public class Device {
 
     /**
      * Checks if this device is enabled.
-     * 
+     *
      * @return {@code true} if this device is enabled.
      */
     public Boolean getEnabled() {
@@ -111,7 +111,7 @@ public class Device {
 
     /**
      * Sets the extension properties for this device.
-     * 
+     *
      * @param extensions The extension properties to set.
      * @return           a reference to this for fluent use.
      */
@@ -122,7 +122,7 @@ public class Device {
 
     /**
      * Adds a new extension entry to the device.
-     * 
+     *
      * @param key The key of the entry.
      * @param value The value of the entry.
      * @return This instance, to allowed chained invocations.
@@ -137,7 +137,7 @@ public class Device {
 
     /**
      * Gets the extension properties for this device.
-     * 
+     *
      * @return The extension properties.
      */
     public Map<String, Object> getExtensions() {
@@ -166,7 +166,7 @@ public class Device {
 
     /**
      * Gets the identifiers of the gateway devices that this device may connect via.
-     * 
+     *
      * @return The identifiers.
      */
     public List<String> getVia() {
@@ -175,7 +175,7 @@ public class Device {
 
     /**
      * Sets the identifiers of the gateway devices that this device may connect via.
-     * 
+     *
      * @param via The via property to set.
      * @return    a reference to this for fluent use.
      * @throws IllegalArgumentException if trying to set the 'via' property while the 'memberOf' property is already set.

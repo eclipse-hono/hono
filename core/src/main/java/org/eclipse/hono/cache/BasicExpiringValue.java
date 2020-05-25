@@ -28,7 +28,7 @@ public class BasicExpiringValue<T> implements ExpiringValue<T> {
 
     /**
      * Creates a new instance for a value and an expiration time.
-     * 
+     *
      * @param value The value.
      * @param expirationTime The instant after which the value will be considered expired.
      */

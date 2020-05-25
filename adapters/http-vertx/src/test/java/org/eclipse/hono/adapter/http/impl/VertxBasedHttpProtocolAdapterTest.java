@@ -207,7 +207,7 @@ public class VertxBasedHttpProtocolAdapterTest {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param testInfo The test meta data.
      */
     @SuppressWarnings("unchecked")

@@ -58,7 +58,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
     /**
      * Gets a client for interacting with the Credentials service.
-     * 
+     *
      * @param tenant The tenant to scope the client to.
      * @return The client.
      */

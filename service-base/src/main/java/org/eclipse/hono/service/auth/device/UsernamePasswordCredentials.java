@@ -79,7 +79,7 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * @return Always {@link CredentialsConstants#SECRETS_TYPE_HASHED_PASSWORD}
      */
     @Override
@@ -89,7 +89,7 @@ public class UsernamePasswordCredentials extends AbstractDeviceCredentials {
 
     /**
      * Gets the password to use for verifying the identity.
-     * 
+     *
      * @return The password.
      */
     public final String getPassword() {

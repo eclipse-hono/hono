@@ -143,7 +143,7 @@ public class HonoCommanderSampler extends HonoSampler implements ThreadListener 
 
     /**
      * Sets the type of trigger for the command sampler.
-     * 
+     *
      * @param triggerType The trigger type (device or sampler)
      */
     public void setTriggerType(final String triggerType) {

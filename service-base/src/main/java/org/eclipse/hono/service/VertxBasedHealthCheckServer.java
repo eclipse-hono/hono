@@ -92,7 +92,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
 
     /**
      * Registers the readiness and liveness checks of the given service.
-     * 
+     *
      * @param serviceInstance instance of the service which's checks should be registered.
      */
     @Override
@@ -106,7 +106,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      * <p>
      * During start up, each of the providers will be invoked with the HTTP server's
      * {@code Router} so that the providers can register their resources.
-     * 
+     *
      * @param resourceProviders Additional resources to expose.
      * @throws NullPointerException if provider list is {@code null}.
      */
@@ -232,7 +232,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      * This method usually does not need to be invoked explicitly because
      * the HTTP server will be closed implicitly when the vert.x instance
      * is closed.
-     * 
+     *
      * @return A Future indicating the outcome of the operation.
      */
     @Override

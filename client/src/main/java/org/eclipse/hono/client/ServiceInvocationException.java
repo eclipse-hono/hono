@@ -27,7 +27,7 @@ public class ServiceInvocationException extends RuntimeException {
 
     /**
      * Creates a new exception for an error code.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
      */
@@ -37,7 +37,7 @@ public class ServiceInvocationException extends RuntimeException {
 
     /**
      * Creates a new exception for an error code and a detail message.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param msg The detail message.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
@@ -48,7 +48,7 @@ public class ServiceInvocationException extends RuntimeException {
 
     /**
      * Creates a new exception for an error code and a root cause.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param cause The root cause.
      * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
@@ -59,7 +59,7 @@ public class ServiceInvocationException extends RuntimeException {
 
     /**
      * Creates a new exception for an error code, a detail message and a root cause.
-     * 
+     *
      * @param errorCode The code representing the erroneous outcome.
      * @param msg The detail message.
      * @param cause The root cause.
@@ -76,7 +76,7 @@ public class ServiceInvocationException extends RuntimeException {
 
     /**
      * Gets the code representing the erroneous outcome.
-     * 
+     *
      * @return The code.
      */
     public final int getErrorCode() {
@@ -85,7 +85,7 @@ public class ServiceInvocationException extends RuntimeException {
 
     /**
      * Provide a default message if none is provided.
-     * 
+     *
      * @param errorCode The error code
      * @param msg The detail message. May be {@code null}.
      * @return The provided message or the default message derived from the error code if {@code null} was provided as a
@@ -102,7 +102,7 @@ public class ServiceInvocationException extends RuntimeException {
 
     /**
      * Extract the HTTP status code from an exception.
-     * 
+     *
      * @param t The exception to extract the code from.
      * @return The HTTP status code, or 500 if the exception is not of type {@link ServiceInvocationException}.
      */

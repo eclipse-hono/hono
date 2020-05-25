@@ -100,7 +100,7 @@ public final class HonoClientUnitTestHelper {
      * Creates a mocked OpenTracing SpanBuilder for creating a given Span.
      * <p>
      * All invocations on the mock are stubbed to return the builder by default.
-     * 
+     *
      * @param spanToCreate The object that the <em>start</em> method of the
      *                     returned builder should produce.
      * @return The builder.
@@ -124,7 +124,7 @@ public final class HonoClientUnitTestHelper {
      * <p>
      * Invokes {@link #mockHonoConnection(Vertx, ClientConfigProperties)}
      * with default {@link ClientConfigProperties}.
-     * 
+     *
      * @param vertx The vert.x instance to use.
      * @return The connection.
      */
@@ -135,7 +135,7 @@ public final class HonoClientUnitTestHelper {
     /**
      * Creates a mocked Hono connection that returns a
      * Noop Tracer.
-     * 
+     *
      * @param vertx The vert.x instance to use.
      * @param props The client properties to use.
      * @return The connection.

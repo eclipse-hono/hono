@@ -27,7 +27,7 @@ public interface MessageConsumer {
      * <p>
      * The underlying AMQP connection to the server is not affected by this operation.
      * </p>
-     * 
+     *
      * @param closeHandler A handler that is called back with the result of the attempt to close the link.
      */
     void close(Handler<AsyncResult<Void>> closeHandler);

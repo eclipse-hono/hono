@@ -120,7 +120,7 @@ public class AmqpAdapterClientCommandResponseSender extends CommandResponseSende
     /**
      * The method in the parent class is only intended for use by a protocol adapter to forward the command response
      * downstream, and this use case is not supported in this class.
-     * 
+     *
      * @param commandResponse not used.
      * @param context not used.
      * @return nothing.

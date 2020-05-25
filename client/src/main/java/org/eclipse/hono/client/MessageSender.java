@@ -42,7 +42,7 @@ public interface MessageSender extends CreditBasedSender {
      * Closes the AMQP link with the Hono server this sender is using.
      * <p>
      * The underlying AMQP connection to the server is not affected by this operation.
-     * 
+     *
      * @param closeHandler A handler that is called back with the outcome of the attempt to close the link.
      * @throws NullPointerException if the handler is {@code null}.
      */
@@ -52,14 +52,14 @@ public interface MessageSender extends CreditBasedSender {
      * Checks if this sender is (locally) open.
      * <p>
      * Note that the value returned is valid during execution of the current vert.x handler only.
-     * 
+     *
      * @return {@code true} if this sender can be used to send messages to the peer.
      */
     boolean isOpen();
 
     /**
      * Sends an AMQP 1.0 message to the endpoint configured for this client.
-     * 
+     *
      * @param message The message to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -81,7 +81,7 @@ public interface MessageSender extends CreditBasedSender {
      * Sends an AMQP 1.0 message to the endpoint configured for this client.
      * <p>
      * This default implementation simply returns the result of {@link #send(Message)}.
-     * 
+     *
      * @param message The message to send.
      * @param context The currently active OpenTracing span. An implementation
      *         should use this as the parent for any span it creates for tracing
@@ -108,7 +108,7 @@ public interface MessageSender extends CreditBasedSender {
     /**
      * Sends an AMQP 1.0 message to the peer and waits for the disposition indicating
      * the outcome of the transfer.
-     * 
+     *
      * @param message The message to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -129,7 +129,7 @@ public interface MessageSender extends CreditBasedSender {
      * the outcome of the transfer.
      * <p>
      * This default implementation simply returns the result of {@link #sendAndWaitForOutcome(Message)}.
-     * 
+     *
      * @param message The message to send.
      * @param context The currently active OpenTracing span. An implementation
      *         should use this as the parent for any span it creates for tracing

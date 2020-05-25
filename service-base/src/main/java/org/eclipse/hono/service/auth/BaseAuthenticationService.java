@@ -36,7 +36,7 @@ import io.vertx.core.json.JsonObject;
  * method with the received message. If the handler succeeds, the result is sent back via the event bus as a reply
  * to the original authentication request. Otherwise, a failure reply is sent using the error code from the handler
  * exception.
- * 
+ *
  * @param <T> The type of configuration properties this service supports.
  */
 public abstract class BaseAuthenticationService<T> extends ConfigurationSupportingVerticle<T> implements AuthenticationService {
@@ -56,7 +56,7 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
      * during startup.
      * <p>
      * This default implementation always completes the start promise.
-     * 
+     *
      * @param startPromise Completes if startup succeeded.
      */
     protected void doStart(final Promise<Void> startPromise) {
@@ -76,7 +76,7 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
      * during shutdown.
      * <p>
      * This default implementation always completes the stop future.
-     * 
+     *
      * @param stopPromise Completes if shutdown succeeded.
      */
     protected void doStop(final Promise<Void> stopPromise) {

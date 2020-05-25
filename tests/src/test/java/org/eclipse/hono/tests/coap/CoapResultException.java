@@ -24,7 +24,7 @@ public class CoapResultException extends Exception {
 
     /**
      * Create a new instance with an error code.
-     * 
+     *
      * @param errorCode The error code.
      */
     public CoapResultException(final int errorCode) {
@@ -34,7 +34,7 @@ public class CoapResultException extends Exception {
 
     /**
      * Create a new instance with an error code and message.
-     * 
+     *
      * @param errorCode The error code.
      * @param message The message.
      */
@@ -45,7 +45,7 @@ public class CoapResultException extends Exception {
 
     /**
      * Gets the error code.
-     * 
+     *
      * @return The code.
      */
     public final int getErrorCode() {

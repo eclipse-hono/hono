@@ -83,7 +83,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
 
     /**
      * Creates a new factory for an existing connection.
-     * 
+     *
      * @param connection The connection to the AMQP network.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -335,7 +335,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * This implementation always creates a new sender link.
      */
     @Override

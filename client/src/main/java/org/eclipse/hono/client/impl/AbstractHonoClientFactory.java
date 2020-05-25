@@ -86,7 +86,7 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConn
      * Checks whether this client is connected to the service.
      * <p>
      * Simply delegates to {@link HonoConnection#isConnected()}.
-     * 
+     *
      * @return A succeeded future if this factory is connected.
      *         Otherwise, the future will be failed with a
      *         {@link ServerErrorException}.
@@ -105,7 +105,7 @@ abstract class AbstractHonoClientFactory implements ConnectionLifecycle<HonoConn
      * future is failed.
      * <p>
      * Simply delegates to {@link HonoConnection#isConnected(long)}.
-     * 
+     *
      * @param waitForCurrentConnectAttemptTimeout The maximum number of milliseconds to wait for
      *                                            an ongoing connection attempt to finish.
      * @return A succeeded future if this factory is connected.

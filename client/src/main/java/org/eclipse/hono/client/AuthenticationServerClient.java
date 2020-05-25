@@ -50,7 +50,7 @@ public final class AuthenticationServerClient {
 
     /**
      * Creates a client for a remote authentication server.
-     * 
+     *
      * @param vertx The Vert.x instance to run on.
      * @param connectionFactory The factory.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -68,7 +68,7 @@ public final class AuthenticationServerClient {
      * <p>
      * This method currently always fails the handler because there is no way (yet) in vertx-proton
      * to perform a SASL EXTERNAL exchange including an authorization id.
-     * 
+     *
      * @param authzid The identity to act as.
      * @param subjectDn The Subject DN.
      * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
@@ -82,7 +82,7 @@ public final class AuthenticationServerClient {
 
     /**
      * Verifies username/password credentials with a remote authentication server using SASL PLAIN.
-     * 
+     *
      * @param authzid The identity to act as.
      * @param authcid The username.
      * @param password The password.

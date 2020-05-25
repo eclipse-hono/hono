@@ -39,7 +39,7 @@ public final class PropertyBag {
     /**
      * Creates a property bag object from the given topic by retrieving 
      * all the properties from the <em>property-bag</em>.
-     * 
+     *
      * @param topic The topic that the message has been published to.
      * @return The property bag object or {@code null} if no 
      *         <em>property-bag</em> is set in the topic.

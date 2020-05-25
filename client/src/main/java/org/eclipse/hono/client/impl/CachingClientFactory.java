@@ -38,7 +38,7 @@ import io.vertx.core.Vertx;
  * fails if the clearState method is being invoked.
  * <p>
  * Created clients are being cached.
- * 
+ *
  * @param <T> The type of client to be created.
  */
 class CachingClientFactory<T> extends ClientFactory<T> {
@@ -79,7 +79,7 @@ class CachingClientFactory<T> extends ClientFactory<T> {
 
     /**
      * Removes a client from the cache.
-     * 
+     *
      * @param key The key of the client to remove.
      */
     public void removeClient(final String key) {
@@ -88,7 +88,7 @@ class CachingClientFactory<T> extends ClientFactory<T> {
 
     /**
      * Removes a client from the cache.
-     * 
+     *
      * @param key The key of the client to remove.
      * @param postProcessor A handler to invoke with the removed client.
      */
@@ -114,7 +114,7 @@ class CachingClientFactory<T> extends ClientFactory<T> {
 
     /**
      * Gets an existing client.
-     * 
+     *
      * @param key The key to look up.
      * @return The client or {@code null} if the cache does
      *         not contain the key.
@@ -129,7 +129,7 @@ class CachingClientFactory<T> extends ClientFactory<T> {
      * This method first tries to look up an already existing
      * client using the given key. If no client exists yet, a new
      * instance is created using the given factory and put to the cache.
-     * 
+     *
      * @param key The key to cache the client under.
      * @param clientInstanceSupplier The factory to use for creating a
      *        new client (if necessary).

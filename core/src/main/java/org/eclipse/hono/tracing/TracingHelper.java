@@ -124,7 +124,7 @@ public final class TracingHelper {
 
     /**
      * Sets the tags identifying a device.
-     * 
+     *
      * @param span The span to set the tags on.
      * @param tenantId The tenant that the device belongs to or {@code null} if unknown.
      * @param deviceId The device identifier or {@code null} if unknown.
@@ -144,7 +144,7 @@ public final class TracingHelper {
      * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
      * <p>
      * This method does <em>not</em> finish the span.
-     * 
+     *
      * @param span The span to mark.
      * @param error The exception that has occurred.
      * @throws NullPointerException if error is {@code null}.
@@ -157,7 +157,7 @@ public final class TracingHelper {
 
     /**
      * Creates a set of items to log for an error.
-     * 
+     *
      * @param error The error.
      * @return The items to log.
      */
@@ -174,7 +174,7 @@ public final class TracingHelper {
      * Marks an <em>OpenTracing</em> span as erroneous and logs a message.
      * <p>
      * This method does <em>not</em> finish the span.
-     * 
+     *
      * @param span The span to mark.
      * @param message The message to log on the span.
      * @throws NullPointerException if message is {@code null}.
@@ -218,7 +218,7 @@ public final class TracingHelper {
      * Marks an <em>OpenTracing</em> span as erroneous and logs several items.
      * <p>
      * This method does <em>not</em> finish the span.
-     * 
+     *
      * @param span The span to mark.
      * @param items The items to log on the span. Note that this method will
      *               also log an item using {@code event} as key and {@code error}

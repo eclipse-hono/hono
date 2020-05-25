@@ -27,7 +27,7 @@ public class ResourceConflictException extends ClientErrorException {
 
     /**
      * Creates a new exception for a detail message.
-     * 
+     *
      * @param msg The detail message.
      */
     public ResourceConflictException(final String msg) {
@@ -36,7 +36,7 @@ public class ResourceConflictException extends ClientErrorException {
 
     /**
      * Creates a new exception for a root cause.
-     * 
+     *
      * @param cause The root cause.
      */
     public ResourceConflictException(final Throwable cause) {
@@ -45,7 +45,7 @@ public class ResourceConflictException extends ClientErrorException {
 
     /**
      * Creates a new exception for a detail message and a root cause.
-     * 
+     *
      * @param msg The detail message.
      * @param cause The root cause.
      */

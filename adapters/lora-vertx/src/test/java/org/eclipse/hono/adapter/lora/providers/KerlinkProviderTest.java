@@ -77,7 +77,7 @@ public class KerlinkProviderTest {
 
     /**
      * Sets up the fixture.
-     * 
+     *
      * @param testInfo The test meta data.
      */
     @BeforeEach

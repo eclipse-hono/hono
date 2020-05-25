@@ -149,7 +149,7 @@ public final class DeviceRegistryUtils {
 
     /**
      * Gets a unique identifier generated using {@link UUID#randomUUID()}.
-     * 
+     *
      * @return The generated unique identifier.
      */
     public static String getUniqueIdentifier() {
@@ -215,7 +215,7 @@ public final class DeviceRegistryUtils {
      * {@link PasswordSecret#encode(HonoPasswordEncoder)}, {@link PasswordSecret#checkValidity()}
      * and {@link PasswordSecret#verifyHashAlgorithm(Set, int)} methods are invoked.</li>
      * </ol>
-     * 
+     *
      * @param credential The secret to validate.
      * @param passwordEncoder The password encoder.
      * @param hashAlgorithmsWhitelist The list of supported hashing algorithms for pre-hashed passwords.

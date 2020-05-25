@@ -63,7 +63,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
      * <p>
      * The client will be ready to use after invoking {@link #createLinks()} or
      * {@link #createLinks(Handler, Handler)} only.
-     * 
+     *
      * @param connection The connection to Hono.
      * @param tenantId The identifier of the tenant for which the client should be created.
      */
@@ -122,7 +122,7 @@ public class CredentialsClientImpl extends AbstractRequestResponseClient<Credent
 
     /**
      * Gets the AMQP <em>target</em> address to use for sending requests to Hono's Credentials API endpoint.
-     * 
+     *
      * @param tenantId The tenant to upload data for.
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.

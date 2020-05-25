@@ -37,7 +37,7 @@ import io.vertx.proton.ProtonSender;
 
 /**
  * Abstract base class for tests that verify the tenant timeout feature in the client factories.
- * 
+ *
  * @param <T> The type of the client that the factory builds.
  */
 @ExtendWith(VertxExtension.class)
@@ -48,7 +48,7 @@ public abstract class AbstractTenantTimeoutRelatedClientFactoryTest<T> {
 
     /**
      * Gets a future with a client of type `T` from its factory.
-     * 
+     *
      * @param connection The connection to be used.
      * @param tenantId The tenant of the client.
      * @return The future with the client.

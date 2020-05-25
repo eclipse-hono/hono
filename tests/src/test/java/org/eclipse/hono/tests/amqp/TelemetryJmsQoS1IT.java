@@ -66,7 +66,7 @@ public class TelemetryJmsQoS1IT {
 
     /**
      * Creates a connection to the AMP Messaging Network.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @BeforeAll
@@ -81,7 +81,7 @@ public class TelemetryJmsQoS1IT {
 
     /**
      * Prints the test name to the console.
-     * 
+     *
      * @param info The current test's meta information.
      */
     @BeforeEach
@@ -92,7 +92,7 @@ public class TelemetryJmsQoS1IT {
     /**
      * Closes the downstream consumer an the connection
      * to the AMQP adapter.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterEach
@@ -115,7 +115,7 @@ public class TelemetryJmsQoS1IT {
 
     /**
      * Closes the connection to the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @AfterAll
@@ -131,7 +131,7 @@ public class TelemetryJmsQoS1IT {
     /**
      * Verifies that telemetry messages uploaded to the Hono server are all received
      * by a downstream consumer.
-     * 
+     *
      * @throws Exception if the test fails.
      */
     @Test

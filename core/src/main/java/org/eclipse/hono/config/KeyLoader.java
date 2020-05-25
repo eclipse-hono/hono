@@ -55,7 +55,7 @@ public final class KeyLoader {
 
     /**
      * A processor for PEM file content.
-     *  
+     *
      * @param <R> The type of the result.
      */
     @FunctionalInterface
@@ -76,7 +76,7 @@ public final class KeyLoader {
 
     /**
      * Gets the private key.
-     * 
+     *
      * @return The private key, may be {@code null}
      */
     public PrivateKey getPrivateKey() {
@@ -85,7 +85,7 @@ public final class KeyLoader {
 
     /**
      * Gets the certificate chain.
-     * 
+     *
      * @return The chain of {@code null} if no certificates have been loaded.
      */
     public Certificate[] getCertificateChain() {
@@ -98,7 +98,7 @@ public final class KeyLoader {
 
     /**
      * Gets the public key.
-     * 
+     *
      * @return The public key or {@code null} if not set.
      */
     public PublicKey getPublicKey() {
@@ -111,7 +111,7 @@ public final class KeyLoader {
 
     /**
      * Creates a new loader for a key store.
-     * 
+     *
      * @param vertx The vertx instance to use for loading the key store.
      * @param keyStorePath The absolute path to the key store to load keys from.
      * @param password The password required for accessing the key store.
@@ -148,7 +148,7 @@ public final class KeyLoader {
 
     /**
      * Creates a new loader for a key store.
-     * 
+     *
      * @param vertx The vertx instance to use for loading the key store.
      * @param keyPath The absolute path to the PEM file containing the private key.
      * @param certPath The absolute path to the PEM file containing the certificate (chain).

@@ -33,7 +33,7 @@ public final class TenantMessageFilter extends BaseMessageFilter {
 
     /**
      * Checks whether a given tenant message contains all required properties.
-     * 
+     *
      * @param linkTarget The resource path to check the message's properties against for consistency.
      * @param msg The AMQP 1.0 message to perform the checks on.
      * @return {@code true} if the message passes all checks.

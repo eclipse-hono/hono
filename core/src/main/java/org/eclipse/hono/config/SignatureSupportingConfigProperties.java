@@ -28,7 +28,7 @@ public class SignatureSupportingConfigProperties {
 
     /**
      * Gets the secret used for creating and validating HmacSHA256 based signatures.
-     * 
+     *
      * @return The secret or {@code null} if not set.
      */
     public final String getSharedSecret() {
@@ -37,7 +37,7 @@ public class SignatureSupportingConfigProperties {
 
     /**
      * Sets the secret to use for creating and validating HmacSHA256 based signatures.
-     * 
+     *
      * @param secret The shared secret.
      * @throws NullPointerException if secret is {@code null}.
      * @throws IllegalArgumentException if the secret is &lt; 32 bytes.
@@ -54,7 +54,7 @@ public class SignatureSupportingConfigProperties {
      * for creating SHA256withRSA based signatures.
      * <p>
      * The file must be in PKCS8 PEM format.
-     * 
+     *
      * @param keyPath The path to the PEM file.
      * @throws NullPointerException if the path is {@code null}.
      */
@@ -65,7 +65,7 @@ public class SignatureSupportingConfigProperties {
     /**
      * Gets the path to the file containing the private key to be used
      * for validating RSA based signatures.
-     * 
+     *
      * @return The path to the file or {@code null} if not set.
      */
     public final String getKeyPath() {
@@ -74,7 +74,7 @@ public class SignatureSupportingConfigProperties {
 
     /**
      * Gets the period of time after which tokens created using this configuration should expire.
-     * 
+     *
      * @return The number of seconds after which tokens expire.
      */
     public final long getTokenExpiration() {
@@ -85,7 +85,7 @@ public class SignatureSupportingConfigProperties {
      * Sets the period of time after which tokens created using this configuration should expire.
      * <p>
      * The default value is 600 seconds (10 minutes).
-     * 
+     *
      * @param seconds The number of seconds after which tokens expire.
      * @throws IllegalArgumentException if seconds is &lt;= 0.
      */
@@ -101,7 +101,7 @@ public class SignatureSupportingConfigProperties {
      * for validating SHA256withRSA based signatures.
      * <p>
      * The file must be in PKCS8 PEM format.
-     * 
+     *
      * @param certPath The path to the PEM file.
      * @throws NullPointerException if the path is {@code null}.
      */
@@ -112,7 +112,7 @@ public class SignatureSupportingConfigProperties {
     /**
      * Gets the path to the X.509 certificate containing the public key to be used
      * for validating RSA based signatures.
-     * 
+     *
      * @return The path to the file or {@code null} if not set.
      */
     public final String getCertPath() {
@@ -121,7 +121,7 @@ public class SignatureSupportingConfigProperties {
 
     /**
      * Checks if this configuration contains enough information for creating assertions.
-     * 
+     *
      * @return {@code true} if any of sharedSecret or keyPath is not {@code null}.
      */
     public final boolean isAppropriateForCreating() {
@@ -130,7 +130,7 @@ public class SignatureSupportingConfigProperties {
 
     /**
      * Checks if this configuration contains enough information for validating assertions.
-     * 
+     *
      * @return {@code true} if any of sharedSecret or certificatePath is not {@code null}.
      */
     public final boolean isAppropriateForValidating() {

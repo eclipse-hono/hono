@@ -929,7 +929,7 @@ public final class MessageHelper {
      * This method simply calls
      * {@link #newMessage(ResourceIdentifier, String, String, Buffer, TenantObject, JsonObject, Integer, Duration, String, boolean, boolean)}
      * to create the AMQP 1.0 message.
-     * 
+     *
      * @param target       The target address of the message or {@code null} if the message's
      *                     <em>to</em> property contains the target address.
      * @param contentType  The content type describing the message's payload or {@code null} if no content type
@@ -940,7 +940,7 @@ public final class MessageHelper {
      * @param timeToLive   The message's <em>time-to-live</em> as provided by the device or {@code null} if the
      *                     device did not provide any TTL.
      * @param adapterName  The type name of the protocol adapter that the message has been published to.
-     * 
+     *
      * @return  The AMQP 1.0 message.
      */
     public static Message newMessage(

@@ -26,7 +26,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * An operation response, including a resource version.
- * 
+ *
  * @param <T> The type of the payload.
  */
 public final class OperationResult<T> extends Result<T> {
@@ -35,7 +35,7 @@ public final class OperationResult<T> extends Result<T> {
 
     /**
      * Create a new instance.
-     * 
+     *
      * @param status The HTTP status code.
      * @param payload The payload, may be {@code null}.
      * @param cacheDirective The caching directive, may be {@link Optional#empty()}, but not {@code null}.
@@ -53,7 +53,7 @@ public final class OperationResult<T> extends Result<T> {
 
     /**
      * Create a response from the request.
-     * 
+     *
      * @param request The request to use as base.
      * @param payloadMapper The mapper for mapping the payload to the JSON object required by the
      *            {@link EventBusMessage}.
@@ -70,14 +70,14 @@ public final class OperationResult<T> extends Result<T> {
 
     /**
      * Create a new "ok" response.
-     * 
+     *
      * @param status The status of the response.
      * @param payload The payload of the response.
      * @param directive The cache directory of the response.
      * @param resourceVersion The optional resource version of the response.
-     * 
+     *
      * @param <T> The type of the payload.
-     * 
+     *
      * @return The new response object.
      */
     public static <T> OperationResult<T> ok(final int status, final T payload,
@@ -89,7 +89,7 @@ public final class OperationResult<T> extends Result<T> {
 
     /**
      * Create "empty" response.
-     * 
+     *
      * @param <T> The of payload.
      * @param status Response status.
      * @return New instance.

@@ -37,7 +37,7 @@ public final class CacheDirective {
 
     /**
      * Creates a new <em>max-age</em> directive.
-     * 
+     *
      * @param maxAge The maximum age in number of seconds.
      * @return The directive.
      * @throws IllegalArgumentException if the given value is less or equal to zero.
@@ -51,7 +51,7 @@ public final class CacheDirective {
 
     /**
      * Creates a new <em>no-cache</em> directive.
-     * 
+     *
      * @return The directive.
      */
     public static CacheDirective noCacheDirective() {
@@ -60,7 +60,7 @@ public final class CacheDirective {
 
     /**
      * Parses a cache directive.
-     * 
+     *
      * @param directive The directive to parse.
      * @return The cache directive or {@code null} if the directive cannot be parsed.
      */
@@ -85,7 +85,7 @@ public final class CacheDirective {
 
     /**
      * Checks if this directive allows caching.
-     * 
+     *
      * @return {@code false} if caching is not allowed.
      */
     public boolean isCachingAllowed() {
@@ -95,7 +95,7 @@ public final class CacheDirective {
     /**
      * Gets the maximum period of time for which a resource
      * may be cached.
-     * 
+     *
      * @return The maximum age in seconds.
      */
     public long getMaxAge() {
@@ -108,7 +108,7 @@ public final class CacheDirective {
      * The format follows the <em>cache-directive</em> defined
      * in <a href="https://tools.ietf.org/html/rfc2616#section-14.9">
      * RFC 2616, Section 14.9</a>.
-     * 
+     *
      * @return The cache directive which can be included, e.g. in a
      *         <em>Cache-Control</em> header.
      */

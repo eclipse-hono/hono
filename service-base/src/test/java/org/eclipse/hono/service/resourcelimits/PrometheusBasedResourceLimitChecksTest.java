@@ -123,7 +123,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     /**
      * Verifies that the Basic authentication header is set if username and password have been
      * configured.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -154,7 +154,7 @@ public class PrometheusBasedResourceLimitChecksTest {
     /**
      * Verifies that the connection limit check returns {@code false} if the limit
      * is not yet reached.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")

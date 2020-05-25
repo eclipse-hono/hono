@@ -43,7 +43,7 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
     /**
      * Sets a handler which will be invoked after this consumer has been
      * locally closed.
-     * 
+     *
      * @param handler The handler.
      */
     protected void setLocalCloseHandler(final Handler<String> handler) {

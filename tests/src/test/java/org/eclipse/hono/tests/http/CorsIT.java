@@ -67,7 +67,7 @@ public class CorsIT {
     /**
      * Verifies that the HTTP adapter returns matching CORS headers in response to a
      * CORS preflight request for posting telemetry data.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -92,7 +92,7 @@ public class CorsIT {
     /**
      * Verifies that the HTTP adapter returns matching CORS headers in response to a
      * CORS preflight request for putting telemetry data.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -117,7 +117,7 @@ public class CorsIT {
     /**
      * Verifies that the HTTP adapter returns matching CORS headers in response to a
      * CORS preflight request for posting an event.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -141,7 +141,7 @@ public class CorsIT {
     /**
      * Verifies that the HTTP adapter returns matching CORS headers in response to a
      * CORS preflight request for putting an event.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -166,7 +166,7 @@ public class CorsIT {
     /**
      * Verifies that the HTTP adapter returns matching CORS headers in response to a
      * CORS preflight request for posting a command response.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -190,7 +190,7 @@ public class CorsIT {
     /**
      * Verifies that the HTTP adapter returns matching CORS headers in response to a
      * CORS preflight request for putting a command response.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

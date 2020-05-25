@@ -78,7 +78,7 @@ public class X509AuthHandlerTest {
     /**
      * Verifies that the handler returns the status code conveyed in a
      * failed Tenant service invocation in the response.
-     * 
+     *
      * @throws SSLPeerUnverifiedException if the client certificate cannot be validated.
      */
     @Test
@@ -118,7 +118,7 @@ public class X509AuthHandlerTest {
 
         /**
          * Creates a new certificate.
-         * 
+         *
          * @param subject The subject.
          * @param issuer The issuer of the certificate.
          */

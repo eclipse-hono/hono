@@ -45,7 +45,7 @@ public abstract class AbstractDownstreamSender extends AbstractSender implements
 
     /**
      * Creates a new sender.
-     * 
+     *
      * @param connection The connection to use for interacting with the server.
      * @param sender The sender link to send messages over.
      * @param tenantId The identifier of the tenant that the

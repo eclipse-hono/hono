@@ -35,7 +35,7 @@ public class VertxProperties {
      * <p>
      * The default is to not prefer native networking.
      * </p>
-     * 
+     *
      * @param preferNative {@code true} to prefer native networking, {@code false} otherwise.
      */
     public void setPreferNative(final boolean preferNative) {
@@ -44,7 +44,7 @@ public class VertxProperties {
 
     /**
      * Enable the vert.x metrics system, or not.
-     * 
+     *
      * <p>
      * This decides if the vert.x metrics system will be enabled. Hono uses the Spring Boot integration with Micrometer,
      * so enabling the vert.x metrics will only enable the contribution of vert.x internal metrics to this system.
@@ -52,7 +52,7 @@ public class VertxProperties {
      * <p>
      * The default is to not enable vert.x metrics.
      * </p>
-     * 
+     *
      * @param enableMetrics {@code true} to enable the metrics system, {@code false} otherwise.
      */
     public void setEnableMetrics(final boolean enableMetrics) {
@@ -64,7 +64,7 @@ public class VertxProperties {
      * run without being considered to block the event loop.
      * <p>
      * The default value of this property is 2000 milliseconds.
-     * 
+     *
      * @param executeTime The number of milliseconds.
      * @throws IllegalArgumentException if execute time is less than 1.
      */
@@ -80,7 +80,7 @@ public class VertxProperties {
      * a DNS query is considered to be failed.
      * <p>
      * The default value of this property is 5000 milliseconds.
-     * 
+     *
      * @param timeout The timeout in milliseconds.
      * @throws IllegalArgumentException if timeout is less than 100ms.
      */
@@ -93,7 +93,7 @@ public class VertxProperties {
 
     /**
      * Configures the Vert.x options based on this object's property values.
-     * 
+     *
      * @param options The options to configure.
      * @return The (updated) options.
      */

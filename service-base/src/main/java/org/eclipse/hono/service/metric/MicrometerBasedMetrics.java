@@ -96,7 +96,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
     /**
      * Creates a new metrics instance.
-     * 
+     *
      * @param registry The meter registry to use.
      * @param vertx The Vert.x instance to use.
      * @throws NullPointerException if registry or vertx is {@code null}.
@@ -120,7 +120,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
     /**
      * Sets the protocol adapter configuration.
-     * 
+     *
      * @param config The protocol adapter configuration.
      * @throws NullPointerException if config is {@code null}.
      */
@@ -273,7 +273,7 @@ public class MicrometerBasedMetrics implements Metrics {
      * <p>
      * If no gauge value exists for the given key yet, a new value
      * is created using the given name and tags.
-     * 
+     *
      * @param <K> The type of the key.
      * @param <V> The type of the gauge's value.
      * @param name The metric name.
@@ -298,7 +298,7 @@ public class MicrometerBasedMetrics implements Metrics {
      * <p>
      * If no gauge value exists for the given tenant yet, a new value
      * is created using the given name and a tag for the tenant.
-     * 
+     *
      * @param <V> The type of the gauge's value.
      * @param name The metric name.
      * @param map The map that holds the metric's gauge values.
@@ -379,7 +379,7 @@ public class MicrometerBasedMetrics implements Metrics {
 
     /**
      * Tracks the device connection duration for the given tenant and records the tracked value.
-     * 
+     *
      * @param tenantId The tenant identifier.
      * @param deviceConnectionsCount The number of device connections.
      */

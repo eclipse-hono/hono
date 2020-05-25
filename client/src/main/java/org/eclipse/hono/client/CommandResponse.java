@@ -59,7 +59,7 @@ public final class CommandResponse {
 
     /**
      * Creates a response for a request ID.
-     * 
+     *
      * @param requestId The request ID of the command that this is the response for.
      * @param tenantId The tenant ID of the device sending the response.
      * @param deviceId The device ID of the device sending the response.
@@ -157,7 +157,7 @@ public final class CommandResponse {
 
     /**
      * Gets the reply-to identifier that has been extracted from the request ID.
-     * 
+     *
      * @return The identifier or {@code null} if the request ID could not be parsed.
      */
     public String getReplyToId() {
@@ -166,7 +166,7 @@ public final class CommandResponse {
 
     /**
      * Gets the correlation identifier that has bee extracted from the request ID.
-     * 
+     *
      * @return The identifier or {@code null} if the request ID could not be parsed.
      */
     public String getCorrelationId() {
@@ -176,7 +176,7 @@ public final class CommandResponse {
     /**
      * Gets the HTTP status code that indicates the outcome of
      * executing the command.
-     * 
+     *
      * @return The status code.
      */
     public int getStatus() {

@@ -53,7 +53,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
 
     /**
      * Sets up class fixture.
-     * 
+     *
      * @throws GeneralSecurityException if the self signed certificate cannot be created.
      * @throws IOException if the self signed certificate cannot be read.
      */
@@ -66,7 +66,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
 
     /**
      * Verifies that a device is created and credentials are set for it when auto-provisioning a device.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -98,7 +98,7 @@ public class AutoProvisioningEnabledDeviceBackendTest {
     /**
      * Verifies that if the creation of credentials fails during the the provisioning, the previously created device
      * will be removed.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

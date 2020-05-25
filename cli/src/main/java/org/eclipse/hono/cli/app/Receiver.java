@@ -61,7 +61,7 @@ public class Receiver extends AbstractApplicationClient {
 
     /**
      * Set message handler for processing adaption.
-     * 
+     *
      * @param messageHandler message handler.
      * @throws NullPointerException if message handlerr is {@code null}.
      */
@@ -72,7 +72,7 @@ public class Receiver extends AbstractApplicationClient {
     /**
      * Starts this component.
      * <p>
-     * 
+     *
      * @return A future indicating the outcome of the startup process.
      */
     @PostConstruct
@@ -122,9 +122,9 @@ public class Receiver extends AbstractApplicationClient {
 
     /**
      * Handle received message.
-     * 
+     *
      * Write log messages to stdout.
-     * 
+     *
      * @param endpoint receiving endpoint, "telemetry" or "event".
      * @param msg received message
      */

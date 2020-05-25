@@ -24,7 +24,7 @@ import io.vertx.core.json.JsonObject;
  * headers are overwritten with the result of the mapper (which includes the resourceId).
  * E.g.: when the deviceId is in the payload of the message, the deviceId can be deducted in the custom mapper and
  * the payload can be changed accordingly to the payload originally received by the gateway.
- * 
+ *
  * @param <T> The type of execution context supported by this mapping service.
  */
 public interface MessageMapping<T extends ExecutionContext> {

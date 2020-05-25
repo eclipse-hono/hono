@@ -195,7 +195,7 @@ public final class MongoDbConfigProperties {
      * for an operation before raising an error.
      * <p>
      * When this property is not set, the Vert.x mongodb client uses a default value of 300000 ms.
-     * 
+     *
      * @param serverSelectionTimeoutInMs The server selection timeout in milliseconds.
      * @return A reference to this for fluent use.
      * @throws IllegalArgumentException if the timeout is set to &lt; 0.

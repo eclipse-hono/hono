@@ -41,7 +41,7 @@ public class MessageAnnotationsExtractAdapter implements TextMap {
 
     /**
      * Creates an adapter for a message.
-     * 
+     *
      * @param message The message.
      * @param propertiesMapName The name of the message annotation of type map that contains the properties to extract.
      * @throws NullPointerException if any of the parameters are {@code null}.

@@ -86,7 +86,7 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * Gets the vert.x instance used by this connection.
      * <p>
      * The returned instance may be used to e.g. schedule timers.
-     * 
+     *
      * @return The vert.x instance.
      */
     Vertx getVertx();
@@ -94,14 +94,14 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
     /**
      * Gets the <em>OpenTracing</em> {@code Tracer} used for tracking
      * distributed interactions across process boundaries.
-     * 
+     *
      * @return The tracer.
      */
     Tracer getTracer();
 
     /**
      * Gets the configuration properties used for creating this connection.
-     * 
+     *
      * @return The configuration.
      */
     ClientConfigProperties getConfig();
@@ -217,7 +217,7 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
 
     /**
      * Checks if this connection is shut down.
-     * 
+     *
      * @return {@code true} if this connection is shut down already
      *         or is in the process of shutting down.
      */
@@ -253,7 +253,7 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
     /**
      * Executes some code on the vert.x Context that has been used to establish the
      * connection to the peer.
-     * 
+     *
      * @param <T> The type of the result that the code produces.
      * @param codeToRun The code to execute. The code is required to either complete or
      *                  fail the promise that is passed into the handler.

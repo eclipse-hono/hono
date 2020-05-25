@@ -86,7 +86,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
     /**
      * Gets the AMQP <em>target</em> address to use for sending requests to Hono's Device Connection API endpoint.
-     * 
+     *
      * @param tenantId The tenant to upload data for.
      * @return The target address.
      * @throws NullPointerException if tenant is {@code null}.
@@ -130,7 +130,7 @@ public class DeviceConnectionClientImpl extends AbstractRequestResponseClient<De
 
     /**
      * Creates a new device connection client for a tenant.
-     * 
+     *
      * @param con The connection to the server.
      * @param tenantId The tenant to consumer events for.
      * @param senderCloseHook A handler to invoke if the peer closes the sender link unexpectedly.

@@ -70,7 +70,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
 
     /**
      * Creates a new resolver.
-     * 
+     *
      * @param vertxContext The vert.x context to run on.
      * @param tracer The OpenTracing tracer.
      * @param adapterName The name of the protocol adapter.
@@ -94,7 +94,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
 
     /**
      * Extracts the (pre-shared) key from the candidate secret(s) on record for the device.
-     * 
+     *
      * @param credentialsOnRecord The credentials on record as returned by the Credentials service.
      * @return The key or {@code null} if no candidate secret is on record.
      */
@@ -198,7 +198,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * handshake.
      * <p>
      * On success, add hono device to cache.
-     * 
+     *
      * @param handshakeIdentity The identity used by the device.
      * @return A future completed with the key or failed with a {@link ServiceInvocationException}.
      */
@@ -232,7 +232,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
 
     /**
      * Create tenant aware identity based on the provided pre-shared-key handshake identity.
-     * 
+     *
      * @param identity pre-shared-key handshake identity.
      * @return tenant aware identity.
      */

@@ -39,7 +39,7 @@ public class DefaultConnectionLimitManager implements ConnectionLimitManager {
      * <p>
      * If the protocol adapter properties are null or no limit is configured, the recommended limit of the strategy will
      * be set as the limit.
-     * 
+     *
      * @param strategy The strategy to configure the connection limit.
      * @param currentConnections The supplier to invoke for getting the current number of connections.
      * @param config The configuration of the adapter or {@code null}.

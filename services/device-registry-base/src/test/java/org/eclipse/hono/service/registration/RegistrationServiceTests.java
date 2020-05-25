@@ -70,7 +70,7 @@ public abstract class RegistrationServiceTests {
 
     /**
      * Gets device management service being tested.
-     * 
+     *
      * @return The device management service
      */
     public abstract DeviceManagementService getDeviceManagementService();
@@ -652,7 +652,7 @@ public abstract class RegistrationServiceTests {
     /**
      * Verifies that updating a device succeeds when the request contains a resource version that matches
      * the one of the device on record.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test
@@ -706,7 +706,7 @@ public abstract class RegistrationServiceTests {
 
     /**
      * Helps asserting device data.
-     * 
+     *
      * @param tenant The tenant.
      * @param deviceId The device ID.
      * @param gatewayId The optional gateway ID
@@ -742,7 +742,7 @@ public abstract class RegistrationServiceTests {
 
     /**
      * Assert devices, expecting them to be "not found".
-     * 
+     *
      * @param devices The map of devices to assert.
      * @return A future, reporting the assertion status.
      */
@@ -768,7 +768,7 @@ public abstract class RegistrationServiceTests {
      * Assert a set of devices.
      * <p>
      * This will read the devices and expect them to be found and match the provided device information.
-     * 
+     *
      * @param devices The devices and device information.
      * @return A future, reporting the assertion status.
      */
@@ -806,7 +806,7 @@ public abstract class RegistrationServiceTests {
 
     /**
      * Creates a device for {@link #TENANT}.
-     * 
+     *
      * @param deviceId The device identifier.
      * @param device The device data.
      * @return A succeeded future if the device has been created successfully.
@@ -817,7 +817,7 @@ public abstract class RegistrationServiceTests {
 
     /**
      * Creates a set of devices.
-     * 
+     *
      * @param devices The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */

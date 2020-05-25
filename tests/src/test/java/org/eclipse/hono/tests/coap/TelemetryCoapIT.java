@@ -75,7 +75,7 @@ public class TelemetryCoapIT extends CoapTestBase {
     /**
      * Verifies that a number of telemetry messages uploaded to Hono's CoAP adapter
      * using QoS 1 can be successfully consumed via the AMQP Messaging Network.
-     * 
+     *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
      */
@@ -105,7 +105,7 @@ public class TelemetryCoapIT extends CoapTestBase {
      * Verifies that the upload of a telemetry message containing a payload that
      * exceeds the CoAP adapter's configured max payload size fails with a 4.13
      * response code.
-     * 
+     *
      * @param ctx The test context.
      * @throws IOException if the CoAP request cannot be sent to the adapter.
      * @throws ConnectorException  if the CoAP request cannot be sent to the adapter.

@@ -336,7 +336,7 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
 
         /**
          * Creates a new ExpiringValue.
-         * 
+         *
          * @param value The value.
          * @param lifespanNanos The lifespan in nanoseconds. To indicate no expiration an excessively
          *                      long period may be given, such as {@code Long#MAX_VALUE}.

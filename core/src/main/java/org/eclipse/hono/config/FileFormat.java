@@ -49,9 +49,9 @@ public enum FileFormat {
 
     /**
      * Use the provided file format or detect.
-     * 
+     *
      * If the file format is not provided the method will try to detect it by a call to {@link #detect(String)}.
-     * 
+     *
      * @param format The provided format, may be {@code null}
      * @param path The path to check, may be {@code null}, in which the result will be {@link Optional#empty()}.
      * @return The provided or detected file format, may return {@code null} if the path is {@code null} or the format
@@ -72,7 +72,7 @@ public enum FileFormat {
 
     /**
      * Detect the file format based on the file name extension.
-     * 
+     *
      * @param path The relative or absolute file name, may be {@code null}
      * @return the detected file format, may return {@code null} if the path is {@code null} or the format culd not be
      *         detected.

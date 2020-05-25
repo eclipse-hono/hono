@@ -34,7 +34,7 @@ import io.vertx.core.Vertx;
 
 /**
  * A class that tracks command subscriptions, unsubscriptions and handles PUBACKs.
- * 
+ *
  * @param <T> The type of configuration properties the mqtt adapter supports/requires.
  */
 public final class CommandSubscriptionsManager<T extends MqttProtocolAdapterProperties> {

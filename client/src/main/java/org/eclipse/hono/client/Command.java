@@ -370,7 +370,7 @@ public final class Command {
      * <p>
      * If the command message didn't contain a <em>reply-to</em> address, the default
      * {@link CommandConstants#NORTHBOUND_COMMAND_RESPONSE_ENDPOINT} is returned here.
-     * 
+     *
      * @return The name of the endpoint.
      * @throws IllegalStateException if this command is invalid.
      */
@@ -438,7 +438,7 @@ public final class Command {
     /**
      * Encodes the given boolean parameters related to the original reply-to address of the command message as a single
      * digit string.
-     * 
+     *
      * @param replyToContainedDeviceId Whether the original reply-to address of the command message contained the device
      *            id.
      * @return The encoded options as a single digit string.

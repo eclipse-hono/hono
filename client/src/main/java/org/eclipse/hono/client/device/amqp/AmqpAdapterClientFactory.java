@@ -51,7 +51,7 @@ public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnec
      *
      * @return A future that will complete with the sender once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this client is not connected.
-     * 
+     *
      * @see "https://www.eclipse.org/hono/docs/dev/user-guide/amqp-adapter/"
      */
     Future<TelemetrySender> getOrCreateTelemetrySender();
@@ -84,7 +84,7 @@ public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnec
      * @return A future that will complete with the consumer once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this factory is not connected.
      * @throws NullPointerException if any of the parameters is {@code null}.
-     * 
+     *
      * @see "https://www.eclipse.org/hono/docs/dev/user-guide/amqp-adapter/"
      */
     Future<MessageConsumer> createDeviceSpecificCommandConsumer(String deviceId, Consumer<Message> messageHandler);
@@ -99,7 +99,7 @@ public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnec
      * @return A future that will complete with the consumer once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this factory is not connected.
      * @throws NullPointerException if any of the message handler is {@code null}.
-     * 
+     *
      * @see "https://www.eclipse.org/hono/docs/dev/user-guide/amqp-adapter/"
      */
     Future<MessageConsumer> createCommandConsumer(Consumer<Message> messageHandler);
@@ -115,7 +115,7 @@ public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnec
      *
      * @return A future that will complete with the sender once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this client is not connected.
-     * 
+     *
      * @see "https://www.eclipse.org/hono/docs/dev/user-guide/amqp-adapter/"
      */
     Future<CommandResponder> getOrCreateCommandResponseSender();

@@ -68,7 +68,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
     /**
      * Creates a new instance for a Tenant service client.
-     * 
+     *
      * @param tenantClientFactory The factory to use for creating a Tenant service client.
      */
     public TenantServiceBasedX509Authentication(final TenantClientFactory tenantClientFactory) {
@@ -78,7 +78,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
     /**
      * Creates a new instance for a Tenant service client.
-     * 
+     *
      * @param tenantClientFactory The factory to use for creating a Tenant service client.
      * @param tracer The <em>OpenTracing</em> tracer to use for tracking the process of
      *               authenticating the client.
@@ -91,7 +91,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
     /**
      * Creates a new instance for a Tenant service client.
-     * 
+     *
      * @param tenantClientFactory The factory to use for creating a Tenant service client.
      * @param tracer The <em>OpenTracing</em> tracer to use for tracking the process of
      *               authenticating the client.
@@ -111,7 +111,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     /**
      * Validates a certificate path using a trust anchor retrieved from
      * the Tenant service.
-     * 
+     *
      * @param path The certificate path to validate.
      * @param currentSpan The <em>OpenTracing</em> context in which the
      *                    validation should be executed, or {@code null}
@@ -215,7 +215,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      * byte array as returned by {@link java.security.cert.X509Certificate#getEncoded()}
      * (<em>optional: only present if auto-provisioning is enabled for the used trust anchor</em>)</li>
      * </ul>
-     * 
+     *
      * @param clientCertPath The validated client certificate path that the device has
      *                   presented during the TLS handshake. The device's end certificate
      *                   is contained at index 0.

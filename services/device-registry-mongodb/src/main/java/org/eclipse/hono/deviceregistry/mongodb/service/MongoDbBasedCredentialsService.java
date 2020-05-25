@@ -55,7 +55,7 @@ import io.vertx.ext.mongo.UpdateOptions;
 /**
  * This is an implementation of the credentials service and the credentials management service where data is 
  * stored in a mongodb database.
- * 
+ *
  * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/">Credentials API</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */

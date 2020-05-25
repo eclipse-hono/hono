@@ -50,7 +50,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
     /**
      * Logs the currently executing test method name.
-     * 
+     *
      * @param testInfo Meta info about the test being run.
      */
     @BeforeEach
@@ -243,7 +243,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
     /**
      * Verifies that the AMQP Adapter will fail to authenticate a device whose username does not match the expected pattern
      * {@code [<authId>@<tenantId>]}.
-     * 
+     *
      * @param ctx The Vert.x test context.
      */
     @Test

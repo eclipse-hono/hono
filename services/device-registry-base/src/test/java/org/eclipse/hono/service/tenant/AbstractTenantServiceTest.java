@@ -54,14 +54,14 @@ public abstract class AbstractTenantServiceTest {
 
     /**
      * Gets tenant service being tested.
-     * 
+     *
      * @return The tenant service
      */
     public abstract TenantService getTenantService();
 
     /**
      * Gets tenant management service being tested.
-     * 
+     *
      * @return The tenant management service
      */
     public abstract TenantManagementService getTenantManagementService();
@@ -226,7 +226,7 @@ public abstract class AbstractTenantServiceTest {
 
     /**
      * Verifies that a updating a tenant with the matching resource version succeeds.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @Test

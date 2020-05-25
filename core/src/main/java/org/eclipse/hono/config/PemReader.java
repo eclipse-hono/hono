@@ -59,7 +59,7 @@ public final class PemReader {
 
         /**
          * Gets the PEM entry payload.
-         * 
+         *
          * @return the payload
          */
         public byte[] getPayload() {
@@ -68,7 +68,7 @@ public final class PemReader {
 
         /**
          * Gets the PEM entry type.
-         * 
+         *
          * @return the type
          */
         public String getType() {
@@ -79,10 +79,10 @@ public final class PemReader {
 
     /**
      * Reads a PEM file and return its entries.
-     * 
+     *
      * @param path The file to read.
      * @return The PEM entries.
-     * 
+     *
      * @throws IOException I case of any error.
      */
     public static List<Entry> readAll(final Path path) throws IOException {
@@ -95,11 +95,11 @@ public final class PemReader {
 
     /**
      * Reads a PEM file using vertx in blocking mode and return its entries.
-     * 
+     *
      * @param vertx The vertx instance to use.
      * @param path The file to read.
      * @return The PEM entries.
-     * 
+     *
      * @throws IOException I case of any error.
      */
     public static List<Entry> readAllBlocking(final Vertx vertx, final Path path) throws IOException {
@@ -163,7 +163,7 @@ public final class PemReader {
 
     /**
      * Reads a PEM file and return its entries.
-     * 
+     *
      * @param reader The source to read from.
      * @return The list of entries.
      * @throws IOException In case of any error.
