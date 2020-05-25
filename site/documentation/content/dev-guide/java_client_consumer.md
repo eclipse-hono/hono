@@ -13,7 +13,7 @@ If the value of `ttd` indicates that the device stays connected for an unlimited
 notified the device is disconnected again (`ttd == 0`).
 
 This application shall serve as a blueprint to integrate your existing java source code with Hono. 
-Its code is found in the [example](https://github.com/eclipse/hono/tree/master/example) module in the package [org.eclipse.hono.vertx.example](https://github.com/eclipse/hono/tree/master/example/src/main/java/org/eclipse/hono/vertx/example).
+Its code is found in the [example](https://github.com/eclipse/hono/tree/master/examples) module in the package [org.eclipse.hono.vertx.example](https://github.com/eclipse/hono/tree/master/examples/hono-client-examples/src/main/java/org/eclipse/hono/vertx/example).
 
 The provided classes are kept as simple as possible (in the tradition of a classical "Hello World" implementation) while still
 covering the most relevant messaging patterns (downstream and upstream messages).
@@ -28,7 +28,7 @@ Note that production ready code likely has to think more about error handling an
 
 ## Configure the example
 
-For simplicity, all configurations are defined as Java constants inside the class [HonoExampleConstants](https://github.com/eclipse/hono/blob/master/example/src/main/java/org/eclipse/hono/vertx/example/base/HonoExampleConstants.java).
+For simplicity, all configurations are defined as Java constants inside the class [HonoExampleConstants](https://github.com/eclipse/hono/blob/master/examples/hono-client-examples/src/main/java/org/eclipse/hono/vertx/example/base/HonoExampleConstants.java).
 
 If you have Hono running in Docker under `localhost`, the example should work out of the box.
 
@@ -47,7 +47,7 @@ The application waits for messages until you press any key or kill it.
 It is started by
 
 ~~~sh
-# in directory: hono/example/
+# in directory: hono/examples/
 mvn exec:java -Dexec.mainClass=org.eclipse.hono.vertx.example.HonoExampleApplication
 ~~~
 
