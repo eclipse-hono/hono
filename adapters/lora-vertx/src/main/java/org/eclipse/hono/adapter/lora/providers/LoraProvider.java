@@ -16,11 +16,8 @@ package org.eclipse.hono.adapter.lora.providers;
 import java.util.Map;
 
 import org.eclipse.hono.adapter.lora.LoraMessageType;
-import org.eclipse.hono.client.Command;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.util.CredentialsObject;
 
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
@@ -108,19 +105,5 @@ public interface LoraProvider {
      */
     default JsonObject extractAdditionalData(JsonObject loraMessage) {
         return null;
-    }
-
-    /**
-     * Sends the given payload using this lora provider.
-     *
-     * @param gatewayDevice The gateway device object containing the device information
-     * @param gatewayCredential The gateway credential object containing the device credential information
-     * @param targetDeviceId The device id containing the device information to which the message should be sent
-     * @param loraCommand The command message containing the payload which should be sent.
-     * @return A Future containing the result of the operation.
-     */
-    default Future<Void> sendDownlinkCommand(final JsonObject gatewayDevice, final CredentialsObject gatewayCredential,
-            final String targetDeviceId, final Command loraCommand) {
-        return Future.failedFuture(new UnsupportedOperationException());
     }
 }

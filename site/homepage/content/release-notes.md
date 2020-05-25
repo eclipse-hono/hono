@@ -2,6 +2,15 @@
 title = "Release Notes"
 +++
 
+## 1.2.3 (not yet released)
+
+### API Changes
+
+* The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
+  because the Device Registration API does not define a corresponding operation.
+  Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
+  method has been removed.
+
 ## 1.2.0
 
 ### New Features
