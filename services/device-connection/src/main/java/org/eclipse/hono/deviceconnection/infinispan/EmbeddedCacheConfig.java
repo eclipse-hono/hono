@@ -42,9 +42,9 @@ import io.vertx.core.Vertx;
 @Profile(ApplicationConfig.PROFILE_EMBEDDED_CACHE)
 public class EmbeddedCacheConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(RemoteCacheConfig.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RemoteCacheConfig.class);
 
-    @Value("${hono.device-connection.embedded.configuration-file}")
+    @Value("${hono.device-connection.embedded.configuration-file:/etc/hono/cache-config.xml}")
     private Path configuration;
 
     /**
@@ -56,7 +56,7 @@ public class EmbeddedCacheConfig {
      */
     @Bean
     public BasicCache<String, String> embeddedCache(final Vertx vertx, final CommonCacheConfig cacheConfig) {
-        log.info("Common Config: {}", cacheConfig);
+        LOG.info("Common Config: {}", cacheConfig);
         return new EmbeddedCache<>(
                 vertx,
                 embeddedCacheManager(cacheConfig),
@@ -70,15 +70,18 @@ public class EmbeddedCacheConfig {
      *
      * @param cacheConfig Common cache configuration options.
      * @return A new configuration.
-     * @throws RuntimeException in case a configuration file is configured and loading fails.
+     * @throws IllegalStateException in case a configuration file is configured and cannot be loaded/parsed.
      */
     @Bean
     public ConfigurationBuilderHolder configuration(final CommonCacheConfig cacheConfig) {
         if (this.configuration != null) {
             try (InputStream in = Files.newInputStream(configuration)) {
-                return new ParserRegistry().parse(in);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to read configuration", e);
+                final ConfigurationBuilderHolder holder = new ParserRegistry().parse(in);
+                LOG.info("successfully configured embedded cache from file [{}]", configuration);
+                return holder;
+            } catch (final IOException e) {
+                LOG.error("failed to read configuration file [{}], falling back to default configuration", configuration, e);
+                throw new IllegalStateException("failed to configure embedded cache", e);
             }
         } else {
             final var builderHolder = new ConfigurationBuilderHolder();

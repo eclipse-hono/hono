@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -43,6 +43,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <!-- should be set to false if testing against a registry that doesn't support GW mode -->
     <deviceregistry.supportsGatewayMode>true</deviceregistry.supportsGatewayMode>
     <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
+    <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
     <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
     <hono.auth.host>hono-service-auth.hono</hono.auth.host>
     <default.java.options>
@@ -338,7 +339,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>AUTH</prefix>
-                      <color>cyan</color>
+                      <color>yellow</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -411,7 +412,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
-                      <color>yellow</color>
+                      <color>green</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -546,7 +547,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <memory>268435456</memory>
                     <log>
                       <prefix>QPID</prefix>
-                      <color>blue</color>
+                      <color>magenta</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -555,6 +556,78 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <env>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
+                  </run>
+                </image>
+                <!-- ##### Device Connection service ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-service-device-connection-test</name>
+                  <alias>device-connection</alias>
+                  <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${docker.image.org-name}/hono-service-device-connection:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/deviceconnection</directory>
+                            <outputDirectory>etc/hono</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <includes>
+                              <include>device-connection-*.pem</include>
+                              <include>auth-server-cert.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+deviceconnection.ip:deviceconnection.amqp.port:5672</port>
+                      <port>+deviceconnection.ip:deviceconnection.health.port:${vertx.health.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/deviceconnection.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>hono-service-device-connection.hono</alias>
+                    </network>
+                    <memorySwap>205520896</memorySwap>
+                    <memory>205520896</memory>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache</SPRING_PROFILES_ACTIVE>
+                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>device-connection</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
+                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
+                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                    </env>
+                    <log>
+                      <prefix>DEVCON</prefix>
+                      <color>yellow</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${deviceconnection.ip}:${deviceconnection.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
                   </run>
                 </image>
                 <!-- ##### HTTP adapter ##### -->
@@ -626,6 +699,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
+                      <color>red</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -706,6 +780,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
+                      <color>red</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -777,7 +852,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
-                      <color>RED</color>
+                      <color>red</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -849,6 +924,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>COAP</prefix>
+                      <color>red</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>

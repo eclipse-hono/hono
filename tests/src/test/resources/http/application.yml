@@ -55,7 +55,7 @@ hono:
     requestTimeout: ${request.timeout}
   deviceConnection:
     name: 'Hono HTTP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.device-connection.host}
     port: 5672
     username: http-adapter@HONO
     password: http-secret

@@ -54,7 +54,7 @@ hono:
     requestTimeout: ${request.timeout}
   deviceConnection:
     name: 'Hono AMQP Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.device-connection.host}
     port: 5672 # AMQP port of the device registry
     username: amqp-adapter@HONO
     password: amqp-secret

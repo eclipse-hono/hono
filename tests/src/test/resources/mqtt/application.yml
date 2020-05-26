@@ -54,7 +54,7 @@ hono:
     requestTimeout: ${request.timeout}
   deviceConnection:
     name: 'Hono MQTT Adapter'
-    host: ${hono.registration.host}
+    host: ${hono.device-connection.host}
     port: 5672
     username: mqtt-adapter@HONO
     password: mqtt-secret
