@@ -473,7 +473,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     }
                 }))
                 .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
-                .setHandler(setup.succeeding(ok -> ready.flag()));
+                .onComplete(setup.succeeding(ok -> ready.flag()));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -488,7 +488,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                commandSender.apply(msg).setHandler(sendAttempt -> {
+                commandSender.apply(msg).onComplete(sendAttempt -> {
                     if (sendAttempt.succeeded()) {
                         LOGGER.debug("sending command {} succeeded unexpectedly", commandsSent.get());
                     } else {
