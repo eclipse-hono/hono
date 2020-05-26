@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -162,45 +162,6 @@ public class RegistrationClientImpl extends AbstractRequestResponseClient<Regist
         final Map<String, Object> properties = new HashMap<>();
         properties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         return properties;
-    }
-
-    /**
-     * Invokes the <em>Get Registration Information</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
-     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
-     */
-    @Override
-    public final Future<JsonObject> get(final String deviceId) {
-        return get(deviceId, null);
-    }
-
-    /**
-     * Invokes the <em>Get Registration Information</em> operation of Hono's
-     * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>
-     * on the service represented by the <em>sender</em> and <em>receiver</em> links.
-     */
-    @Override
-    public final Future<JsonObject> get(final String deviceId, final SpanContext context) {
-
-        Objects.requireNonNull(deviceId);
-        final Future<RegistrationResult> resultTracker = Future.future();
-
-        createAndSendRequest(
-                RegistrationConstants.ACTION_GET,
-                createDeviceIdProperties(deviceId),
-                null,
-                resultTracker,
-                null,
-                context);
-
-        return resultTracker.map(regResult -> {
-            switch (regResult.getStatus()) {
-            case HttpURLConnection.HTTP_OK:
-                return regResult.getPayload();
-            default:
-                throw StatusCodeMapper.from(regResult);
-            }
-        });
     }
 
     /**

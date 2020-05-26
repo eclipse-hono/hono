@@ -151,14 +151,6 @@ public class JmsBasedRegistrationClient extends JmsBasedRequestResponseClient<Re
      * {@inheritDoc}
      */
     @Override
-    public Future<JsonObject> get(final String deviceId) {
-        throw new UnsupportedOperationException("not implemented");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     protected RegistrationResult getResult(final int status, final Buffer payload, final CacheDirective cacheDirective) {
 
         if (payload == null) {
