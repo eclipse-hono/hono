@@ -100,9 +100,15 @@ public final class MongoDbDeviceRegistryUtils {
 
         LOG.debug(error.getMessage(), error);
         TracingHelper.logError(span, error.getMessage(), error);
+
         if (error instanceof ClientErrorException) {
             return OperationResult.empty(((ClientErrorException) error).getErrorCode());
         }
+
+        if (error instanceof IllegalArgumentException) {
+            return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+        }
+
         return OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR);
     }
 

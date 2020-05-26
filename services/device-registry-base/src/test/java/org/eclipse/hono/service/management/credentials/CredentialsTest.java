@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
@@ -27,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
@@ -239,5 +241,132 @@ public class CredentialsTest {
         assertThat(decodeCredential.getSecrets()).hasSize(1);
         final PasswordSecret decodeSecret = decodeCredential.getSecrets().get(0);
         assertThat(decodeSecret.getNotAfter()).isEqualTo(Instant.parse("1992-09-11T11:38:00Z"));
+    }
+
+    /**
+     * Test merging of two password credentials.
+     */
+    @Test
+    public void testMergingOfPasswordCredential() {
+        final String authId = "test-auth-1";
+        final String secretId = DeviceRegistryUtils.getUniqueIdentifier();
+        final Instant date = Instant.parse("2020-09-11T11:38:00.123456Z");
+
+        //Create password credential 1
+        final PasswordSecret secret1 = new PasswordSecret();
+        secret1.setId(secretId);
+        secret1.setPasswordHash("hash-1");
+        secret1.setSalt("salt-1");
+        secret1.setNotAfter(date);
+
+        final PasswordCredential credential1 = new PasswordCredential();
+        credential1.setAuthId(authId);
+        credential1.setSecrets(Arrays.asList(secret1));
+        credential1.setComment("Comment-1");
+
+        //Create PSK credential 2 with a secret having an id and another without id
+        final PasswordSecret secret2 = new PasswordSecret();
+        secret2.setId(secretId);
+
+        final PasswordSecret secret3 = new PasswordSecret();
+        secret3.setPasswordHash("hash-3");
+        secret3.setSalt("salt-3");
+        secret3.setNotBefore(date);
+
+        final PasswordCredential credential2 = new PasswordCredential();
+        credential2.setAuthId(authId);
+        credential2.setSecrets(Arrays.asList(secret2, secret3));
+        credential2.setComment("Comment-2");
+
+        //Merge those two credentials
+        final CommonCredential mergedCredential = credential2.merge(credential1);
+
+        //verify the result
+        assertEquals(2, mergedCredential.getSecrets().size());
+        assertEquals("Comment-2", mergedCredential.getComment());
+        final PasswordSecret mergedSecret = (PasswordSecret) mergedCredential.getSecrets().get(0);
+        assertEquals(secretId, mergedSecret.getId());
+        assertEquals("hash-1", mergedSecret.getPasswordHash());
+        assertEquals("salt-1", mergedSecret.getSalt());
+        assertNull(mergedSecret.getNotAfter());
+    }
+
+    /**
+     * Test merging of two PSK credentials.
+     */
+    @Test
+    public void testMergingOfPskCredential() {
+        final String authId = "test-auth-1";
+        final String secretId = DeviceRegistryUtils.getUniqueIdentifier();
+        final Instant date = Instant.parse("1992-09-11T11:38:00.123456Z");
+
+        //Create PSK credential 1
+        final PskSecret secret1 = new PskSecret();
+        secret1.setId(secretId);
+        secret1.setKey("key-1".getBytes(StandardCharsets.UTF_8));
+        secret1.setNotAfter(date);
+
+        final PskCredential credential1 = new PskCredential();
+        credential1.setAuthId(authId);
+        credential1.setSecrets(Arrays.asList(secret1));
+        credential1.setComment("Comment-1");
+
+        //Create PSK credential 2 with a secret having an id and another without id
+        final PskSecret secret2 = new PskSecret();
+        secret2.setId(secretId);
+
+        final PskSecret secret3 = new PskSecret();
+        secret3.setKey("key-3".getBytes(StandardCharsets.UTF_8));
+        secret3.setNotBefore(date);
+
+        final PskCredential credential2 = new PskCredential();
+        credential2.setAuthId(authId);
+        credential2.setSecrets(Arrays.asList(secret2, secret3));
+        credential2.setComment("Comment-2");
+
+        //Merge those two credentials
+        final CommonCredential mergedCredential = credential2.merge(credential1);
+
+        //verify the result
+        assertEquals(2, mergedCredential.getSecrets().size());
+        assertEquals("Comment-2", mergedCredential.getComment());
+        final PskSecret mergedSecret = (PskSecret) mergedCredential.getSecrets().get(0);
+        assertEquals(secretId, mergedSecret.getId());
+        assertEquals("key-1", new String(mergedSecret.getKey()));
+        assertNull(mergedSecret.getNotBefore());
+    }
+
+    /**
+     * Test merging two credentials of different types fails.
+     */
+    @Test
+    public void testMergingCredentialsOfDifferentType() {
+        final String authId = "test-auth-1";
+        final String secretId = DeviceRegistryUtils.getUniqueIdentifier();
+        final Instant date = Instant.parse("2020-09-11T11:38:00.123456Z");
+
+        // Create password credential 1
+        final PasswordSecret secret1 = new PasswordSecret();
+        secret1.setId(secretId);
+        secret1.setPasswordHash("hash-1");
+        secret1.setSalt("salt-1");
+        secret1.setNotAfter(date);
+
+        final PasswordCredential credential1 = new PasswordCredential();
+        credential1.setAuthId(authId);
+        credential1.setSecrets(Arrays.asList(secret1));
+        credential1.setComment("Comment-1");
+
+        // Create PSK credential 2
+        final PskSecret secret2 = new PskSecret();
+        secret2.setId(secretId);
+
+        final PskCredential credential2 = new PskCredential();
+        credential2.setAuthId(authId);
+        credential2.setSecrets(Arrays.asList(secret2));
+        credential2.setComment("Comment-2");
+
+        //Merge those two credentials and verify the result
+        assertThrows(IllegalArgumentException.class, () -> credential2.merge(credential1));
     }
 }
