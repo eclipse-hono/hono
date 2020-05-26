@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -56,7 +56,7 @@ def buildAndDeploy(def utils) {
         withMaven(maven: utils.getMavenVersion(),
                 jdk: utils.getJDKVersion(),
                 mavenLocalRepo: '.repository',
-                options: [jacocoPublisher(disabled: true), artifactsPublisher(disabled: true)]) {
+                options: [artifactsPublisher(disabled: true)]) {
             sh "mvn --projects :hono-service-auth,:hono-service-device-registry,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-mqtt-vertx,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-lora-vertx,:hono-adapter-sigfox-vertx,:hono-example,:hono-cli -am deploy -DskipTests=true -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true"
         }
     }
