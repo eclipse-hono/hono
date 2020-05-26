@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,6 @@ node {
         utils.checkOutHonoRepoMaster()
         utils.build()
         utils.aggregateJunitResults()
-        utils.captureCodeCoverageReport()
         currentBuild.result = 'SUCCESS'
     } catch (err) {
         currentBuild.result = 'FAILURE'
