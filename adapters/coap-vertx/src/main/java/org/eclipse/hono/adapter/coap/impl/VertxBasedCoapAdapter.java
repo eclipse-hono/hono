@@ -68,6 +68,14 @@ public final class VertxBasedCoapAdapter extends AbstractVertxBasedCoapAdapter<C
                     "missing request URI"));
         }
 
+        if (pathList.size() == 1) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing tenant and device ID in URI"));
+        } else if (pathList.size() == 2) {
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "missing device ID in URI"));
+        }
+
         try {
             final String[] path = pathList.toArray(new String[pathList.size()]);
             final ResourceIdentifier identifier = ResourceIdentifier.fromPath(path);
