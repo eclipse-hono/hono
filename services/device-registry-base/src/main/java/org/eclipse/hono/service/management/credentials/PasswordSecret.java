@@ -239,6 +239,9 @@ public class PasswordSecret extends CommonSecret {
         salt = null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void merge(final CommonSecret secret) {
         Objects.requireNonNull(secret);

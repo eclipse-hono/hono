@@ -59,6 +59,9 @@ public class PskSecret extends CommonSecret {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     void merge(final CommonSecret secret) {
         Objects.requireNonNull(secret);
