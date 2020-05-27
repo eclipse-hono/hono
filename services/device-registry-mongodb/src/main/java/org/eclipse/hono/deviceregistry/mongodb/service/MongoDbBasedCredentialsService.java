@@ -183,8 +183,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                             DeviceRegistryUtils.getUniqueIdentifier());
 
                     if (credentialsDto.requiresMerging()) {
-                        return findCredentials(deviceKey, resourceVersion)
-                                .map(result -> result.mapTo(CredentialsDto.class))
+                        return getCredentialsDto(deviceKey, resourceVersion)
                                 .map(credentialsDto::merge);
                     }
 
@@ -208,22 +207,18 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);
 
-        return findCredentials(deviceKey, Optional.empty())
-                .map(result -> {
-                    final List<CommonCredential> credentialsList = result
-                            .getJsonArray(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS)
+        return getCredentialsDto(deviceKey)
+                .map(credentialsDto -> {
+                    final List<CommonCredential> credentials = credentialsDto.getCredentials()
                             .stream()
-                            .filter(JsonObject.class::isInstance)
-                            .map(JsonObject.class::cast)
-                            .map(credential -> credential.mapTo(CommonCredential.class))
                             .map(CommonCredential::stripPrivateInfo)
                             .collect(Collectors.toList());
 
                     return OperationResult.ok(
                             HttpURLConnection.HTTP_OK,
-                            credentialsList,
+                            credentials,
                             Optional.empty(),
-                            Optional.of(result.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION)));
+                            Optional.of(credentialsDto.getVersion()));
                 })
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -334,8 +329,13 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                                         .put(credentialsTypeKey, new JsonObject().put("$exists", true))),
                         INDEX_CREATION_MAX_RETRIES));
     }
+    private Future<CredentialsDto> getCredentialsDto(final DeviceKey deviceKey) {
 
-    private Future<JsonObject> findCredentials(final DeviceKey deviceKey, final Optional<String> resourceVersion) {
+        return getCredentialsDto(deviceKey, Optional.empty());
+    }
+
+    private Future<CredentialsDto> getCredentialsDto(final DeviceKey deviceKey,
+            final Optional<String> resourceVersion) {
         final JsonObject findCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
                 .withTenantId(deviceKey.getTenantId())
@@ -347,6 +347,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         return findCredentialsPromise.future()
                 .compose(result -> Optional.ofNullable(result)
+                        .map(credentialsDtoJson -> credentialsDtoJson.mapTo(CredentialsDto.class))
                         .map(Future::succeededFuture)
                         .orElse(MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
                                 deviceKey.getDeviceId(),
@@ -354,7 +355,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                                 getCredentialsDto(deviceKey))));
     }
 
-    private Future<CredentialsResult<JsonObject>> findCredentials(
+    private Future<CredentialsResult<JsonObject>> getCredentialsResult(
             final String tenantId,
             final String authId,
             final String type) {
@@ -388,12 +389,6 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                         .orElse(CredentialsResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
-    private Future<CredentialsDto> getCredentialsDto(final DeviceKey deviceKey) {
-
-        return findCredentials(deviceKey, Optional.empty())
-                .map(result -> result.mapTo(CredentialsDto.class));
-    }
-
     private CacheDirective getCacheDirective(final String type) {
 
         if (config.getCacheMaxAge() > 0) {
@@ -421,7 +416,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
             final JsonObject clientContext) {
 
         //TODO: To implement to make use of the client context.
-        return findCredentials(tenantId, authId, type);
+        return getCredentialsResult(tenantId, authId, type);
     }
 
     private Future<Result<Void>> processAddCredentials(
