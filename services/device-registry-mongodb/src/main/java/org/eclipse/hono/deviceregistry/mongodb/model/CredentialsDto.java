@@ -31,7 +31,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A DTO (Data Transfer Object) class to store credentials information in mongodb.
  */
-public class CredentialsDto extends BaseDto {
+public final class CredentialsDto extends BaseDto {
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
     private String tenantId;
@@ -156,6 +156,34 @@ public class CredentialsDto extends BaseDto {
     @JsonIgnore
     public boolean requiresMerging() {
         return requiresMerging;
+    }
+
+    /**
+     * Merges the secrets of the given credential DTO with that of the current one.
+     *
+     * @param credentialsDto The credential DTO to be merged.
+     * @return  a reference to this for fluent use.
+     * @throws NullPointerException if the given credential DTO is {@code null}.
+     */
+    @JsonIgnore
+    public CredentialsDto merge(final CredentialsDto credentialsDto) {
+        Objects.requireNonNull(credentialsDto);
+
+        Optional.ofNullable(credentialsDto.getCredentials())
+                .ifPresent(credentialsToMerge -> this.credentials
+                        .forEach(credential -> findCredentialByIdAndType(credential.getAuthId(), credential.getType(),
+                                credentialsToMerge)
+                                        .ifPresent(credential::merge)));
+
+        return this;
+    }
+
+    @JsonIgnore
+    private Optional<CommonCredential> findCredentialByIdAndType(final String authId, final String authType,
+            final List<CommonCredential> credentials) {
+        return credentials.stream()
+                .filter(credential -> authId.equals(credential.getAuthId()) && authType.equals(credential.getType()))
+                .findFirst();
     }
 
     @JsonIgnore

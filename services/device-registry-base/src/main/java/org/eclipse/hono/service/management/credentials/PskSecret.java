@@ -12,7 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
+import java.util.Objects;
+
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.Strings;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -56,4 +59,18 @@ public class PskSecret extends CommonSecret {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    void merge(final CommonSecret secret) {
+        Objects.requireNonNull(secret);
+
+        if (secret instanceof PskSecret) {
+            if (!Strings.isNullOrEmpty(getId()) && Strings.isNullOrEmpty(key)) {
+                final PskSecret pskSecret = (PskSecret) secret;
+                key = pskSecret.getKey();
+            }
+        }
+    }
 }

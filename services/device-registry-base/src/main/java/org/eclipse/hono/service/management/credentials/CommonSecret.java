@@ -160,4 +160,15 @@ public abstract class CommonSecret {
             }
         }
     }
+
+    /**
+     * Merges the given secret with that of the current one.
+     * <p>
+     * The default implementation in {@link CommonSecret} does nothing.
+     *
+     * @param secret The secret to be merged.
+     * @throws NullPointerException if the given secret is {@code null}.
+     */
+    void merge(final CommonSecret secret) {
+    }
 }
