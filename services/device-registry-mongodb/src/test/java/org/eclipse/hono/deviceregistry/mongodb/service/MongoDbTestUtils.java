@@ -34,7 +34,7 @@ import de.flapdoodle.embed.process.runtime.Network;
 /**
  * Utility class to initialize and tear down embedded mongodb.
  */
-public final class MongoDbUtils {
+public final class MongoDbTestUtils {
 
     private MongodExecutable mongodExecutable;
     private MongodProcess mongodProcess;

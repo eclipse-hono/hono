@@ -27,23 +27,26 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.flapdoodle.embed.process.runtime.Network;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+/**
+ * Tests for {@link MongoDbBasedTenantService}.
+ */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
+
+    private final MongoDbTestUtils mongoDbTestUtils = new MongoDbTestUtils();
+    private MongoClient mongoClient;
     private MongoDbBasedTenantService tenantService;
     private Vertx vertx;
-    private MongoDbUtils mongoDbUtils;
-    private MongoClient mongoClient;
 
     /**
      * Sets up static fixture.
@@ -53,19 +56,16 @@ class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
      */
     @BeforeAll
     public void setup(final VertxTestContext testContext) throws IOException {
-        final String mongoDbHost = "localhost";
+        final String mongoDbHost = "127.0.0.1";
         final int mongoDbPort = Network.getFreeServerPort();
-
-        mongoDbUtils = new MongoDbUtils();
-
-        mongoDbUtils.startEmbeddedMongoDb(mongoDbHost, mongoDbPort);
-
-        vertx = Vertx.vertx();
-        mongoClient = MongoClient.createShared(vertx, new MongoDbConfigProperties()
+        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
                 .setHost(mongoDbHost)
                 .setPort(mongoDbPort)
-                .setDbName("mongoDBTestDeviceRegistry")
-                .getMongoClientConfig());
+                .setDbName("hono-tenants-test");
+
+        mongoDbTestUtils.startEmbeddedMongoDb(mongoDbHost, mongoDbPort);
+        vertx = Vertx.vertx();
+        mongoClient = MongoClient.createShared(vertx, mongoDbConfig.getMongoClientConfig());
         tenantService = new MongoDbBasedTenantService(
                 vertx,
                 mongoClient,
@@ -80,11 +80,12 @@ class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
      */
     @AfterAll
     public void finishTest(final VertxTestContext testContext) {
-        final Promise<Void> vertxStopPromise = Promise.promise();
-        vertx.close(vertxStopPromise);
-
-        CompositeFuture.all(tenantService.stop(), vertxStopPromise.future()).onComplete(testContext.completing());
-        mongoDbUtils.stopEmbeddedMongoDb();
+        final Checkpoint shutdown = testContext.checkpoint(3);
+        tenantService.stop().onComplete(s -> shutdown.flag());
+        mongoClient.close();
+        vertx.close(s -> shutdown.flag());
+        mongoDbTestUtils.stopEmbeddedMongoDb();
+        shutdown.flag();
     }
 
     /**
