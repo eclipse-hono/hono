@@ -145,6 +145,15 @@ title = "Release Notes"
   can be referenced in a device's *viaGroups* property in order to authorize all gateways that are a member
   of any of the groups to act on behalf of the device.
 
+## 1.1.2
+
+### API Changes
+
+* The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
+  because the Device Registration API does not define a corresponding operation.
+  Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
+  method has been removed.
+
 ## 1.1.1
 
 ### Fixes & Enhancements
@@ -221,6 +230,15 @@ title = "Release Notes"
   configured in such a way that protocol adapters can send and receive messages on the `control/*`
   address pattern. This is now used for internal communication between protocol adapters only.
 * The `create` method in `org.eclipse.hono.client.HonoConnection` now requires its Vertx parameter to be not null.
+
+## 1.0.4
+
+### API Changes
+
+* The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
+  because the Device Registration API does not define a corresponding operation.
+  Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
+  method has been removed.
 
 ## 1.0.3
 
