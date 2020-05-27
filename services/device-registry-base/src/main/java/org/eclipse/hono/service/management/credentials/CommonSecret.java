@@ -160,4 +160,7 @@ public abstract class CommonSecret {
             }
         }
     }
+
+    void merge(final CommonSecret secret) {
+    }
 }

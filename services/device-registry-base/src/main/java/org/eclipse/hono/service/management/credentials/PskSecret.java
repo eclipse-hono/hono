@@ -59,12 +59,15 @@ public class PskSecret extends CommonSecret {
         }
     }
 
+    @Override
+    void merge(final CommonSecret secret) {
+        Objects.requireNonNull(secret);
 
-    void merge(final PskSecret pskSecret) {
-        Objects.requireNonNull(pskSecret);
-
-        if (!Strings.isNullOrEmpty(getId()) && Strings.isNullOrEmpty(key)) {
-            this.key = pskSecret.getKey();
+        if (secret instanceof PskSecret) {
+            if (!Strings.isNullOrEmpty(getId()) && Strings.isNullOrEmpty(key)) {
+                final PskSecret pskSecret = (PskSecret) secret;
+                key = pskSecret.getKey();
+            }
         }
     }
 }

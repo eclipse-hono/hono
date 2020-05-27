@@ -187,23 +187,18 @@ public abstract class CommonCredential {
 
         getSecrets()
                 .forEach(secret -> Optional.ofNullable(secret.getId())
-                        .ifPresent(secretId -> findSecretById(credential, secretId)
-                                .map(result -> {
-                                    if (secret instanceof PasswordSecret) {
-                                        ((PasswordSecret) secret).merge((PasswordSecret) result);
-                                    } else if (secret instanceof PskSecret) {
-                                        ((PskSecret) secret).merge((PskSecret) result);
-                                    }
-                                    return result;
-                                }).orElseThrow(() -> new IllegalArgumentException(
-                                        String.format("secret [id: %s] not found", secret.getId())))));
+                        .ifPresent(secretId -> credential.findSecretById(secretId)
+                                .ifPresentOrElse(secret::merge, () -> {
+                                    throw new IllegalArgumentException(
+                                            String.format("secret [id: %s] not found", secret.getId()));
+                                })));
 
         return this;
     }
 
 
-    private Optional<? extends CommonSecret> findSecretById(final CommonCredential credential, final String secretId) {
-        return credential.getSecrets()
+    private Optional<? extends CommonSecret> findSecretById(final String secretId) {
+        return getSecrets()
                 .stream()
                 .filter(secret -> secret.getId() != null)
                 .filter(secret -> secret.getId().equals(secretId))

@@ -239,10 +239,12 @@ public class PasswordSecret extends CommonSecret {
         salt = null;
     }
 
-    void merge(final PasswordSecret passwordSecret) {
-        Objects.requireNonNull(passwordSecret);
+    @Override
+    void merge(final CommonSecret secret) {
+        Objects.requireNonNull(secret);
 
-        if (containsOnlySecretId()) {
+        if (secret instanceof PasswordSecret && containsOnlySecretId()) {
+            final PasswordSecret passwordSecret = (PasswordSecret) secret;
             passwordPlain = passwordSecret.getPasswordPlain();
             passwordHash = passwordSecret.getPasswordHash();
             hashFunction = passwordSecret.getHashFunction();
