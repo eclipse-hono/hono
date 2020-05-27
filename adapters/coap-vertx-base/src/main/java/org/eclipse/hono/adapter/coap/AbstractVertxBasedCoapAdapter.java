@@ -46,7 +46,7 @@ import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
-import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
+import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.Command;
@@ -114,7 +114,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private CoapServer server;
     private CoapAdapterMetrics metrics = CoapAdapterMetrics.NOOP;
     private ApplicationLevelInfoSupplier honoDeviceResolver;
-    private PskStore pskStore;
+    private AdvancedPskStore pskStore;
 
     private volatile Endpoint secureEndpoint;
     private volatile Endpoint insecureEndpoint;
@@ -134,7 +134,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
      *
      * @param pskStore The service to use.
      */
-    public final void setPskStore(final PskStore pskStore) {
+    public final void setPskStore(final AdvancedPskStore pskStore) {
         this.pskStore = Objects.requireNonNull(pskStore);
     }
 
@@ -362,10 +362,10 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         final ApplicationLevelInfoSupplier deviceResolver = Optional.ofNullable(honoDeviceResolver)
                 .orElse(new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(), getCredentialsClientFactory()));
-        final PskStore store = Optional.ofNullable(pskStore)
+        final AdvancedPskStore store = Optional.ofNullable(pskStore)
                 .orElseGet(() -> {
-                    if (deviceResolver instanceof PskStore) {
-                        return (PskStore) deviceResolver;
+                    if (deviceResolver instanceof AdvancedPskStore) {
+                        return (AdvancedPskStore) deviceResolver;
                     } else {
                         return new DefaultDeviceResolver(context, tracer, getTypeName(), getConfig(), getCredentialsClientFactory());
                     }
@@ -378,7 +378,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         dtlsConfig.setAddress(
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
-        dtlsConfig.setPskStore(store);
+        dtlsConfig.setAdvancedPskStore(store);
         dtlsConfig.setRetransmissionTimeout(getConfig().getDtlsRetransmissionTimeout());
         dtlsConfig.setMaxConnections(config.getInt(Keys.MAX_ACTIVE_PEERS));
         addIdentity(dtlsConfig);
