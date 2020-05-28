@@ -56,6 +56,7 @@ import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.ProtocolAdapterCommandConsumer;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.AbstractProtocolAdapterBase;
+import org.eclipse.hono.service.limiting.MemoryBasedConnectionLimitStrategy;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
@@ -94,6 +95,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         extends AbstractProtocolAdapterBase<T> {
 
     private static final String KEY_TIMER_ID = "timerId";
+    /**
+     * The minimum amount of memory that the adapter requires to run.
+     */
+    private static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
+    /**
+     * The amount of memory required for each connection.
+     */
+    private static final int MEMORY_PER_CONNECTION = 10_000; // 10KB: expected avg. memory consumption per connection
 
     /**
      * A logger shared with subclasses.
@@ -370,10 +379,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
         dtlsConfig.setPskStore(store);
-        dtlsConfig.setRetransmissionTimeout(config.getInt(Keys.ACK_TIMEOUT));
-        if (getConfig().getMaxConnections() > 0) {
-            dtlsConfig.setMaxConnections(getConfig().getMaxConnections());
-        }
+        dtlsConfig.setRetransmissionTimeout(getConfig().getDtlsRetransmissionTimeout());
+        dtlsConfig.setMaxConnections(config.getInt(Keys.MAX_ACTIVE_PEERS));
         addIdentity(dtlsConfig);
 
         try {
@@ -442,6 +449,13 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         networkConfig.setInt(Keys.MAX_RESOURCE_BODY_SIZE, getConfig().getMaxPayloadSize());
         networkConfig.setInt(Keys.EXCHANGE_LIFETIME, getConfig().getExchangeLifetime());
         networkConfig.setBoolean(Keys.USE_MESSAGE_OFFLOADING, getConfig().isMessageOffloadingEnabled());
+        final int maxConnections = getConfig().getMaxConnections();
+        if (maxConnections == 0) {
+            final MemoryBasedConnectionLimitStrategy limits = new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION);
+            networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, limits.getRecommendedLimit());
+        } else {
+            networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, maxConnections);
+        }
         return networkConfig;
     }
 
