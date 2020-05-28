@@ -42,6 +42,9 @@ title = "Release Notes"
   `org.eclipse.hono.service.management.tenant`, `org.eclipse.hono.service.registration` and
   `org.eclipse.hono.service.tenant` have been moved from the *service-base* to the
   *device-registry-base* module.
+* The Device Connection service did return a 500 error code if no *last known gateway* could
+  be found for a device ID. This has been fixed so that the service now returns a 404
+  in that case as specified by the Device Connection API.
 
 ### API Changes
 
