@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.coap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
@@ -26,6 +27,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -40,7 +42,8 @@ public final class CoapContext extends MapBasedExecutionContext {
     public static final String PARAM_EMPTY_CONTENT = "empty";
 
     private final CoapExchange exchange;
-
+    private final AtomicBoolean acceptTimerFlag = new AtomicBoolean();
+    private final AtomicBoolean acceptFlag = new AtomicBoolean();
     private Sample timer;
 
     private CoapContext(final CoapExchange exchange) {
@@ -74,6 +77,35 @@ public final class CoapContext extends MapBasedExecutionContext {
         final CoapContext result = new CoapContext(request);
         result.timer = timer;
         return result;
+    }
+
+    /**
+     * Sets a timer to trigger the sending of a separate ACK to a device.
+     * <p>
+     *
+     * @param vertx Vertx to schedule the timer
+     * @param timeoutMillis The number of milliseconds to wait for a separate ACK. {@code -1}, never use separate
+     *            response, {@code 0}, always use separate response.
+     */
+    public void startAcceptTimer(
+            final Vertx vertx,
+            final long timeoutMillis) {
+
+        if (acceptTimerFlag.compareAndSet(false, true)) {
+            if (timeoutMillis < 0) {
+                // always use piggybacked response, never send separate ACK
+                return;
+            } else if (timeoutMillis == 0) {
+                // always send separate ACK and separate response
+                accept();
+            } else if (!acceptFlag.get()) {
+                vertx.setTimer(timeoutMillis, id -> {
+                    if (!acceptFlag.get()) {
+                        accept();
+                    }
+                });
+            }
+        }
     }
 
     /**
@@ -203,6 +235,8 @@ public final class CoapContext extends MapBasedExecutionContext {
     /**
      * Sends a response with the response code to the device.
      *
+     * This also accepts the exchange.
+     *
      * @param responseCode The code to set in the response.
      */
     public void respondWithCode(final ResponseCode responseCode) {
@@ -211,6 +245,8 @@ public final class CoapContext extends MapBasedExecutionContext {
 
     /**
      * Sends a response with the response code to the device.
+     *
+     * This also accepts the exchange.
      *
      * @param responseCode The code to set in the response.
      * @param description The message to include in the response body or {@code null} if
@@ -228,10 +264,24 @@ public final class CoapContext extends MapBasedExecutionContext {
     /**
      * Sends a response to the device.
      *
+     * This also accepts the exchange.
+     *
      * @param response The response to sent.
+     * @return the sent response code
      */
-    public void respond(final Response response) {
+    public ResponseCode respond(final Response response) {
+        acceptFlag.set(true);
         exchange.respond(response);
+        return response.getCode();
+    }
+
+    /**
+     * Accept exchange.
+     */
+    public void accept() {
+        if (acceptFlag.compareAndSet(false, true)) {
+            exchange.accept();
+        }
     }
 
     /**

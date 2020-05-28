@@ -39,6 +39,7 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.config.NetworkConfig;
+import org.eclipse.californium.core.network.config.NetworkConfig.Keys;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
@@ -369,6 +370,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                 new InetSocketAddress(getConfig().getBindAddress(), getConfig().getPort(getPortDefaultValue())));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
         dtlsConfig.setPskStore(store);
+        dtlsConfig.setRetransmissionTimeout(config.getInt(Keys.ACK_TIMEOUT));
         if (getConfig().getMaxConnections() > 0) {
             dtlsConfig.setMaxConnections(getConfig().getMaxConnections());
         }
@@ -434,12 +436,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
     private NetworkConfig newDefaultNetworkConfig() {
         final NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setInt(NetworkConfig.Keys.PROTOCOL_STAGE_THREAD_COUNT, getConfig().getCoapThreads());
-        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, getConfig().getConnectorThreads());
-        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getConnectorThreads());
-        networkConfig.setInt(NetworkConfig.Keys.MAX_RESOURCE_BODY_SIZE, getConfig().getMaxPayloadSize());
-        networkConfig.setInt(NetworkConfig.Keys.EXCHANGE_LIFETIME, getConfig().getExchangeLifetime());
-        networkConfig.setBoolean(NetworkConfig.Keys.USE_MESSAGE_OFFLOADING, getConfig().isMessageOffloadingEnabled());
+        networkConfig.setInt(Keys.PROTOCOL_STAGE_THREAD_COUNT, getConfig().getCoapThreads());
+        networkConfig.setInt(Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, getConfig().getConnectorThreads());
+        networkConfig.setInt(Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getConnectorThreads());
+        networkConfig.setInt(Keys.MAX_RESOURCE_BODY_SIZE, getConfig().getMaxPayloadSize());
+        networkConfig.setInt(Keys.EXCHANGE_LIFETIME, getConfig().getExchangeLifetime());
+        networkConfig.setBoolean(Keys.USE_MESSAGE_OFFLOADING, getConfig().isMessageOffloadingEnabled());
         return networkConfig;
     }
 
@@ -456,7 +458,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     protected Future<NetworkConfig> getSecureNetworkConfig() {
 
         final NetworkConfig networkConfig = newDefaultNetworkConfig();
-        networkConfig.setInt(NetworkConfig.Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getDtlsThreads());
+        networkConfig.setInt(Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, getConfig().getDtlsThreads());
         return loadNetworkConfig(getConfig().getNetworkConfig(), networkConfig)
                 .compose(c -> loadNetworkConfig(getConfig().getSecureNetworkConfig(), c));
     }
@@ -742,6 +744,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
                 if (waitForOutcome) {
                     // wait for outcome, ensure message order, if CoAP NSTART-1 is used.
+                    context.startAcceptTimer(vertx, getConfig().getTimeoutToAck());
                     return CompositeFuture.all(
                             sender.sendAndWaitForOutcome(downstreamMessage, currentSpan.context()),
                             responseReady.future())
@@ -801,9 +804,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                 .onComplete(onClosedHandler),
                         () -> onClosedHandler.handle(Future.succeededFuture()));
                 return result.future();
-
-            }).otherwise(t -> {
-
+            }).recover(t -> {
                 log.debug("cannot process message for device [tenantId: {}, deviceId: {}, endpoint: {}]",
                         device.getTenantId(), device.getDeviceId(), endpoint.getCanonicalName(), t);
                 metrics.reportTelemetry(
@@ -816,11 +817,17 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                         getTtdStatus(context),
                         context.getTimer());
                 TracingHelper.logError(currentSpan, t);
+                final Promise<ResponseCode> result = Promise.promise();
+                final Handler<AsyncResult<Void>> onClosedHandler = res -> {
+                    final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
+                    result.complete(context.respond(response));
+                    currentSpan.finish();
+                };
                 Optional.ofNullable(commandConsumerTracker.result()).ifPresentOrElse(
                         consumer -> consumer.close(currentSpan.context())
-                                .onComplete(res -> currentSpan.finish()),
-                        currentSpan::finish);
-                return CoapErrorResponse.respond(context.getExchange(), t);
+                                .onComplete(onClosedHandler),
+                        () -> onClosedHandler.handle(Future.succeededFuture()));
+                return result.future();
             });
         }
     }
@@ -1002,7 +1009,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     if (!requestProcessed.get()) {
                         // if the request was not responded already, add a timer for triggering an empty response
                         addCommandReceptionTimer(context, requestProcessed, responseReady, ttdSecs);
-                        context.getExchange().accept();
+                        context.startAcceptTimer(vertx, getConfig().getTimeoutToAck());
                     }
                     return consumer;
                 });
@@ -1178,7 +1185,8 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             ProcessingOutcome.from(t),
                             payload.length(),
                             context.getTimer());
-                    return CoapErrorResponse.respond(context.getExchange(), t);
+                    final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
+                    return context.respond(response);
                 });
     }
 }
