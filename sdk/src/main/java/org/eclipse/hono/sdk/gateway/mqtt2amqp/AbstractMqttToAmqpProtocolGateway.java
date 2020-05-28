@@ -508,7 +508,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * @param ctx The context in which the MQTT message has been published.
      * @throws NullPointerException if the context is {@code null}.
      */
-    final void handlePublishedMessage(final MqttDownstreamContext ctx) {
+    private void handlePublishedMessage(final MqttDownstreamContext ctx) {
 
         Objects.requireNonNull(ctx);
 
@@ -641,7 +641,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * @param cmdHandler The CommandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    final void onSubscribe(final MqttEndpoint endpoint, final Device authenticatedDevice,
+    private void onSubscribe(final MqttEndpoint endpoint, final Device authenticatedDevice,
             final MqttSubscribeMessage subscribeMsg, final CommandHandler cmdHandler) {
 
         Objects.requireNonNull(endpoint);
@@ -700,7 +700,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * @param cmdHandler The CommandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    final void onUnsubscribe(final MqttEndpoint endpoint, final Device authenticatedDevice,
+    private void onUnsubscribe(final MqttEndpoint endpoint, final Device authenticatedDevice,
             final MqttUnsubscribeMessage unsubscribeMsg, final CommandHandler cmdHandler) {
 
         Objects.requireNonNull(endpoint);
