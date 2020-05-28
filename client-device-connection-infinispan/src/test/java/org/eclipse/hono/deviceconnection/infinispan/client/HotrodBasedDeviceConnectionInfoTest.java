@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -89,7 +90,6 @@ class HotrodBasedDeviceConnectionInfoTest {
     /**
      * Sets up the fixture.
      */
-    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() {
         cache = new SimpleTestRemoteCache();
@@ -115,6 +115,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     void testSetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
         final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
@@ -129,6 +130,7 @@ class HotrodBasedDeviceConnectionInfoTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
     void testSetLastKnownGatewayFails(final VertxTestContext ctx) {
         final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
@@ -146,8 +148,9 @@ class HotrodBasedDeviceConnectionInfoTest {
      * 
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
-    void testGetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
+    public void testGetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
         final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
         info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.get(anyString())).thenReturn(Future.succeededFuture("gw-id"));
@@ -161,22 +164,48 @@ class HotrodBasedDeviceConnectionInfoTest {
     }
 
     /**
-     * Verifies that a request to set a gateway fails with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * 
+     * Verifies that a request to get a gateway fails with a {@link org.eclipse.hono.client.ServiceInvocationException}
+     * if the remote cache cannot be accessed.
+     *
      * @param ctx The vert.x test context.
      */
+    @SuppressWarnings("unchecked")
     @Test
-    void testGetLastKnownGatewayFails(final VertxTestContext ctx) {
+    public void testGetLastKnownGatewayFailsForCacheAccessException(final VertxTestContext ctx) {
         final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
         info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
         when(mockedCache.get(anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
         info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(SpanContext.class))
-            .setHandler(ctx.failing(t -> {
-                ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServiceInvocationException.class);
+                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                });
                 ctx.completeNow();
             }));
     }
 
+    /**
+     * Verifies that a request to get a gateway fails with a {@link org.eclipse.hono.client.ClientErrorException}
+     * if no entry exists for the given device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testGetLastKnownGatewayFailsForNonExistingEntry(final VertxTestContext ctx) {
+        final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
+        info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
+        when(mockedCache.get(anyString())).thenReturn(Future.succeededFuture(null));
+        info.getLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", mock(SpanContext.class))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                });
+                ctx.completeNow();
+            }));
+    }
 
     /**
      * Verifies that the <em>setCommandHandlingAdapterInstance</em> operation succeeds.

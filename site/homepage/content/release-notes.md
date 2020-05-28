@@ -4,6 +4,12 @@ title = "Release Notes"
 
 ## 1.2.3 (not yet released)
 
+### Fixes & Enhancements
+
+* The Device Connection service did return a 500 error code if no *last known gateway* could
+  be found found for a device ID. This has been fixed so that the service now returns a 404
+  in that case as specified by the Device Connection API.
+
 ### API Changes
 
 * The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
