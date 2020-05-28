@@ -50,6 +50,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.NetServerOptions;
@@ -470,7 +471,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
                 message -> handlePublishedMessage(
                         MqttDownstreamContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
 
-        final CommandHandler cmdHandler = new CommandHandler(vertx, commandAckTimeout, authenticatedDevice);
+        final CommandHandler cmdHandler = createCommandHandler(authenticatedDevice, vertx, commandAckTimeout);
         endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, this::onCommandPublished));
         endpoint.subscribeHandler(msg -> onSubscribe(endpoint, authenticatedDevice, msg, cmdHandler));
         endpoint.unsubscribeHandler(msg -> onUnsubscribe(endpoint, authenticatedDevice, msg, cmdHandler));
@@ -480,6 +481,21 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
             cmdHandler.removeAllSubscriptions();
         });
 
+    }
+
+    /**
+     * Invoked when a device connects, after authentication.
+     * <p>
+     * This method is only visible for testing purposes.
+     * 
+     * @param authenticatedDevice The device.
+     * @param vertx The vert.x instance
+     * @param commandAckTimeout The command acknowledgement timeout in milliseconds.
+     * @return The command handler for the given device.
+     */
+    CommandHandler createCommandHandler(final Device authenticatedDevice, final Vertx vertx,
+            final int commandAckTimeout) {
+        return new CommandHandler(vertx, commandAckTimeout, authenticatedDevice);
     }
 
     /**
@@ -769,14 +785,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
             startPromise.fail("TLS configuration invalid");
         }
 
-        final MqttServerOptions options = new MqttServerOptions()
-                .setHost(mqttServerConfig.getBindAddress())
-                .setPort(mqttServerConfig.getPort());
-
-        addTlsKeyCertOptions(options);
-        addTlsTrustOptions(options);
-
-        MqttServer.create(this.vertx, options)
+        MqttServer.create(vertx, getMqttServerOptions())
                 .endpointHandler(this::handleEndpointConnection)
                 .listen(asyncResult -> {
                     if (asyncResult.succeeded()) {
@@ -790,6 +799,23 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
                         startPromise.fail(asyncResult.cause());
                     }
                 });
+    }
+
+    /**
+     * Returns the options for the MQTT server.
+     * <p>
+     * This method is only visible for testing purposes.
+     * 
+     * @return The options configured with the values of the {@link MqttGatewayServerConfig}.
+     */
+    MqttServerOptions getMqttServerOptions() {
+        final MqttServerOptions options = new MqttServerOptions()
+                .setHost(mqttServerConfig.getBindAddress())
+                .setPort(mqttServerConfig.getPort());
+
+        addTlsKeyCertOptions(options);
+        addTlsTrustOptions(options);
+        return options;
     }
 
     private void addTlsKeyCertOptions(final NetServerOptions serverOptions) {

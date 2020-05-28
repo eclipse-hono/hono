@@ -159,20 +159,22 @@ final class CommandHandler {
             LOG.debug("Remove subscription for topicFilter [{}]", topicFilter);
 
             if (commandConsumer != null && subscriptions.isEmpty()) {
-                closeCommandConsumer();
+                if (commandConsumer.succeeded()) {
+                    closeCommandConsumer(commandConsumer.result());
+                }
             }
         }
     }
 
-    private void closeCommandConsumer() {
-        commandConsumer.onSuccess(consumer -> consumer.close(cls -> {
+    private void closeCommandConsumer(final MessageConsumer consumer) {
+        consumer.close(cls -> {
             if (cls.succeeded()) {
-                LOG.trace("Command consumer closed");
+                LOG.debug("Command consumer closed");
                 commandConsumer = null;
             } else {
                 LOG.error("Error closing command consumer", cls.cause());
             }
-        }));
+        });
     }
 
     /**
