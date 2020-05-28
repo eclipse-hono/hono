@@ -430,6 +430,43 @@ After a command has arrived as in the above example, the response is sent using 
 mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
 
+## Custom Message Mapping
+
+This protocol adapter supports transformation of messages that have been uploaded by devices before they get forwarded to downstream consumers.
+
+{{% note title="Experimental" %}}
+This is an experimental feature. The names of the configuration properties, potential values and the overall functionality are therefore
+subject to change without prior notice.
+{{% /note %}}
+
+This feature is useful in scenarios where devices are connected to the adapter via a gateway but the gateway is not able to include
+the device ID in the topic that the gateway publishes data to. The gateway will use the plain `telemetry` or `event` topics in this case.
+The message payload will usually contain the identifier of the device that the data originates from.
+
+The same functionality can also be used to transform the payload of messages uploaded by a device. This can be used for example to
+transform binary encoded data into a JSON document which can be consumed more easily by downstream consumers.
+
+The mechanism works as follows:
+1. A client uploads a message to the MQTT adapter.
+1. The adapter invokes the Device Registration service's *assert Registration* operation using either
+   the authenticated device's identifier, if the topic does not contain a device ID, or the device ID from the
+   topic.
+1. If the assertion succeeds, the adapter creates the downstream message using the original message's payload and
+   the asserted device ID as the origin device.
+1. If the response payload contains a value for the *mapper* property, the adapter tries to find a *mapper endpoint* configuration
+   for the given value. If a mapper endpoint with a matching name has been configured for the adapter,
+   1. the adapter sends an HTTP request to the endpoint which contains the original message's payload in the request body.
+   1. If the response body is not empty, it is used as the downstream message's payload.
+   1. If the response contains a *device_id* header and its value is different from the original device ID, then the adapter
+      invokes the *assert Registration* operation again, this time using the mapped device ID instead of the original device ID.
+      If the assertion succeeds, the adapter uses the asserted (mapped) device ID for the downstream message.
+1. The adapter forwards the downstream message.
+
+Please refer to the [Device Registry Management API]({{< relref "/api/management#/devices/createDeviceRegistration" >}})
+for how to register a *mapper* for a device.
+Please refer to the [MQTT Adapter Admin Guide]({{< relref "/admin-guide/mqtt-adapter-config#custom-message-mapping" >}})
+for how to configure custom mapper endpoints.
+
 ## Downstream Meta Data
 
 The adapter includes the following meta data in messages being sent downstream:
@@ -439,9 +476,11 @@ The adapter includes the following meta data in messages being sent downstream:
 | *device_id*        | *application*           | *string*  | The identifier of the device that the message originates from.  |
 | *orig_adapter*     | *application*           | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The MQTT adapter's type name is `hono-mqtt`. |
 | *orig_address*     | *application*           | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
-| *x-opt-retain*     | * *message-annotations* | *boolean* | Contains `true` if the device has published an event or telemetry message with its *retain* flag set to `1` |
+| *x-opt-retain*     | *message-annotations*   | *boolean* | Contains `true` if the device has published an event or telemetry message with its *retain* flag set to `1` |
 
-The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#tenant-information-format" >}}) or the [device level]({{< relref "/api/device-registration#assert-device-registration" >}}). The values of the default properties are determined as follows:
+The adapter also considers *defaults* registered for the device at either the [tenant]({{< relref "/api/tenant#tenant-information-format" >}})
+or the [device level]({{< relref "/api/device-registration#assert-device-registration" >}}).
+The values of the default properties are determined as follows:
 
 1. If the message already contains a non-empty property of the same name, the value if unchanged.
 2. Otherwise, if a default property of the same name is defined in the device's registration information, that value is used.

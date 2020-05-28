@@ -62,6 +62,7 @@ In case of a successful invocation of the operation, the body of the response me
 | *device-id*      | *yes*     | *string*      | The ID of the device that is subject of the assertion. |
 | *via*            | *no*      | *array*       | The IDs (JSON strings) of gateways which may act on behalf of the device. This property MUST be set if any gateways are registered for the device. If the assertion request contained a *gateway_id* property and the response's *status* property has value `200` (indicating a successful assertion) then the array MUST at least contain the gateway ID from the request. |
 | *defaults*       | *no*      | *object*      | Default values to be used by protocol adapters for augmenting messages from devices with missing information like a *content type*. It is up to the discretion of a protocol adapter if and how to use the given default values when processing messages published by the device. |
+| *mapper*         | *no*      | *string*      | The (logical) name of a service that can be used to transform messages uploaded by the device before they are forwarded to downstream consumers. The client needs to map this name to the particular service to invoke. |
 
 Below is an example for a payload of a response to an *assert* request for device `4711` which also includes a default *content-type*:
 ~~~json

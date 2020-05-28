@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.1.0
+   version: 1.2.0
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -765,17 +765,31 @@ components:
                type: array
                items:
                   type: string
-               description: The device IDs of the gateways that are registered to act on behalf of this device. Note that "via" and "memberOf" must not be set at the same time.
+               description: |
+                  The device IDs of the gateways that are registered to act on behalf of this device.
+                  Note that "via" and "memberOf" must not be set at the same time.
             "viaGroups":
                type: array
                items:
                   type: string
-               description: The IDs of the gateway groups that are registered to act on behalf of this device. Note that "viaGroups" and "memberOf" must not be set at the same time.
+               description: |
+                  The IDs of the gateway groups that are registered to act on behalf of this device.
+                  Note that "viaGroups" and "memberOf" must not be set at the same time.
             "memberOf":
                type: array
                items:
                   type: string
-               description: The IDs of the gateway groups that this device is a member of. Note that "via" and "memberOf" must not be set at the same time. The same applies for "viaGroups" and "memberOf" which must be set at the same time too. The reason is that Eclipse Hono does not support groups of gateway groups.
+               description: |
+                  The IDs of the gateway groups that this device is a member of.
+                  Note that neither "via" nor "viaGroups" must be set if "memberOf" is set.
+            "mapper":
+               type: string
+               description: |
+                  The (logical) name of a service that can be used by protocol adapters to transform messages
+                  uploaded by devices before sending them to downstream consumers.
+                  The protocol adapter needs to map this name to the particular service to invoke.
+                  NB: This is an experimental feature and thus this property is subject to change without
+                  notice.
             "ext":
                $ref: '#/components/schemas/Extensions'
 

@@ -34,9 +34,6 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_MQTT_KEY_PATH`<br>`--hono.mqtt.keyPath` | no | - | The absolute path to the (PKCS8) PEM file containing the private key that the protocol adapter should use for authenticating to clients. This option must be used in conjunction with `HONO_MQTT_CERT_PATH`. Alternatively, the `HONO_MQTT_KEY_STORE_PATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_MQTT_KEY_STORE_PASSWORD`<br>`--hono.mqtt.keyStorePassword` | no | - | The password required to read the contents of the key store. |
 | `HONO_MQTT_KEY_STORE_PATH`<br>`--hono.mqtt.keyStorePath` | no | - | The absolute path to the Java key store containing the private key and certificate that the protocol adapter should use for authenticating to clients. Either this option or the `HONO_MQTT_KEY_PATH` and `HONO_MQTT_CERT_PATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
-| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_HOST`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.host` | no | - | The host to which the adapter should connect to call the custom mapper. Replace `<mapperName>` with the name of the mapper to configure. |
-| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_PORT`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.port` | no | - | The port to which the adapter should connect to call the custom mapper. Replace `<mapperName>` with the name of the mapper to configure. |
-| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_URI`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.uri` | no | - | The used uri to append to the host to call the mapping method on the mapping server. Replace `<mapperName>` with the name of the mapper to configure. |
 | `HONO_MQTT_SNI`<br>`--hono.mqtt.sni` | no | `false` | Set whether the server supports Server Name Indication. By default, the server will not support SNI and the option is `false`. However, if set to `true` then the key store format , `HONO_MQTT_KEY_STORE_PATH`,  should be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. |
 | `HONO_MQTT_MAX_CONNECTIONS`<br>`--hono.mqtt.maxConnections` | no | `0` | The maximum number of concurrent connections that the protocol adapter should accept. If not set (or set to `0`), the protocol adapter determines a reasonable value based on the available resources like memory and CPU. |
 | `HONO_MQTT_MAX_PAYLOAD_SIZE`<br>`--hono.mqtt.maxPayloadSize` | no | `2048` | The maximum allowed size of an incoming MQTT message's payload in bytes. When a client sends a message with a larger payload, the message is discarded and the connection to the client gets closed. |
@@ -91,3 +88,22 @@ The protocol adapter may be configured to open both a secure and a non-secure po
 ### Ephemeral Ports
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The protocol adapter will then use arbitrary (unused) port numbers determined by the operating system during startup.
+
+## Custom Message Mapping
+
+This protocol adapter supports transformation of messages that have been uploaded by devices before forwarding them to downstream consumers.
+
+{{% note title="Experimental" %}}
+This is an experimental feature. The names of the configuration properties, potential values and the overall functionality are therefore
+subject to change without prior notice.
+{{% /note %}}
+
+The following table provides an overview of the configuration variables and corresponding command line options for configuring the external
+service endpoint(s) for transforming messages:
+
+| Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
+| :------------------------------------------ | :-------: | :------------ | :------------|
+| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_HOST`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.host` | no | - | The host name or IP address of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the logical service name as set in the *mapper* property of the device's registration information. |
+| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_PORT`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.port` | no | - | The port of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the logical service name as set in the *mapper* property of the device's registration information. |
+| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_URI`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.uri` | no | - | The URI of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the logical service name as set in the *mapper* property of the device's registration information. |
+
