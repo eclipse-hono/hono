@@ -17,6 +17,7 @@ package org.eclipse.hono.adapter.coap;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -28,6 +29,7 @@ import javax.crypto.SecretKey;
 
 import org.eclipse.californium.elements.auth.AdditionalInfo;
 import org.eclipse.californium.elements.auth.PreSharedKeyIdentity;
+import org.eclipse.californium.elements.util.LeastRecentlyUsedCache;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.dtls.PskPublicInformation;
 import org.eclipse.californium.scandium.dtls.pskstore.PskStore;
@@ -67,6 +69,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
     private final String adapterName;
     private final CoapAdapterProperties config;
     private final CredentialsClientFactory credentialsClientFactory;
+    private final LeastRecentlyUsedCache<PreSharedKeyDeviceIdentity, String> devices;
 
     /**
      * Creates a new resolver.
@@ -90,6 +93,10 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
         this.adapterName = Objects.requireNonNull(adapterName);
         this.config = Objects.requireNonNull(config);
         this.credentialsClientFactory = Objects.requireNonNull(credentialsClientFactory);
+        this.devices = new LeastRecentlyUsedCache<PreSharedKeyDeviceIdentity, String>(
+                500, 2000, 20);
+        this.devices.setUpdatingOnReadAccess(true);
+        this.devices.setEvictingOnReadAccess(false);
     }
 
     /**
@@ -109,7 +116,9 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
     private static SecretKey getKey(final JsonObject candidateSecret) {
         try {
             final byte[] encodedKey = candidateSecret.getBinary(CredentialsConstants.FIELD_SECRETS_KEY);
-            return SecretUtil.create(encodedKey, "PSK");
+            final SecretKey key = SecretUtil.create(encodedKey, "PSK");
+            Arrays.fill(encodedKey, (byte) 0);
+            return key;
         } catch (IllegalArgumentException | ClassCastException e) {
             return null;
         }
@@ -134,24 +143,36 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
             final PreSharedKeyDeviceIdentity deviceIdentity = getHandshakeIdentity(span, clientIdentity.getName());
             TracingHelper.TAG_TENANT_ID.set(span, deviceIdentity.getTenantId());
             TracingHelper.TAG_AUTH_ID.set(span, deviceIdentity.getAuthId());
-            final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
-            context.runOnContext(go -> {
-                credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId())
-                    .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, deviceIdentity.getAuthId(), new JsonObject(), span.context()))
-                    .onSuccess(credentials -> credentialsResult.complete(credentials))
-                    .onFailure(t -> credentialsResult.completeExceptionally(t));
-            });
-            try {
-                // client will only wait a limited period of time,
-                // so no need to use get(Long, TimeUnit) here
-                final CredentialsObject credentials = credentialsResult.join();
-                result.put("hono-device", new Device(deviceIdentity.getTenantId(), credentials.getDeviceId()));
-                span.log("successfully resolved device identity");
-                TracingHelper.TAG_DEVICE_ID.set(span, credentials.getDeviceId());
-            } catch (final CompletionException e) {
-                TracingHelper.logError(span, "could not resolve auhenticated principal", e);
-                LOG.debug("could not resolve authenticated principal [type: {}, tenant-id: {}, auth-id: {}]",
-                        clientIdentity.getClass(), deviceIdentity.getTenantId(), deviceIdentity.getAuthId(), e);
+            String deviceId;
+            synchronized (devices) {
+                deviceId = devices.remove(deviceIdentity);
+            }
+
+            if (deviceId == null) {
+                // resumption handshake or fast rehandshakes from same device
+                final CompletableFuture<CredentialsObject> credentialsResult = new CompletableFuture<>();
+                context.runOnContext(go -> {
+                    credentialsClientFactory.getOrCreateCredentialsClient(deviceIdentity.getTenantId())
+                        .compose(client -> client.get(CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, deviceIdentity.getAuthId(), new JsonObject(), span.context()))
+                        .onSuccess(credentials -> credentialsResult.complete(credentials))
+                        .onFailure(t -> credentialsResult.completeExceptionally(t));
+                });
+                try {
+                    // client will only wait a limited period of time,
+                    // so no need to use get(Long, TimeUnit) here
+                    deviceId = credentialsResult.join().getDeviceId();
+                    span.log("successfully resolved device identity");
+                } catch (final CompletionException e) {
+                    TracingHelper.logError(span, "could not resolve auhenticated principal", e);
+                    LOG.debug("could not resolve authenticated principal [type: {}, tenant-id: {}, auth-id: {}]",
+                            clientIdentity.getClass(), deviceIdentity.getTenantId(), deviceIdentity.getAuthId(), e);
+                }
+            } else {
+                span.log("device identity cached");
+            }
+            if (deviceId != null) {
+                result.put("hono-device", new Device(deviceIdentity.getTenantId(), deviceId));
+                TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             }
             span.finish();
         } else {
@@ -208,7 +229,12 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
                 .getOrCreateCredentialsClient(handshakeIdentity.getTenantId())
                 .compose(client -> client.get(handshakeIdentity.getType(), handshakeIdentity.getAuthId(), new JsonObject(), context))
                 .compose((credentials) -> Optional.ofNullable(getCandidateKey(credentials))
-                        .map(secret -> Future.succeededFuture(secret))
+                        .map(secret -> {
+                            synchronized (devices) {
+                                devices.put(handshakeIdentity, credentials.getDeviceId());
+                            }
+                            return Future.succeededFuture(secret);
+                        })
                         .orElseGet(() -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
                                 "no shared key registered for identity"))));
     }
