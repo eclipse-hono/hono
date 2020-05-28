@@ -14,8 +14,6 @@
 package org.eclipse.hono.deviceconnection.infinispan;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
@@ -75,8 +73,8 @@ public class EmbeddedCacheConfig {
     @Bean
     public ConfigurationBuilderHolder configuration(final CommonCacheConfig cacheConfig) {
         if (this.configuration != null) {
-            try (InputStream in = Files.newInputStream(configuration)) {
-                final ConfigurationBuilderHolder holder = new ParserRegistry().parse(in);
+            try {
+                final ConfigurationBuilderHolder holder = new ParserRegistry().parseFile(configuration.toFile());
                 LOG.info("successfully configured embedded cache from file [{}]", configuration);
                 return holder;
             } catch (final IOException e) {
