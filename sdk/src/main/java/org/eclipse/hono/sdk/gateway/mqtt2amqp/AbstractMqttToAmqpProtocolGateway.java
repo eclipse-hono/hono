@@ -188,7 +188,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * @see ClientConfigProperties#setPassword(String)
      */
     protected Future<Credentials> provideGatewayCredentials(final String tenantId) {
-        return Future.failedFuture("credentials of the gateway adapter not found in the provided configuration.");
+        return Future.failedFuture("credentials of the protocol gateway not found in the provided configuration.");
     }
 
     /**
@@ -774,7 +774,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
     /**
      * {@inheritDoc}
      * <p>
-     * Creates and starts the MQTT server.
+     * Creates and starts the MQTT server and invokes {@link #afterStartup(Promise)} afterwards.
      */
     @Override
     public final void start(final Promise<Void> startPromise) {
@@ -793,7 +793,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
                         log.info("MQTT server running on {}:{}", mqttServerConfig.getBindAddress(),
                                 startedServer.actualPort());
                         server = startedServer;
-                        startPromise.complete();
+                        afterStartup(startPromise);
                     } else {
                         log.error("error while starting up MQTT server", asyncResult.cause());
                         startPromise.fail(asyncResult.cause());
@@ -848,22 +848,49 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
     }
 
     /**
-     * Invoked directly before the gateway is shut down. It stops the MQTT server.
+     * {@inheritDoc}
      * <p>
-     * Subclasses may override this method to perform any work required before shutting down this protocol adapter but
-     * must always call this method.
-     *
-     * @param stopFuture The future to complete once all work is done and shut down should commence.
+     * Invokes {@link #beforeShutdown(Promise)} and stops the MQTT server.
      */
     @Override
-    public void stop(final Future<Void> stopFuture) {
-        final Promise<Void> serverTracker = Promise.promise();
-        if (this.server != null) {
-            this.server.close(serverTracker);
-        } else {
-            serverTracker.complete();
-        }
-        serverTracker.future().setHandler(stopFuture);
+    public final void stop(final Promise<Void> stopPromise) {
+
+        final Promise<Void> stopTracker = Promise.promise();
+        beforeShutdown(stopTracker);
+        stopTracker.future().onComplete(v -> {
+            if (server != null) {
+                server.close(stopPromise);
+            } else {
+                stopPromise.complete();
+            }
+        });
+
+    }
+
+    /**
+     * Invoked directly before the gateway is shut down.
+     * <p>
+     * This default implementation always completes the promise.
+     * <p>
+     * Subclasses should override this method to perform any work required before shutting down this protocol gateway.
+     *
+     * @param stopPromise The promise to complete once all work is done and shut down should commence.
+     */
+    protected void beforeShutdown(final Promise<Void> stopPromise) {
+        stopPromise.complete();
+    }
+
+    /**
+     * Invoked after the gateway has started up.
+     * <p>
+     * This default implementation simply completes the promise.
+     * <p>
+     * Subclasses should override this method to perform any work required on start-up of this protocol gateway.
+     *
+     * @param startPromise The promise to complete once start up is complete.
+     */
+    protected void afterStartup(final Promise<Void> startPromise) {
+        startPromise.complete();
     }
 
 }
