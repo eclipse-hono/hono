@@ -120,6 +120,11 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         Objects.requireNonNull(deviceId);
 
         return cache.get(getGatewayEntryKey(tenantId, deviceId))
+                .recover(t -> {
+                    LOG.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
+                            tenantId, deviceId, t);
+                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                })
                 .compose(gatewayId -> {
                     if (gatewayId == null) {
                         LOG.debug("could not find last known gateway for device [tenant: {}, device-id: {}]", tenantId,
@@ -130,11 +135,6 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                                 deviceId, gatewayId);
                         return Future.succeededFuture(getLastKnownGatewayResultJson(gatewayId));
                     }
-                })
-                .recover(t -> {
-                    LOG.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
-                            tenantId, deviceId, t);
-                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
                 });
     }
 
