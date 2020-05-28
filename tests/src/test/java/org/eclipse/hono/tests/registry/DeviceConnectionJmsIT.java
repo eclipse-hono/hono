@@ -56,7 +56,7 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
     @BeforeAll
     public static void init(final VertxTestContext ctx) {
 
-        props = IntegrationTestSupport.getDeviceRegistryProperties(
+        props = IntegrationTestSupport.getDeviceConnectionServiceProperties(
                 IntegrationTestSupport.HONO_USER,
                 IntegrationTestSupport.HONO_PWD);
 

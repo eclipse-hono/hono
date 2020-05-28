@@ -87,6 +87,10 @@ public final class IntegrationTestSupport {
      */
     public static final int    DEFAULT_COAPS_PORT = 5684;
     /**
+     * The default AMQP port exposed by the Device Connection service.
+     */
+    public static final int    DEFAULT_DEVICECONNECTION_AMQP_PORT = 35672;
+    /**
      * The default AMQP port exposed by the device registry.
      */
     public static final int    DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
@@ -152,6 +156,19 @@ public final class IntegrationTestSupport {
      * has access to all tenants.
      */
     public static final String PROPERTY_TENANT_ADMIN_PASSWORD = "tenant.admin.password";
+    /**
+     * The name of the system property to use for setting the IP address of the Device Connection service.
+     */
+    public static final String PROPERTY_DEVICECONNECTION_HOST = "deviceconnection.host";
+    /**
+     * The name of the system property to use for setting the port number that the Device Connection
+     * service should listen on for AMQP connections.
+     */
+    public static final String PROPERTY_DEVICECONNECTION_AMQP_PORT = "deviceconnection.amqp.port";
+    /**
+     * The name of the system property to use for setting the port number that the Device Registry
+     * should listen on for HTTP connections.
+     */
     /**
      * The name of the system property to use for setting the IP address of the Device Registry.
      */
@@ -292,6 +309,15 @@ public final class IntegrationTestSupport {
      * The port number that the Device Registry listens on for HTTP requests.
      */
     public static final int    HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
+
+    /**
+     * The IP address of the Device Connection service.
+     */
+    public static final String HONO_DEVICECONNECTION_HOST = System.getProperty(PROPERTY_DEVICECONNECTION_HOST, DEFAULT_HOST);
+    /**
+     * The port number that the Device Connection service listens on for AMQP connections.
+     */
+    public static final int    HONO_DEVICECONNECTION_AMQP_PORT = Integer.getInteger(PROPERTY_DEVICECONNECTION_AMQP_PORT, DEFAULT_DEVICECONNECTION_AMQP_PORT);
 
     /**
      * The IP address of the AMQP Messaging Network.
@@ -491,6 +517,23 @@ public final class IntegrationTestSupport {
         final ClientConfigProperties props = getClientConfigProperties(
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT,
+                username,
+                password);
+        return props;
+    }
+
+    /**
+     * Creates properties for connecting to the Device Connection service.
+     *
+     * @param username The username to use for authenticating to the service.
+     * @param password The password to use for authenticating to the service.
+     * @return The properties.
+     */
+    public static ClientConfigProperties getDeviceConnectionServiceProperties(final String username, final String password) {
+
+        final ClientConfigProperties props = getClientConfigProperties(
+                IntegrationTestSupport.HONO_DEVICECONNECTION_HOST,
+                IntegrationTestSupport.HONO_DEVICECONNECTION_AMQP_PORT,
                 username,
                 password);
         return props;

@@ -992,6 +992,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <downstream.amqp.port>${qpid.amqp.port}</downstream.amqp.port>
                 <downstream.username>consumer@HONO</downstream.username>
                 <downstream.password>verysecret</downstream.password>
+                <deviceconnection.host>${deviceconnection.ip}</deviceconnection.host>
+                <deviceconnection.amqp.port>${deviceconnection.amqp.port}</deviceconnection.amqp.port>
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>

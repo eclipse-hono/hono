@@ -49,7 +49,7 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
         client = DeviceConnectionClientFactory.create(
                 HonoConnection.newConnection(
                         vertx,
-                        IntegrationTestSupport.getDeviceRegistryProperties(
+                        IntegrationTestSupport.getDeviceConnectionServiceProperties(
                                 IntegrationTestSupport.HONO_USER,
                                 IntegrationTestSupport.HONO_PWD)));
 
