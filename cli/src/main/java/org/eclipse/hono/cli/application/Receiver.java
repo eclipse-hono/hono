@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,30 +10,30 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.cli.app;
+
+package org.eclipse.hono.cli.application;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.BiConsumer;
 
-import javax.annotation.PostConstruct;
-
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.cli.AbstractCommand;
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.util.MessageHelper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
+
 /**
- * A command line client for receiving messages from via Hono's north bound Telemetry and/or Event API
+ * The methods of the command line client for receiving messages from via Hono's north bound Telemetry and/or Event API
  * <p>
  * Messages are output to stdout.
  * <p>
@@ -41,18 +41,12 @@ import io.vertx.core.buffer.Buffer;
  * receiver for downstream data. Please refer to the documentation of Command &amp; Control for the example that supports
  * it (found in the User Guide section).
  */
-@Component
-@Profile("receiver")
-public class Receiver extends AbstractApplicationClient {
+public class Receiver extends AbstractCommand {
 
-    private static final String TYPE_TELEMETRY = "telemetry";
-    private static final String TYPE_EVENT = "event";
-    private static final String TYPE_ALL = "all";
-    /**
-     * The type of messages to create a consumer for.
-     */
-    @Value(value = "${message.type}")
-    protected String messageType;
+    private final ApplicationClientFactory clientFactory;
+    private final String tenantId;
+    private final String messageType;
+    private final int connectionRetryInterval;
 
     /**
      * Bi consumer to handle messages based on endpoint.
@@ -60,33 +54,51 @@ public class Receiver extends AbstractApplicationClient {
     private BiConsumer<String, Message> messageHandler = (endpoint, msg) -> handleMessage(endpoint, msg);
 
     /**
+     * Constructor to create the config environment for the execution of the command.
+     *
+     * @param clientFactory The factory with client's methods.
+     * @param vertx The instance of vert.x connection.
+     * @param tenantId The tenant which the user want to connect.
+     * @param messageType The message type which the user want to receive.
+     * @param connectionRetryInterval The time to wait before retry to connect.
+     */
+    public Receiver(final ApplicationClientFactory clientFactory, final Vertx vertx, final String tenantId, final String messageType, final int connectionRetryInterval) {
+        this.clientFactory = clientFactory;
+        this.vertx = vertx;
+        this.tenantId = tenantId;
+        this.messageType = messageType;
+        this.connectionRetryInterval = connectionRetryInterval;
+    }
+
+    /**
      * Set message handler for processing adaption.
      *
      * @param messageHandler message handler.
      * @throws NullPointerException if message handlerr is {@code null}.
      */
-    void setMessageHandler(final BiConsumer<String, Message> messageHandler) {
+    public void setMessageHandler(final BiConsumer<String, Message> messageHandler) {
         this.messageHandler = Objects.requireNonNull(messageHandler);
     }
 
     /**
-     * Starts this component.
-     * <p>
+     * Entrypoint to start the command.
      *
-     * @return A future indicating the outcome of the startup process.
+     * @param latch The handle to signal the ended execution and return to the shell.
+     * @param con The Hono connection instance, already connected.
      */
-    @PostConstruct
-    Future<CompositeFuture> start() {
-        return clientFactory.connect()
-                .compose(con -> {
-                    clientFactory.addReconnectListener(this::createConsumer);
-                    return createConsumer(con);
-                })
-                .onComplete(this::handleCreateConsumerStatus);
+    public void start(final CountDownLatch latch, final HonoConnection con) {
+        this.latch = latch;
+        clientFactory.isConnected().onComplete(connectionStatus -> {
+            if (connectionStatus.succeeded()) {
+                clientFactory.addReconnectListener(this::createConsumer);
+                createConsumer(con);
+            } else {
+                close(connectionStatus.cause());
+            }
+        });
     }
 
     private CompositeFuture createConsumer(final HonoConnection connection) {
-
         final Handler<Void> closeHandler = closeHook -> {
             log.info("close handler of consumer is called");
             vertx.setTimer(connectionRetryInterval, reconnect -> {
@@ -97,18 +109,14 @@ public class Receiver extends AbstractApplicationClient {
 
         @SuppressWarnings("rawtypes")
         final List<Future> consumerFutures = new ArrayList<>();
-        if (messageType.equals(TYPE_EVENT) || messageType.equals(TYPE_ALL)) {
+        if (messageType.equals(ApplicationProfile.TYPE_EVENT) || messageType.equals(ApplicationProfile.TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createEventConsumer(tenantId, msg -> {
-                        messageHandler.accept(TYPE_EVENT, msg);
-                    }, closeHandler));
+                    clientFactory.createEventConsumer(tenantId, msg -> messageHandler.accept(ApplicationProfile.TYPE_EVENT, msg), closeHandler));
         }
 
-        if (messageType.equals(TYPE_TELEMETRY) || messageType.equals(TYPE_ALL)) {
+        if (messageType.equals(ApplicationProfile.TYPE_TELEMETRY) || messageType.equals(ApplicationProfile.TYPE_ALL)) {
             consumerFutures.add(
-                    clientFactory.createTelemetryConsumer(tenantId, msg -> {
-                        messageHandler.accept(TYPE_TELEMETRY, msg);
-                    }, closeHandler));
+                    clientFactory.createTelemetryConsumer(tenantId, msg -> messageHandler.accept(ApplicationProfile.TYPE_TELEMETRY, msg), closeHandler));
         }
 
         if (consumerFutures.isEmpty()) {
@@ -120,14 +128,6 @@ public class Receiver extends AbstractApplicationClient {
         return CompositeFuture.all(consumerFutures);
     }
 
-    /**
-     * Handle received message.
-     *
-     * Write log messages to stdout.
-     *
-     * @param endpoint receiving endpoint, "telemetry" or "event".
-     * @param msg received message
-     */
     private void handleMessage(final String endpoint, final Message msg) {
         final String deviceId = MessageHelper.getDeviceId(msg);
 
@@ -141,13 +141,8 @@ public class Receiver extends AbstractApplicationClient {
         }
     }
 
-    private void handleCreateConsumerStatus(final AsyncResult<CompositeFuture> startup) {
-        if (startup.succeeded()) {
-            log.info("Receiver [tenant: {}, mode: {}] created successfully, hit ctrl-c to exit", tenantId,
-                    messageType);
-        } else {
-            log.error("Error occurred during initialization of receiver: {}", startup.cause().getMessage());
-            vertx.close();
-        }
+    private void close(final Throwable t) {
+        log.error("Connection not established: {}", t.getMessage());
+        latch.countDown();
     }
 }

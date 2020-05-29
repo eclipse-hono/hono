@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,23 +13,29 @@
 
 package org.eclipse.hono.cli;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 
+import org.eclipse.hono.cli.shell.InputReader;
+import org.eclipse.hono.cli.shell.ShellHelper;
+import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
+import org.springframework.context.annotation.Lazy;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 
 /**
  * Abstract base class for the Hono CLI module.
+ * <p>
+ * Contains connection Vert.x instance and client properties autowired as spring beans.
+ * The profile and the corresponding factory methods will be valued at time of connection (when the user execute the command).
  */
 public abstract class AbstractCliClient {
-
     /**
      * A logger to be shared with subclasses.
      */
@@ -44,22 +50,38 @@ public abstract class AbstractCliClient {
      */
     protected Context ctx;
     /**
-     * The Spring Boot profiles that are active.
+     * The class containing all client properties.
      */
-    protected List<String> activeProfiles;
-
+    protected ClientConfigProperties honoClientConfig;
     /**
-     * Sets the Spring environment.
-     *
-     * @param env The environment.
-     * @throws NullPointerException if environment is {@code null}.
+     * To connection created.
+     */
+    protected HonoConnection con;
+    /**
+     * To stop the executions of internal commands.
+     */
+    protected CountDownLatch connLatch;
+    /**
+     * Spring Shell inputReader.
      */
     @Autowired
-    public final void setActiveProfiles(final Environment env) {
-        Objects.requireNonNull(env);
-        activeProfiles = Arrays.asList(env.getActiveProfiles());
+    protected @Lazy InputReader inputReader;
+    /**
+     * Spring Shell output helper.
+     * <p>
+     * it can be passed to the method class instead to use the log (it's more stylish).
+     */
+    @Autowired
+    protected ShellHelper shellHelper;
+    /**
+     * Sets the default client configuration.
+     *
+     * @param honoClientConfig The Client Configuration class instance.
+     */
+    @Autowired
+    private void setClientConfigProperties(final ClientConfigProperties honoClientConfig) {
+        this.honoClientConfig = Objects.requireNonNull(honoClientConfig);
     }
-
     /**
      * Sets the vert.x instance.
      *
@@ -67,9 +89,26 @@ public abstract class AbstractCliClient {
      * @throws NullPointerException if vert.x is {@code null}.
      */
     @Autowired
-    public final void setVertx(final Vertx vertx) {
+    protected void setVertx(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
         this.ctx = vertx.getOrCreateContext();
     }
+    /**
+     * Handler for the Hono connection establishment.
+     *
+     * @param startup The async result of the connection.
+     */
+    protected void handleConnectionStatus(final AsyncResult<HonoConnection> startup) {
+        if (startup.succeeded()) {
+            con = startup.result();
+            shellHelper.printInfo("Connection created!");
+        } else {
+            shellHelper.printError("Error occurred during initialization of receiver: " + startup.cause().getMessage());
+            if (connLatch != null) {
+                connLatch.countDown();
+            }
+        }
+    }
 
 }
+

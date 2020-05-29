@@ -10,23 +10,18 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.cli.app;
+
+package org.eclipse.hono.cli.application;
 
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.annotation.PostConstruct;
-
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.cli.AbstractCommand;
 import org.eclipse.hono.util.MessageHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -39,17 +34,12 @@ import io.vertx.core.buffer.Buffer;
  * <p>
  * Statistics are output to stdout.
  */
-@Component
-@Profile("statistic")
-public class ReceiverStatistics {
-    private static final Logger LOG_STATISTIC = LoggerFactory.getLogger(ReceiverStatistics.class);
-    private static final long INTERVAL_MILLIS = 10000;
+public class ReceiverStatistics extends AbstractCommand {
 
     /**
      * The statistics interval in milliseconds.
      */
-    @Value(value = "${statistic.interval}")
-    protected long interval = INTERVAL_MILLIS;
+    private final int interval;
 
     /**
      * Enable the statistics auto reset.
@@ -57,17 +47,12 @@ public class ReceiverStatistics {
      * Resets the overall statistics after one quiet interval. May take close to twice the interval since the last
      * received message.
      */
-    @Value(value = "${statistic.autoreset}")
-    protected boolean autoReset;
+    private boolean autoReset;
 
     /**
      * Basic message receiver.
      */
     private final Receiver receiver;
-    /**
-     * The vert.x instance to run on.
-     */
-    private final Vertx vertx;
     /**
      * Overall statistic.
      */
@@ -76,18 +61,24 @@ public class ReceiverStatistics {
      * Current period statistic.
      */
     private Statistic current;
-
     /**
-     * Create new receiver statistics.
+     * The timer id.
+     */
+    private long periodicId;
+    /**
+     * Constructor to create new receiver statistics.
      *
      * @param receiver Receiver instance
      * @param vertx The vert.x instance.
+     * @param interval User provided milliseconds of interval.
+     * @param autoReset User provided flag to enable the statistics auto reset.
      * @throws NullPointerException if vert.x or receiver is {@code null}.
      */
-    @Autowired
-    public ReceiverStatistics(final Receiver receiver, final Vertx vertx) {
+    public ReceiverStatistics(final Receiver receiver, final Vertx vertx, final int interval, final boolean autoReset) {
         this.receiver = Objects.requireNonNull(receiver);
         this.vertx = Objects.requireNonNull(vertx);
+        this.interval = interval;
+        this.autoReset = autoReset;
     }
 
     /**
@@ -96,11 +87,11 @@ public class ReceiverStatistics {
      *
      * @return A future indicating the outcome of the startup process.
      */
-    @PostConstruct
-    Future<CompositeFuture> start() {
-        vertx.setPeriodic(interval, this::statistic);
+    Future<CompositeFuture> start(final CountDownLatch receiverLatch) {
+        this.latch = receiverLatch;
+        periodicId = vertx.setPeriodic(interval, this::statistic);
         receiver.setMessageHandler((endpoint, msg) -> handleMessage(endpoint, msg));
-        LOG_STATISTIC.info("Statistics [interval: {} ms, autoreset: {}]", interval, autoReset);
+        log.info("Statistics [interval: {} ms, autoreset: {}]", interval, autoReset);
         return Future.succeededFuture();
     }
 
@@ -109,7 +100,7 @@ public class ReceiverStatistics {
 
         final Buffer payload = MessageHelper.getPayload(msg);
 
-        if (LOG_STATISTIC.isInfoEnabled()) {
+        if (log.isInfoEnabled()) {
             final long now = System.nanoTime();
             final Statistic total;
             Statistic current;
@@ -126,7 +117,7 @@ public class ReceiverStatistics {
             total.increment(now);
             if (!current.increment(now)) {
                 if (current.isPrinting()) {
-                    LOG_STATISTIC.info("statistic: total {}, last {}", total, current);
+                    log.info("statistic: total {}, last {}", total, current);
                 }
                 synchronized (this) {
                     if (this.current == current) {
@@ -138,17 +129,21 @@ public class ReceiverStatistics {
             }
         }
 
-        LOG_STATISTIC.trace("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(),
+        log.trace("received {} message [device: {}, content-type: {}]: {}", endpoint, deviceId, msg.getContentType(),
                 payload);
 
         if (msg.getApplicationProperties() != null) {
-            LOG_STATISTIC.trace("... with application properties: {}", msg.getApplicationProperties().getValue());
+            log.trace("... with application properties: {}", msg.getApplicationProperties().getValue());
         }
     }
 
     private void statistic(final Long id) {
         final Statistic total;
         final Statistic current;
+        if (latch.getCount() > 0) {
+            vertx.cancelTimer(periodicId);
+            return;
+        }
         synchronized (this) {
             total = this.total;
             current = this.current;
@@ -157,9 +152,9 @@ public class ReceiverStatistics {
             final long now = System.nanoTime();
             if (current == null || current.finished(now)) {
                 if (current == null) {
-                    LOG_STATISTIC.info("statistic: total {}", total);
+                    log.info("statistic: total {}", total);
                 } else {
-                    LOG_STATISTIC.info("statistic: total {}, last {}", total, current);
+                    log.info("statistic: total {}, last {}", total, current);
                 }
                 synchronized (this) {
                     if (this.total == total && this.current == current) {

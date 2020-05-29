@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,56 +11,85 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli.app;
+package org.eclipse.hono.cli.application;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
-import java.util.Scanner;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.PostConstruct;
-
+import org.eclipse.hono.cli.AbstractCommand;
+import org.eclipse.hono.cli.shell.InputReader;
+import org.eclipse.hono.client.ApplicationClientFactory;
 import org.eclipse.hono.client.CommandClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.util.BufferResult;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.buffer.Buffer;
 
 /**
- * A command line client for sending commands to devices connected
- * to one of Hono's protocol adapters.
+ * A command line client for sending commands to devices connected to one of Hono's protocol adapters.
  * <p>
  * The commands to send are read from stdin.
  */
-@Component
-@Profile("command")
-public class Commander extends AbstractApplicationClient {
-
-    private final Scanner scanner = new Scanner(System.in);
-    @Value(value = "${command.timeoutInSeconds}")
-    private int requestTimeoutInSecs;
+public class Commander extends AbstractCommand {
+    /**
+     * Spring Shell inputReader.
+     */
+    private final InputReader inputReader;
+    /**
+     * To execute commands in another thread.
+     */
     private WorkerExecutor workerExecutor;
 
     /**
-     * Starts this component.
-     *
+     * Methods factory instantiated with the connection parameters.
      */
-    @PostConstruct
-    void start() {
+    private final ApplicationClientFactory clientFactory;
+
+    private final String tenantId;
+    private final String deviceId;
+    private final int requestTimeoutInSecs;
+
+    /**
+     * Constructor to create the config environment for the execution of the command.
+     *
+     * @param clientFactory The factory with client's methods.
+     * @param vertx The instance of vert.x connection.
+     * @param inputReader The shell's inputReader.
+     * @param tenantId The tenant which the user want to connect.
+     * @param deviceId The device which the user want to connect.
+     * @param requestTimeoutInSecs The timeout interval of the request expressed in seconds.
+     */
+    public Commander(final ApplicationClientFactory clientFactory, final Vertx vertx, final InputReader inputReader, final String tenantId, final String deviceId, final int requestTimeoutInSecs) {
+        this.clientFactory = clientFactory;
+        this.vertx = vertx;
+        this.inputReader = inputReader;
+        this.tenantId = tenantId;
+        this.deviceId = deviceId;
+        this.requestTimeoutInSecs = requestTimeoutInSecs;
+    }
+
+    /**
+     * Entrypoint to start the command.
+     *
+     * @param latch The handle to signal the ended execution and return to the shell.
+     * @param con The Hono connection instance, already connected.
+     */
+    public void start(final CountDownLatch latch, final HonoConnection con) {
+        this.latch = latch;
         workerExecutor = vertx.createSharedWorkerExecutor("user-input-pool", 3, TimeUnit.HOURS.toNanos(1));
-        clientFactory.connect().onComplete(connectAttempt -> {
-            if (connectAttempt.succeeded()) {
+        clientFactory.isConnected().onComplete(connectionStatus -> {
+            if (connectionStatus.succeeded()) {
                 clientFactory.addReconnectListener(this::startCommandClient);
-                startCommandClient(connectAttempt.result());
+                startCommandClient(con);
             } else {
-                close(connectAttempt.cause());
+                close(connectionStatus.cause());
             }
         });
     }
@@ -68,7 +97,7 @@ public class Commander extends AbstractApplicationClient {
     private void startCommandClient(final HonoConnection connection) {
         getCommandFromUser()
         .compose(this::processCommand)
-        .onComplete(sendAttempt -> startCommandClient(connection));
+        .setHandler(sendAttempt -> startCommandClient(connection));
     }
 
     private Future<Void> processCommand(final Command command) {
@@ -131,16 +160,9 @@ public class Commander extends AbstractApplicationClient {
         workerExecutor.executeBlocking(userInputFuture -> {
             System.out.println();
             System.out.println();
-            System.out.printf(
-                    ">>>>>>>>> Enter name of command for device [%s] in tenant [%s] (prefix with 'ow:' to send one-way command):",
-                    deviceId, tenantId);
-            System.out.println();
-            final String honoCmd = scanner.nextLine();
-            System.out.println(">>>>>>>>> Enter command payload:");
-            final String honoPayload = scanner.nextLine();
-            System.out.println(">>>>>>>>> Enter content type:");
-            final String honoContentType = scanner.nextLine();
-            System.out.println();
+            final String honoCmd = inputReader.prompt(">>>>>>>>> Enter name of command for device [" + deviceId + "] in tenant [" + tenantId + "] (prefix with 'ow:' to send one-way command):");
+            final String honoPayload = inputReader.prompt(">>>>>>>>> Enter command payload:");
+            final String honoContentType = inputReader.prompt(">>>>>>>>> Enter content type:");
             userInputFuture.complete(new Command(honoCmd, honoPayload, honoContentType));
         }, result);
         return result.future();
@@ -148,12 +170,12 @@ public class Commander extends AbstractApplicationClient {
 
     private void close(final Throwable t) {
         workerExecutor.close();
-        vertx.close();
-        log.error("Error: {}", t.getMessage());
+        log.error("Connection not established: {}", t.getMessage());
+        latch.countDown();
     }
 
     /**
-     * Command class that encapsulates hono command and payload.
+     * Command class that encapsulates Hono command and payload.
      */
     private static class Command {
 
@@ -190,4 +212,5 @@ public class Commander extends AbstractApplicationClient {
             return contentType;
         }
     }
+
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,10 +11,8 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.cli;
+package org.eclipse.hono.cli.config;
 
-import org.eclipse.hono.client.ApplicationClientFactory;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -28,7 +26,7 @@ import io.vertx.core.dns.AddressResolverOptions;
  * Configuration for CLI application.
  */
 @Configuration
-public class AppConfiguration {
+public class SpringAppConfig {
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
@@ -67,13 +65,4 @@ public class AppConfiguration {
         return config;
     }
 
-    /**
-     * Exposes a factory for creating clients for Hono's northbound APIs as a Spring bean.
-     *
-     * @return The factory.
-     */
-    @Bean
-    public ApplicationClientFactory clientFactory() {
-        return ApplicationClientFactory.create(HonoConnection.newConnection(vertx(), honoClientConfig()));
-    }
 }
