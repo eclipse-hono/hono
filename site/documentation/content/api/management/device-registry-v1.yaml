@@ -260,8 +260,8 @@ paths:
       get:
          tags:
             - devices
-         summary: Retrieve all devices for a tenant
-         operationId: getAllDevicesForTenant
+         summary: Search devices for a tenant, with optional filters and paging options.
+         operationId: searchDevicesForTenant
          requestBody:
             description: Filters, paging and sorting options.
             content:
@@ -507,7 +507,7 @@ components:
       PagingOptions:
          type: object
          additionalProperties: false
-         description: options to page the results of bulk querries.
+         description: options to page the results of bulk queries.
          properties:
             "limit":
                type: integer
@@ -519,14 +519,20 @@ components:
       FilterOptions:
             type: object
             additionalProperties: true
-            description: Allows arbitrary filters to be applied to bulk querries.
+            description: Allows arbitrary filters to be applied to bulk queries.
                          Fields to filter MUST be designated with their JSON Path representation.
+            examples:
+               Filters options:
+                  $ref: '#/components/examples/FilterOptionsExample'
 
       SortingOptions:
          type: object
          additionalProperties: true
-         description: Sorting options to be applied to bulk querries results.
+         description: Sorting options to be applied to bulk queries results.
                      The field to be used for sorting MUST be defined with its JSON Path representation.
+         examples:
+            Sorting options:
+               $ref: '#/components/examples/SortingOptionsExample'
 
       # Tenant schema
 
@@ -1178,3 +1184,11 @@ components:
                "id": "349556ea-4902-47c7-beb0-1009ab693fb4",
                "not-after": "2027-12-24T19:00:00Z",
             }]
+      FilterOptionsExample:
+         value:
+            enabled: true
+            ext.brand: "eclipse"
+      SortingOptionsExample:
+         value:
+            status.created: "ascending"
+
