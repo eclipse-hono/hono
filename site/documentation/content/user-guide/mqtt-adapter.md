@@ -52,30 +52,30 @@ See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discu
 
 ## Resource Limit Checks
 
-The adapter performs additional checks regarding resource limits when a client tries to connect and/or send a message to the adapter.
+The adapter performs additional checks regarding [resource limits]({{< ref "/concepts/resource-limits.md" >}}) when a client tries to connect and/or
+send a message to the adapter.
 
 ### Connection Limits
 
-The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if
-* the maximum number of connections per protocol adapter instance is reached, or
-* if the maximum number of simultaneously connected devices for the tenant is reached.
+The adapter rejects a client’s connection attempt with return code
 
-Please refer to [resource-limits]({{< ref "/concepts/resource-limits.md" >}}) for details.
+* `0x03` (*Connection Refused: server unavailable*), if the maximum number of connections per protocol adapter instance is reached
+* `0x05` (*Connection Refused: not authorized*), if the maximum number of simultaneously connected devices for the tenant is reached.
 
 ### Connection Duration Limits
 
-The adapter rejects a client's connection attempt with return code `0x05`, indicating `Connection Refused: not authorized`, if the
-[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for
-the client's tenant is exceeded.
+The adapter rejects a client’s connection attempt with return code `0x05` (*Connection Refused: not authorized*), if the
+[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for the client’s tenant is exceeded.
 
 ### Message Limits
 
 The adapter
 
+* rejects a client's connection attempt with return code `0x05` (*Connection Refused: not authorized*),
 * discards any MQTT PUBLISH packet containing telemetry data or an event that is sent by a client and
 * rejects any AMQP 1.0 message containing a command sent by a north bound application
 
-if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device’s tenant is exceeded.
 
 ## Connection Events
 

@@ -61,24 +61,27 @@ The adapter performs additional checks regarding resource limits when a client t
 
 ### Connection Limits
 
-The adapter rejects a client's connection attempt with a `amqp:unauthorized-access` error if
+The adapter immediately closes a newly established connection with an `amqp:unauthorized-access` error if
+
 * the maximum number of connections per protocol adapter instance is reached, or
-* if the maximum number of simultaneously connected devices for the tenant is reached.
+* if the maximum number of simultaneously connected devices for the client's tenant is reached.
 
 Please refer to [resource-limits]({{< ref "/concepts/resource-limits.md" >}}) for details.
 
 ### Connection Duration Limits
 
-The adapter rejects a client's connection attempt with a `amqp:unauthorized-access` error if the
+The adapter immediately closes a newly established connection with an `amqp:unauthorized-access` error if the
 [connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for
 the client's tenant is exceeded.
 
 ### Message Limits
 
-The adapter rejects any AMQP 1.0 message containing
+The adapter
 
-* telemetry data or an event uploaded by a client
-* a command sent by a north bound application
+* immediately closes a newly established connection with an `amqp:unauthorized-access` error and
+* rejects any AMQP 1.0 message containing
+  * telemetry data or an event uploaded by a client
+  * a command sent by a north bound application
 
 if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device's tenant is exceeded.
 
