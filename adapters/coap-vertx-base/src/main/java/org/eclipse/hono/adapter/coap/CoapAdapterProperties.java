@@ -55,6 +55,10 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * longer required and could be release earlier. That helps to reduce the heap consumption.
      */
     public static final boolean DEFAULT_MESSAGE_OFFLOADING = true;
+    /**
+     * The default timeout in milliseconds to send a separate ACK.
+     */
+    public static final int DEFAULT_TIMEOUT_TO_ACK = 500;
 
     private String idSplitRegex = DEFAULT_ID_SPLIT_REGEX;
     private String networkConfig = null;
@@ -66,6 +70,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int dtlsRetransmissionTimeout = DEFAULT_DTLS_RETRANSMISSION_TIMEOUT;
     private int exchangeLifetime = DEFAULT_EXCHANGE_LIFETIME;
     private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
+    private int timeoutToAck = DEFAULT_TIMEOUT_TO_ACK;
 
     /**
      * Gets the regular expression used for splitting up
@@ -267,8 +272,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * Timeout to wait before retransmit a flight, if no response is received.
      * <p>
-     * The default value of this property is {@link #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT},
-     * {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
+     * The default value of this property is {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
      *
      * @return The timeout in milliseconds.
      */
@@ -281,8 +285,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * Timeout to wait before retransmit a flight, if no response is received.
      * <p>
-     * The default value of this property is {@link #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT},
-     * {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
+     * The default value of this property is {@value #DEFAULT_DTLS_RETRANSMISSION_TIMEOUT} milliseconds.
      *
      * @param dtlsRetransmissionTimeout timeout in milliseconds to retransmit a flight.
      * @throws IllegalArgumentException if dtlsRetransmissionTimeout is &lt; 1.
@@ -299,8 +302,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * Time to keep coap request for deduplication.
      * <p>
-     * The default value of this property is {@link #DEFAULT_EXCHANGE_LIFETIME}, {@value #DEFAULT_EXCHANGE_LIFETIME}
-     * milliseconds.
+     * The default value of this property is {@value #DEFAULT_EXCHANGE_LIFETIME} milliseconds.
      *
      * @return The exchange lifetime in milliseconds.
      */
@@ -313,8 +315,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * Time to keep coap request for deduplication.
      * <p>
-     * The default value of this property is {@link #DEFAULT_EXCHANGE_LIFETIME}, {@value #DEFAULT_EXCHANGE_LIFETIME}
-     * milliseconds.
+     * The default value of this property is {@value #DEFAULT_EXCHANGE_LIFETIME} milliseconds.
      *
      * @param exchangeLifetime the exchange lifetime in milliseconds to keep the request for deduplication.
      * @throws IllegalArgumentException if exchangeLifetime is &lt; 1.
@@ -331,7 +332,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * When messages are kept for deduplication, parts of the message could be offloaded to reduce the heap consumption.
      * <p>
-     * The default value of this property is {@link #DEFAULT_MESSAGE_OFFLOADING}, {@value #DEFAULT_MESSAGE_OFFLOADING}.
+     * The default value of this property {@value #DEFAULT_MESSAGE_OFFLOADING}.
      *
      * @return {@code true} enable message offloading, {@code false} disable message offloading.
      */
@@ -344,7 +345,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * <p>
      * When messages are kept for deduplication, parts of the message could be offloaded to reduce the heap consumption.
      * <p>
-     * The default value of this property is {@link #DEFAULT_MESSAGE_OFFLOADING}, {@value #DEFAULT_MESSAGE_OFFLOADING}.
+     * The default value of this property is {@value #DEFAULT_MESSAGE_OFFLOADING}.
      *
      * @param messageOffloading {@code true} enable message offloading, {@code false} disable message offloading.
      */
@@ -352,4 +353,37 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
         this.messageOffloadingEnabled = messageOffloading;
     }
 
+    /**
+     * Gets the timeout to ACK a CoAP CON requests.
+     * <p>
+     * If the response is available before that timeout, a more efficient piggybacked response is used. If the timeout
+     * is reached without response, a separate ACK is sent to prevent the client from retransmit the CON request.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_TIMEOUT_TO_ACK} milliseconds.
+     *
+     * @return The timeout in milliseconds. {@code -1}, never use separate response, {@code 0}, always use separate
+     *         response.
+     */
+    public final int getTimeoutToAck() {
+        return timeoutToAck;
+    }
+
+    /**
+     * Sets the timeout to ACK a CoAP CON request.
+     * <p>
+     * If the response is available before that timeout, a more efficient piggybacked response is used. If the timeout
+     * is reached without response, a separate ACK is sent to prevent the client form retransmit the CON request.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_TIMEOUT_TO_ACK} milliseconds.
+     *
+     * @param timeoutToAck timeout in milliseconds to send separate ACK. {@code -1}, never use separate response,
+     *            {@code 0}, always use separate response.
+     * @throws IllegalArgumentException if timeoutToAck is &lt; -1.
+     */
+    public final void setTimeoutToAck(final int timeoutToAck) {
+        if (timeoutToAck < -1) {
+            throw new IllegalArgumentException("timeout to ack must be at least -1");
+        }
+        this.timeoutToAck = timeoutToAck;
+    }
 }

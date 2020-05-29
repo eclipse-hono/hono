@@ -19,11 +19,10 @@ import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.MessageFormatException;
 import org.eclipse.californium.core.coap.Response;
-import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.client.ServiceInvocationException;
 
 /**
- * Utility send response with an error.
+ * Utility to prepare response with an error.
  */
 public class CoapErrorResponse {
 
@@ -46,54 +45,40 @@ public class CoapErrorResponse {
     }
 
     /**
-     * Respond the coap exchange with the provide error cause.
+     * Create response with the provide error cause.
      *
-     * @param exchange coap exchange to be responded
-     * @param cause error cause
-     * @return The response code included in the CoAP response.
-     */
-    public static ResponseCode respond(final CoapExchange exchange, final Throwable cause) {
-        return respond(exchange, cause, ResponseCode.INTERNAL_SERVER_ERROR);
-    }
-
-    /**
-     * Respond the coap exchange with the provide error cause.
-     *
-     * Convert http-code into coap-code, if available. Add cause message as payload for response.
-     *
-     * @param exchange coap exchange to be responded
      * @param cause error cause
      * @param defaultCode default response code, if a more specific response code is not available.
-     * @return The response code included in the CoAP response.
+     * @return The CoAP response.
      */
-    public static ResponseCode respond(final CoapExchange exchange, final Throwable cause, final ResponseCode defaultCode) {
+    public static Response respond(final Throwable cause, final ResponseCode defaultCode) {
 
         final String message = cause == null ? null : cause.getMessage();
         final ResponseCode code = toCoapCode(cause, defaultCode);
+        final Response response = respond(message, code);
         switch (code) {
         case SERVICE_UNAVAILABLE:
             // delay retry by 2 seconds, see http adapter, HttpUtils.serviceUnavailable(ctx, 2)
-            exchange.setMaxAge(2);
+            response.getOptions().setMaxAge(2);
             break;
         default:
             break;
         }
-        respond(exchange, message, code);
-        return code;
+        return response;
     }
 
     /**
-     * Respond the coap exchange with the provide error cause.
+     * Create response with provide response code.
      *
-     * @param exchange coap exchange to be responded
      * @param message error message sent as payload.
      * @param code response code.
+     * @return The CoAP response.
      */
-    public static void respond(final CoapExchange exchange, final String message, final ResponseCode code) {
+    public static Response respond(final String message, final ResponseCode code) {
         final Response response = new Response(code);
         response.setPayload(message);
         response.getOptions().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
-        exchange.respond(response);
+        return response;
     }
 
     /**

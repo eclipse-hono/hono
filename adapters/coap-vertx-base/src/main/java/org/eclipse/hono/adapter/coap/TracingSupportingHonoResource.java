@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.OptionSet;
+import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
@@ -110,14 +111,17 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
             case PUT:
                 responseCode = handlePut(coapExchange, currentSpan);
                 break;
-            default:
-                CoapErrorResponse.respond(coapExchange, "unsupported method", ResponseCode.METHOD_NOT_ALLOWED);
-                responseCode = Future.succeededFuture(ResponseCode.METHOD_NOT_ALLOWED);
-                break;
+        default:
+            final Response response = CoapErrorResponse.respond("unsupported method", ResponseCode.METHOD_NOT_ALLOWED);
+            coapExchange.respond(response);
+            responseCode = Future.succeededFuture(response.getCode());
+            break;
         }
         responseCode.otherwise(t -> {
             log.debug("failed:", t);
-            return CoapErrorResponse.respond(coapExchange, t);
+            final Response response = CoapErrorResponse.respond(t, ResponseCode.INTERNAL_SERVER_ERROR);
+            coapExchange.respond(response);
+            return response.getCode();
         })
         .onComplete(r -> {
             log.debug("response: {}", r.result());
@@ -139,8 +143,9 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     protected Future<ResponseCode> handlePost(final CoapExchange exchange, final Span currentSpan) {
-        CoapErrorResponse.respond(exchange, "not implemented", ResponseCode.NOT_IMPLEMENTED);
-        return Future.succeededFuture(ResponseCode.NOT_IMPLEMENTED);
+        final Response response = CoapErrorResponse.respond("not implemented", ResponseCode.NOT_IMPLEMENTED);
+        exchange.respond(response);
+        return Future.succeededFuture(response.getCode());
     }
 
     /**
@@ -156,8 +161,9 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     protected Future<ResponseCode> handlePut(final CoapExchange exchange, final Span currentSpan) {
-        CoapErrorResponse.respond(exchange, "not implemented", ResponseCode.NOT_IMPLEMENTED);
-        return Future.succeededFuture(ResponseCode.NOT_IMPLEMENTED);
+        final Response response = CoapErrorResponse.respond("not implemented", ResponseCode.NOT_IMPLEMENTED);
+        exchange.respond(response);
+        return Future.succeededFuture(response.getCode());
     }
 
     /**
