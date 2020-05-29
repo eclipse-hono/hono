@@ -39,19 +39,35 @@ The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT`
 
 **NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the concepts.
 
-## Connection Limits
+## Resource Limit Checks
 
-After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the MQTT adapter.  If the limit is exceeded then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+The adapter performs additional checks regarding [resource limits]({{< ref "/concepts/resource-limits.md" >}}) when a client tries to connect and/or
+send a message to the adapter.
 
-## Connection Duration Limits
+### Connection Limits
 
-Before accepting any connection requests from the devices, the MQTT adapter verifies that the configured [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) is not exceeded. If the limit has been already reached, then a return code `0x05` indicating `Connection Refused: not authorised` is sent back.
+The adapter rejects a client’s connection attempt with return code
 
-## Message Limits
+* `0x03` (*Connection Refused: server unavailable*), if the maximum number of connections per protocol adapter instance is reached
+* `0x05` (*Connection Refused: not authorized*), if the maximum number of simultaneously connected devices for the tenant is reached.
 
-Before accepting any telemetry or event or command messages, the MQTT adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+### Connection Duration Limits
+
+The adapter rejects a client’s connection attempt with return code `0x05` (*Connection Refused: not authorized*), if the
+[connection duration limit]({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured for the client’s tenant is exceeded.
+
+### Message Limits
+
+The adapter
+
+* rejects a client's connection attempt with return code `0x05` (*Connection Refused: not authorized*),
+* discards any MQTT PUBLISH packet containing telemetry data or an event that is sent by a client and
+* rejects any AMQP 1.0 message containing a command sent by a north bound application
+
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device’s tenant is exceeded.
 
 ## Connection Event
+
 The MQTT Adapter can send a [Connection Event]({{< relref "/api/event#connection-event" >}}) once the connection with a device has been successfully established or ended. Note that this requires the [`HONO_CONNECTION_EVENTS_PRODUCER`]({{< relref "/admin-guide/mqtt-adapter-config#service-configuration" >}}) configuration property to be explicitly set to `events`.
 
 ## Publishing Telemetry Data

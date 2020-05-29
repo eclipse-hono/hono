@@ -10,7 +10,7 @@ The AMQP protocol adapter allows clients (devices or gateway components) support
 
 By default, all Hono protocol adapters require clients (devices or gateway components) to authenticate during connection establishment. This is the preferred way for devices to publish data via protocol adapters. The AMQP adapter supports both the [SASL PLAIN](https://tools.ietf.org/html/rfc4616) and [SASL EXTERNAL](https://tools.ietf.org/html/rfc4422) authentication mechanisms. The former uses a *username* and *password* to authenticate to the adapter while the latter uses a client certificate.
 
-In this guide, we will give examples for publishing telemetry and events for *authenticated* (using SASL PLAIN) and *unauthenticated* clients. 
+In this guide, we will give examples for publishing telemetry data and events for *authenticated* (using SASL PLAIN) and *unauthenticated* clients. 
 
 **NB** The AMQP adapter can be configured to *allow* unauthenticated devices to connect by setting configuration variable `HONO_AMQP_AUTHENTICATION_REQUIRED` to `false`.
 
@@ -36,17 +36,34 @@ When a device uses a client certificate for authentication, the TLS handshake is
 
 **NB** The AMQP adapter needs to be configured for TLS in order to support this mechanism.
 
-## Connection Limits
+## Resource Limit Checks
 
-After verifying the credentials, the number of existing connections is checked against the configured [resource-limits] ({{< ref "/concepts/resource-limits.md" >}}) by the AMQP adapter.  If the limit is exceeded then the connection request is not accepted.
+The adapter performs additional checks regarding [resource limits]({{< ref "/concepts/resource-limits.md" >}}) when a client tries to connect and/or
+send a message to the adapter.
 
-## Connection Duration Limits
+### Connection Limits
 
-Before accepting any connection requests from the devices, the AMQP adapter verifies that the configured [connection duration limit] ({{< relref "/concepts/resource-limits.md#connection-duration-limit" >}}) is not exceeded. If the limit has been already reached, then the connection request is not accepted.
+The adapter fails the SASL handshake with a client
 
-## Message Limits
+* if the maximum number of simultaneously connected devices for the client's tenant is reached, or
+* if the maximum number of connections per protocol adapter instance is reached.
 
-Before accepting any telemetry or event or command messages, the AMQP adapter verifies that the configured [message limit] ({{< relref "/concepts/resource-limits.md" >}}) is not exceeded. The incoming message is discarded if the limit is exceeded. 
+### Connection Duration Limits
+
+The adapter fails the SASL handshake with a client if the
+[connection duration limit]({{< ref "/concepts/resource-limits.md#connection-duration-limit" >}}) that has been configured
+for the client’s tenant is exceeded.
+
+### Message Limits
+
+The adapter
+
+* fails the SASL handshake with a client and
+* rejects any AMQP 1.0 message containing
+  * telemetry data or an event uploaded by a client
+  * a command sent by a north bound application
+
+if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has been configured for the device’s tenant is exceeded.
 
 ## Connection Event
 
