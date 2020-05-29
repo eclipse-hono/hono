@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.3.0
+   version: 1.4.0
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -324,6 +324,32 @@ paths:
             403:
                $ref: '#/components/responses/NotAllowed'
 
+      get:
+         tags:
+            - devices
+         summary: Search devices for a tenant with optional filters, paging and sorting options.
+         operationId: searchDevicesForTenant
+         requestBody:
+            description: Filters, paging and sorting options.
+            content:
+               application/json:
+                  schema:
+                     $ref: '#/components/schemas/PagingSortingFilteringOptions'
+            required: false
+         responses:
+            200:
+               description: operation successful
+               content:
+                  application/json:
+                     schema:
+                        $ref: '#/components/schemas/SearchDevicesResult'
+            400:
+               $ref: '#/components/responses/MalformedRequest'
+            401:
+               $ref: '#/components/responses/Unauthorized'
+            404:
+               $ref: '#/components/responses/NotFound'
+
    /devices/{tenantId}/{deviceId}:
 
       parameters:
@@ -500,7 +526,7 @@ paths:
             details of its secrets like password hash and/or hash algortihm used.
             This mode of operation is called *replace mode*. However, this behavior is
             discouraged because it might disclose confidential information in plain text.
-            
+
             Instead, implementors should remove all confidential information from the secrets
             and include a (unique) identifier with each secret. Clients can then refer to
             this identifier in order to update particular secrets. This mode of operation
@@ -625,7 +651,95 @@ components:
          description: Allows arbitrary properties as extension to the ones
                       specified by the Hono API.
 
-# Tenant schema
+
+      PagingSortingFilteringOptions:
+         type: object
+         additionalProperties: false
+         properties:
+            "page":
+               $ref: '#/components/schemas/PagingOptions'
+            "filters":
+               type: array
+               description: A list of filter expressions. Objects must match all filters in order to be included in a result.
+               items:
+                  $ref: '#/components/schemas/FilterOption'
+            "sort":
+               type: array
+               description: A list of sorting options. If multiples options are provided, the results will be sorted following the order of the options in the list.
+               items:
+                  $ref: '#/components/schemas/SortingOption'
+
+      PagingOptions:
+         type: object
+         additionalProperties: false
+         description: options to page the results of bulk queries.
+         properties:
+            "limit":
+               type: integer
+               default: 30
+               minimum: 0
+               maximum: 200
+               description: The maximum number of objects to include in a response.
+            "offset":
+               type: integer
+               default: 0
+               minimum: 0
+               description: |
+                  The offset to use as a starting point to return results. This allows to go through the query results in
+                  a paged manner when the query returns more results than the limit.
+
+      FilterOption:
+            type: object
+            additionalProperties: false
+            description: Filters to be applied to bulk queries.
+            required:
+               - field
+               - value
+               - op
+            properties:
+               "field":
+                  type: string
+                  description: |
+                     A Json Pointer identifying the field to use for filtering.
+                     Json pointer is defined in RFC 6901.
+               "value":
+                  type: string
+                  description: |
+                     The value to filter the field with.
+                     Wildcard characters are supported : `*` will match zero or any number of characters
+                     and `?` will match exactly one character.
+               "op":
+                  type: string
+                  description: The operator to use when applying the filter.
+                  enum:
+                     - eq
+            examples:
+               Filters options:
+                  $ref: '#/components/examples/FilterOptionsExample'
+
+      SortingOption:
+         type: object
+         additionalProperties: false
+         description: Sorting option to be applied to bulk queries results.
+         required:
+            - field
+         properties:
+            "field":
+               type: string
+               description: |
+                  The Json Pointer identifying the field to use for sorting.
+                  Json pointer is defined in RFC 6901.
+            "direction":
+               type: string
+               default: ascending
+               enum:
+                  - ascending
+                  - descending
+         examples:
+            Sorting options:
+               $ref: '#/components/examples/SortingOptionsExample'
+
+      # Tenant schema
 
       Tenant:
          type: object
@@ -979,6 +1093,23 @@ components:
             "last-user":
                type: string
                description: The user who made the last edit on this device.
+
+      SearchDevicesResult:
+         type: object
+         description: The result of a search request.
+         additionalProperties: false
+         properties:
+            "total":
+               type: String
+               description: The total number of results returned by the query, regardless of the *limit* set in the paging options.
+            "results":
+               $ref: '#/components/schemas/DevicesList'
+
+      DevicesList:
+         type: array
+         description: A list of devices.
+         items:
+            $ref: '#/components/schemas/Device'
 
 # Credentials
 
@@ -1371,3 +1502,22 @@ components:
                   "not-after": "2027-12-24T19:00:00Z",
                }]
             }]
+      FilterOptionsExample:
+         value:
+           [
+            {
+                field: "/enabled",
+                value: true,
+                op: "eq"
+            },
+            {
+                field: "/ext/brand",
+                value: "eclipse*",
+                op: "eq"
+            }
+           ]
+      SortingOptionsExample:
+         value:
+            field: "/status/created"
+            direction: "ascending"
+
