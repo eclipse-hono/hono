@@ -257,6 +257,37 @@ paths:
             403:
                $ref: '#/components/responses/NotAllowed'
 
+      get:
+         tags:
+            - devices
+         summary: Retrieve all devices for a tenant
+         operationId: getAllDevicesForTenant
+         requestBody:
+            description: Filters, paging and sorting options.
+            content:
+               application/json:
+                  schema:
+                     $ref: '#/components/schemas/PagingSortingFilteringOptions'
+            required: false
+         responses:
+            200:
+               description: operation successful
+               content:
+                  application/json:
+                     schema:
+                        $ref: '#/components/schemas/Device'
+               headers:
+                  ETag:
+                     description: Version of the resource
+                     schema:
+                        type: string
+            400:
+               $ref: '#/components/responses/MalformedRequest'
+            401:
+               $ref: '#/components/responses/Unauthorized'
+            404:
+               $ref: '#/components/responses/NotFound'
+
    /devices/{tenantId}/{deviceId}:
 
       parameters:
@@ -461,7 +492,43 @@ components:
          description: Allows arbitrary properties as extension to the ones
                       specified by the Hono API.
 
-# Tenant schema
+
+      PagingSortingFilteringOptions:
+         type: object
+         additionalProperties: false
+         properties:
+            "page":
+               $ref: '#/components/schemas/PagingOptions'
+            "filters":
+               $ref: '#/components/schemas/FilterOptions'
+            "sort":
+               $ref: '#/components/schemas/SortingOptions'
+
+      PagingOptions:
+         type: object
+         additionalProperties: false
+         description: options to page the results of bulk querries.
+         properties:
+            "limit":
+               type: integer
+               default: 30
+            "offset":
+               type: integer
+               default: 0
+
+      FilterOptions:
+            type: object
+            additionalProperties: true
+            description: Allows arbitrary filters to be applied to bulk querries.
+                         Fields to filter MUST be designated with their JSON Path representation.
+
+      SortingOptions:
+         type: object
+         additionalProperties: true
+         description: Sorting options to be applied to bulk querries results.
+                     The field to be used for sorting MUST be defined with its JSON Path representation.
+
+      # Tenant schema
 
       Tenant:
          type: object
