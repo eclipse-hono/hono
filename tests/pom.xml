@@ -62,6 +62,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <jaeger.disabled>true</jaeger.disabled>
     <jaeger.host>hono-jaeger.hono</jaeger.host>
     <jaeger.query.port>18080</jaeger.query.port>
+    <log.color.amqp-network>magenta</log.color.amqp-network>
+    <log.color.hono-device-registry>green</log.color.hono-device-registry>
+    <log.color.hono-protocol-adapters>red</log.color.hono-protocol-adapters>
+    <log.color.hono-services>yellow</log.color.hono-services>
+    <log.color.extra-services>cyan</log.color.extra-services>
   </properties>
 
   <dependencies>
@@ -265,7 +270,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>JAEGER</prefix>
-                      <color>green</color>
+                      <color>${log.color.extra-services}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -339,7 +344,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>AUTH</prefix>
-                      <color>yellow</color>
+                      <color>${log.color.hono-services}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -412,7 +417,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
-                      <color>green</color>
+                      <color>${log.color.hono-device-registry}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -481,7 +486,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>ARTEMIS</prefix>
-                      <color>magenta</color>
+                      <color>${log.color.amqp-network}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -547,7 +552,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <memory>268435456</memory>
                     <log>
                       <prefix>QPID</prefix>
-                      <color>magenta</color>
+                      <color>${log.color.amqp-network}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -602,8 +607,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-device-connection.hono</alias>
                     </network>
-                    <memorySwap>205520896</memorySwap>
-                    <memory>205520896</memory>
+                    <memorySwap>314572800</memorySwap>
+                    <memory>314572800</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
@@ -618,7 +623,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>DEVCON</prefix>
-                      <color>yellow</color>
+                      <color>${log.color.hono-services}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -699,7 +704,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
-                      <color>red</color>
+                      <color>${log.color.hono-protocol-adapters}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -780,7 +785,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
-                      <color>red</color>
+                      <color>${log.color.hono-protocol-adapters}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -852,7 +857,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
-                      <color>red</color>
+                      <color>${log.color.hono-protocol-adapters}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
@@ -924,7 +929,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <log>
                       <prefix>COAP</prefix>
-                      <color>red</color>
+                      <color>${log.color.hono-protocol-adapters}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
