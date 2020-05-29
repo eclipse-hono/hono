@@ -628,7 +628,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Checks if this adapter may accept another telemetry or event message from a device.
+     * Checks if a tenant's message limit will be exceeded by a given payload.
      * <p>
      * This default implementation uses the
      * {@link ResourceLimitChecks#isMessageLimitReached(TenantObject, long, SpanContext)} method

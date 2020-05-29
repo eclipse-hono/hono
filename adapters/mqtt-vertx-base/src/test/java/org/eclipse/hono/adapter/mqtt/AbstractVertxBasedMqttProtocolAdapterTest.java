@@ -1201,11 +1201,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .thenReturn(Future.succeededFuture(sender));
 
         // WHEN a device of "my-tenant" publishes a telemetry message
+        final MqttEndpoint client = mockEndpoint();
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t/tenant/device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         adapter.uploadTelemetryMessage(
-                newMqttContext(msg, mockEndpoint()),
+                newMqttContext(msg, client),
                 "my-tenant",
                 "the-device",
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {
@@ -1215,6 +1216,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                         // because the message limit is exceeded
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
+                        // and the published message has not been acknowledged
+                        verify(client, never()).publishAcknowledge(anyInt());
                         // and the message has been reported as unprocessable
                         verify(metrics).reportTelemetry(
                                 any(MetricsTags.EndpointType.class),
@@ -1249,11 +1252,12 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                 .thenReturn(Future.succeededFuture(sender));
 
         // WHEN a device of "my-tenant" publishes an event message
+        final MqttEndpoint client = mockEndpoint();
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("e/tenant/device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         adapter.uploadEventMessage(
-                newMqttContext(msg, mockEndpoint()),
+                newMqttContext(msg, client),
                 "my-tenant",
                 "the-device",
                 Buffer.buffer("test")).onComplete(ctx.failing(t -> {
@@ -1263,6 +1267,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest {
                         // because the message limit is exceeded
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
+                        // and the event has not been acknowledged
+                        verify(client, never()).publishAcknowledge(anyInt());
                         // and the message has been reported as unprocessable
                         verify(metrics).reportTelemetry(
                                 any(MetricsTags.EndpointType.class),
