@@ -146,7 +146,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final Duration lifespan, final boolean updateOnly, final SpanContext context) {
+            final String adapterInstanceId, final Duration lifespan, final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
@@ -154,38 +154,17 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         // sanity check, preventing an ArithmeticException in lifespan.toMillis()
         final long lifespanMillis = lifespan == null || lifespan.isNegative()
                 || lifespan.getSeconds() > (Long.MAX_VALUE / 1000L) ? -1 : lifespan.toMillis();
-        final String key = getAdapterInstanceEntryKey(tenantId, deviceId);
-        if (updateOnly) {
-            return cache.replace(key, adapterInstanceId, adapterInstanceId, lifespanMillis, TimeUnit.MILLISECONDS)
-                    .recover(t -> {
-                        LOG.debug("failed to update command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
-                                tenantId, deviceId, adapterInstanceId, lifespanMillis, t);
-                        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
-                    })
-                    .compose(replaced -> {
-                        if (replaced) {
-                            LOG.debug("updated command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
-                                    tenantId, deviceId, adapterInstanceId, lifespanMillis);
-                            return Future.succeededFuture();
-                        } else {
-                            LOG.debug("cannot update non-existing command handling adapter instance entry [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
-                                    tenantId, deviceId, adapterInstanceId, lifespanMillis);
-                            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED));
-                        }
-                    });
-        } else {
-            return cache.put(key, adapterInstanceId, lifespanMillis, TimeUnit.MILLISECONDS)
-                    .recover(t -> {
-                        LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
-                                tenantId, deviceId, adapterInstanceId, lifespanMillis, t);
-                        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
-                    })
-                    .map(replacedValue -> {
-                        LOG.debug("set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
-                                tenantId, deviceId, adapterInstanceId, lifespanMillis);
-                        return (Void) null;
-                    });
-        }
+        return cache.put(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId, lifespanMillis, TimeUnit.MILLISECONDS)
+                .map(replacedValue -> {
+                    LOG.debug("set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
+                            tenantId, deviceId, adapterInstanceId, lifespanMillis);
+                    return (Void) null;
+                })
+                .recover(t -> {
+                    LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
+                            tenantId, deviceId, adapterInstanceId, lifespanMillis, t);
+                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                });
     }
 
     @Override

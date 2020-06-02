@@ -15,7 +15,6 @@ package org.eclipse.hono.deviceconnection.infinispan;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -156,18 +155,17 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         final String deviceId = "testDevice";
         final String adapterInstanceId = "adapterInstanceId";
-        final boolean updateOnly = true;
-        when(cache.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(), anyBoolean(), any(SpanContext.class)))
+        when(cache.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(), any(SpanContext.class)))
                 .thenReturn(Future.succeededFuture());
 
         givenAStartedService()
         .compose(ok -> svc.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, deviceId, adapterInstanceId, null,
-                updateOnly, span))
+                 span))
         .onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                 verify(cache).setCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(),
-                        eq(updateOnly), any(SpanContext.class));
+                        any(SpanContext.class));
             });
             ctx.completeNow();
         }));

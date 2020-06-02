@@ -118,8 +118,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         final String adapterInstance = randomId();
 
         getClient(Constants.DEFAULT_TENANT)
-            .compose(client -> client
-                    .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, false, null).map(client))
+            .compose(client -> client.setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, null).map(client))
             .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
             .onComplete(ctx.succeeding(r -> {
                 ctx.verify(() -> {
@@ -150,7 +149,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
 
         getClient(Constants.DEFAULT_TENANT)
                 .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespan, false, null)
+                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespan, null)
                         .map(client))
                 .compose(client -> {
                     final Promise<JsonObject> instancesPromise = Promise.promise();
@@ -163,66 +162,6 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                 })
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
-                    ctx.completeNow();
-                }));
-    }
-
-    /**
-     * Verifies that a request to update the command-handling adapter instance for a device succeeds.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testSetCommandHandlingAdapterInstanceWithUpdateOnlyTrueSucceeds(final VertxTestContext ctx) {
-
-        final String deviceId = randomId();
-        final String adapterInstance = randomId();
-
-        getClient(Constants.DEFAULT_TENANT)
-                // first invocation initially adds the entry
-                .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, false, null).map(client))
-                // now update the entry
-                .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, true, null).map(client))
-                .compose(client -> client.getCommandHandlingAdapterInstances(deviceId, List.of(), null))
-                .onComplete(ctx.succeeding(r -> {
-                    ctx.verify(() -> {
-                        final JsonArray instanceList = r.getJsonArray(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCES);
-                        assertThat(instanceList).hasSize(1);
-                        final JsonObject instance = instanceList.getJsonObject(0);
-                        assertThat(instance.getString(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
-                        assertThat(instance.getString(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID)).isEqualTo(adapterInstance);
-                    });
-                    ctx.completeNow();
-                }));
-    }
-
-    /**
-     * Verifies that a request to update the command-handling adapter instance for a device fails if
-     * the given adapter instance parameter doesn't match the one of the entry registered for the given device.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Timeout(value = 6, timeUnit = TimeUnit.SECONDS)
-    @Test
-    public void testSetCommandHandlingAdapterInstanceWithUpdateOnlyTrueFails(final VertxTestContext ctx) {
-
-        final String deviceId = randomId();
-        final String adapterInstance = randomId();
-        final Duration lifespan = Duration.ofSeconds(1);
-
-        getClient(Constants.DEFAULT_TENANT)
-                // first invocation initially adds the entry
-                .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, lifespan, false, null)
-                        .map(client))
-                // now try to update the entry, but with another adapter instance
-                .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, "otherAdapterInstance", lifespan, true, null))
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_PRECON_FAILED));
                     ctx.completeNow();
                 }));
     }
@@ -263,7 +202,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
         getClient(Constants.DEFAULT_TENANT)
                 // add the entry
                 .compose(client -> client
-                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, false, null)
+                        .setCommandHandlingAdapterInstance(deviceId, adapterInstance, null, null)
                         .map(client))
                 // then remove it
                 .compose(client -> client.removeCommandHandlingAdapterInstance(deviceId, adapterInstance, null))

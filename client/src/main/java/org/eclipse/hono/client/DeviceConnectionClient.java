@@ -76,8 +76,6 @@ public interface DeviceConnectionClient extends RequestResponseClient {
      * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
      *                 interpreted as an unlimited lifespan. Only the number of seconds in the given duration
      *                 will be taken into account.
-     * @param updateOnly If {@code true}, this operation will only update an existing mapping entry with the given
-     *                   lifespan, provided such an entry with the given device id and adapter instance id exists.
      * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
      *            An implementation should use this as the parent for any span it creates for tracing
      *            the execution of this operation.
@@ -85,7 +83,7 @@ public interface DeviceConnectionClient extends RequestResponseClient {
      * @throws NullPointerException if device id or adapter instance id is {@code null}.
      */
     Future<Void> setCommandHandlingAdapterInstance(String deviceId, String adapterInstanceId, Duration lifespan,
-            boolean updateOnly, SpanContext context);
+            SpanContext context);
 
     /**
      * Removes the mapping information that associates the given device with the given protocol adapter instance
