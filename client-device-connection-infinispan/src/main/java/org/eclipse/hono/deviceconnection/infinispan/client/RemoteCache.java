@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -43,8 +44,23 @@ public interface RemoteCache<K, V> {
      * @return A succeeded future containing the previous value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be stored in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<V> put(K key, V value);
+
+    /**
+     * Puts a value to the cache.
+     *
+     * @param key The key.
+     * @param value The value.
+     * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
+     * @param lifespanUnit The time unit for the lifespan.
+     * @return A succeeded future containing the previous value or {@code null} if the
+     *         cache didn't contain the key yet.
+     *         A failed future if the value could not be stored in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<V> put(K key, V value, long lifespan, TimeUnit lifespanUnit);
 
     /**
      * Removes the cache entry for a key only if the currently mapped entry has the given version.
@@ -53,16 +69,18 @@ public interface RemoteCache<K, V> {
      * @param version The version of the cache entry to match.
      * @return A succeeded future containing {@code true} if the value was removed
      *         and {@code false} otherwise.
+     * @throws NullPointerException if key is {@code null}.
      */
     Future<Boolean> removeWithVersion(K key, long version);
 
     /**
      * Gets a value from the cache.
-     * 
+     *
      * @param key The key.
      * @return A succeeded future containing the value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be read from the cache.
+     * @throws NullPointerException if key is {@code null}.
      */
     Future<V> get(K key);
 
@@ -73,6 +91,7 @@ public interface RemoteCache<K, V> {
      * @return A succeeded future containing the value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be read from the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<Versioned<V>> getWithVersion(K key);
 
@@ -81,6 +100,7 @@ public interface RemoteCache<K, V> {
      *
      * @param keys The keys.
      * @return A succeeded future containing a map with key/value pairs.
+     * @throws NullPointerException if keys is {@code null}.
      */
     Future<Map<K, V>> getAll(Set<? extends K> keys);
 }

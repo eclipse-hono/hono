@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ConnectionLifecycle;
@@ -159,9 +160,12 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
      * @return A succeeded future containing the previous value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be stored in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Override
     public Future<V> put(final K key, final V value) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
 
         if (cache == null) {
 
@@ -179,8 +183,43 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
 
     }
 
+    /**
+     * Puts a value to the cache.
+     *
+     * @param key The key.
+     * @param value The value.
+     * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
+     * @param lifespanUnit The time unit for the lifespan.
+     * @return A succeeded future containing the previous value or {@code null} if the
+     *         cache didn't contain the key yet.
+     *         A failed future if the value could not be stored in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    @Override
+    public Future<V> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+        Objects.requireNonNull(lifespanUnit);
+
+        if (cache == null) {
+
+            return noConnectionFailure();
+
+        } else {
+
+            return Futures.create(() -> {
+                return cache
+                        .withFlags(Flag.FORCE_RETURN_VALUE)
+                        .putAsync(key, value, lifespan, lifespanUnit);
+            });
+
+        }
+
+    }
+
     @Override
     public Future<Boolean> removeWithVersion(final K key, final long version) {
+        Objects.requireNonNull(key);
 
         if (cache == null) {
 
@@ -205,9 +244,11 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
      * @return A succeeded future containing the value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be read from the cache.
+     * @throws NullPointerException if key is {@code null}.
      */
     @Override
     public Future<V> get(final K key) {
+        Objects.requireNonNull(key);
 
         if (cache == null) {
 
@@ -231,9 +272,11 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
      * @return A succeeded future containing the versioned value or {@code null} if the
      *         cache didn't contain the key yet.
      *         A failed future if the value could not be read from the cache.
+     * @throws NullPointerException if key is {@code null}.
      */
     @Override
     public Future<Versioned<V>> getWithVersion(final K key) {
+        Objects.requireNonNull(key);
 
         if (cache == null) {
 
@@ -259,6 +302,7 @@ public final class HotrodCache<K, V> implements RemoteCache<K, V>, ConnectionLif
 
     @Override
     public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
+        Objects.requireNonNull(keys);
 
         if (cache == null) {
 

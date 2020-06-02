@@ -143,6 +143,28 @@ class HotrodCacheTest {
     }
 
     /**
+     * Verifies that a request to put a value with a lifespan to the cache
+     * results in the value being written to the data grid with the given lifespan.
+     *
+     * @param ctx The vert.x text context.
+     */
+    @Test
+    void testPutWithLifespanSucceeds(final VertxTestContext ctx) {
+        final BasicCache<Object, Object> grid = givenAConnectedCache();
+        when(grid.putAsync(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
+                .thenReturn(CompletableFuture.completedFuture("oldValue"));
+        cache.connect()
+                .compose(c -> c.put("key", "value", 1, TimeUnit.SECONDS))
+                .onComplete(ctx.succeeding(v -> {
+                    ctx.verify(() -> {
+                        verify(grid).putAsync("key", "value", 1, TimeUnit.SECONDS);
+                        assertThat(v).isEqualTo("oldValue");
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that a request to put a value to the cache fails with the
      * root cause for the failure to access the data grid.
      *

@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -112,7 +113,7 @@ class HotrodBasedDeviceConnectionInfoTest {
 
     /**
      * Verifies that a last known gateway can be successfully set.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -120,14 +121,14 @@ class HotrodBasedDeviceConnectionInfoTest {
     void testSetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
         final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
         info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.put(anyString(), anyString())).thenReturn(Future.succeededFuture("oldValue"));
+        when(mockedCache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.succeededFuture("oldValue"));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", null)
             .setHandler(ctx.completing());
     }
 
     /**
      * Verifies that a request to set a gateway fails with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -135,7 +136,7 @@ class HotrodBasedDeviceConnectionInfoTest {
     void testSetLastKnownGatewayFails(final VertxTestContext ctx) {
         final RemoteCache<String, String> mockedCache = mock(RemoteCache.class);
         info = new HotrodBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.put(anyString(), anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
+        when(mockedCache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.failedFuture(new IOException("not available")));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", mock(SpanContext.class))
             .setHandler(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
@@ -145,7 +146,7 @@ class HotrodBasedDeviceConnectionInfoTest {
 
     /**
      * Verifies that a last known gateway can be successfully retrieved.
-     * 
+     *
      * @param ctx The vert.x test context.
      */
     @SuppressWarnings("unchecked")
@@ -667,6 +668,12 @@ class HotrodBasedDeviceConnectionInfoTest {
         public Future<String> put(final String key, final String value) {
             final Versioned<String> oldValue = map.put(key, new Versioned<>(versionCounter++, value));
             return Future.succeededFuture(oldValue != null ? oldValue.getValue() : null);
+        }
+
+        @Override
+        public Future<String> put(final String key, final String value, final long lifespan,
+                final TimeUnit lifespanUnit) {
+            return put(key, value); // lifespan is ignored for the tests
         }
 
         @Override

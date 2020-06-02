@@ -15,11 +15,13 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -50,6 +52,11 @@ import io.vertx.ext.healthchecks.Status;
  *
  */
 public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionInfo, HealthCheckProvider {
+
+    /**
+     * Lifespan for last-known-gateway cache entries.
+     */
+    static final Duration LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN = Duration.ofDays(28);
 
     /**
      * For <em>viaGateways</em> parameter value lower or equal to this value, the {@link #getCommandHandlingAdapterInstances(String, String, Set, SpanContext)}
@@ -98,7 +105,8 @@ public final class HotrodBasedDeviceConnectionInfo implements DeviceConnectionIn
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
 
-        return cache.put(getGatewayEntryKey(tenantId, deviceId), gatewayId)
+        final long lifespanMillis = LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN.toMillis();
+        return cache.put(getGatewayEntryKey(tenantId, deviceId), gatewayId, lifespanMillis, TimeUnit.MILLISECONDS)
             .map(replacedValue -> {
                 LOG.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]", tenantId, deviceId,
                         gatewayId);
