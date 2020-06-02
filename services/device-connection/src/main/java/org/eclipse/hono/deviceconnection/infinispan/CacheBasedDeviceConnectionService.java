@@ -80,8 +80,8 @@ public class CacheBasedDeviceConnectionService extends AbstractVerticle implemen
     @Override
     public Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId,
             final String deviceId, final String adapterInstanceId, final Duration lifespan,
-            final boolean updateOnly, final Span span) {
-        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, updateOnly, span.context())
+            final Span span) {
+        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span.context())
                 .map(v -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }

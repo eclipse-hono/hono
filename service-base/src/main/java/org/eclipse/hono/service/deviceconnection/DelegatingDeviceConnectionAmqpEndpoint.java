@@ -16,7 +16,6 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
@@ -242,9 +241,6 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
         final String deviceId = MessageHelper.getDeviceId(request);
         final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
         final Integer lifespanSecondsOrNull = MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class);
-        final boolean updateOnly = Optional
-                .ofNullable(MessageHelper.getApplicationProperty(request.getApplicationProperties(), MessageHelper.APP_PROPERTY_UPDATE_ONLY, Boolean.class))
-                .orElse(false);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
@@ -263,12 +259,10 @@ public class DelegatingDeviceConnectionAmqpEndpoint<S extends DeviceConnectionSe
             TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
             span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
             span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespan.getSeconds());
-            span.setTag(MessageHelper.APP_PROPERTY_UPDATE_ONLY, updateOnly);
-            log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {} (lifespan: {}s, updateOnly: {})",
-                    tenantId, deviceId, adapterInstanceId, lifespan.getSeconds(), updateOnly);
+            log.debug("setting command handling adapter instance for tenant [{}], device [{}] to {} (lifespan: {}s)",
+                    tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
 
-            resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan,
-                    updateOnly, span)
+            resultFuture = getService().setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span)
                     .map(res -> DeviceConnectionConstants.getAmqpReply(
                             DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT,
                             tenantId,

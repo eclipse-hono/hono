@@ -83,8 +83,6 @@ public interface DeviceConnectionService {
      * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
      *                 interpreted as an unlimited lifespan. The guaranteed granularity taken into account
      *                 here is seconds.
-     * @param updateOnly If {@code true}, this operation will only update an existing mapping entry with the given
-     *                   lifespan, provided such an entry with the given device id and adapter instance id exists.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
      *            implementation should log (error) events on this span and it may set tags and use this span as the
      *            parent for any spans created in this method.
@@ -93,7 +91,7 @@ public interface DeviceConnectionService {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(String tenantId, String deviceId,
-            String adapterInstanceId, Duration lifespan, boolean updateOnly, Span span);
+            String adapterInstanceId, Duration lifespan, Span span);
 
     /**
      * Removes the mapping information that associates the given device with the given protocol adapter instance

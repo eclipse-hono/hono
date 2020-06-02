@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Predicate;
 
 import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.util.DeviceConnectionConstants;
@@ -114,8 +113,7 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
 
     @Override
     public final Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId,
-            final String deviceId, final String protocolAdapterInstanceId, final Duration lifespan,
-            final boolean updateOnly, final Span span) {
+            final String deviceId, final String protocolAdapterInstanceId, final Duration lifespan, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(protocolAdapterInstanceId);
@@ -126,19 +124,9 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
         final int currentMapSize = adapterInstancesForTenantMap.size();
         if (currentMapSize < getConfig().getMaxDevicesPerTenant()
                 || (currentMapSize == getConfig().getMaxDevicesPerTenant() && adapterInstancesForTenantMap.containsKey(deviceId))) {
-            final ExpiringValue<JsonObject> newValue = new ExpiringValue<>(
-                    createAdapterInstanceIdJson(protocolAdapterInstanceId), getLifespanNanos(lifespan));
-            if (updateOnly) {
-                if (replaceIfMatching(adapterInstancesForTenantMap, deviceId, newValue,
-                        v -> protocolAdapterInstanceId.equals(getAdapterInstanceIdFromJson(v.getValue())))) {
-                    result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
-                } else {
-                    result = DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED);
-                }
-            } else {
-                adapterInstancesForTenantMap.put(deviceId, newValue);
-                result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
-            }
+            adapterInstancesForTenantMap.put(deviceId,
+                    new ExpiringValue<>(createAdapterInstanceIdJson(protocolAdapterInstanceId), getLifespanNanos(lifespan)));
+            result = DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT);
         } else {
             log.debug("cannot set protocol adapter instance for handling commands of device [{}], tenant [{}]: max number of entries per tenant reached ({})",
                     deviceId, tenantId, getConfig().getMaxDevicesPerTenant());
@@ -306,22 +294,6 @@ public class MapBasedDeviceConnectionService implements DeviceConnectionService 
     private static <V, K> V getValue(final Map<K, ExpiringValue<V>> map, final K key) {
         final ExpiringValue<V> expiringValue = map.get(key);
         return expiringValue != null ? expiringValue.getValue() : null;
-    }
-
-    /**
-     * Replaces the entry for a key only if evaluating the given predicate on the current value returns {@code true}.
-     */
-    private static <V, K> boolean replaceIfMatching(final ConcurrentMap<K, V> map, final K key, final V newValue,
-            final Predicate<? super V> matchingPredicate) {
-        for (V oldValue; (oldValue = map.get(key)) != null;) {
-            if (!matchingPredicate.test(oldValue)) {
-                return false;
-            }
-            if (map.replace(key, oldValue, newValue)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

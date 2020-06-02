@@ -232,30 +232,6 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, ConnectionLifecyc
     }
 
     /**
-     * Replaces the entry for a key only if currently mapped to a given value.
-     *
-     * @param key The key.
-     * @param oldValue The value to overwrite.
-     * @param newValue The value to store.
-     * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
-     * @param lifespanUnit The time unit for the lifespan.
-     * @return A succeeded future containing a boolean, indicating whether the value was replaced or not.
-     *         A failed future if the value could not be stored in the cache.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    @Override
-    public Future<Boolean> replace(final K key, final V oldValue, final V newValue, final long lifespan,
-            final TimeUnit lifespanUnit) {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(oldValue);
-        Objects.requireNonNull(newValue);
-        Objects.requireNonNull(lifespanUnit);
-
-        return withCache(cache -> cache.replaceAsync(key, oldValue, newValue, lifespan, lifespanUnit));
-
-    }
-
-    /**
      * Remove a key/value mapping from the cache.
      *
      * @param key The key.

@@ -129,7 +129,6 @@ The following table provides an overview of the properties a client needs to set
 | *subject*             | yes       | *properties*             | *string*  | MUST be set to `set-cmd-handling-adapter-instance`. |
 | *adapter_instance_id* | yes       | *application-properties* | *string*  | The identifier of the protocol adapter instance that currently handles commands for the device or gateway identified by the *device_id* property. |
 | *lifespan*            | no        | *application-properties* | *int*     | The lifespan of the mapping entry in seconds. After that period, the mapping entry shall be treated as non-existent by the *Device Registration API* methods. A negative value, as well as an omitted property, is interpreted as an unlimited lifespan. |
-| *update_only*         | no        | *application-properties* | *boolean* | If set to `true`, the command will only update an existing mapping entry with the given lifespan, provided such an entry with the given device id and adapter instance id exists. If the property is omitted or set to `false`, the mapping entry will be set regardless whether an entry with the given adapter instance id exists or not. |
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
@@ -143,7 +142,6 @@ The response message's *status* property may contain the following codes:
 | :---- | :---------- |
 | *204* | OK, the command-handling adapter instance for the device has been updated. |
 | *400* | Bad Request, the adapter instance for the device has not been set or updated due to invalid or missing data in the request. |
-| *412* | Precondition failed, the adapter instance for the device has not been set or updated. This status is returned if the *update_only* property is set to `true` but no matching entry for the given device ID and adapter instance value exists. |
 
 Implementors of this API may return a *404* status code in order to indicate that no device with the given identifier exists for the given tenant. However, performing such a check is optional.
 
