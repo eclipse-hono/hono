@@ -19,10 +19,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,28 +35,33 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = Include.NON_NULL)
 public class Device {
 
+    @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(value = Include.NON_EMPTY)
     private Map<String, Object> extensions = new HashMap<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_DEFAULTS)
     @JsonInclude(value = Include.NON_EMPTY)
     private Map<String, Object> defaults = new HashMap<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_VIA)
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> via = new LinkedList<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_VIA_GROUPS)
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> viaGroups = new LinkedList<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_MEMBER_OF)
     @JsonInclude(value = Include.NON_EMPTY)
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> memberOf = new LinkedList<>();
 
-    @JsonInclude(value = Include.NON_NULL)
+    @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
     private String mapper;
 
     /**
@@ -67,6 +74,7 @@ public class Device {
      * Creates a new instance cloned from an existing instance.
      *
      * @param other The device to copy from.
+     * @throws NullPointerException if other device is {@code null}.
      */
     public Device(final Device other) {
         Objects.requireNonNull(other);
@@ -90,10 +98,13 @@ public class Device {
     }
 
     /**
-     * Sets the enabled property for this device.
+     * Enables or disables this device.
+     * <p>
+     * Disabled devices cannot connect to any of the protocol adapters.
+     * The default value of this property is {@code true}.
      *
-     * @param enabled The enabled property to set.
-     * @return        a reference to this for fluent use.
+     * @param enabled {@code true} if this device should be enabled.
+     * @return A reference to this for fluent use.
      */
     public Device setEnabled(final Boolean enabled) {
         this.enabled = enabled;
@@ -102,11 +113,15 @@ public class Device {
 
     /**
      * Checks if this device is enabled.
+     * <p>
+     * Disabled devices cannot connect to any of the protocol adapters.
+     * The default value of this property is {@code true}.
      *
      * @return {@code true} if this device is enabled.
      */
-    public Boolean getEnabled() {
-        return enabled;
+    @JsonIgnore
+    public boolean isEnabled() {
+        return Optional.ofNullable(enabled).orElse(true);
     }
 
     /**
@@ -240,10 +255,11 @@ public class Device {
     }
 
     /**
-     * Sets the mapper property for this device.
+     * Sets the (logical) name of a service that can be used to transform messages
+     * uploaded by this device before they are forwarded to downstream consumers.
      *
-     * @param mapper The mapper property to set.
-     * @return        a reference to this for fluent use.
+     * @param mapper The service name or {@code null} if no service should be invoked.
+     * @return A reference to this for fluent use.
      */
     public Device setMapper(final String mapper) {
         this.mapper = mapper;
@@ -251,9 +267,10 @@ public class Device {
     }
 
     /**
-     * Gets the mapper for this devices.
+     * Sets the (logical) name of a service that can be used to transform messages
+     * uploaded by this device before they are forwarded to downstream consumers.
      *
-     * @return mapper for this device.
+     * @return The service name or {@code null} if no service is configured.
      */
     public String getMapper() {
         return mapper;

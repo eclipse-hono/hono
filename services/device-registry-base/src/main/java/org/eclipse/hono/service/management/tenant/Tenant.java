@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -92,11 +92,14 @@ public class Tenant {
     /**
      * Sets whether devices of this tenant should be able to connect
      * to Hono.
+     * <p>
+     * The default value of this property is {@code true}.
      *
      * @param enabled {@code true} if devices should be able to connect.
      * @return This instance, to allow chained invocations.
      */
-    public final Tenant setEnabled(final Boolean enabled) {
+    @JsonIgnore
+    public final Tenant setEnabled(final boolean enabled) {
         this.enabled = enabled;
         return this;
     }
@@ -104,11 +107,14 @@ public class Tenant {
     /**
      * Checks whether devices of this tenant are able to connect
      * to Hono.
+     * <p>
+     * The default value of this property is {@code true}.
      *
      * @return {@code true} if devices are able to connect.
      */
-    public final Boolean isEnabled() {
-        return enabled;
+    @JsonIgnore
+    public final boolean isEnabled() {
+        return Optional.ofNullable(enabled).orElse(true);
     }
 
     /**

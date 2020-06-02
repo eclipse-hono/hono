@@ -151,8 +151,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                     getHelper().registry.getRegistrationInfo(Constants.DEFAULT_TENANT, result.getDeviceId())
                             .onComplete(ctx.succeeding(device -> {
                                 // AND the device has been registered as well
-                                ctx.verify(() -> assertThat(device.toJsonObject().mapTo(Device.class).getEnabled())
-                                        .isTrue());
+                                ctx.verify(() -> assertThat(device.toJsonObject().mapTo(Device.class).isEnabled()));
                                 ctx.completeNow();
                             }));
                 }));

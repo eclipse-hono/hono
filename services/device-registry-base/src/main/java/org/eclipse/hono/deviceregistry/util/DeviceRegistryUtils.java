@@ -86,7 +86,7 @@ public final class DeviceRegistryUtils {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(source);
 
-        final TenantObject target = TenantObject.from(tenantId, Optional.ofNullable(source.isEnabled()).orElse(true));
+        final TenantObject target = TenantObject.from(tenantId, source.isEnabled());
         target.setResourceLimits(source.getResourceLimits());
         target.setTracingConfig(source.getTracing());
 

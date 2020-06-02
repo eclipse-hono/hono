@@ -53,9 +53,9 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-public class TenantHttpIT {
+public class TenantManagementIT {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TenantHttpIT.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TenantManagementIT.class);
     private static final String TENANT_PREFIX = "testTenant";
     private static final Vertx vertx = Vertx.vertx();
 
@@ -186,7 +186,7 @@ public class TenantHttpIT {
     public void testAddTenantFailsWithInvalidTenantId(final VertxTestContext context) {
 
         registry.addTenant("tenantid$", null, HttpURLConnection.HTTP_BAD_REQUEST)
-                .setHandler(context.completing());
+            .onComplete(context.completing());
     }
 
     /**

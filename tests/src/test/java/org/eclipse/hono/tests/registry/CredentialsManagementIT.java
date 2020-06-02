@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -55,12 +55,12 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests verifying the Device Registry component by making HTTP requests to its
- * Credentials HTTP endpoint and validating the corresponding responses.
+ * Tests verifying the behavior of the Device Registry Management API's <em>credentials</em>
+ * endpoint provided by the Device Registry component.
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-public class CredentialsHttpIT {
+public class CredentialsManagementIT {
 
     private static final String HTTP_HEADER_ETAG = HttpHeaders.ETAG.toString();
 
@@ -442,13 +442,11 @@ public class CredentialsHttpIT {
         credentialsListToAdd.add(hashedPasswordCredential);
         credentialsListToAdd.add(pskCredentials);
 
-        registry
-                .addCredentials(TENANT, deviceId, credentialsListToAdd)
-
-                .compose(ar -> registry.getCredentials(TENANT, deviceId))
-                .onComplete(context.succeeding(b -> {
-                    assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
-                    context.completeNow();
+        registry.addCredentials(TENANT, deviceId, credentialsListToAdd)
+            .compose(ar -> registry.getCredentials(TENANT, deviceId))
+            .onComplete(context.succeeding(b -> {
+                assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
+                context.completeNow();
         }));
     }
 

@@ -461,11 +461,11 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
 
     @Override
     public Future<OperationResult<Void>> updateCredentials(final String tenantId, final String deviceId,
-            final List<CommonCredential> secrets,
+            final List<CommonCredential> credentials,
             final Optional<String> resourceVersion,
             final Span span) {
 
-        return Future.succeededFuture(set(tenantId, deviceId, resourceVersion, span, secrets));
+        return Future.succeededFuture(set(tenantId, deviceId, resourceVersion, span, credentials));
 
     }
 
@@ -518,12 +518,15 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
                     .findAny().orElse(null);
 
             if (credentialsJson == null) {
-                // did not found an entry, add new one
+                // did not find an entry, add new one
                 credentialsJson = new JsonObject();
                 credentialsJson.put(CredentialsConstants.FIELD_AUTH_ID, authId);
                 credentialsJson.put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
                 credentialsJson.put(CredentialsConstants.FIELD_TYPE, type);
-                credentialsJson.put(CredentialsConstants.FIELD_ENABLED, credential.getEnabled());
+                if (!credential.isEnabled()) {
+                    // only add non-default value
+                    credentialsJson.put(CredentialsConstants.FIELD_ENABLED, credential.isEnabled());
+                }
                 credentialsJson.put(RegistryManagementConstants.FIELD_EXT, credential.getExtensions());
                 json.add(credentialsJson);
             }

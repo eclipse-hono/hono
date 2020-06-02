@@ -73,12 +73,22 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String FIELD_VIA_GROUPS = "viaGroups";
 
     /**
+     * The name of the field that contains the name of a service that can be used to transform messages
+     * uploaded by the device before they are forwarded to downstream consumers.
+     */
+    public static final String FIELD_MAPPER = "mapper";
+
+    /**
      * The name of the field that contains the names of the gateway groups that the (gateway) device is a member of.
      */
     public static final String FIELD_MEMBER_OF = "memberOf";
 
     // CREDENTIALS
 
+    /**
+     * The name of the field that contains a comment for the credentials.
+     */
+    public static final String FIELD_COMMENT                     = "comment";
     /**
      * The name of the field that contains the type of credentials.
      */

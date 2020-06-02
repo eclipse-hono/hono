@@ -22,6 +22,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -78,6 +80,38 @@ public class AbstractRegistrationServiceTest {
         service.setTenantInformationService(tenantInformationService);
     }
 
+    /**
+     * Verifies that the payload returned for a request to assert the registration
+     * of an existing device contains the information registered for the device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAssertRegistrationContainsDeviceInfo(final VertxTestContext ctx) {
+
+        final JsonObject registreredDevice = new JsonObject()
+                .put(RegistrationConstants.FIELD_MAPPER, "mapping-service")
+                .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject().put("foo", "bar"))
+                .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw1").add("gw2"))
+                .put("ext", new JsonObject().put("key", "value"));
+
+        when(service.processAssertRegistration(any(DeviceKey.class), any(Span.class)))
+            .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK,
+                    new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, "device")
+                        .put(RegistrationConstants.FIELD_DATA, registreredDevice))));
+
+        service.assertRegistration(Constants.DEFAULT_TENANT, "device", span)
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    assertThat(result.getPayload().getString(RegistrationConstants.FIELD_MAPPER)).isEqualTo("mapping-service");
+                    assertThat(result.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsOnly("gw1", "gw2");
+                    assertThat(result.getPayload().getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS)).containsOnly(Map.entry("foo", "bar"));
+                    assertThat(result.getPayload().containsKey("ext")).isFalse();
+                });
+                ctx.completeNow();
+            }));
+    }
 
     /**
      * Verifies that the service returns a 404 status code for a request for asserting the registration

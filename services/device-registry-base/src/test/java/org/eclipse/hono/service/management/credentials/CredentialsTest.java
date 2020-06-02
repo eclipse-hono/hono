@@ -187,7 +187,7 @@ public class CredentialsTest {
 
         assertNotNull(credential);
         assertEquals("foo", credential.getAuthId());
-        assertTrue(credential.getEnabled());
+        assertTrue(credential.isEnabled());
         assertEquals(1, credential.getSecrets().size());
 
         final PasswordSecret secret = credential.getSecrets().get(0);

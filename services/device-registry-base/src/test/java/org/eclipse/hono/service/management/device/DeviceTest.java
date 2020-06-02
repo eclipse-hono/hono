@@ -35,7 +35,7 @@ public class DeviceTest {
     public void testDecodeDefault() {
         final var device = Json.decodeValue("{}", Device.class);
         assertThat(device).isNotNull();
-        assertThat(device.getEnabled()).isNull();
+        assertThat(device.isEnabled());
     }
 
 
@@ -46,7 +46,7 @@ public class DeviceTest {
     public void testDecodeDisabled() {
         final var device = Json.decodeValue("{\"enabled\": false}", Device.class);
         assertThat(device).isNotNull();
-        assertThat(device.getEnabled()).isFalse();
+        assertThat(device.isEnabled()).isFalse();
     }
 
     /**
@@ -56,7 +56,7 @@ public class DeviceTest {
     public void testDecodeEnabled() {
         final var device = Json.decodeValue("{\"enabled\": true}", Device.class);
         assertThat(device).isNotNull();
-        assertThat(device.getEnabled()).isTrue();
+        assertThat(device.isEnabled());
     }
 
     /**
@@ -66,7 +66,7 @@ public class DeviceTest {
     public void testDecodeExt() {
         final var device = Json.decodeValue("{\"ext\": {\"foo\": \"bar\"}}", Device.class);
         assertThat(device).isNotNull();
-        assertThat(device.getEnabled()).isNull();
+        assertThat(device.isEnabled());
 
         final var ext = device.getExtensions();
         assertThat(ext).isNotNull();
@@ -173,6 +173,5 @@ public class DeviceTest {
         final var json = JsonObject.mapFrom(device);
         assertThat(json).isNotNull();
         assertThat(json.getString("mapper")).isEqualTo("test");
-        assertThat(json.getJsonObject("ext")).isNull();
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,9 +39,9 @@ public abstract class CommonCredential {
 
     @JsonProperty(RegistryManagementConstants.FIELD_AUTH_ID)
     private String authId;
-    @JsonProperty
+    @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
-    @JsonProperty
+    @JsonProperty(RegistryManagementConstants.FIELD_COMMENT)
     private String comment;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
@@ -69,25 +69,29 @@ public abstract class CommonCredential {
     /**
      * Sets the authentication identifier that the device uses for authenticating to protocol adapters.
      *
-     * @param authId  The authentication identifier use for authentication.
-     * @return        a reference to this for fluent use.
+     * @param authId The authentication identifier use for authentication.
+     * @return A reference to this for fluent use.
      */
     public CommonCredential setAuthId(final String authId) {
         this.authId = authId;
         return this;
     }
 
-    public Boolean getEnabled() {
-        return enabled;
+    @JsonIgnore
+    public boolean isEnabled() {
+        return Optional.ofNullable(enabled).orElse(true);
     }
 
     /**
-     * Sets the enabled property to indicate to protocol adapters whether this credential type should be use to authenticate devices.
+     * Sets whether protocol adapters may use these credentials to authenticate devices.
+     * <p>
+     * The default value of this property is {@code true}.
      *
-     * @param enabled  Whether this credential type should be used to authenticate devices.
-     * @return         a reference to this for fluent use.
+     * @param enabled {@code true} if these credentials may be used to authenticate devices.
+     * @return A reference to this for fluent use.
      */
-    public CommonCredential setEnabled(final Boolean enabled) {
+    @JsonIgnore
+    public CommonCredential setEnabled(final boolean enabled) {
         this.enabled = enabled;
         return this;
     }

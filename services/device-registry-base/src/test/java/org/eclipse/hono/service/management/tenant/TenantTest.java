@@ -74,7 +74,7 @@ public class TenantTest {
 
         final var tenant = new JsonObject().mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.isEnabled());
+        assertTrue(tenant.isEnabled());
     }
 
 
@@ -107,7 +107,7 @@ public class TenantTest {
                 .put(RegistryManagementConstants.FIELD_EXT, new JsonObject().put("foo", "bar"))
                 .mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.isEnabled());
+        assertTrue(tenant.isEnabled());
 
         final var ext = tenant.getExtensions();
         assertNotNull(ext);
@@ -129,7 +129,7 @@ public class TenantTest {
                 .put(RegistryManagementConstants.FIELD_ADAPTERS, adapterJson)
                 .mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.isEnabled());
+        assertTrue(tenant.isEnabled());
 
         final var adapters = tenant.getAdapters();
         assertNotNull(adapters);
@@ -228,7 +228,7 @@ public class TenantTest {
 
         final Tenant tenant = tenantSpec.mapTo(Tenant.class);
         assertNotNull(tenant);
-        assertNull(tenant.isEnabled());
+        assertTrue(tenant.isEnabled());
 
         final ResourceLimits limits = tenant.getResourceLimits();
         assertNotNull(limits);

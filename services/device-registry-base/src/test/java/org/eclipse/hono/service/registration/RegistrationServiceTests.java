@@ -28,6 +28,7 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
@@ -784,18 +785,18 @@ public abstract class RegistrationServiceTests {
                         assertThat(r.getPayload()).isNotNull();
                         assertThat(r.getResourceVersion()).isNotNull(); // may be empty, but not null
                         assertThat(r.getCacheDirective()).isNotNull(); // may be empty, but not null
-                        assertThat(r.getPayload().getEnabled()).isEqualTo(device.getEnabled());
+                        assertThat(r.getPayload().isEnabled()).isEqualTo(device.isEnabled());
                         assertThat(r.getPayload().getVia()).isEqualTo(device.getVia());
                     },
                     r -> {
-                        if (Boolean.FALSE.equals(device.getEnabled())) {
-                            assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-                            assertThat(r.getPayload()).isNull();
-                        } else {
+                        if (device.isEnabled()) {
                             assertThat(r.isOk());
                             assertThat(r.getPayload()).isNotNull();
-                            final JsonArray actualVias = r.getPayload().getJsonArray("via", new JsonArray());
+                            final JsonArray actualVias = r.getPayload().getJsonArray(RegistryManagementConstants.FIELD_VIA, new JsonArray());
                             assertThat(actualVias).hasSameElementsAs(device.getVia());
+                        } else {
+                            assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                            assertThat(r.getPayload()).isNull();
                         }
                     }));
         }
