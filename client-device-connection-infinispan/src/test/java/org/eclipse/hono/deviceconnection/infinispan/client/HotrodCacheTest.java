@@ -15,15 +15,22 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.infinispan.client.hotrod.Flag;
+import org.infinispan.client.hotrod.RemoteCache;
 import org.infinispan.client.hotrod.RemoteCacheContainer;
 import org.infinispan.client.hotrod.configuration.Configuration;
+import org.infinispan.client.hotrod.impl.MetadataValueImpl;
+import org.infinispan.commons.api.BasicCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -60,5 +67,31 @@ class HotrodCacheTest extends AbstractBasicCacheTest {
         when(configuration.forceReturnValues()).thenReturn(false);
         when(result.withFlags(Flag.FORCE_RETURN_VALUE)).thenReturn(result);
         return result;
+    }
+
+    @Override
+    protected void mockRemoveWithValue(final BasicCache<Object, Object> cache, final String key, final Object value,
+            final boolean removeOperationResult) {
+        final org.infinispan.client.hotrod.RemoteCache<Object, Object> remoteCache = (RemoteCache<Object, Object>) cache;
+        if (removeOperationResult) {
+            final long version = 1;
+            when(remoteCache.getWithMetadataAsync(eq(key)))
+                    .thenReturn(CompletableFuture.completedFuture(new MetadataValueImpl<>(-1, -1, -1, -1,
+                            version, value)));
+            when(remoteCache.removeWithVersionAsync(eq(key), eq(version)))
+                    .thenReturn(CompletableFuture.completedFuture(true));
+        } else {
+            when(remoteCache.getWithMetadataAsync(eq(key))).thenReturn(CompletableFuture.completedFuture(null));
+        }
+    }
+
+    @Override
+    protected void verifyRemoveWithValue(final BasicCache<Object, Object> cache, final String key,
+            final Object value, final boolean expectedRemoveOperationResult) {
+        final org.infinispan.client.hotrod.RemoteCache<Object, Object> remoteCache = (RemoteCache<Object, Object>) cache;
+        verify(remoteCache).getWithMetadataAsync(key);
+        if (expectedRemoveOperationResult) {
+            verify(remoteCache).removeWithVersionAsync(eq(key), anyLong());
+        }
     }
 }

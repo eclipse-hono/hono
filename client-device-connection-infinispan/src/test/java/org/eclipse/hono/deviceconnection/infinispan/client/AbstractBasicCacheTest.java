@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -54,6 +55,17 @@ abstract class AbstractBasicCacheTest {
     protected BasicCache<String, String> cache;
 
     protected abstract org.infinispan.commons.api.BasicCache<Object, Object> givenAConnectedCache();
+
+    protected void mockRemoveWithValue(final org.infinispan.commons.api.BasicCache<Object, Object> cache,
+            final String key, final Object value, final boolean removeOperationResult) {
+        when(cache.removeAsync(eq(key), eq(value)))
+                .thenReturn(CompletableFuture.completedFuture(removeOperationResult));
+    }
+
+    protected void verifyRemoveWithValue(final org.infinispan.commons.api.BasicCache<Object, Object> cache,
+            final String key, final Object value, final boolean expectedRemoveOperationResult) {
+        verify(cache).removeAsync(key, value);
+    }
 
     /**
      * Sets up the fixture.
@@ -187,12 +199,12 @@ abstract class AbstractBasicCacheTest {
     @Test
     void testRemoveWithValueSucceeds(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.removeAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(true));
+        mockRemoveWithValue(grid, "key", "value", true);
         cache.connect()
                 .compose(c -> c.remove("key", "value"))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        verify(grid).removeAsync("key", "value");
+                        verifyRemoveWithValue(grid, "key", "value", true);
                         assertThat(v).isTrue();
                     });
                     ctx.completeNow();
@@ -208,12 +220,12 @@ abstract class AbstractBasicCacheTest {
     @Test
     void testRemoveWithValueFails(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedCache();
-        when(grid.removeAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture(false));
+        mockRemoveWithValue(grid, "key", "value", false);
         cache.connect()
                 .compose(c -> c.remove("key", "value"))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        verify(grid).removeAsync("key", "value");
+                        verifyRemoveWithValue(grid, "key", "value", false);
                         assertThat(v).isFalse();
                     });
                     ctx.completeNow();
