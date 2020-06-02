@@ -21,7 +21,11 @@
 
 node {
     def utils = evaluate readTrusted("jenkins/Hono-PipelineUtils.groovy")
-    properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '30')),
+    properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '',
+                  artifactNumToKeepStr: '5',
+                  daysToKeepStr: '',
+                  numToKeepStr: '30')),
+                disableConcurrentBuilds(),
                 pipelineTriggers([pollSCM('* * * * *')])])
     try {
         utils.checkOutHonoRepoMaster()
