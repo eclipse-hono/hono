@@ -51,6 +51,11 @@ import io.vertx.ext.healthchecks.Status;
 public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInfo, HealthCheckProvider {
 
     /**
+     * Lifespan for last-known-gateway cache entries.
+     */
+    static final Duration LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN = Duration.ofDays(28);
+
+    /**
      * For <em>viaGateways</em> parameter value lower or equal to this value, the {@link #getCommandHandlingAdapterInstances(String, String, Set, SpanContext)}
      * method will use an optimized approach, potentially saving additional cache requests.
      */
@@ -97,7 +102,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
 
-        return cache.put(getGatewayEntryKey(tenantId, deviceId), gatewayId)
+        final long lifespanMillis = LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN.toMillis();
+        return cache.put(getGatewayEntryKey(tenantId, deviceId), gatewayId, lifespanMillis, TimeUnit.MILLISECONDS)
             .map(replacedValue -> {
                 LOG.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]", tenantId, deviceId,
                         gatewayId);

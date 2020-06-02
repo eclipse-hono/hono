@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -133,7 +134,7 @@ class CacheBasedDeviceConnectionInfoTest {
     void testSetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
         final Cache<String, String> mockedCache = mockCache();
         info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.put(anyString(), anyString())).thenReturn(Future.succeededFuture("oldValue"));
+        when(mockedCache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.succeededFuture("oldValue"));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", null)
             .onComplete(ctx.completing());
     }
@@ -147,7 +148,7 @@ class CacheBasedDeviceConnectionInfoTest {
     void testSetLastKnownGatewayFails(final VertxTestContext ctx) {
         final Cache<String, String> mockedCache = mockCache();
         info = new CacheBasedDeviceConnectionInfo(mockedCache, tracer);
-        when(mockedCache.put(anyString(), anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
+        when(mockedCache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.failedFuture(new IOException("not available")));
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", mock(SpanContext.class))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(t).isInstanceOf(ServiceInvocationException.class));
