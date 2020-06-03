@@ -285,7 +285,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <memory>314572800</memory>
                     <log>
                       <prefix>MONGODB</prefix>
-                      <color>green</color>
+                      <color>${log.color.hono-device-registry}</color>
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
