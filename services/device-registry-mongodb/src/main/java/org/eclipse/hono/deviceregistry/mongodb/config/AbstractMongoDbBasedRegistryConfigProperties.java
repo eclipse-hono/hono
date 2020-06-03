@@ -24,7 +24,7 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
      * The default number of seconds that information returned by the service's
      * operations may be cached for.
      */
-    public static final int DEFAULT_MAX_AGE_SECONDS = 180;
+    private static final int DEFAULT_MAX_AGE_SECONDS = 180;
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
     /**
      * Mongodb collection name for individual device registry service entity type.

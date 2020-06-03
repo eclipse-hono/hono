@@ -77,7 +77,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
      */
     public static final String FIELD_TENANT = "tenant";
 
-    private static final Logger log = LoggerFactory.getLogger(FileBasedCredentialsService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileBasedCredentialsService.class);
 
     // <tenantId, <authId, credentialsData[]>>
     private final ConcurrentMap<String, ConcurrentMap<String, JsonArray>> credentials = new ConcurrentHashMap<>();
@@ -126,7 +126,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         } else if (createIfMissing) {
             vertx.fileSystem().createFile(getConfig().getFilename(), result);
         } else {
-            log.debug("no such file [{}]", getConfig().getFilename());
+            LOG.debug("no such file [{}]", getConfig().getFilename());
             result.complete();
         }
         return result.future();
@@ -138,25 +138,25 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         final Promise<Void> startPromise = Promise.promise();
         if (running.compareAndSet(false, true)) {
             if (!getConfig().isModificationEnabled()) {
-                log.info("modification of credentials has been disabled");
+                LOG.info("modification of credentials has been disabled");
             }
 
             if (getConfig().getFilename() == null) {
-                log.debug("credentials filename is not set, no credentials will be loaded");
+                LOG.debug("credentials filename is not set, no credentials will be loaded");
                 startPromise.complete();
             } else {
                 checkFileExists(getConfig().isSaveToFile())
                     .compose(ok -> loadCredentials())
                     .onSuccess(ok -> {
                         if (getConfig().isSaveToFile()) {
-                            log.info("saving credentials to file every 3 seconds");
+                            LOG.info("saving credentials to file every 3 seconds");
                             vertx.setPeriodic(3000, saveIdentities -> saveToFile());
                         } else {
-                            log.info("persistence is disabled, will not save credentials to file");
+                            LOG.info("persistence is disabled, will not save credentials to file");
                         }
                     })
                     .onFailure(t -> {
-                        log.error("failed to start up service", t);
+                        LOG.error("failed to start up service", t);
                         running.set(false);
                     })
                     .onComplete(startPromise);
@@ -171,16 +171,16 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
 
         if (getConfig().getFilename() == null || getConfig().isStartEmpty()) {
             // no need to load anything
-            log.info("Either filename is null or empty start is set, won't load any credentials");
+            LOG.info("Either filename is null or empty start is set, won't load any credentials");
             return Future.succeededFuture();
         } else {
             final Promise<Buffer> readResult = Promise.promise();
-            log.debug("trying to load credentials from file {}", getConfig().getFilename());
+            LOG.debug("trying to load credentials from file {}", getConfig().getFilename());
             vertx.fileSystem().readFile(getConfig().getFilename(), readResult);
             return readResult.future()
                     .compose(this::addAll)
                     .recover(t -> {
-                        log.debug("cannot load credentials from file [{}]: {}", getConfig().getFilename(),
+                        LOG.debug("cannot load credentials from file [{}]: {}", getConfig().getFilename(),
                                 t.getMessage());
                         return Future.succeededFuture();
                     });
@@ -192,16 +192,16 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         try {
             int credentialsCount = 0;
             final JsonArray allObjects = credentials.toJsonArray();
-            log.debug("trying to load credentials for {} tenants", allObjects.size());
+            LOG.debug("trying to load credentials for {} tenants", allObjects.size());
             for (final Object obj : allObjects) {
                 if (JsonObject.class.isInstance(obj)) {
                     credentialsCount += addCredentialsForTenant((JsonObject) obj);
                 }
             }
-            log.info("successfully loaded {} credentials from file [{}]", credentialsCount, getConfig().getFilename());
+            LOG.info("successfully loaded {} credentials from file [{}]", credentialsCount, getConfig().getFilename());
             result.complete();
         } catch (final DecodeException e) {
-            log.warn("cannot read malformed JSON from credentials file [{}]", getConfig().getFilename());
+            LOG.warn("cannot read malformed JSON from credentials file [{}]", getConfig().getFilename());
             result.fail(e);
         }
         return result.future();
@@ -265,15 +265,15 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
                         writeHandler);
                 return writeHandler.future().map(ok -> {
                     dirty.set(false);
-                    log.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getFilename());
+                    LOG.trace("successfully wrote {} credentials to file {}", idCount.get(), getConfig().getFilename());
                     return (Void) null;
                 }).otherwise(t -> {
-                    log.warn("could not write credentials to file {}", getConfig().getFilename(), t);
+                    LOG.warn("could not write credentials to file {}", getConfig().getFilename(), t);
                     return (Void) null;
                 });
             });
         } else {
-            log.trace("credentials registry does not need to be persisted");
+            LOG.trace("credentials registry does not need to be persisted");
             return Future.succeededFuture();
         }
     }
@@ -407,7 +407,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
                         .filter(entry -> entry.getValue() != null)
                         .allMatch(entry -> {
                             final Object valueOnRecord = extensionProperties.getValue(entry.getKey());
-                            log.debug("comparing client context property [name: {}, value: {}] to value on record: {}",
+                            LOG.debug("comparing client context property [name: {}, value: {}] to value on record: {}",
                                     entry.getKey(), entry.getValue(), valueOnRecord);
                             if (valueOnRecord == null) {
                                 return true;
@@ -502,7 +502,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
                         config.getMaxBcryptIterations());
             } catch (final IllegalStateException e) {
                 TracingHelper.logError(span, e);
-                log.debug("Failed to validate credentials", e);
+                LOG.debug("Failed to validate credentials", e);
                 return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
             }
 
@@ -697,7 +697,7 @@ public final class FileBasedCredentialsService implements CredentialsManagementS
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resultHandler);
 
-        log.debug("removing credentials for device [tenant-id: {}, device-id: {}]", tenantId, deviceId);
+        LOG.debug("removing credentials for device [tenant-id: {}, device-id: {}]", tenantId, deviceId);
 
         resultHandler.handle(Future.succeededFuture(remove(tenantId, deviceId, span)));
     }

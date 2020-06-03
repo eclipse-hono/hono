@@ -76,7 +76,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceTest {
 
-    private static final Logger log = LoggerFactory.getLogger(FileBasedCredentialsServiceTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileBasedCredentialsServiceTest.class);
 
     private static final String REGISTRATION_FILE_NAME = "/device-identities.json";
     private static final String CREDENTIALS_FILE_NAME = "/credentials.json";
@@ -152,7 +152,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
 
         CompositeFuture.all(registrationService.start(), credentialsService.start())
             .onComplete(result -> {
-                log.debug("Startup complete", result.cause());
+                LOG.debug("Startup complete", result.cause());
                 if (result.failed()) {
                     startupTracker.fail(result.cause());
                 } else {
