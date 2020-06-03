@@ -16,7 +16,7 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 import java.time.Duration;
 import java.util.Set;
 
-import io.opentracing.SpanContext;
+import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -36,16 +36,16 @@ public interface DeviceConnectionInfo {
      * @param deviceId The device identifier.
      * @param gatewayId The gateway identifier. This may be the same as the device identifier if the device is
      *                  (currently) not connected via a gateway but directly to a protocol adapter.
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     *            Implementing classes should use this as the parent for any span they create for tracing
-     *            the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the device connection information has been updated.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * @throws NullPointerException if tenant, device id or gateway id are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<Void> setLastKnownGatewayForDevice(String tenant, String deviceId, String gatewayId, SpanContext context);
+    Future<Void> setLastKnownGatewayForDevice(String tenant, String deviceId, String gatewayId, Span span);
 
     /**
      * Gets the gateway that last acted on behalf of a device.
@@ -55,18 +55,18 @@ public interface DeviceConnectionInfo {
      *
      * @param tenant The tenant that the device belongs to.
      * @param deviceId The device identifier.
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     *            Implementing classes should use this as the parent for any span they create for tracing
-     *            the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a JSON object containing the currently mapped gateway ID
      *         in the <em>gateway-id</em> property, if device connection information has been found for
      *         the given device.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * @throws NullPointerException if tenant or device id are {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<JsonObject> getLastKnownGatewayForDevice(String tenant, String deviceId, SpanContext context);
+    Future<JsonObject> getLastKnownGatewayForDevice(String tenant, String deviceId, Span span);
 
     /**
      * Sets the protocol adapter instance that handles commands for the given device or gateway.
@@ -76,17 +76,17 @@ public interface DeviceConnectionInfo {
      * @param adapterInstanceId The protocol adapter instance id.
      * @param lifespan The lifespan of the mapping entry. Using a negative duration or {@code null} here is
      *                 interpreted as an unlimited lifespan.
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     *            Implementing classes should use this as the parent for any span they create for tracing
-     *            the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the device connection information has been updated.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * @throws NullPointerException if any of the parameters except context is {@code null}.
+     * @throws NullPointerException if any of the parameters except lifespan is {@code null}.
      */
     Future<Void> setCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId,
-            Duration lifespan, SpanContext context);
+            Duration lifespan, Span span);
 
     /**
      * Removes the mapping information that associates the given device with the given protocol adapter instance
@@ -96,17 +96,17 @@ public interface DeviceConnectionInfo {
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param adapterInstanceId The protocol adapter instance id that the entry to be removed has to contain.
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     *            Implementing classes should use this as the parent for any span they create for tracing
-     *            the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation, with its value indicating whether the protocol
      *         adapter instance value was removed or not.
      *         <p>
      *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if there
      *         was an error removing the value.
-     * @throws NullPointerException if any of the parameters except context is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<Boolean> removeCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId, SpanContext context);
+    Future<Boolean> removeCommandHandlingAdapterInstance(String tenantId, String deviceId, String adapterInstanceId, Span span);
 
     /**
      * Gets information about the adapter instances that can handle a command for the given device.
@@ -119,15 +119,15 @@ public interface DeviceConnectionInfo {
      * @param tenantId The tenant id.
      * @param deviceId The device id.
      * @param viaGateways The set of gateways that may act on behalf of the given device.
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     *            Implementing classes should use this as the parent for any span they create for tracing
-     *            the execution of this operation.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         If instances were found, the future will be succeeded with a JSON object containing one or more mappings
      *         from device id to adapter instance id.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * @throws NullPointerException if any of the parameters except context is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<JsonObject> getCommandHandlingAdapterInstances(String tenantId, String deviceId, Set<String> viaGateways, SpanContext context);
+    Future<JsonObject> getCommandHandlingAdapterInstances(String tenantId, String deviceId, Set<String> viaGateways, Span span);
 }

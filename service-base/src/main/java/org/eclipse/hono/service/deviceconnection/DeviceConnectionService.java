@@ -88,7 +88,7 @@ public interface DeviceConnectionService {
      *            parent for any spans created in this method.
      * @return A future indicating the outcome of the operation.
      *         The <em>status</em> will be <em>204 No Content</em> if the operation completed successfully.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters except lifespan is {@code null}.
      */
     Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(String tenantId, String deviceId,
             String adapterInstanceId, Duration lifespan, Span span);
@@ -132,7 +132,7 @@ public interface DeviceConnectionService {
      *         to adapter instance id.</li>
      *         <li><em>404 Not Found</em> if no instances were found.</li>
      *         </ul>
-     * @throws NullPointerException if any of the parameters except context is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<DeviceConnectionResult> getCommandHandlingAdapterInstances(String tenantId, String deviceId, List<String> viaGateways, Span span);
 }
