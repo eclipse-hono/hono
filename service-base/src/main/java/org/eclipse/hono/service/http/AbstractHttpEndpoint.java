@@ -225,14 +225,26 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      */
     protected final String getRequestIdParam(final String paramName, final RoutingContext ctx, final Span span, final boolean optional) {
         final String value = ctx.request().getParam(paramName);
+        final String regex;
+
+        switch (paramName) {
+            case PARAM_TENANT_ID:
+                regex = config.getTenantIdRegex();
+                break;
+            case PARAM_DEVICE_ID:
+                regex = config.getDeviceIdRegex();
+                break;
+            default:
+                regex = ".+";
+        }
 
         if (value != null) {
-            if (value.matches(config.getResourceIdRegex())) {
+            if (value.matches(regex)) {
                 span.setTag(paramName, value);
                 return value;
             } else {
                 final String msg = String.format("%s does not match allowed pattern: %s",
-                        value, config.getResourceIdRegex());
+                        value, regex);
                 HttpUtils.badRequest(ctx, msg);
                 finishSpanWithError(span, HttpURLConnection.HTTP_BAD_REQUEST, msg);
                 return null;
