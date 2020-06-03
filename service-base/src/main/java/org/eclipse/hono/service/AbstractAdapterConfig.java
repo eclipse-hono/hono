@@ -41,10 +41,12 @@ import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
 
@@ -444,15 +446,19 @@ public abstract class AbstractAdapterConfig {
      * Exposes a factory for creating clients for receiving upstream commands
      * via the AMQP Messaging Network.
      *
+     * @param appContext The Spring application context.
      * @return The factory.
      */
     @Bean
     @Scope("prototype")
-    public ProtocolAdapterCommandConsumerFactory commandConsumerFactory() {
+    public ProtocolAdapterCommandConsumerFactory commandConsumerFactory(final ApplicationContext appContext) {
         // be sure to use a new ClientConfigProperties instance so that its unique container-id
         // is only used for the specific consumer factory instance created here (as adapterInstanceId, which has to be unique)
         final ClientConfigProperties clientConfigProperties = new ClientConfigProperties(commandConsumerFactoryConfig());
         final HonoConnection honoConnection = HonoConnection.newConnection(vertx(), clientConfigProperties);
+        // make sure the tracer instance gets autowired into the honoConnection
+        appContext.getAutowireCapableBeanFactory()
+                .autowireBeanProperties(honoConnection, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false);
         final String adapterInstanceId = clientConfigProperties.getContainerId();
         return ProtocolAdapterCommandConsumerFactory.create(honoConnection, adapterInstanceId);
     }
@@ -466,7 +472,7 @@ public abstract class AbstractAdapterConfig {
      * @return The identifier.
      * @deprecated This id is not used anymore. The id representing the protocol adapter instance for usage in the
      *             <em>ProtocolAdapterCommandConsumerFactory</em> instance is now initialized in
-     *             {@link #commandConsumerFactory()}.
+     *             {@link #commandConsumerFactory(ApplicationContext)}.
      */
     @Qualifier("adapterInstanceId")
     @Bean
