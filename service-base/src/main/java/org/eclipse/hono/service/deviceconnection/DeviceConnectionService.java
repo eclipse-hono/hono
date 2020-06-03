@@ -127,7 +127,7 @@ public interface DeviceConnectionService {
      *         to adapter instance id.</li>
      *         <li><em>404 Not Found</em> if no instances were found.</li>
      *         </ul>
-     * @throws NullPointerException if any of the parameters except context is {@code null}.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<DeviceConnectionResult> getCommandHandlingAdapterInstances(String tenantId, String deviceId, List<String> viaGateways, Span span);
 }

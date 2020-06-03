@@ -124,6 +124,24 @@ public final class TracingHelper {
     }
 
     /**
+     * Sets the tags identifying a device.
+     *
+     * @param span The span to set the tags on.
+     * @param tenantId The tenant that the device belongs to or {@code null} if unknown.
+     * @param deviceId The device identifier or {@code null} if unknown.
+     */
+    public static void setDeviceTags(final Span span, final String tenantId, final String deviceId) {
+        if (span != null) {
+            if (tenantId != null) {
+                TAG_TENANT_ID.set(span, tenantId);
+            }
+            if (deviceId != null) {
+                TAG_DEVICE_ID.set(span, deviceId);
+            }
+        }
+    }
+
+    /**
      * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
      * <p>
      * This method does <em>not</em> finish the span.

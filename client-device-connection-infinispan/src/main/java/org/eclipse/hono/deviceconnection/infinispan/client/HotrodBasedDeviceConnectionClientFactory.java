@@ -111,7 +111,7 @@ public final class HotrodBasedDeviceConnectionClientFactory implements BasicDevi
     public Future<DeviceConnectionClient> getOrCreateDeviceConnectionClient(final String tenantId) {
         final DeviceConnectionClient result = clients.get(tenantId, key -> {
             final DeviceConnectionInfo info = new HotrodBasedDeviceConnectionInfo(cache, tracer);
-            return new HotrodBasedDeviceConnectionClient(key, info);
+            return new HotrodBasedDeviceConnectionClient(key, info, tracer);
         });
         return Future.succeededFuture(result);
     }
