@@ -15,7 +15,6 @@ package org.eclipse.hono.service.management.credentials;
 import java.util.Objects;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.Strings;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -52,8 +51,7 @@ public class PskSecret extends CommonSecret {
     }
 
     @Override
-    public void checkValidity() {
-        super.checkValidity();
+    public void checkValidityOfSpecificProperties() {
         if (this.key == null || this.key.length <= 0) {
             throw new IllegalStateException(String.format("'%s' must be set", RegistryManagementConstants.FIELD_SECRETS_KEY));
         }
@@ -61,16 +59,18 @@ public class PskSecret extends CommonSecret {
 
     /**
      * {@inheritDoc}
+     * <p>
+     * Sets this secret's key property to the value of the other secret's corresponding
+     * property if this secret's key property is @{@code null}.
      */
     @Override
-    void merge(final CommonSecret secret) {
-        Objects.requireNonNull(secret);
+    protected void mergeProperties(final CommonSecret otherSecret) {
 
-        if (secret instanceof PskSecret) {
-            if (!Strings.isNullOrEmpty(getId()) && Strings.isNullOrEmpty(key)) {
-                final PskSecret pskSecret = (PskSecret) secret;
-                key = pskSecret.getKey();
-            }
+        Objects.requireNonNull(otherSecret);
+
+        if (this.key == null) {
+            final PskSecret otherPskSecret = (PskSecret) otherSecret;
+            this.key = otherPskSecret.key;
         }
     }
 }

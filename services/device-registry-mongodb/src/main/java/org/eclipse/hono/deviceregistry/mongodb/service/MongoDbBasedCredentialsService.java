@@ -165,7 +165,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
     protected Future<OperationResult<Void>> processUpdateCredentials(
             final DeviceKey deviceKey,
             final Optional<String> resourceVersion,
-            final List<CommonCredential> credentials,
+            final List<CommonCredential> updatedCredentials,
             final Span span) {
 
         Objects.requireNonNull(deviceKey);
@@ -176,18 +176,21 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
                 .compose(ok -> {
-                    final CredentialsDto credentialsDto = new CredentialsDto(
+                    final CredentialsDto updatedCredentialsDto = new CredentialsDto(
                             deviceKey.getTenantId(),
                             deviceKey.getDeviceId(),
-                            credentials,
+                            updatedCredentials,
                             DeviceRegistryUtils.getUniqueIdentifier());
 
-                    if (credentialsDto.requiresMerging()) {
+                    if (updatedCredentialsDto.requiresMerging()) {
                         return getCredentialsDto(deviceKey, resourceVersion)
-                                .map(credentialsDto::merge);
+                                .map(updatedCredentialsDto::merge);
+                    } else {
+                        // simply replace the existing credentials with the
+                        // updated ones provided by the client
+                        return Future.succeededFuture(updatedCredentialsDto);
                     }
 
-                    return Future.succeededFuture(credentialsDto);
                 }).compose(credentialsDto -> updateCredentials(
                         deviceKey,
                         resourceVersion,

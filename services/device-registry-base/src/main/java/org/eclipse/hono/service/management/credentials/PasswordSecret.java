@@ -131,8 +131,7 @@ public class PasswordSecret extends CommonSecret {
      * @throws IllegalStateException if the secret is not valid.
      */
     @Override
-    public void checkValidity() {
-        super.checkValidity();
+    protected void checkValidityOfSpecificProperties() {
         if (containsOnlySecretId()) {
             return;
         }
@@ -241,17 +240,22 @@ public class PasswordSecret extends CommonSecret {
 
     /**
      * {@inheritDoc}
+     * <p>
+     * Sets this secret's passwordPlain, passwordHash, hashFunction and salt properties
+     * to the values of the other secret's corresponding properties if this
+     * secret's {@link #containsOnlySecretId()} method returns {@code true}.
      */
     @Override
-    void merge(final CommonSecret secret) {
-        Objects.requireNonNull(secret);
+    protected void mergeProperties(final CommonSecret otherSecret) {
 
-        if (secret instanceof PasswordSecret && containsOnlySecretId()) {
-            final PasswordSecret passwordSecret = (PasswordSecret) secret;
-            passwordPlain = passwordSecret.getPasswordPlain();
-            passwordHash = passwordSecret.getPasswordHash();
-            hashFunction = passwordSecret.getHashFunction();
-            salt = passwordSecret.getSalt();
+        Objects.requireNonNull(otherSecret);
+
+        if (this.containsOnlySecretId()) {
+            final PasswordSecret otherPasswordSecret = (PasswordSecret) otherSecret;
+            this.passwordPlain = otherPasswordSecret.passwordPlain;
+            this.passwordHash = otherPasswordSecret.passwordHash;
+            this.hashFunction = otherPasswordSecret.hashFunction;
+            this.salt = otherPasswordSecret.salt;
         }
     }
 }
