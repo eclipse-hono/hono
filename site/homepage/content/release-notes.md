@@ -2,7 +2,7 @@
 title = "Release Notes"
 +++
 
-## 1.2.3 (not yet released)
+## 1.2.3
 
 ### Fixes & Enhancements
 
