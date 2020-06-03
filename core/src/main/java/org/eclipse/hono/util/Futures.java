@@ -16,6 +16,8 @@ package org.eclipse.hono.util;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -41,19 +43,21 @@ public final class Futures {
      */
     public static <T> Future<T> create(final Supplier<CompletionStage<T>> futureSupplier) {
 
+        final Context originalContext = Vertx.currentContext();
         final CompletionStage<T> future;
         try {
             future = futureSupplier.get();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             return Future.failedFuture(e);
         }
 
         final Promise<T> result = Promise.promise();
         future.whenComplete((r, e) -> {
-            if (e == null) {
-                result.complete(r);
+            final AsyncResult<T> asyncResult = e != null ? Future.failedFuture(e) : Future.succeededFuture(r);
+            if (originalContext != null && originalContext != Vertx.currentContext()) {
+                originalContext.runOnContext(go -> result.handle(asyncResult));
             } else {
-                result.fail(e);
+                result.handle(asyncResult);
             }
         });
 
