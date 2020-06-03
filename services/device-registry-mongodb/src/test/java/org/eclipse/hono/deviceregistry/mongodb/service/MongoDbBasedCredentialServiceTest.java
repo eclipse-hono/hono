@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
@@ -29,7 +28,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -46,7 +44,6 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServiceTest {
 
-    private final MongoDbTestUtils mongoDbTestUtils = new MongoDbTestUtils();
     private MongoClient mongoClient;
     private final MongoDbBasedCredentialsConfigProperties credentialsServiceConfig = new MongoDbBasedCredentialsConfigProperties();
     private MongoDbBasedCredentialsService credentialsService;
@@ -62,16 +59,9 @@ public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServic
      */
     @BeforeAll
     public void setup(final VertxTestContext testContext) throws IOException {
-        final String mongoDbHost = "127.0.0.1";
-        final int mongoDbPort = Network.getFreeServerPort();
-        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
-                .setHost(mongoDbHost)
-                .setPort(mongoDbPort)
-                .setDbName("hono-credentials-test");
 
-        mongoDbTestUtils.startEmbeddedMongoDb(mongoDbHost, mongoDbPort);
         vertx = Vertx.vertx();
-        mongoClient = MongoClient.createShared(vertx, mongoDbConfig.getMongoClientConfig());
+        mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
         credentialsService = new MongoDbBasedCredentialsService(
                 vertx,
                 mongoClient,
@@ -93,14 +83,13 @@ public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServic
      */
     @AfterAll
     public void finishTest(final VertxTestContext testContext) {
-        final Checkpoint shutdown = testContext.checkpoint(4);
+
+        final Checkpoint shutdown = testContext.checkpoint(3);
 
         credentialsService.stop().onComplete(s -> shutdown.flag());
         registrationService.stop().onComplete(s -> shutdown.flag());
         mongoClient.close();
         vertx.close(s -> shutdown.flag());
-        mongoDbTestUtils.stopEmbeddedMongoDb();
-        shutdown.flag();
     }
 
     /**

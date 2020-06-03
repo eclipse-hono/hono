@@ -65,6 +65,96 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
             </plugin>
+            <plugin>
+              <groupId>com.github.joelittlejohn.embedmongo</groupId>
+              <artifactId>embedmongo-maven-plugin</artifactId>
+              <version>0.4.2</version>
+              <executions>
+                <execution>
+                  <id>start-mongodb</id>
+                  <phase>pre-integration-test</phase>
+                  <goals>
+                    <goal>start</goal>
+                  </goals>
+                  <configuration>
+                    <randomPort>true</randomPort>
+                    <!-- optional, default is false, if true allocates a random port and overrides embedmongo.port -->
+
+                    <version>4.0.18</version>
+                    <!-- optional, default 2.2.1 -->
+
+                    <features>ONLY_WITH_SSL, ONLY_WINDOWS_2008_SERVER, NO_HTTP_INTERFACE_ARG</features>
+                    <!-- optional, default is none. Enables flapdoodle.embed.mongo features, for example to build Windows download URLs since 3.6 -->
+
+                    <!-- databaseDirectory>/tmp/mongotest</databaseDirectory-->
+                    <!-- optional, default is a new dir in java.io.tmpdir -->
+
+                    <logging>console</logging>
+                    <!-- optional (file|console|none), default console -->
+
+                    <logFile>${project.build.directory}/myfile.log</logFile>
+                    <!-- optional, can be used when logging=file, default is ./embedmongo.log -->
+
+                    <logFileEncoding>utf-8</logFileEncoding>
+                    <!-- optional, can be used when logging=file, default is utf-8 -->
+
+                    <bindIp>127.0.0.1</bindIp>
+                    <!-- optional, default is to listen on all interfaces -->
+
+                    <!-- downloadPath>http://internal-mongo-repo/</downloadPath-->
+                    <!-- optional, default is http://fastdl.mongodb.org/ -->
+
+                    <unixSocketPrefix>${user.home}/.embedmongo</unixSocketPrefix>
+                    <!-- optional, default is /tmp -->
+
+                    <storageEngine>wiredTiger</storageEngine>
+                    <!--optional, one of wiredTiger or mmapv1 (default is mmapv1) -->
+
+                    <skip>false</skip>
+                    <!-- optional, skips this plugin entirely, use on the command line like -Dembedmongo.skip -->
+
+                  </configuration>
+                </execution>
+                <execution>
+                  <id>stop-mongodb</id>
+                  <phase>post-integration-test</phase>
+                  <goals>
+                    <goal>stop</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration>
+                <skip>true</skip>
+              </configuration>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-failsafe-plugin</artifactId>
+              <configuration>
+                <includes>
+                  <include>**/*Test.java</include>
+                </includes>
+                <systemPropertyVariables>
+                  <mongodb.port>${embedmongo.port}</mongodb.port>
+                  <vertx.logger-delegate-factory-class-name>io.vertx.core.logging.SLF4JLogDelegateFactory</vertx.logger-delegate-factory-class-name>
+                  <!-- javax.net.debug>ssl:handshake</javax.net.debug-->
+                </systemPropertyVariables>
+              </configuration>
+              <executions>
+                <execution>
+                  <id>run-tests</id>
+                  <phase>integration-test</phase>
+                  <goals>
+                    <goal>integration-test</goal>
+                    <goal>verify</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -81,6 +171,21 @@
                     <plugin>
                         <groupId>io.fabric8</groupId>
                         <artifactId>docker-maven-plugin</artifactId>
+                        <executions>
+                          <execution>
+                            <id>build_images</id>
+                            <!--
+                              postpone building of container image to after the integration tests
+                              have succeeded because the unit tests are run against a Mongo DB
+                              instance that is started/stopped as part of the integration test
+                              phase
+                            -->
+                            <phase>post-integration-test</phase>
+                            <goals>
+                              <goal>build</goal>
+                            </goals>
+                          </execution>
+                        </executions>
                         <configuration>
                             <images>
                                 <image>
