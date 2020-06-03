@@ -785,7 +785,7 @@ components:
             "mapper":
                type: string
                description: |
-                  The (logical) name of a service that can be used by protocol adapters to transform messages
+                  The name of a service that can be used by protocol adapters to transform messages
                   uploaded by devices before sending them to downstream consumers.
                   The protocol adapter needs to map this name to the particular service to invoke.
                   NB: This is an experimental feature and thus this property is subject to change without

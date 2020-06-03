@@ -103,7 +103,7 @@ service endpoint(s) for transforming messages:
 
 | Environment Variable<br>Command Line Option | Mandatory | Default Value | Description  |
 | :------------------------------------------ | :-------: | :------------ | :------------|
-| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_HOST`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.host` | no | - | The host name or IP address of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the logical service name as set in the *mapper* property of the device's registration information. |
-| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_PORT`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.port` | no | - | The port of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the logical service name as set in the *mapper* property of the device's registration information. |
-| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_URI`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.uri` | no | - | The URI of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the logical service name as set in the *mapper* property of the device's registration information. |
+| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_HOST`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.host` | no | - | The host name or IP address of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the service name as set in the *mapper* property of the device's registration information. |
+| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_PORT`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.port` | no | - | The port of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the service name as set in the *mapper* property of the device's registration information. |
+| `HONO_MQTT_MAPPERENDPOINTS_<mapperName>_URI`<br>`--hono.mqtt.mapperEndpoints.<mapperName>.uri` | no | - | The URI of the service to invoke for transforming uploaded messages. The `<mapperName>` needs to contain the service name as set in the *mapper* property of the device's registration information. |
 
