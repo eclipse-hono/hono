@@ -25,18 +25,14 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.HealthCheckProvider;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -56,7 +52,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     static final Duration LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN = Duration.ofDays(28);
 
     /**
-     * For <em>viaGateways</em> parameter value lower or equal to this value, the {@link #getCommandHandlingAdapterInstances(String, String, Set, SpanContext)}
+     * For <em>viaGateways</em> parameter value lower or equal to this value, the {@link #getCommandHandlingAdapterInstances(String, String, Set, Span)}
      * method will use an optimized approach, potentially saving additional cache requests.
      */
     static final int VIA_GATEWAYS_OPTIMIZATION_THRESHOLD = 3;
@@ -97,10 +93,11 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      */
     @Override
     public Future<Void> setLastKnownGatewayForDevice(final String tenantId, final String deviceId,
-            final String gatewayId, final SpanContext context) {
+            final String gatewayId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
+        Objects.requireNonNull(span);
 
         final long lifespanMillis = LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN.toMillis();
         return cache.put(getGatewayEntryKey(tenantId, deviceId), gatewayId, lifespanMillis, TimeUnit.MILLISECONDS)
@@ -120,10 +117,10 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      * {@inheritDoc}
      */
     @Override
-    public Future<JsonObject> getLastKnownGatewayForDevice(final String tenantId, final String deviceId,
-            final SpanContext context) {
+    public Future<JsonObject> getLastKnownGatewayForDevice(final String tenantId, final String deviceId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(span);
 
         return cache.get(getGatewayEntryKey(tenantId, deviceId))
                 .recover(t -> {
@@ -146,10 +143,11 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final Duration lifespan, final SpanContext context) {
+            final String adapterInstanceId, final Duration lifespan, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
+        Objects.requireNonNull(span);
 
         // sanity check, preventing an ArithmeticException in lifespan.toMillis()
         final long lifespanMillis = lifespan == null || lifespan.isNegative()
@@ -169,10 +167,11 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public Future<Boolean> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final SpanContext context) {
+            final String adapterInstanceId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
+        Objects.requireNonNull(span);
 
         final String key = getAdapterInstanceEntryKey(tenantId, deviceId);
 
@@ -198,9 +197,11 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public Future<JsonObject> getCommandHandlingAdapterInstances(final String tenantId, final String deviceId,
-            final Set<String> viaGateways, final SpanContext context) {
-
-        final Span span = createSpan("get command handling adapter instances", tenantId, deviceId, null, context);
+            final Set<String> viaGateways, final Span span) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(viaGateways);
+        Objects.requireNonNull(span);
 
         final Future<JsonObject> resultFuture;
         if (viaGateways.isEmpty()) {
@@ -227,16 +228,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
             // instead trying the last known gateway first
             resultFuture = getInstancesGettingLastKnownGatewayFirst(tenantId, deviceId, viaGateways, span);
         }
-        return resultFuture.compose(jsonObject -> {
-            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_OK);
-            span.finish();
-            return Future.succeededFuture(jsonObject);
-        }).recover(t -> {
-            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(t));
-            TracingHelper.logError(span, t);
-            span.finish();
-            return Future.failedFuture(t);
-        });
+        return resultFuture;
     }
 
     private Future<JsonObject> getInstancesQueryingAllGatewaysFirst(final String tenantId, final String deviceId,
@@ -477,22 +469,5 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-    }
-
-    private Span createSpan(
-            final String operationName,
-            final String tenantId,
-            final String deviceId,
-            final String adapterInstanceId,
-            final SpanContext spanContext) {
-
-        final Tracer.SpanBuilder spanBuilder = TracingHelper.buildChildSpan(tracer, spanContext, operationName, getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
-                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId);
-        if (adapterInstanceId != null) {
-            spanBuilder.withTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-        }
-        return spanBuilder.start();
     }
 }

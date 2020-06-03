@@ -59,7 +59,7 @@ public class CacheBasedDeviceConnectionService extends AbstractVerticle implemen
             final String gatewayId,
             final Span span) {
 
-        return cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span.context())
+        return cache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span)
                 .map(ok -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
@@ -72,7 +72,7 @@ public class CacheBasedDeviceConnectionService extends AbstractVerticle implemen
             final String deviceId,
             final Span span) {
 
-        return cache.getLastKnownGatewayForDevice(tenantId, deviceId, span.context())
+        return cache.getLastKnownGatewayForDevice(tenantId, deviceId, span)
                 .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
                 .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
@@ -81,7 +81,7 @@ public class CacheBasedDeviceConnectionService extends AbstractVerticle implemen
     public Future<DeviceConnectionResult> setCommandHandlingAdapterInstance(final String tenantId,
             final String deviceId, final String adapterInstanceId, final Duration lifespan,
             final Span span) {
-        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span.context())
+        return cache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span)
                 .map(v -> DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
@@ -89,7 +89,7 @@ public class CacheBasedDeviceConnectionService extends AbstractVerticle implemen
     @Override
     public Future<DeviceConnectionResult> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
             final String adapterInstanceId, final Span span) {
-        return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span.context())
+        return cache.removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, span)
                 .map(removed -> removed ? DeviceConnectionResult.from(HttpURLConnection.HTTP_NO_CONTENT)
                         : DeviceConnectionResult.from(HttpURLConnection.HTTP_PRECON_FAILED))
                 .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
@@ -98,7 +98,7 @@ public class CacheBasedDeviceConnectionService extends AbstractVerticle implemen
     @Override
     public Future<DeviceConnectionResult> getCommandHandlingAdapterInstances(final String tenantId, final String deviceId,
             final List<String> viaGateways, final Span span) {
-        return cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span.context())
+        return cache.getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span)
                 .map(json -> DeviceConnectionResult.from(HttpURLConnection.HTTP_OK, json))
                 .otherwise(t -> DeviceConnectionResult.from(ServiceInvocationException.extractStatusCode(t)));
     }

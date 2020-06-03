@@ -106,7 +106,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         final String deviceId = "testDevice";
         final String gatewayId = "testGateway";
-        when(cache.setLastKnownGatewayForDevice(anyString(), anyString(), anyString(), any(SpanContext.class)))
+        when(cache.setLastKnownGatewayForDevice(anyString(), anyString(), anyString(), any(Span.class)))
             .thenReturn(Future.succeededFuture());
 
         givenAStartedService()
@@ -114,7 +114,7 @@ public class CacheBasedDeviceConnectionServiceTest {
         .onComplete(ctx.succeeding(result -> {
             ctx.verify(() -> {
                 assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
-                verify(cache).setLastKnownGatewayForDevice(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(gatewayId), any(SpanContext.class));
+                verify(cache).setLastKnownGatewayForDevice(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(gatewayId), any(Span.class));
             });
             ctx.completeNow();
         }));
@@ -130,7 +130,7 @@ public class CacheBasedDeviceConnectionServiceTest {
     public void testGetLastKnownGatewayForDeviceNotFound(final VertxTestContext ctx) {
 
         final String deviceId = "testDevice";
-        when(cache.getLastKnownGatewayForDevice(anyString(), anyString(), any(SpanContext.class)))
+        when(cache.getLastKnownGatewayForDevice(anyString(), anyString(), any(Span.class)))
             .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)));
 
         givenAStartedService()
@@ -155,7 +155,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         final String deviceId = "testDevice";
         final String adapterInstanceId = "adapterInstanceId";
-        when(cache.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(), any(SpanContext.class)))
+        when(cache.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(), any(Span.class)))
                 .thenReturn(Future.succeededFuture());
 
         givenAStartedService()
@@ -165,7 +165,7 @@ public class CacheBasedDeviceConnectionServiceTest {
             ctx.verify(() -> {
                 assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                 verify(cache).setCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(),
-                        any(SpanContext.class));
+                        any(Span.class));
             });
             ctx.completeNow();
         }));
@@ -183,7 +183,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         final String deviceId = "testDevice";
         final String adapterInstanceId = "adapterInstanceId";
-        when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(SpanContext.class)))
+        when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(Span.class)))
                 .thenReturn(Future.succeededFuture(true));
 
         givenAStartedService()
@@ -191,7 +191,7 @@ public class CacheBasedDeviceConnectionServiceTest {
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
-                        verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));
+                        verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(Span.class));
                     });
                     ctx.completeNow();
                 }));
@@ -209,7 +209,7 @@ public class CacheBasedDeviceConnectionServiceTest {
 
         final String deviceId = "testDevice";
         final String adapterInstanceId = "adapterInstanceId";
-        when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(SpanContext.class)))
+        when(cache.removeCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(Span.class)))
                 .thenReturn(Future.succeededFuture(false));
 
         givenAStartedService()
@@ -217,7 +217,7 @@ public class CacheBasedDeviceConnectionServiceTest {
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
-                        verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(SpanContext.class));
+                        verify(cache).removeCommandHandlingAdapterInstance(eq(Constants.DEFAULT_TENANT), eq(deviceId), eq(adapterInstanceId), any(Span.class));
                     });
                     ctx.completeNow();
                 }));

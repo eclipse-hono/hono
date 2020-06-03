@@ -110,7 +110,7 @@ public final class CacheBasedDeviceConnectionClientFactory implements BasicDevic
     public Future<DeviceConnectionClient> getOrCreateDeviceConnectionClient(final String tenantId) {
         final DeviceConnectionClient result = clients.get(tenantId, key -> {
             final DeviceConnectionInfo info = new CacheBasedDeviceConnectionInfo(cache, tracer);
-            return new CacheBasedDeviceConnectionClient(key, info);
+            return new CacheBasedDeviceConnectionClient(key, info, tracer);
         });
         return Future.succeededFuture(result);
     }
