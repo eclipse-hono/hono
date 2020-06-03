@@ -43,10 +43,16 @@ public class ServiceConfigProperties extends ServerConfig {
     private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
 
     /**
-     * The regexp to use to validate tenant IDs and device IDs.
-     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_ID_REGEX}
+     * The regexp to use to validate device IDs.
+     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_REGEX}
      */
-    private String resourceIdRegex = RegistryManagementConstants.DEFAULT_ID_REGEX;
+    private String deviceIdRegex = RegistryManagementConstants.DEFAULT_DEVICE_ID_REGEX;
+
+    /**
+     * The regexp to use to validate tenant IDs.
+     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_REGEX}
+     */
+    private String tenantIdRegex = RegistryManagementConstants.DEFAULT_TENANT_ID_REGEX;
 
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
@@ -256,23 +262,44 @@ public class ServiceConfigProperties extends ServerConfig {
     }
 
     /**
-     * Gets the regular expression to use to validate tenant IDs and device IDs.
+     * Gets the regular expression to use to validate device IDs.
      * <p>
      *
      * @return The regular expression as a string.
      */
-    public final String getResourceIdRegex() {
-        return resourceIdRegex;
+    public final String getDeviceIdRegex() {
+        return deviceIdRegex;
     }
 
     /**
-     * Sets the regular expression to use to validate tenant IDs and device IDs.
+     * Sets the regular expression to use to validate device IDs.
      * <p>
-     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_ID_REGEX}
+     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_REGEX}
      *
      * @param regex A string containing the regular expression.
      */
-    public void setResourceIdRegex(final String regex) {
-        this.resourceIdRegex = regex;
+    public void setDeviceIdRegex(final String regex) {
+        this.deviceIdRegex = regex;
+    }
+
+    /**
+     * Gets the regular expression to use to validate tenant IDs.
+     * <p>
+     *
+     * @return The regular expression as a string.
+     */
+    public final String getTenantIdRegex() {
+        return tenantIdRegex;
+    }
+
+    /**
+     * Sets the regular expression to use to validate tenant IDs.
+     * <p>
+     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_REGEX}
+     *
+     * @param regex A string containing the regular expression.
+     */
+    public void setTenantIdRegex(final String regex) {
+        this.tenantIdRegex = regex;
     }
 }
