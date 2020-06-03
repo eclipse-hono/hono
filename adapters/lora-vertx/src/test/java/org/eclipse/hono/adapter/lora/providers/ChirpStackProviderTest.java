@@ -52,7 +52,7 @@ public class ChirpStackProviderTest {
         final JsonObject loraMessage = LoraTestUtil.loadTestFile("chirpStack.uplink");
         final String payload = provider.extractPayload(loraMessage);
 
-        assertEquals("data", payload);
+        assertEquals("75AB5A", payload);
     }
 
     /**

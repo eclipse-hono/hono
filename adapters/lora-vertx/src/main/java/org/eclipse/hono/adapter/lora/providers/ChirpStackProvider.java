@@ -80,7 +80,7 @@ public class ChirpStackProvider implements LoraProvider {
         }
 
         if (payload instanceof String) {
-            return (String) payload;
+            return LoraUtils.convertFromBase64ToHex((String) payload);
         }
 
         throw new LoraProviderMalformedPayloadException("Payload could not be extracted from message. Expected " +
