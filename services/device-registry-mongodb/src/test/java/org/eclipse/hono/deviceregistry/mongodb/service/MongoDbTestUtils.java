@@ -12,68 +12,42 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import java.io.IOException;
-import java.util.UUID;
+import java.util.Objects;
 
-import de.flapdoodle.embed.mongo.Command;
-import de.flapdoodle.embed.mongo.MongodExecutable;
-import de.flapdoodle.embed.mongo.MongodProcess;
-import de.flapdoodle.embed.mongo.MongodStarter;
-import de.flapdoodle.embed.mongo.config.DownloadConfigBuilder;
-import de.flapdoodle.embed.mongo.config.ExtractedArtifactStoreBuilder;
-import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
-import de.flapdoodle.embed.mongo.config.Net;
-import de.flapdoodle.embed.mongo.config.RuntimeConfigBuilder;
-import de.flapdoodle.embed.mongo.distribution.Version;
-import de.flapdoodle.embed.process.config.IRuntimeConfig;
-import de.flapdoodle.embed.process.extract.UUIDTempNaming;
-import de.flapdoodle.embed.process.io.directories.FixedPath;
-import de.flapdoodle.embed.process.io.directories.IDirectory;
-import de.flapdoodle.embed.process.runtime.Network;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
+
+import io.vertx.core.Vertx;
+import io.vertx.ext.mongo.MongoClient;
 
 /**
- * Utility class to initialize and tear down embedded mongodb.
+ * Utility class for creating clients for a running Mongo DB instance.
  */
 public final class MongoDbTestUtils {
 
-    private MongodExecutable mongodExecutable;
-    private MongodProcess mongodProcess;
+    private static final String MONGO_DB_HOST = System.getProperty("mongodb.host", "127.0.0.1");
+    private static final int MONGO_DB_PORT = Integer.getInteger("mongodb.port");
 
-    /**
-     * Initializes embedded mongodb.
-     *
-     * @param host the mongodb hostname.
-     * @param port the mongodb port.
-     * @throws IOException if the embedded mongodb cannot be initialised.
-     */
-    public void startEmbeddedMongoDb(final String host, final int port) throws IOException {
-        final IDirectory artifactStorePath = new FixedPath(
-                "target/embeddedMongodbCustomPath-" + UUID.randomUUID().toString());
-        final IDirectory extractDir = new FixedPath("target/extractMongodbCustomPath-" + UUID.randomUUID().toString());
-        final Command command = Command.MongoD;
-        final IRuntimeConfig runtimeConfig = new RuntimeConfigBuilder()
-                .defaults(command)
-                .artifactStore(new ExtractedArtifactStoreBuilder()
-                        .defaults(command)
-                        .download(new DownloadConfigBuilder()
-                                .defaultsForCommand(command)
-                                .artifactStorePath(artifactStorePath).build())
-                        .extractDir(extractDir)
-                        .executableNaming(new UUIDTempNaming()))
-                .build();
-        mongodExecutable = MongodStarter.getInstance(runtimeConfig)
-                .prepare(new MongodConfigBuilder()
-                        .version(Version.Main.PRODUCTION)
-                        .net(new Net(host, port, Network.localhostIsIPv6()))
-                        .build());
-        mongodProcess = mongodExecutable.start();
+    private MongoDbTestUtils() {
+        // prevent instantiation
     }
 
     /**
-     * Tears down the embedded mongo db.
+     * Creates a new vert.x Mongo DB client.
+     *
+     * @param vertx The vert.x instance to run on.
+     * @param dbName The name of the database to connect to.
+     * @return The client.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public void stopEmbeddedMongoDb() {
-        mongodProcess.stop();
-        mongodExecutable.stop();
+    public static MongoClient getMongoClient(final Vertx vertx, final String dbName) {
+
+        Objects.requireNonNull(vertx);
+        Objects.requireNonNull(dbName);
+
+        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
+                .setHost(MongoDbTestUtils.MONGO_DB_HOST)
+                .setPort(MongoDbTestUtils.MONGO_DB_PORT)
+                .setDbName(dbName);
+        return MongoClient.createShared(vertx, mongoDbConfig.getMongoClientConfig());
     }
 }
