@@ -1,0 +1,45 @@
+hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 90
+  healthCheck:
+    insecurePortBindAddress: 0.0.0.0
+    insecurePort: ${vertx.health.port}
+  auth:
+    host: ${hono.auth.host}
+    port: 5672
+    name: device-registry
+    validation:
+      certPath: /etc/hono/certs/auth-server-cert.pem
+  registry:
+    amqp:
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+    http:
+      authenticationRequired: false
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+    svc:
+  credentials:
+    svc:
+      maxBcryptIterations: ${max.bcrypt.iterations}
+  tenant:
+    svc:
+  mongodb:
+    host: ${hono.mongodb.host}
+    port: ${hono.mongodb.port}
+    dbName: ${hono.mongodb.database.name}
+    username: ${hono.mongodb.username}
+    password: ${hono.mongodb.password}
+  vertx:
+    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+
+spring:
+  jmx:
+    enabled: false
+
+management:
+  port: -1
+
+server:
+  port: -1

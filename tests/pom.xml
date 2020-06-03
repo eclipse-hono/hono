@@ -56,6 +56,9 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <http.java.options></http.java.options>
     <mqtt.java.options></mqtt.java.options>
     <deviceregistry.image>hono-service-device-registry-file</deviceregistry.image>
+    <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
+    <hono.mongodb.image.name>mongo:4.2.5</hono.mongodb.image.name>
+    <hono.mongodb.disabled>true</hono.mongodb.disabled>
     <!-- logging profile: either prod, dev or trace -->
     <logging.profile>prod</logging.profile>
     <trace.frames>0</trace.frames>
@@ -187,6 +190,19 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
   <profiles>
     <profile>
+      <id>device-registry-mongodb</id>
+      <properties>
+        <deviceregistry.image>hono-service-device-registry-mongodb</deviceregistry.image>
+        <hono.mongodb.disabled>false</hono.mongodb.disabled>
+        <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>
+        <hono.mongodb.port>27017</hono.mongodb.port>
+        <hono.mongodb.username>device-registry@HONO</hono.mongodb.username>
+        <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
+        <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
+        <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
+      </properties>
+    </profile>
+    <profile>
       <id>run-tests</id>
       <build>
         <plugins>
@@ -228,6 +244,55 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>false</startParallel>
               <images>
+                <!-- ##### Mongo DB instance for the device registry ##### -->
+                <image>
+                  <name>${docker.image.org-name}/hono-mongodb-test</name>
+                  <alias>mongo</alias>
+                  <build>
+                    <skip>${hono.mongodb.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${hono.mongodb.image.name}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/mongodb/init_db</directory>
+                            <outputDirectory>docker-entrypoint-initdb.d/</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${hono.mongodb.disabled}</skip>
+                    <ports>
+                      <port>+mongodb.ip:mongodb.port:${hono.mongodb.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/mongodb.port.properties</portPropertyFile>
+                    <env>
+                      <MONGO_INITDB_DATABASE>${hono.mongodb.database.name}</MONGO_INITDB_DATABASE>
+                    </env>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>${hono.mongodb.host}</alias>
+                    </network>
+                    <memorySwap>314572800</memorySwap>
+                    <memory>314572800</memory>
+                    <log>
+                      <prefix>MONGODB</prefix>
+                      <color>${log.color.hono-device-registry}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(waiting for connections on port).*</log>
+                    </wait>
+                  </run>
+                </image>
                 <!-- ##### Jaeger tracing component ##### -->
                 <image>
                   <name>${docker.image.org-name}/hono-jaeger-all-in-one-test</name>
@@ -370,7 +435,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.build.directory}/resources/deviceregistry</directory>
+                            <directory>${project.build.directory}/resources/${hono.deviceregistry.resources.folder}</directory>
                             <outputDirectory>etc/hono</outputDirectory>
                             <includes>
                               <include>*</include>
