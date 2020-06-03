@@ -68,6 +68,24 @@ title = "Release Notes"
   Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
   method has been removed.
 
+## 1.2.3
+
+### Fixes & Enhancements
+
+* The Device Connection service did return a 500 error code if no *last known gateway* could
+  be found found for a device ID. This has been fixed so that the service now returns a 404
+  in that case as specified by the Device Connection API.
+* The cache based Device Connection service implementation now applies a lifespan of 28 days
+  when setting/updating cache entries containing *last known gateway* information. This means
+  no global expiration configuration is needed anymore for the cache.
+
+### API Changes
+
+* The `org.eclipse.hono.client.DeviceRegistration` interface's *get* methods have been removed
+  because the Device Registration API does not define a corresponding operation.
+  Consequently, the C&C functionality of the Kerlink Lora provider which relied on the *get*
+  method has been removed.
+
 ## 1.2.2
 
 ### Fixes & Enhancements
