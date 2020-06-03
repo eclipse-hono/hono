@@ -89,7 +89,7 @@
                     <!-- databaseDirectory>/tmp/mongotest</databaseDirectory-->
                     <!-- optional, default is a new dir in java.io.tmpdir -->
 
-                    <logging>console</logging>
+                    <logging>none</logging>
                     <!-- optional (file|console|none), default console -->
 
                     <logFile>${project.build.directory}/myfile.log</logFile>

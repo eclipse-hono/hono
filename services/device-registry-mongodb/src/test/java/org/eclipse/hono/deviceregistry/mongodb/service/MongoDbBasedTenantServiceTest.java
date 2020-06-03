@@ -22,13 +22,16 @@ import org.eclipse.hono.service.tenant.TenantService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -41,9 +44,12 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
 
-    private MongoClient mongoClient;
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantServiceTest.class);
+
+    private final MongoDbBasedTenantsConfigProperties config = new MongoDbBasedTenantsConfigProperties();
     private MongoDbBasedTenantService tenantService;
     private Vertx vertx;
+    private MongoClient mongoClient;
 
     /**
      * Sets up static fixture.
@@ -52,28 +58,25 @@ class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
      * @throws IOException if the embedded mongo db could not be started on the available port.
      */
     @BeforeAll
-    public void setup(final VertxTestContext testContext) throws IOException {
+    public void startService(final VertxTestContext testContext) throws IOException {
 
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-tenants-test");
         tenantService = new MongoDbBasedTenantService(
                 vertx,
                 mongoClient,
-                new MongoDbBasedTenantsConfigProperties());
+                config);
         tenantService.start().onComplete(testContext.completing());
     }
 
     /**
-     * Cleans up fixture.
+     * Prints the test name.
      *
-     * @param testContext The test context to use for running asynchronous tests.
+     * @param testInfo Test case meta information.
      */
-    @AfterAll
-    public void finishTest(final VertxTestContext testContext) {
-        final Checkpoint shutdown = testContext.checkpoint(2);
-        tenantService.stop().onComplete(s -> shutdown.flag());
-        mongoClient.close();
-        vertx.close(s -> shutdown.flag());
+    @BeforeEach
+    public void setup(final TestInfo testInfo) {
+        LOG.info("running {}", testInfo.getDisplayName());
     }
 
     /**
@@ -84,19 +87,33 @@ class MongoDbBasedTenantServiceTest extends AbstractTenantServiceTest {
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
         mongoClient.removeDocuments(
-                new MongoDbBasedTenantsConfigProperties().getCollectionName(), new JsonObject(),
+                config.getCollectionName(),
+                new JsonObject(),
                 testContext.completing());
     }
 
+    /**
+     * Cleans up fixture.
+     *
+     * @param testContext The test context to use for running asynchronous tests.
+     */
+    @AfterAll
+    public void finishTest(final VertxTestContext testContext) {
 
+        mongoClient.close();
+        tenantService.stop()
+            .onComplete(s -> {
+                vertx.close(testContext.completing());
+            });
+    }
 
     @Override
     public TenantService getTenantService() {
-        return this.tenantService;
+        return tenantService;
     }
 
     @Override
     public TenantManagementService getTenantManagementService() {
-        return this.tenantService;
+        return tenantService;
     }
 }

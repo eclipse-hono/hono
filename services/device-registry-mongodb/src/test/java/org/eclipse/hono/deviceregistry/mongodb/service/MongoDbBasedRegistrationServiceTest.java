@@ -20,13 +20,18 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.registration.RegistrationServiceTests;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -39,6 +44,9 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTests {
 
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationServiceTest.class);
+
+    private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
     private MongoClient mongoClient;
     private MongoDbBasedRegistrationService registrationService;
     private Vertx vertx;
@@ -57,8 +65,31 @@ public class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTest
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                new MongoDbBasedRegistrationConfigProperties());
+                config);
         registrationService.start().onComplete(testContext.completing());
+    }
+
+    /**
+     * Prints the test name.
+     *
+     * @param testInfo Test case meta information.
+     */
+    @BeforeEach
+    public void setup(final TestInfo testInfo) {
+        LOG.info("running {}", testInfo.getDisplayName());
+    }
+
+    /**
+     * Cleans up the collection after tests.
+     *
+     * @param testContext The test context to use for running asynchronous tests.
+     */
+    @AfterEach
+    public void cleanCollection(final VertxTestContext testContext) {
+        mongoClient.removeDocuments(
+                config.getCollectionName(),
+                new JsonObject(),
+                testContext.completing());
     }
 
     /**
@@ -69,10 +100,9 @@ public class MongoDbBasedRegistrationServiceTest extends RegistrationServiceTest
     @AfterAll
     public void finishTest(final VertxTestContext testContext) {
 
-        final Checkpoint shutdown = testContext.checkpoint(2);
-        registrationService.stop().onComplete(s -> shutdown.flag());
         mongoClient.close();
-        vertx.close(s -> shutdown.flag());
+        registrationService.stop()
+            .onComplete(s -> vertx.close(testContext.completing()));
     }
 
     @Override

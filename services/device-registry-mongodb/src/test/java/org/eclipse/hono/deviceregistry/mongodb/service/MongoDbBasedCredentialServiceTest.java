@@ -25,8 +25,12 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -44,8 +48,12 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServiceTest {
 
-    private MongoClient mongoClient;
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialServiceTest.class);
+
     private final MongoDbBasedCredentialsConfigProperties credentialsServiceConfig = new MongoDbBasedCredentialsConfigProperties();
+    private final MongoDbBasedRegistrationConfigProperties registrationServiceConfig = new MongoDbBasedRegistrationConfigProperties();
+
+    private MongoClient mongoClient;
     private MongoDbBasedCredentialsService credentialsService;
     private MongoDbBasedRegistrationService registrationService;
     private MongoDbBasedDeviceBackend deviceBackendService;
@@ -60,6 +68,7 @@ public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServic
     @BeforeAll
     public void setup(final VertxTestContext testContext) throws IOException {
 
+        final Checkpoint started = testContext.checkpoint(2);
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
         credentialsService = new MongoDbBasedCredentialsService(
@@ -70,26 +79,20 @@ public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServic
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
-                new MongoDbBasedRegistrationConfigProperties());
-        credentialsService.start().onComplete(testContext.completing());
-        registrationService.start().onComplete(testContext.completing());
+                registrationServiceConfig);
         deviceBackendService = new MongoDbBasedDeviceBackend(this.registrationService, this.credentialsService);
+        credentialsService.start().onSuccess(ok -> started.flag());
+        registrationService.start().onSuccess(ok -> started.flag());
     }
 
     /**
-     * Cleans up fixture.
+     * Prints the test name.
      *
-     * @param testContext The test context to use for running asynchronous tests.
+     * @param testInfo Test case meta information.
      */
-    @AfterAll
-    public void finishTest(final VertxTestContext testContext) {
-
-        final Checkpoint shutdown = testContext.checkpoint(3);
-
-        credentialsService.stop().onComplete(s -> shutdown.flag());
-        registrationService.stop().onComplete(s -> shutdown.flag());
-        mongoClient.close();
-        vertx.close(s -> shutdown.flag());
+    @BeforeEach
+    public void setup(final TestInfo testInfo) {
+        LOG.info("running {}", testInfo.getDisplayName());
     }
 
     /**
@@ -99,8 +102,30 @@ public class MongoDbBasedCredentialServiceTest extends AbstractCredentialsServic
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        mongoClient.removeDocuments(credentialsServiceConfig.getCollectionName(), new JsonObject(),
-                testContext.completing());
+        final Checkpoint clean = testContext.checkpoint(2);
+        mongoClient.removeDocuments(
+                credentialsServiceConfig.getCollectionName(),
+                new JsonObject(),
+                testContext.succeeding(ok -> clean.flag()));
+        mongoClient.removeDocuments(
+                credentialsServiceConfig.getCollectionName(),
+                new JsonObject(),
+                testContext.succeeding(ok -> clean.flag()));
+    }
+
+    /**
+     * Shut down services.
+     *
+     * @param testContext The test context to use for running asynchronous tests.
+     */
+    @AfterAll
+    public void finishTest(final VertxTestContext testContext) {
+
+        final Checkpoint shutdown = testContext.checkpoint(3);
+        mongoClient.close();
+        credentialsService.stop().onComplete(s -> shutdown.flag());
+        registrationService.stop().onComplete(s -> shutdown.flag());
+        vertx.close(s -> shutdown.flag());
     }
 
     @Override
