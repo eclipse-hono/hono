@@ -26,11 +26,17 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
      */
     public static final int DEFAULT_MAX_AGE_SECONDS = 180;
 
+    /**
+     * The default limit of results returned by the service when searching for multiples devices.
+     */
+    public static final int DEFAULT_PAGE_LIMIT = 30;
+
     private String filename = getDefaultFileName();
     private boolean saveToFile = false;
     private boolean modificationEnabled = true;
     private boolean startEmpty = false;
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
+    private int defaultPageLimit = DEFAULT_PAGE_LIMIT;
 
     /**
      * Gets the path to the file that the registry should be persisted to periodically.
@@ -163,5 +169,33 @@ public abstract class AbstractFileBasedRegistryConfigProperties {
      */
     public final void setStartEmpty(final boolean flag) {
         this.startEmpty = flag;
+    }
+
+    /**
+     * Gets the default number of result returned by the service
+     * when searching for multiples devices.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_PAGE_LIMIT} 30.
+     *
+     * @return The limit of results.
+     */
+    public int getDefaultPageLimit() {
+        return defaultPageLimit;
+    }
+
+    /**
+     * Sets the default number of result returned by the service
+     * when searching for multiples devices.
+     * <p>
+     * The default value of this property is {@link #DEFAULT_PAGE_LIMIT} 30.
+     *
+     * @param defaultPageLimit the default limit to set.
+     * @throws IllegalArgumentException if page limit is &lt; 0.
+     */
+    public void setDefaultPageLimit(final int defaultPageLimit) {
+        if (defaultPageLimit < 0) {
+            throw new IllegalArgumentException("default page limit must be >= 0");
+        }
+        this.defaultPageLimit = defaultPageLimit;
     }
 }

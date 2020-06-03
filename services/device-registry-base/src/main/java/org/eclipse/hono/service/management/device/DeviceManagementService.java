@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service.management.device;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.hono.service.management.Id;
@@ -106,4 +108,28 @@ public interface DeviceManagementService {
      *      Device Registry Management API - Delete Device Registration</a>
      */
     Future<Result<Void>> deleteDevice(String tenantId, String deviceId, Optional<String> resourceVersion, Span span);
+
+    /**
+     * Gets all devices registration data by tenant ID. Optionally searchable with filters.
+     *
+     * @param tenantId The tenant the devices belongs to.
+     * @param limit The maximum number of result to return.
+     * @param offset The number of results to skip before applying the limit.
+     * @param sorting A Map entry containing the JSON Path of a key to sort by, and the sorting method.
+     *                If the sorting method is null, a default sort will be applied.
+     * @param filters a Map containing the JSON Path of a key to filter by, and the value to filter with.
+     *                If a filter key is given with a null value, it will be ignored.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *          An implementation should log (error) events on this span and it may set tags and use this span as the
+     *          parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation.
+     *         The <em>status code</em> is set as specified in the
+     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant">
+     *         Device Registry Management API - Search devices for a tenant </a>
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant">
+     *      Device Registry Management API - Search devices for a tenant</a>
+     */
+    Future<OperationResult<List<DeviceWithId>>> searchDevices(String tenantId, Optional<Integer> limit, Optional<Integer> offset,
+                                                  Optional<Map.Entry> sorting, Optional<Map> filters, Span span);
 }

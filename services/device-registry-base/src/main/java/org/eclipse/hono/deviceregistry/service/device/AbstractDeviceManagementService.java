@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.service.device;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +24,7 @@ import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -91,6 +94,22 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     protected abstract Future<Result<Void>> processDeleteDevice(DeviceKey key, Optional<String> resourceVersion, Span span);
 
     /**
+     * Delete a device with a specified key.
+     *
+     * @param tenantId The tenantID.
+     * @param limit The maximum number of result to return.
+     * @param offset The number of results to skip before applying the limit.
+     * @param sorting A Map entry containing the JSON Path of a key to sort by, and the sorting method.
+     *                If the sorting method is null, a default sort will be applied.
+     * @param filters a Map containing the JSON Path of a key to filter by, and the value to filter with.
+     *                If a filter key is given with a null value, it will be ignored.
+     * @param span The active OpenTracing span for this operation.
+     * @return A future indicating the outcome of the operation.
+     */
+    protected abstract Future<OperationResult<List<DeviceWithId>>> processSearchDevices(String tenantId, Optional<Integer> limit, Optional<Integer> offset,
+                                                                                  Optional<Map.Entry> sorting, Optional<Map> filters, Span span);
+
+    /**
      * Generates a unique device identifier for a given tenant. A default implementation generates a random UUID value.
      *
      * @param tenantId The tenant identifier.
@@ -156,5 +175,17 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                         ? Future.succeededFuture(Result.from(result.getStatus()))
                         : processDeleteDevice(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, span));
 
+    }
+
+    @Override
+    public Future<OperationResult<List<DeviceWithId>>> searchDevices(final String tenantId, final Optional<Integer> limit, final Optional<Integer> offset, final Optional<Map.Entry> sorting, final Optional<Map> filters, final Span span) {
+
+        Objects.requireNonNull(tenantId);
+
+        return this.tenantInformationService
+                .tenantExists(tenantId, span)
+                .compose(result -> result.isError()
+                        ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
+                        : processSearchDevices(tenantId, limit, offset, sorting, filters, span));
     }
 }

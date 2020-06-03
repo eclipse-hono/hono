@@ -12,14 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.file;
 
+import java.lang.reflect.Array;
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +32,7 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -519,6 +516,35 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
     private ConcurrentMap<String, Versioned<Device>> getDevicesForTenant(final String tenantId) {
         return identities.computeIfAbsent(tenantId, id -> new ConcurrentHashMap<>());
     }
+
+    @Override
+    public Future<OperationResult<List<DeviceWithId>>> searchDevices(final String tenantId, final Optional<Integer> limit, final Optional<Integer> offset,
+                                                               final Optional<Entry> sorting, final Optional<Map> filters, final Span span) {
+
+        final int actualLimit = limit.orElse(config.getDefaultPageLimit());
+        final int actualOffset = offset.orElse(0);
+
+        return Future.succeededFuture(doSearchDevices(tenantId, actualLimit, actualOffset));
+    }
+
+    private OperationResult<List<DeviceWithId>> doSearchDevices(final String tenantId, final int limit, final int offset) {
+
+        final Set allDevicesIds = getDevicesForTenant(tenantId).entrySet();
+        final List<DeviceWithId> devicesList = new ArrayList<>();
+
+        for (int i = offset; i < limit + offset; i++ ) {
+            allDevicesIds.toArray()
+            final DeviceWithId withId = DeviceWithId.fromDevice(allDevices);
+
+            devicesList.add(withId);
+        }
+
+        return OperationResult.ok(HttpURLConnection.HTTP_OK,
+                devicesList,
+                Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
+                null);
+    }
+
 
     /**
      * Removes all devices from the registry.
