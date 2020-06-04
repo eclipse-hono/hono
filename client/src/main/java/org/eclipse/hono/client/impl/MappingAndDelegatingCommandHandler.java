@@ -93,6 +93,7 @@ public class MappingAndDelegatingCommandHandler {
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
 
         this.delegatedCommandSenderFactory = new CachingClientFactory<>(connection.getVertx(), s -> s.isOpen());
+        this.connection.addDisconnectListener(con -> delegatedCommandSenderFactory.clearState());
     }
 
     /**
@@ -279,7 +280,9 @@ public class MappingAndDelegatingCommandHandler {
     private Future<DelegatedCommandSender> getOrCreateDelegatedCommandSender(final String protocolAdapterInstanceId) {
         return connection.executeOnContext(result -> {
             delegatedCommandSenderFactory.getOrCreateClient(protocolAdapterInstanceId,
-                    () -> DelegatedCommandSenderImpl.create(connection, protocolAdapterInstanceId, null), result);
+                    () -> DelegatedCommandSenderImpl.create(connection, protocolAdapterInstanceId,
+                            onSenderClosed -> delegatedCommandSenderFactory.removeClient(protocolAdapterInstanceId)),
+                    result);
         });
     }
 
