@@ -18,6 +18,7 @@ import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -64,6 +65,8 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * The key that is used to put the if-Match ETags values to the RoutingContext.
      */
     protected static final String KEY_RESOURCE_VERSION = "KEY_RESOURCE_VERSION";
+
+    private static final Pattern PATTERN_ANY_STRING = Pattern.compile(".*");
 
     /**
      * The configuration properties for this endpoint.
@@ -224,31 +227,38 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @throws NullPointerException If ctx or paramName are {@code null}.
      */
     protected final String getRequestIdParam(final String paramName, final RoutingContext ctx, final Span span, final boolean optional) {
-        final String value = ctx.request().getParam(paramName);
-        final String regex;
 
-        switch (paramName) {
-            case PARAM_TENANT_ID:
-                regex = config.getTenantIdRegex();
-                break;
-            case PARAM_DEVICE_ID:
-                regex = config.getDeviceIdRegex();
-                break;
-            default:
-                regex = ".+";
-        }
+        final String value = ctx.request().getParam(paramName);
 
         if (value != null) {
-            if (value.matches(regex)) {
+
+            final Pattern pattern;
+            final boolean matches;
+            switch (paramName) {
+            case PARAM_TENANT_ID:
+                pattern = config.getTenantIdPattern();
+                matches = pattern.matcher(value).matches();
+                break;
+            case PARAM_DEVICE_ID:
+                pattern = config.getDeviceIdPattern();
+                matches = pattern.matcher(value).matches();
+                break;
+            default:
+                pattern = PATTERN_ANY_STRING;
+                matches = true;
+            }
+
+            if (matches) {
                 span.setTag(paramName, value);
                 return value;
             } else {
-                final String msg = String.format("%s does not match allowed pattern: %s",
-                        value, regex);
+                final String msg = String.format("parameter [name: %s, value: %s] does not match allowed pattern: %s",
+                        paramName, value, pattern.pattern());
                 HttpUtils.badRequest(ctx, msg);
                 finishSpanWithError(span, HttpURLConnection.HTTP_BAD_REQUEST, msg);
                 return null;
             }
+
         } else if (!optional) {
             final String msg = String.format("Missing request parameter: %s", paramName);
             HttpUtils.badRequest(ctx, msg);

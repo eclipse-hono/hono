@@ -19,6 +19,8 @@ import java.util.Optional;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -597,11 +599,14 @@ public final class CrudHttpClient {
     }
 
     private static ServiceInvocationException newUnexpectedResponseStatusException(final int statusCode) {
-        if (statusCode >= 400 && statusCode < 600) {
-            return new ServiceInvocationException(statusCode);
+        if (statusCode >= 400 && statusCode < 500) {
+            return new ClientErrorException(statusCode);
+        } else if (statusCode >= 500 && statusCode < 600) {
+            return new ServerErrorException(statusCode);
+        } else {
+            return new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
+                    "Unexpected response status " + statusCode);
         }
-        return new ServiceInvocationException(HttpURLConnection.HTTP_PRECON_FAILED,
-                "Unexpected response status " + statusCode);
     }
 
     @Override

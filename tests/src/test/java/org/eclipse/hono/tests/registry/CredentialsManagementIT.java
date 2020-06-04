@@ -42,7 +42,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import io.vertx.core.Vertx;
@@ -62,6 +65,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class CredentialsManagementIT {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CredentialsManagementIT.class);
     private static final String HTTP_HEADER_ETAG = HttpHeaders.ETAG.toString();
 
     private static final String TENANT = Constants.DEFAULT_TENANT;
@@ -98,10 +102,12 @@ public class CredentialsManagementIT {
      * Sets up the fixture.
      *
      * @param ctx The test context.
+     * @param testInfo The test meta data.
      */
     @BeforeEach
-    public void setUp(final VertxTestContext ctx) {
+    public void setUp(final VertxTestContext ctx, final TestInfo testInfo) {
 
+        LOG.info("running test: {}", testInfo.getDisplayName());
         deviceId = UUID.randomUUID().toString();
         authId = getRandomAuthId(TEST_AUTH_ID);
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);

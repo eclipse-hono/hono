@@ -22,10 +22,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -38,6 +38,8 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.net.UrlEscapers;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
@@ -104,6 +106,58 @@ public final class DeviceRegistryHttpClient {
         this.httpClient = new CrudHttpClient(vertx, host, port);
     }
 
+    private static String credentialsByDeviceUri(final String tenant, final String deviceId) {
+        return String.format(
+                TEMPLATE_URI_CREDENTIALS_BY_DEVICE,
+                Optional.ofNullable(tenant)
+                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
+                    .orElse(null),
+                Optional.ofNullable(deviceId)
+                    .map(d -> UrlEscapers.urlPathSegmentEscaper().escape(d))
+                    .orElse(null));
+    }
+
+    private static String credentialsInstanceUri(final String tenant, final String authId, final String type) {
+        return String.format(
+                TEMPLATE_URI_CREDENTIALS_INSTANCE,
+                Optional.ofNullable(tenant)
+                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
+                    .orElse(null),
+                Optional.ofNullable(authId)
+                    .map(a -> UrlEscapers.urlPathSegmentEscaper().escape(a))
+                    .orElse(null),
+                Optional.ofNullable(type)
+                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
+                    .orElse(null));
+    }
+
+    private static String tenantInstanceUri(final String tenant) {
+        return String.format(
+                TEMPLATE_URI_TENANT_INSTANCE,
+                Optional.ofNullable(tenant)
+                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
+                    .orElse(null));
+    }
+
+    private static String registrationInstanceUri(final String tenant, final String deviceId) {
+        return String.format(
+                TEMPLATE_URI_REGISTRATION_INSTANCE,
+                Optional.ofNullable(tenant)
+                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
+                    .orElse(null),
+                Optional.ofNullable(deviceId)
+                    .map(d -> UrlEscapers.urlPathSegmentEscaper().escape(d))
+                    .orElse(null));
+    }
+
+    private static String registrationWithoutIdUri(final String tenant) {
+        return String.format(
+                TEMPLATE_URI_REGISTRATION_WITHOUT_ID,
+                Optional.ofNullable(tenant)
+                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
+                    .orElse(null));
+    }
+
     // tenant management
 
     /**
@@ -165,7 +219,7 @@ public final class DeviceRegistryHttpClient {
     public Future<MultiMap> addTenant(final String tenantId, final Tenant requestPayload, final String contentType,
             final int expectedStatusCode) {
 
-        final String uri = String.format("%s/%s", URI_ADD_TENANT, tenantId);
+        final String uri = tenantInstanceUri(tenantId);
         final JsonObject payload = JsonObject.mapFrom(requestPayload);
         return httpClient.create(uri, payload, contentType,
                 response -> response.statusCode() == expectedStatusCode, true);
@@ -196,7 +250,7 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<Buffer> getTenant(final String tenantId, final int expectedStatusCode) {
 
-        final String uri = String.format(TEMPLATE_URI_TENANT_INSTANCE, tenantId);
+        final String uri = tenantInstanceUri(tenantId);
         return httpClient.get(uri, status -> status == expectedStatusCode);
     }
 
@@ -212,7 +266,7 @@ public final class DeviceRegistryHttpClient {
     public Future<MultiMap> updateTenant(final String tenantId, final Tenant requestPayload,
             final int expectedStatusCode) {
 
-        final String uri = String.format(TEMPLATE_URI_TENANT_INSTANCE, tenantId);
+        final String uri = tenantInstanceUri(tenantId);
         final JsonObject payload = JsonObject.mapFrom(requestPayload);
         return httpClient.update(uri, payload, status -> status == expectedStatusCode);
     }
@@ -242,7 +296,7 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<Void> removeTenant(final String tenantId, final int expectedStatusCode) {
 
-        final String uri = String.format(TEMPLATE_URI_TENANT_INSTANCE, tenantId);
+        final String uri = tenantInstanceUri(tenantId);
         return httpClient.delete(uri, status -> status == expectedStatusCode);
     }
 
@@ -328,11 +382,9 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatus) {
 
         Objects.requireNonNull(tenantId);
-        String uri = String.format(TEMPLATE_URI_REGISTRATION_WITHOUT_ID, tenantId);
-
-        if (deviceId != null) {
-            uri = String.format(TEMPLATE_URI_REGISTRATION_INSTANCE, tenantId, deviceId);
-        }
+        final String uri = Optional.ofNullable(deviceId)
+                .map(id -> registrationInstanceUri(tenantId, id))
+                .orElse(registrationWithoutIdUri(tenantId));
         return httpClient.create(uri, JsonObject.mapFrom(device), contentType,
                 response -> response.statusCode() == expectedStatus, true);
     }
@@ -375,7 +427,7 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatus) {
 
         Objects.requireNonNull(tenantId);
-        final String requestUri = String.format(TEMPLATE_URI_REGISTRATION_INSTANCE, tenantId, deviceId);
+        final String requestUri = registrationInstanceUri(tenantId, deviceId);
         return httpClient.update(requestUri, data, contentType, status -> status == expectedStatus);
     }
 
@@ -391,7 +443,7 @@ public final class DeviceRegistryHttpClient {
     public Future<Buffer> getRegistrationInfo(final String tenantId, final String deviceId) {
 
         Objects.requireNonNull(tenantId);
-        final String requestUri = String.format(TEMPLATE_URI_REGISTRATION_INSTANCE, tenantId, deviceId);
+        final String requestUri = registrationInstanceUri(tenantId, deviceId);
         return httpClient.get(requestUri, status -> status == HttpURLConnection.HTTP_OK);
     }
 
@@ -407,7 +459,7 @@ public final class DeviceRegistryHttpClient {
     public Future<Void> deregisterDevice(final String tenantId, final String deviceId) {
 
         Objects.requireNonNull(tenantId);
-        final String requestUri = String.format(TEMPLATE_URI_REGISTRATION_INSTANCE, tenantId, deviceId);
+        final String requestUri = registrationInstanceUri(tenantId, deviceId);
         return httpClient.delete(requestUri, status -> status == HttpURLConnection.HTTP_NO_CONTENT);
     }
 
@@ -471,7 +523,7 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, tenantId, deviceId);
+        final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
         return httpClient.get(uri, response -> response == HttpURLConnection.HTTP_OK)
                 .compose(body -> {
@@ -505,7 +557,7 @@ public final class DeviceRegistryHttpClient {
     public Future<Buffer> getCredentials(final String tenantId, final String deviceId) {
 
         Objects.requireNonNull(tenantId);
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, tenantId, deviceId);
+        final String uri = credentialsByDeviceUri(tenantId, deviceId);
         return httpClient.get(uri, status -> status == HttpURLConnection.HTTP_OK);
     }
 
@@ -525,7 +577,7 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_INSTANCE, tenantId, authId, type);
+        final String uri = credentialsInstanceUri(tenantId, authId, type);
         return httpClient.get(uri, status -> status == expectedStatusCode);
     }
 
@@ -569,7 +621,7 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, tenantId, deviceId);
+        final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
         final MultiMap headers = MultiMap.caseInsensitiveMultiMap()
                 .add(HttpHeaders.IF_MATCH, version)
@@ -652,7 +704,7 @@ public final class DeviceRegistryHttpClient {
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
-        final String uri = String.format(TEMPLATE_URI_CREDENTIALS_BY_DEVICE, tenantId, deviceId);
+        final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
         return httpClient.update(uri, payload, contentType, status -> status == expectedStatusCode, true);
     }

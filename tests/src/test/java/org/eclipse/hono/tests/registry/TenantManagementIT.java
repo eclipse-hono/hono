@@ -81,7 +81,7 @@ public class TenantManagementIT {
      */
     @BeforeEach
     public void setUp(final TestInfo testInfo) {
-        LOG.debug("running test: {}", testInfo.getDisplayName());
+        LOG.info("running test: {}", testInfo.getDisplayName());
         tenantId = TENANT_PREFIX + "-" + UUID.randomUUID();
     }
 
@@ -185,7 +185,7 @@ public class TenantManagementIT {
     @Test
     public void testAddTenantFailsWithInvalidTenantId(final VertxTestContext context) {
 
-        registry.addTenant("tenantid$", null, HttpURLConnection.HTTP_BAD_REQUEST)
+        registry.addTenant("invalid tenantid$", null, HttpURLConnection.HTTP_BAD_REQUEST)
             .onComplete(context.completing());
     }
 

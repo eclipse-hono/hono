@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
@@ -30,7 +31,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -46,6 +50,8 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class DeviceManagementIT {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DeviceManagementIT.class);
 
     private static final String TENANT = Constants.DEFAULT_TENANT;
 
@@ -68,9 +74,12 @@ public class DeviceManagementIT {
 
     /**
      * Sets up the fixture.
+     *
+     * @param testInfo Meta information about the currently running test case.
      */
     @BeforeEach
-    public void setUp() {
+    public void setUp(final TestInfo testInfo) {
+        LOG.info("running {}", testInfo.getDisplayName());
         deviceId = UUID.randomUUID().toString();
     }
 
@@ -401,12 +410,26 @@ public class DeviceManagementIT {
     @Test
     public void testAddDeviceFailsForInvalidDeviceId(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
+        registry.registerDevice(TENANT, "device ID With spaces and $pecial chars!", null)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                ctx.completeNow();
+            }));
+    }
 
-        registry.registerDevice(TENANT, "device ID With spaces and $pecial chars!", null).onComplete(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
-            ctx.completeNow();
-        }));
+    /**
+     * Verifies that a request to create a request with non valid name fails fails.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAddDeviceFailsForInvalidTenantId(final VertxTestContext ctx) {
+
+        registry.registerDevice("tenant ID With spaces and $pecial chars!", deviceId, null)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                ctx.completeNow();
+            }));
     }
 
     private static void assertRegistrationInformation(

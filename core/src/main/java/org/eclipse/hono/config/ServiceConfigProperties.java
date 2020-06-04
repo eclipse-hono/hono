@@ -14,6 +14,7 @@
 package org.eclipse.hono.config;
 
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -42,18 +43,6 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
 
-    /**
-     * The regexp to use to validate device IDs.
-     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_REGEX}
-     */
-    private String deviceIdRegex = RegistryManagementConstants.DEFAULT_DEVICE_ID_REGEX;
-
-    /**
-     * The regexp to use to validate tenant IDs.
-     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_REGEX}
-     */
-    private String tenantIdRegex = RegistryManagementConstants.DEFAULT_TENANT_ID_REGEX;
-
     private boolean singleTenant = false;
     private boolean networkDebugLogging = false;
     private boolean waitForDownstreamConnection = false;
@@ -61,6 +50,8 @@ public class ServiceConfigProperties extends ServerConfig {
     private int receiverLinkCredit = DEFAULT_RECEIVER_LINK_CREDITS;
     private String corsAllowedOrigin = "*";
     private long sendTimeOutInMs = DEFAULT_SEND_TIMEOUT_IN_MS;
+    private Pattern tenantIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_TENANT_ID_REGEX);
+    private Pattern deviceIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_DEVICE_ID_REGEX);
 
     /**
      * Sets the maximum size of a message payload this server accepts from clients.
@@ -262,44 +253,50 @@ public class ServiceConfigProperties extends ServerConfig {
     }
 
     /**
-     * Gets the regular expression to use to validate device IDs.
+     * Gets the pattern defining valid device identifiers.
      * <p>
+     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_REGEX}.
      *
-     * @return The regular expression as a string.
+     * @return The pattern.
      */
-    public final String getDeviceIdRegex() {
-        return deviceIdRegex;
+    public final Pattern getDeviceIdPattern() {
+        return deviceIdPattern;
     }
 
     /**
-     * Sets the regular expression to use to validate device IDs.
+     * Sets the regular expression defining valid device identifiers.
      * <p>
-     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_REGEX}
+     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_REGEX}
      *
-     * @param regex A string containing the regular expression.
+     * @param regex The regular expression.
+     * @throws NullPointerException if regex is {@code null}.
+     * @throws java.util.regex.PatternSyntaxException if regex is not a valid regular expression.
      */
-    public void setDeviceIdRegex(final String regex) {
-        this.deviceIdRegex = regex;
+    public void setDeviceIdPattern(final String regex) {
+        this.deviceIdPattern = Pattern.compile(Objects.requireNonNull(regex));
     }
 
     /**
-     * Gets the regular expression to use to validate tenant IDs.
+     * Gets the pattern defining valid tenant identifiers.
      * <p>
+     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_REGEX}.
      *
-     * @return The regular expression as a string.
+     * @return The pattern.
      */
-    public final String getTenantIdRegex() {
-        return tenantIdRegex;
+    public final Pattern getTenantIdPattern() {
+        return tenantIdPattern;
     }
 
     /**
-     * Sets the regular expression to use to validate tenant IDs.
+     * Sets the regular expression defining valid tenant identifiers.
      * <p>
-     * The default value is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_REGEX}
+     * The default value of this property is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_REGEX}
      *
-     * @param regex A string containing the regular expression.
+     * @param regex The regular expression.
+     * @throws NullPointerException if regex is {@code null}.
+     * @throws java.util.regex.PatternSyntaxException if regex is not a valid regular expression.
      */
-    public void setTenantIdRegex(final String regex) {
-        this.tenantIdRegex = regex;
+    public void setTenantIdPattern(final String regex) {
+        this.tenantIdPattern = Pattern.compile(Objects.requireNonNull(regex));
     }
 }
