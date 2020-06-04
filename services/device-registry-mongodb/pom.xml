@@ -80,7 +80,7 @@
                     <randomPort>true</randomPort>
                     <!-- optional, default is false, if true allocates a random port and overrides embedmongo.port -->
 
-                    <version>4.0.18</version>
+                    <version>${mongodb.version}</version>
                     <!-- optional, default 2.2.1 -->
 
                     <features>ONLY_WITH_SSL, ONLY_WINDOWS_2008_SERVER, NO_HTTP_INTERFACE_ARG</features>
