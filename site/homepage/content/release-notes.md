@@ -73,7 +73,7 @@ title = "Release Notes"
 ### Fixes & Enhancements
 
 * The Device Connection service did return a 500 error code if no *last known gateway* could
-  be found found for a device ID. This has been fixed so that the service now returns a 404
+  be found for a device ID. This has been fixed so that the service now returns a 404
   in that case as specified by the Device Connection API.
 * The cache based Device Connection service implementation now applies a lifespan of 28 days
   when setting/updating cache entries containing *last known gateway* information. This means
