@@ -183,7 +183,6 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
     @Override
     CommandHandler createCommandHandler(final Device device, final Vertx vertx, final int commandAckTimeout) {
         commandHandler = super.createCommandHandler(device, vertx, commandAckTimeout);
-        ;
         return commandHandler;
     }
 

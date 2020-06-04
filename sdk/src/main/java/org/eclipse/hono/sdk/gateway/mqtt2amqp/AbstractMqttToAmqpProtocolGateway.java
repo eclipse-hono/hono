@@ -364,7 +364,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
 
         authAttempt
                 .compose(this::connectGatewayToAmqpAdapter)
-                .setHandler(result -> {
+                .onComplete(result -> {
                     if (result.succeeded()) {
                         registerHandlers(endpoint, authAttempt.result());
                         log.debug("connection accepted from {}", authAttempt.result().toString());
@@ -514,7 +514,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
 
         onPublishedMessage(ctx)
                 .compose(downstreamMessage -> uploadMessage(downstreamMessage, ctx))
-                .setHandler(processing -> {
+                .onComplete(processing -> {
                     if (processing.succeeded()) {
                         onUploadSuccess(ctx);
                         onMessageSent(ctx);
@@ -677,7 +677,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
         });
 
         // wait for all futures to complete before sending SUBACK
-        CompositeFuture.join(subscriptionOutcome).setHandler(v -> {
+        CompositeFuture.join(subscriptionOutcome).onComplete(v -> {
 
             // return a status code for each topic filter contained in the SUBSCRIBE packet
             final List<MqttQoS> grantedQosLevels = subscriptionOutcome.stream()
