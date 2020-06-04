@@ -108,9 +108,7 @@ public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClien
 
     @Override
     protected void onDisconnect() {
-        if (adapterSpecificConsumer != null) {
-            connection.closeAndFree(adapterSpecificConsumer, v -> {});
-        }
+        adapterSpecificConsumer = null;
         mappingAndDelegatingCommandConsumerFactory.clearState();
     }
 

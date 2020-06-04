@@ -223,20 +223,20 @@ public class DelegatedCommandSenderImpl extends AbstractSender implements Delega
      *
      * @param con The connection to the AMQP network.
      * @param adapterInstanceId The protocol adapter instance id.
-     * @param closeHook A handler to invoke if the peer closes the link unexpectedly (may be {@code null}).
+     * @param remoteCloseHook A handler to invoke if the peer closes the link unexpectedly (may be {@code null}).
      * @return A future indicating the result of the creation attempt.
      * @throws NullPointerException if con or adapterInstanceId is {@code null}.
      */
     public static Future<DelegatedCommandSender> create(
             final HonoConnection con,
             final String adapterInstanceId,
-            final Handler<String> closeHook) {
+            final Handler<String> remoteCloseHook) {
 
         Objects.requireNonNull(con);
         Objects.requireNonNull(adapterInstanceId);
 
         final String targetAddress = getTargetAddress(adapterInstanceId);
-        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, closeHook)
+        return con.createSender(targetAddress, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
                 .map(sender -> new DelegatedCommandSenderImpl(con, sender));
     }
 
