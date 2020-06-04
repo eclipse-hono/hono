@@ -52,7 +52,7 @@ import io.vertx.core.json.JsonObject;
  * <a href=
  * "https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-mqtt-support#sending-device-to-cloud-messages">Device-to-cloud
  * messages</a> are sent as events (if published with QoS 1) or telemetry messages (if published with QoS 0).
- * 
+ *
  * Received one-way commands are forwarded to the device as
  * <a href= "https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-mqtt-support#receiving-cloud-to-device-messages">
  * cloud-to-device messages</a>. Received request/response commands are forwarded as
@@ -316,7 +316,7 @@ public class AzureIotHubMqttGateway extends AbstractMqttToAmqpProtocolGateway {
 
     /**
      * Returns the event topic for the given device id.
-     * 
+     *
      * @param deviceId The id of the device that send messages to this topic.
      * @return The topic without a property bag.
      */

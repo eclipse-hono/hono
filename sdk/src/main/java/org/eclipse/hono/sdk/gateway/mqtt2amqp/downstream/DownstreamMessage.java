@@ -29,7 +29,7 @@ public abstract class DownstreamMessage {
 
     /**
      * Creates an instance.
-     * 
+     *
      * @param payload The payload to be used.
      * @throws NullPointerException if payload is {@code null}.
      */

@@ -74,7 +74,7 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
 
     /**
      * Checks if the startup completed.
-     * 
+     *
      * @return {@code true} if {@link AbstractMqttToAmqpProtocolGateway#afterStartup(Promise)} has been invoked.
      */
     public boolean isStartupComplete() {
@@ -102,7 +102,7 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
 
     /**
      * Return the command handler for the test device.
-     * 
+     *
      * @return The command handler that has been created during the establishment of the device connection.
      */
     public CommandHandler getCommandHandler() {

@@ -44,7 +44,7 @@ public class MqttDownstreamContext {
 
     /**
      * Creates a new context for a published message.
-     * 
+     *
      * @param message The published MQTT message.
      * @param deviceEndpoint The endpoint representing the device that has published the message.
      * @param authenticatedDevice The authenticated device identity.
@@ -74,7 +74,7 @@ public class MqttDownstreamContext {
 
     /**
      * Gets the MQTT endpoint over which the message has been received.
-     * 
+     *
      * @return The endpoint.
      */
     MqttEndpoint deviceEndpoint() {
@@ -83,7 +83,7 @@ public class MqttDownstreamContext {
 
     /**
      * Gets the identity of the authenticated device that has published the message.
-     * 
+     *
      * @return The identity or {@code null} if the device has not been authenticated.
      */
     public Device authenticatedDevice() {
@@ -92,7 +92,7 @@ public class MqttDownstreamContext {
 
     /**
      * Gets the topic that the message has been published to.
-     * 
+     *
      * @return The topic.
      */
     public String topic() {
@@ -101,7 +101,7 @@ public class MqttDownstreamContext {
 
     /**
      * Gets the QoS level of the published MQTT message.
-     * 
+     *
      * @return The QoS.
      */
     public MqttQoS qosLevel() {

@@ -25,7 +25,7 @@ public class DemoDeviceConfiguration {
 
     /**
      * Gets the tenant to which the device belongs.
-     * 
+     *
      * @return The tenant id.
      */
     public String getTenantId() {
@@ -34,7 +34,7 @@ public class DemoDeviceConfiguration {
 
     /**
      * Sets the tenant to which the device belongs.
-     * 
+     *
      * @param tenantId The tenant id.
      */
     public void setTenantId(final String tenantId) {
@@ -43,7 +43,7 @@ public class DemoDeviceConfiguration {
 
     /**
      * Sets the device id.
-     * 
+     *
      * @return The device id.
      */
     public String getDeviceId() {
@@ -61,7 +61,7 @@ public class DemoDeviceConfiguration {
 
     /**
      * Gets the allowed username for the device.
-     * 
+     *
      * @return The username.
      */
     public String getUsername() {
@@ -70,7 +70,7 @@ public class DemoDeviceConfiguration {
 
     /**
      * Sets the allowed username for the device.
-     * 
+     *
      * @param username The username.
      */
     public void setUsername(final String username) {
@@ -79,7 +79,7 @@ public class DemoDeviceConfiguration {
 
     /**
      * Gets the allowed password for the device.
-     * 
+     *
      * @return Sets the allowed username for the device..
      */
     public String getPassword() {
@@ -88,7 +88,7 @@ public class DemoDeviceConfiguration {
 
     /**
      * Sets the allowed password for the device.
-     * 
+     *
      * @param password The password.
      */
     public void setPassword(final String password) {

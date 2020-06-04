@@ -61,7 +61,7 @@ public class MqttCommandContext {
 
     /**
      * Indicates if the message represents a request/response or an one-way command.
-     * 
+     *
      * @return {@code true} if a response is expected.
      */
     public boolean isRequestResponseCommand() {
@@ -70,7 +70,7 @@ public class MqttCommandContext {
 
     /**
      * Returns the subject of the command message.
-     * 
+     *
      * @return The subject.
      */
     public String getSubject() {
@@ -79,7 +79,7 @@ public class MqttCommandContext {
 
     /**
      * Returns the content type of the payload if this information is available from the message.
-     * 
+     *
      * @return The content type or {@code null}.
      */
     public String getContentType() {
@@ -88,7 +88,7 @@ public class MqttCommandContext {
 
     /**
      * Returns the correlation id of the message.
-     * 
+     *
      * @return The correlation id.
      */
     public Object getCorrelationId() {
@@ -124,7 +124,7 @@ public class MqttCommandContext {
 
     /**
      * Returns the received payload.
-     * 
+     *
      * @return The payload - not {@code null}.
      */
     public Buffer getPayload() {

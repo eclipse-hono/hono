@@ -32,7 +32,7 @@ public class Command {
 
     /**
      * Creates an instance.
-     * 
+     *
      * @param topic The topic on which the command should be sent to the device.
      * @param topicFilter The topic filter to which the device has subscribed.
      * @param payload The payload of the command.
@@ -49,7 +49,7 @@ public class Command {
 
     /**
      * Gets the topic on which the command should be sent to the device.
-     * 
+     *
      * @return The topic.
      */
     public String getTopic() {
@@ -58,7 +58,7 @@ public class Command {
 
     /**
      * Returns the topic filter to which the device has subscribed.
-     * 
+     *
      * @return The topic filter.
      */
     public String getTopicFilter() {
@@ -67,7 +67,7 @@ public class Command {
 
     /**
      * Returns the payload to be published to the device.
-     * 
+     *
      * @return The payload.
      */
     public Buffer getPayload() {

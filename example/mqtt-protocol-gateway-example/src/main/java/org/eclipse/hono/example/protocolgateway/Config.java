@@ -37,7 +37,7 @@ public class Config {
      * <p>
      * Sets the TLS protocols from {@link #enabledProtocols} as the enabled secure protocols of the MQTT server if not
      * set explicitly.
-     * 
+     *
      * @return The properties.
      */
     @Bean

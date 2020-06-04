@@ -52,7 +52,7 @@ public class RequestId {
 
     /**
      * Gets the correlation-id that has been decoded from a request-id.
-     * 
+     *
      * @return The correlation-id.
      */
     public String getCorrelationId() {
@@ -61,7 +61,7 @@ public class RequestId {
 
     /**
      * Decodes the given request-id back into separate reply-id and correlation-id.
-     * 
+     *
      * @param requestId The encoded request-id.
      * @return The object containing reply-id and correlation-id.
      * @throws IllegalArgumentException if parsing or decoding fails.
@@ -82,7 +82,7 @@ public class RequestId {
 
     /**
      * Combines the reply-id (which is part of the reply-to address) with the correlation-id into a single string.
-     * 
+     *
      * @param replyTo the reply-to of the command message.
      * @param correlationId the correlation-id of the command message.
      * @return the encoded request-id.

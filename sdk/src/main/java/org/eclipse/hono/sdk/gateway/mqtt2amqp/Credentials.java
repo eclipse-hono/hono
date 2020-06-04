@@ -25,7 +25,7 @@ public class Credentials {
 
     /**
      * Creates an instance.
-     * 
+     *
      * @param username The user name.
      * @param password The password.
      * @throws NullPointerException if any of the parameters is {@code null}.
@@ -40,7 +40,7 @@ public class Credentials {
 
     /**
      * Returns the username.
-     * 
+     *
      * @return The username - not {@code null}.
      */
     public String getUsername() {
@@ -49,7 +49,7 @@ public class Credentials {
 
     /**
      * Returns the password.
-     * 
+     *
      * @return The password - not {@code null}.
      */
     public String getPassword() {

@@ -57,7 +57,7 @@ public final class ProtocolGatewayTestHelper {
     /**
      * Creates a mocked MQTT endpoint and connects it to the given protocol gateway by calling the endpoint handler.
      * Authenticates with the given username and password.
-     * 
+     *
      * @param gateway The protocol gateway to connect to.
      * @param username The username.
      * @param password The password.
@@ -127,11 +127,11 @@ public final class ProtocolGatewayTestHelper {
     /**
      * Simulates sending a MQTT subscribe message by invoking the subscribe handler, that has been set on the given mock
      * endpoint during the connection establishment in one of the "connect..." methods in this class.
-     * 
+     *
      * @param endpoint The connected endpoint mock.
      * @param subscriptions The topic subscriptions to subscribe for.
      * @return A random message id.
-     * 
+     *
      * @see #connectMqttEndpoint(AbstractMqttToAmqpProtocolGateway, String, String)
      * @see #connectMqttEndpointWithClientCertificate(AbstractMqttToAmqpProtocolGateway, X509Certificate)
      */
@@ -171,7 +171,7 @@ public final class ProtocolGatewayTestHelper {
     /**
      * Simulates sending a MQTT publish message by invoking the publish handler, that has been set on the given mock
      * endpoint during the connection establishment in one of the "connect..." methods in this class.
-     * 
+     *
      * @param endpoint The connected endpoint mock.
      * @param payload The payload of the message.
      * @param topic The topic of the message.
@@ -193,7 +193,7 @@ public final class ProtocolGatewayTestHelper {
 
     /**
      * Returns a self signed certificate.
-     * 
+     *
      * @return A new X.509 certificate.
      */
     public static X509Certificate createCertificate() {

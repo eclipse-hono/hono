@@ -39,7 +39,7 @@ public final class TelemetryMessage extends DownstreamMessage {
 
     /**
      * Returns if the result of the sending should be waited for.
-     * 
+     *
      * @return {@code true} if the sender should wait for the outcome of the send operation.
      */
     public boolean shouldWaitForOutcome() {

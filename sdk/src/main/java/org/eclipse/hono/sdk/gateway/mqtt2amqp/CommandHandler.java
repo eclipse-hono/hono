@@ -204,7 +204,7 @@ final class CommandHandler {
 
     /**
      * Returns all subscriptions of this device.
-     * 
+     *
      * @return An unmodifiable view of the subscriptions map with the topic filter as key and the subscription object as
      *         value.
      */

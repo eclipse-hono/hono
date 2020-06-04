@@ -40,7 +40,7 @@ public final class PropertyBag {
     /**
      * Creates a property bag object from the given topic by retrieving all the properties from the
      * <em>property-bag</em>.
-     * 
+     *
      * @param topic The topic that the message has been published to.
      * @return The property bag object or {@code null} if no <em>property-bag</em> is set in the topic.
      * @throws NullPointerException if topic is {@code null}.
@@ -60,7 +60,7 @@ public final class PropertyBag {
 
     /**
      * Creates a topic with the given properties as an URL-encoded property bag.
-     * 
+     *
      * @param baseTopic The topic to which the properties are appended.
      * @param properties The properties to encode into the result - may be {@code null}.
      * @return A topic string ending with the property bag or the base topic if no properties passed in.

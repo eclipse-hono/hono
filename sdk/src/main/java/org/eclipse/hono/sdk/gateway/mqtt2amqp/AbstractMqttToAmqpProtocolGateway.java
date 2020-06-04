@@ -95,7 +95,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * The command acknowledgement timeout determines how long the protocol gateway waits for acknowledgement of a
      * command published with QoS 1. If there is no acknowledgement within this time limit, then the command is settled
      * with the <em>released</em> outcome.
-     * 
+     *
      * @param amqpClientConfig The AMQP client configuration.
      * @param mqttServerConfig The MQTT server configuration.
      * @param commandAckTimeout The timeout in milliseconds.
@@ -124,7 +124,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * <p>
      * Implementations must return a (succeeded) future with the <em>authenticated</em> device if authentication was
      * successful or a failed future otherwise. {@code Null} must never be returned.
-     * 
+     *
      * @param username The username.
      * @param password The password.
      * @param clientId The client id.
@@ -453,7 +453,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * Returns a new {@link AmqpAdapterClientFactory} with a new AMQP connection for the given tenant.
      * <p>
      * This method is only visible for testing purposes.
-     * 
+     *
      * @param tenantId The tenant to be connected.
      * @param clientConfig The client properties to use for the connection.
      * @return The factory. Note that the underlying AMQP connection will not be established until
@@ -487,7 +487,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * Invoked when a device connects, after authentication.
      * <p>
      * This method is only visible for testing purposes.
-     * 
+     *
      * @param authenticatedDevice The device.
      * @param vertx The vert.x instance
      * @param commandAckTimeout The command acknowledgement timeout in milliseconds.
@@ -500,11 +500,11 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
 
     /**
      * Invoked when a device publishes a message.
-     * 
+     *
      * Invokes {@link #onPublishedMessage(MqttDownstreamContext)}, uploads the message to Hono's AMQP adapter.
      * Afterwards it invokes {@link #onMessageSent(MqttDownstreamContext)} if the message has been forwarded
      * successfully or if a the message could not be delivered, {@link #onMessageUndeliverable(MqttDownstreamContext)}.
-     * 
+     *
      * @param ctx The context in which the MQTT message has been published.
      * @throws NullPointerException if the context is {@code null}.
      */
@@ -630,7 +630,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
 
     /**
      * Invoked when a device sends an MQTT <em>SUBSCRIBE</em> packet.
-     * 
+     *
      * It invokes {@link #isTopicFilterValid(String, String, String, String)} for each topic filter in the subscribe
      * packet. If there is a valid topic filter and no command consumer already exists for this device, this method
      * opens a device-specific command consumer for receiving commands from applications for the device.
@@ -805,7 +805,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * Returns the options for the MQTT server.
      * <p>
      * This method is only visible for testing purposes.
-     * 
+     *
      * @return The options configured with the values of the {@link MqttGatewayServerConfig}.
      */
     MqttServerOptions getMqttServerOptions() {
