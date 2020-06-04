@@ -73,6 +73,27 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     public static final String FIELD_VIA_GROUPS = "viaGroups";
 
     /**
+     * The name of the field that contains the status data for the device.
+     * The status object contains the creation date, the last edit date and the last user.
+     */
+    public static final String FIELD_STATUS = "status";
+
+    /**
+     * The name of the field that contains the creation date of the device.
+     */
+    public static final String FIELD_STATUS_CREATION_DATE = "created";
+
+    /**
+     * The name of the field that contains the last update date of the device.
+     */
+    public static final String FIELD_STATUS_LAST_UPDATE = "updated";
+
+    /**
+     * The name of the field that contains the last user that edited the device.
+     */
+    public static final String FIELD_STATUS_LAST_USER = "last-user";
+
+    /**
      * The name of the field that contains the name of a service that can be used to transform messages
      * uploaded by the device before they are forwarded to downstream consumers.
      */

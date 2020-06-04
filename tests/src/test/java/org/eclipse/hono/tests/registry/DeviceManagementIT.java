@@ -15,6 +15,8 @@ package org.eclipse.hono.tests.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -468,6 +470,11 @@ public class DeviceManagementIT {
             final String expectedDeviceId,
             final Device expectedData) {
 
-        assertThat(response).usingRecursiveComparison().isEqualTo(expectedData);
+        final Comparator<Instant> close = (Instant d1, Instant d2) -> d1.compareTo(d2) < 1000 ? 0 : 1;
+
+        assertThat(response)
+                .usingRecursiveComparison()
+                .withComparatorForFields(close, "status.creationTime", "status.lastUpdate")
+                .isEqualTo(expectedData);
     }
 }
