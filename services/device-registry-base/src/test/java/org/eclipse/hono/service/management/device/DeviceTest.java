@@ -92,7 +92,8 @@ public class DeviceTest {
         assertThat(json).isNotNull();
         assertThat(json.getBoolean("enabled")).isNull();
         assertThat(json.getJsonObject("ext")).isNull();
-        assertThat(json).isEmpty();
+        assertThat(json.getJsonObject("status")).isNotNull();
+        assertThat(json).isNotEmpty();
     }
 
     /**

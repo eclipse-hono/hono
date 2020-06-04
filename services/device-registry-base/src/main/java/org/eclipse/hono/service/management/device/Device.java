@@ -61,6 +61,10 @@ public class Device {
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> memberOf = new LinkedList<>();
 
+    @JsonProperty(RegistryManagementConstants.FIELD_STATUS)
+    @JsonInclude(value = Include.NON_EMPTY)
+    private Status status = new Status();
+
     @JsonProperty(RegistryManagementConstants.FIELD_MAPPER)
     private String mapper;
 
