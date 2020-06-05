@@ -126,7 +126,7 @@ public class DeviceManagementIT {
     @Test
     public void testAddDeviceWithoutPayloadSucceeds(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED)
+        registry.registerDevice(TENANT, deviceId, (Device) null, null, HttpURLConnection.HTTP_CREATED)
                 .onComplete(ctx.completing());
     }
 
@@ -212,7 +212,7 @@ public class DeviceManagementIT {
     @Test
     public void testAddDeviceSucceedsForEmptyBodyAndContentType(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
+        registry.registerDevice(TENANT, deviceId, (Device) null, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
     }
 
     /**

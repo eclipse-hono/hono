@@ -22,6 +22,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -173,15 +174,19 @@ public final class FileBasedTenantService implements TenantService, TenantManage
         final Promise<Void> result = Promise.promise();
         try {
             if (tenantsBuffer.length() > 0) {
-                int tenantCount = 0;
-                final JsonArray allObjects = tenantsBuffer.toJsonArray();
-                for (final Object obj : allObjects) {
-                    if (JsonObject.class.isInstance(obj)) {
-                        tenantCount++;
-                        addTenant((JsonObject) obj);
-                    }
-                }
-                LOG.info("successfully loaded {} tenants from file [{}]", tenantCount, getConfig().getFilename());
+                final AtomicInteger tenantCount = new AtomicInteger();
+                tenantsBuffer.toJsonArray().stream()
+                    .filter(JsonObject.class::isInstance)
+                    .map(JsonObject.class::cast)
+                    .forEach(tenantJson -> {
+                        try {
+                            addTenant(tenantJson);
+                            tenantCount.incrementAndGet();
+                        } catch (final IllegalArgumentException | ClassCastException e) {
+                            LOG.warn("cannot deserialize tenant", e);
+                        }
+                    });
+                LOG.info("successfully loaded {} tenants from file [{}]", tenantCount.get(), getConfig().getFilename());
             }
             result.complete();
         } catch (final DecodeException e) {
@@ -193,18 +198,18 @@ public final class FileBasedTenantService implements TenantService, TenantManage
 
     private void addTenant(final JsonObject tenantToAdd) {
 
-        try {
-            final Object trustedCas = tenantToAdd.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
-            if (trustedCas instanceof JsonObject) {
-                tenantToAdd.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(trustedCas));
-            }
-            final String tenantId = tenantToAdd.getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID);
-            final Versioned<Tenant> tenant = new Versioned<>(tenantToAdd.mapTo(Tenant.class));
-            LOG.debug("loading tenant [{}]", tenantId);
-            tenants.put(tenantId, tenant);
-        } catch (final IllegalArgumentException | ClassCastException e) {
-            LOG.warn("cannot deserialize tenant", e);
-        }
+        Optional.ofNullable(tenantToAdd.getValue(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA))
+            .filter(JsonObject.class::isInstance)
+            .map(JsonObject.class::cast)
+            .ifPresent(trustedCas -> tenantToAdd.put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(trustedCas)));
+
+        final String tenantId = Optional.ofNullable(tenantToAdd.remove(TenantConstants.FIELD_PAYLOAD_TENANT_ID))
+            .filter(String.class::isInstance)
+            .map(String.class::cast)
+            .orElseThrow(() -> new IllegalArgumentException("tenant has no " + TenantConstants.FIELD_PAYLOAD_TENANT_ID + " property"));
+        final Versioned<Tenant> tenant = new Versioned<>(tenantToAdd.mapTo(Tenant.class));
+        LOG.debug("loading tenant [{}]", tenantId);
+        tenants.put(tenantId, tenant);
     }
 
     @Override
@@ -413,7 +418,7 @@ public final class FileBasedTenantService implements TenantService, TenantManage
                 LOG.trace("adding tenant [id: {}]: {}", tenantId, JsonObject.mapFrom(tenantSpec).encodePrettily());
             }
             final boolean existsConflictingTenant = tenantSpec.getTrustedCertificateAuthoritySubjectDNs()
-            .stream().anyMatch(subjectDn -> getByCa(subjectDn) != null);
+                    .stream().anyMatch(subjectDn -> getByCa(subjectDn) != null);
 
             if (existsConflictingTenant) {
                 // we are trying to use the same CA as an already existing tenant

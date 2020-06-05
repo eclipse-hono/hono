@@ -30,13 +30,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class Adapter {
 
-    private Boolean enabled = Boolean.FALSE;
+    @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
+    private boolean enabled = false;
 
-    @JsonProperty(required = true)
+    @JsonProperty(value = RegistryManagementConstants.FIELD_ADAPTERS_TYPE, required = true)
     private String type;
 
     @JsonProperty(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)
-    private Boolean deviceAuthenticationRequired = Boolean.TRUE;
+    private boolean deviceAuthenticationRequired = true;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -46,11 +47,10 @@ public class Adapter {
      * Creates a new adapter instance for the given type.
      *
      * @param type The adapter type.
-     * @throws NullPointerException if the type is null.
+     * @throws NullPointerException if the type is {@code null}.
      */
-    public Adapter(@JsonProperty("type") final String type) {
+    public Adapter(@JsonProperty(value = RegistryManagementConstants.FIELD_ADAPTERS_TYPE) final String type) {
         Objects.requireNonNull(type);
-
         this.type = type;
     }
 
@@ -61,7 +61,7 @@ public class Adapter {
      * @param enabled {@code true} if devices should be able to connect.
      * @return This instance, to allow chained invocations.
      */
-    public final Adapter setEnabled(final Boolean enabled) {
+    public final Adapter setEnabled(final boolean enabled) {
         this.enabled = enabled;
         return this;
     }
@@ -72,7 +72,7 @@ public class Adapter {
      *
      * @return {@code true} if devices are able to connect.
      */
-    public final Boolean isEnabled() {
+    public final boolean isEnabled() {
         return enabled;
     }
 
@@ -93,7 +93,7 @@ public class Adapter {
      * @param required {@code true} if devices should be required to authenticate.
      * @return A reference to this for fluent use.
      */
-    public final Adapter setDeviceAuthenticationRequired(final Boolean required) {
+    public final Adapter setDeviceAuthenticationRequired(final boolean required) {
         this.deviceAuthenticationRequired = required;
         return this;
     }
@@ -104,7 +104,7 @@ public class Adapter {
      *
      * @return {@code true} if devices are required to authenticate.
      */
-    public final Boolean isDeviceAuthenticationRequired() {
+    public final boolean isDeviceAuthenticationRequired() {
         return deviceAuthenticationRequired;
     }
 

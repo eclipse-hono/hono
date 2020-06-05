@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,7 +37,7 @@ import io.vertx.core.net.SelfSignedCertificate;
 
 
 /**
- * A TrustedCertificateAuthorityTest.
+ * Tests verifying behavior of {@link TrustedCertificateAuthority}.
  *
  */
 class TrustedCertificateAuthorityTest {
@@ -46,6 +46,7 @@ class TrustedCertificateAuthorityTest {
 
     /**
      * Sets up class fixture.
+     *
      * @throws GeneralSecurityException if the self signed certificate cannot be created.
      * @throws IOException if the self signed certificate cannot be read.
      */

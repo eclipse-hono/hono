@@ -15,16 +15,16 @@
 package org.eclipse.hono.service.management;
 
 import java.net.HttpURLConnection;
-import java.util.Optional;
+import java.util.function.BiConsumer;
 
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.AbstractDelegatingHttpEndpoint;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
@@ -54,6 +54,65 @@ public abstract class AbstractDelegatingRegistryHttpEndpoint<S, T extends Servic
     /**
      * Writes a response based on generic result.
      * <p>
+     * This method delegates to {@link #writeResponse(RoutingContext, Result, BiConsumer, Span)}
+     * passing {@code null} as the custom handler.
+     *
+     * @param ctx The routing context of the request.
+     * @param result The generic result of the operation.
+     * @param span The active OpenTracing span for this operation. The status of the response is logged and span is finished.
+     */
+    protected final void writeResponse(final RoutingContext ctx, final Result<?> result, final Span span) {
+        writeResponse(ctx, result, (BiConsumer<MultiMap, Integer>) null, span);
+    }
+
+    /**
+     * Writes a response based on generic result.
+     * <p>
+     * The behavior is as follows:
+     * <ol>
+     * <li>Set the status code on the response.</li>
+     * <li>Try to serialize the object contained in the result to JSON and use it as the response body.</li>
+     * <li>If the result is an {@code OperationResult} and contains a resource version, add an ETAG header
+     * to the response using the version as its value.</li>
+     * <li>If the handler is not {@code null}, invoke it with the response and the status code from the result.</li>
+     * <li>Set the span's <em>http.status</em> tag to the result's status code.</li>
+     * <li>End the response.</li>
+     * </ol>
+     *
+     * @param ctx The context to write the response to.
+     * @param result The generic result of the operation.
+     * @param customHandler An (optional) handler for post processing successful HTTP response, e.g. to set any additional HTTP
+     *                      headers. The handler <em>must not</em> write to response body. May be {@code null}.
+     * @param span The active OpenTracing span for this operation.
+     */
+    protected final void writeResponse(final RoutingContext ctx, final Result<?> result, final BiConsumer<MultiMap, Integer> customHandler, final Span span) {
+        final int status = result.getStatus();
+        final HttpServerResponse response = ctx.response();
+        response.setStatusCode(status);
+        if (result instanceof OperationResult) {
+            ((OperationResult<?>) result).getResourceVersion().ifPresent(version -> response.putHeader(HttpHeaders.ETAG, version));
+        }
+        if (customHandler != null) {
+            customHandler.accept(response.headers(), status);
+        }
+        // once the body has been written, the response headers can no longer be changed
+        HttpUtils.setResponseBody(response, asJson(result.getPayload()));
+        Tags.HTTP_STATUS.set(span, status);
+        response.end();
+    }
+
+    private JsonObject asJson(final Object obj) {
+        try {
+            return JsonObject.mapFrom(obj);
+        } catch (final IllegalArgumentException e) {
+            logger.debug("error serializing result object [type: {}] to JSON", obj.getClass().getName(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Writes a response based on generic result.
+     * <p>
      * The behavior is as follows:
      * <ol>
      * <li>Set the status code on the response.</li>
@@ -70,7 +129,9 @@ public abstract class AbstractDelegatingRegistryHttpEndpoint<S, T extends Servic
      * @param customHandler An (optional) handler for post processing successful HTTP response, e.g. to set any additional HTTP
      *                      headers. The handler <em>must not</em> write to response body. May be {@code null}.
      * @param span The active OpenTracing span for this operation. The status of the response is logged and span is finished.
+     * @deprecated Use {@link #writeResponse(RoutingContext, Result, BiConsumer, Span)} instead.
      */
+    @Deprecated
     protected final void writeResponse(final RoutingContext ctx, final Result<?> result, final Handler<HttpServerResponse> customHandler, final Span span) {
         final int status = result.getStatus();
         final HttpServerResponse response = ctx.response();
@@ -98,32 +159,11 @@ public abstract class AbstractDelegatingRegistryHttpEndpoint<S, T extends Servic
      * @param customHandler An (optional) handler for post processing successful HTTP response, e.g. to set any additional HTTP
      *                      headers. The handler <em>must not</em> write to response body. May be {@code null}.
      * @param span The active OpenTracing span for this operation. The status of the response is logged and span is finished.
+     * @deprecated Use {@link #writeResponse(RoutingContext, Result, BiConsumer, Span)} instead.
      */
+    @Deprecated
     protected final void writeOperationResponse(final RoutingContext ctx, final OperationResult<?> result, final Handler<HttpServerResponse> customHandler, final Span span) {
         result.getResourceVersion().ifPresent(v -> ctx.response().putHeader(HttpHeaders.ETAG, v));
         writeResponse(ctx, result, customHandler, span);
     }
-
-    /**
-     * Gets the payload from a request body.
-     * <p>
-     * The returned JSON object contains the given payload (if not {@code null}).
-     * If the given payload does not contain an <em>enabled</em> property, then
-     * it is added with value {@code true} to the returned object.
-     *
-     * @param payload The payload from the request message.
-     * @return The payload (never {@code null}).
-     */
-    protected final JsonObject getRequestPayload(final JsonObject payload) {
-
-        return Optional.ofNullable(payload).map(pl -> {
-            final Object obj = pl.getValue(RegistryManagementConstants.FIELD_ENABLED);
-            if (obj instanceof Boolean) {
-                return pl;
-            } else {
-                return pl.copy().put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
-            }
-        }).orElse(new JsonObject().put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE));
-    }
-
 }

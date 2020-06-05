@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.is;
@@ -37,12 +39,13 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
@@ -77,6 +80,14 @@ public class TenantTest {
         assertTrue(tenant.isEnabled());
     }
 
+    /**
+     * Decode tenant with unknown property fails.
+     */
+    @Test
+    public void testDecodeFailsForUnknownProperties() {
+        assertThatThrownBy(() -> Json.decodeValue("{\"unexpected\": \"property\"}", Tenant.class))
+            .isInstanceOf(DecodeException.class);
+    }
 
     /**
      * Decode tenant with "enabled=false".
@@ -119,11 +130,13 @@ public class TenantTest {
      */
     @Test
     public void testDecodeAdapters() {
-        final JsonArray adapterJson = new JsonArray().add(
-                    new JsonObject()
-                            .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
-                            .put(RegistryManagementConstants.FIELD_ENABLED, false)
-                            .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true));
+        final JsonArray adapterJson = new JsonArray()
+                .add(new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
+                        .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, false))
+                .add(new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "mqtt"));
 
         final var tenant = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_ADAPTERS, adapterJson)
@@ -134,6 +147,58 @@ public class TenantTest {
         final var adapters = tenant.getAdapters();
         assertNotNull(adapters);
         assertEquals( "http", adapters.get(0).getType());
+        assertTrue(adapters.get(0).isEnabled());
+        assertFalse(adapters.get(0).isDeviceAuthenticationRequired());
+        assertEquals( "mqtt", adapters.get(1).getType());
+        assertFalse(adapters.get(1).isEnabled());
+        assertTrue(adapters.get(1).isDeviceAuthenticationRequired());
+    }
+
+    /**
+     * Verifies that deserialization of a tenant containing configuration for multiple adapters
+     * of the same type fails.
+     */
+    @Test
+    public void testDecodeAdaptersFailsForDuplicateType() {
+
+        final JsonArray adapterJson = new JsonArray()
+                .add(new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
+                        .put(RegistryManagementConstants.FIELD_ENABLED, false)
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, true))
+                .add(new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_TYPE, "http")
+                        .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                        .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, false));
+        final JsonObject tenant = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_ADAPTERS, adapterJson);
+        assertThatThrownBy(() -> tenant.mapTo(Tenant.class)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verify that a Tenant instance containing multiple "adapters" can be serialized to Json.
+     */
+    @Test
+    public void testEncodeAdapters() {
+
+        final Tenant tenant = new Tenant();
+        tenant.setEnabled(true);
+        tenant
+            .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP))
+            .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
+                    .setEnabled(true)
+                    .setDeviceAuthenticationRequired(false));
+
+        final JsonArray result = JsonObject.mapFrom(tenant).getJsonArray(RegistryManagementConstants.FIELD_ADAPTERS);
+        assertNotNull(result);
+        final JsonObject httpAdapter = result.getJsonObject(0);
+        final JsonObject mqttAdapter = result.getJsonObject(1);
+        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, httpAdapter.getString(RegistryManagementConstants.FIELD_ADAPTERS_TYPE));
+        assertFalse(httpAdapter.getBoolean(RegistryManagementConstants.FIELD_ENABLED));
+        assertTrue(httpAdapter.getBoolean(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
+        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, mqttAdapter.getString(RegistryManagementConstants.FIELD_ADAPTERS_TYPE));
+        assertTrue(mqttAdapter.getBoolean(RegistryManagementConstants.FIELD_ENABLED));
+        assertFalse(mqttAdapter.getBoolean(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
     }
 
     /**
@@ -212,19 +277,19 @@ public class TenantTest {
 
         final JsonObject tenantSpec = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
-                        .put(TenantConstants.FIELD_MAX_CONNECTIONS, 100)
-                        .put(TenantConstants.FIELD_MAX_TTL, 30)
-                        .put(TenantConstants.FIELD_DATA_VOLUME, new JsonObject()
-                                .put(TenantConstants.FIELD_MAX_BYTES, 20_000_000)
-                                .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
-                                .put(TenantConstants.FIELD_PERIOD, new JsonObject()
-                                        .put(TenantConstants.FIELD_PERIOD_MODE, "days")
-                                        .put(TenantConstants.FIELD_PERIOD_NO_OF_DAYS, 90)))
-                        .put(TenantConstants.FIELD_CONNECTION_DURATION, new JsonObject()
-                                .put(TenantConstants.FIELD_MAX_MINUTES, 20_000_000)
-                                .put(TenantConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
-                                .put(TenantConstants.FIELD_PERIOD, new JsonObject()
-                                        .put(TenantConstants.FIELD_PERIOD_MODE, "monthly"))));
+                        .put(RegistryManagementConstants.FIELD_MAX_CONNECTIONS, 100)
+                        .put(RegistryManagementConstants.FIELD_MAX_TTL, 30)
+                        .put(RegistryManagementConstants.FIELD_DATA_VOLUME, new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_MAX_BYTES, 20_000_000)
+                                .put(RegistryManagementConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
+                                .put(RegistryManagementConstants.FIELD_PERIOD, new JsonObject()
+                                        .put(RegistryManagementConstants.FIELD_PERIOD_MODE, "days")
+                                        .put(RegistryManagementConstants.FIELD_PERIOD_NO_OF_DAYS, 90)))
+                        .put(RegistryManagementConstants.FIELD_CONNECTION_DURATION, new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_MAX_MINUTES, 20_000_000)
+                                .put(RegistryManagementConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
+                                .put(RegistryManagementConstants.FIELD_PERIOD, new JsonObject()
+                                        .put(RegistryManagementConstants.FIELD_PERIOD_MODE, "monthly"))));
 
         final Tenant tenant = tenantSpec.mapTo(Tenant.class);
         assertNotNull(tenant);
@@ -260,7 +325,7 @@ public class TenantTest {
 
         final ResourceLimits limits = new ResourceLimits();
         final JsonObject json = JsonObject.mapFrom(limits);
-        assertFalse(json.containsKey(TenantConstants.FIELD_MAX_CONNECTIONS));
+        assertFalse(json.containsKey(RegistryManagementConstants.FIELD_MAX_CONNECTIONS));
         final ResourceLimits deserializedLimits = json.mapTo(ResourceLimits.class);
         assertThat(deserializedLimits.getMaxConnections(), is(-1));
     }
@@ -343,15 +408,15 @@ public class TenantTest {
     }
 
     /**
-     * Encode tenant with "minimum-message-size=4096".
+     * Encode tenant with non-default <em>minimum-message-size</em>.
      */
     @Test
     public void testEncodeMinimumMessageSize() {
         final var tenant = new Tenant();
-        tenant.setMinimumMessageSize(4096);
+        tenant.setMinimumMessageSize(RegistryManagementConstants.DEFAULT_MINIMUM_MESSAGE_SIZE + 10);
         final var json = JsonObject.mapFrom(tenant);
         assertNotNull(json);
-        assertEquals(4096, json.getInteger(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE));
+        assertNotNull(json.getInteger(RegistryManagementConstants.FIELD_MINIMUM_MESSAGE_SIZE));
     }
 
     /**
@@ -367,36 +432,12 @@ public class TenantTest {
         tenant.setTracing(tracingConfig);
         final var json = JsonObject.mapFrom(tenant);
         assertNotNull(json);
-        final JsonObject tracingConfigJson = json.getJsonObject(TenantConstants.FIELD_TRACING);
+        final JsonObject tracingConfigJson = json.getJsonObject(RegistryManagementConstants.FIELD_TRACING);
         assertNotNull(tracingConfigJson);
-        assertEquals(TracingSamplingMode.ALL.getFieldValue(), tracingConfigJson.getString(TenantConstants.FIELD_TRACING_SAMPLING_MODE));
-        final JsonObject traceSamplingModePerAuthIdJson = tracingConfigJson.getJsonObject(TenantConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID);
+        assertEquals(TracingSamplingMode.ALL.getFieldValue(), tracingConfigJson.getString(RegistryManagementConstants.FIELD_TRACING_SAMPLING_MODE));
+        final JsonObject traceSamplingModePerAuthIdJson = tracingConfigJson.getJsonObject(RegistryManagementConstants.FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID);
         assertNotNull(traceSamplingModePerAuthIdJson);
         assertEquals(TracingSamplingMode.ALL.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId1"));
         assertEquals(TracingSamplingMode.DEFAULT.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId2"));
-    }
-
-    /**
-     * Verify that a Tenant instance containing multiple "adapters" can be serialized to Json.
-     */
-    @Test
-    public void testSerializeAdapters() {
-
-        final Tenant tenant = new Tenant();
-        tenant.setEnabled(true);
-        tenant
-            .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP)
-                    .setEnabled(false)
-                    .setDeviceAuthenticationRequired(true))
-            .addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT)
-                    .setEnabled(true)
-                    .setDeviceAuthenticationRequired(true));
-
-        final JsonArray result = JsonObject.mapFrom(tenant).getJsonArray(TenantConstants.FIELD_ADAPTERS);
-        assertNotNull(result);
-        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_HTTP, result.getJsonObject(0).getString(TenantConstants.FIELD_ADAPTERS_TYPE));
-        assertEquals(Constants.PROTOCOL_ADAPTER_TYPE_MQTT, result.getJsonObject(1).getString(TenantConstants.FIELD_ADAPTERS_TYPE));
-        assertEquals(false, result.getJsonObject(0).getBoolean(TenantConstants.FIELD_ENABLED));
-        assertEquals(true, result.getJsonObject(0).getBoolean(TenantConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED));
     }
 }

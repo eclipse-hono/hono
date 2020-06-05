@@ -19,21 +19,20 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
-import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
-import io.opentracing.tag.Tags;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -99,7 +98,6 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         router.post(pathWithTenant)
                 .handler(bodyHandler)
                 .handler(this::extractOptionalJsonPayload)
-                .handler(this::updatePayloadWithTenantId)
                 .handler(this::createTenant);
 
         // GET tenant
@@ -119,32 +117,23 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 .handler(this::deleteTenant);
     }
 
-    /**
-     * Check that the tenantId value is not blank then
-     * update the payload (that was put to the RoutingContext ctx with the
-     * key {@link #KEY_REQUEST_BODY}) with the tenant value retrieved from the RoutingContext.
-     * The tenantId value is associated with the key {@link RegistryManagementConstants#FIELD_PAYLOAD_TENANT_ID}.
-     *
-     * @param ctx The routing context to retrieve the JSON request body from.
-     */
-    protected final void updatePayloadWithTenantId(final RoutingContext ctx) {
+    private void getTenant(final RoutingContext ctx) {
 
-        final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
-        final String tenantId = getTenantIdFromContext(ctx);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_GET_TENANT,
+                getClass().getSimpleName()
+        ).start();
 
-        if (tenantId.isBlank()) {
-            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    String.format("'%s' param cannot be empty", RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)));
-        }
-
-        payload.put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-        ctx.put(KEY_REQUEST_BODY, payload);
-        ctx.next();
-    }
-
-    private String getTenantIdFromContext(final RoutingContext ctx) {
-        final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
-        return Optional.ofNullable(getTenantParam(ctx)).orElse(getTenantParamFromPayload(payload));
+        getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), false)
+            .compose(tenantId -> {
+                logger.debug("retrieving tenant [id: {}]", tenantId.get());
+                return getService().readTenant(tenantId.get(), span);
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     private void createTenant(final RoutingContext ctx) {
@@ -156,70 +145,26 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getRequestIdParam(PARAM_TENANT_ID, ctx, span, true);
+        final Future<Optional<String>> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), true);
+        final Future<Tenant> payload = fromPayload(ctx);
 
-        final JsonObject payload = getRequestPayload(ctx.get(KEY_REQUEST_BODY));
-
-        if (isValidRequestPayload(payload)) {
-            logger.debug("creating tenant [{}]", Optional.ofNullable(tenantId).orElse("<auto>"));
-
-            addNotPresentFieldsWithDefaultValuesForTenant(payload);
-
-            getService().createTenant(Optional.ofNullable(tenantId), payload.mapTo(Tenant.class), span)
-                    .onComplete(handler -> {
-                        final OperationResult<Id> operationResult = handler.result();
-
-                        final String createdTenantId = Optional.ofNullable(operationResult.getPayload()).map(Id::getId)
-                                .orElse(null);
-                        writeOperationResponse(
-                                ctx,
-                                operationResult,
-                                (response) -> response.putHeader(
-                                        HttpHeaders.LOCATION,
-                                        String.format("/%s/%s", getName(), createdTenantId)),
-                                span);
-                    });
-
-        } else {
-            final String msg = "request contains malformed payload";
-            logger.debug(msg);
-            TracingHelper.logError(span, msg);
-            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
-            HttpUtils.badRequest(ctx, msg);
-            span.finish();
-        }
-    }
-
-    private void getTenant(final RoutingContext ctx) {
-
-        final Span span = TracingHelper.buildServerChildSpan(
-                tracer,
-                TracingHandler.serverSpanContext(ctx),
-                SPAN_NAME_GET_TENANT,
-                getClass().getSimpleName()
-        ).start();
-
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-
-        final HttpServerResponse response = ctx.response();
-
-        logger.debug("retrieving tenant [id: {}]", tenantId);
-        getService().readTenant(tenantId, span)
-                .onComplete(handler -> {
-                    final OperationResult<Tenant> operationResult = handler.result();
-                    final int status = operationResult.getStatus();
-                    response.setStatusCode(status);
-                    switch (status) {
-                    case HttpURLConnection.HTTP_OK:
-                        operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
-                        HttpUtils.setResponseBody(response, JsonObject.mapFrom(operationResult.getPayload()));
-                        // falls through intentionally
-                    default:
-                        Tags.HTTP_STATUS.set(span, status);
-                        span.finish();
-                        response.end();
-                    }
-                });
+        CompositeFuture.all(tenantId, payload)
+            .compose(ok -> {
+                logger.debug("creating tenant [{}]", tenantId.result().orElse("<auto>"));
+                return getService().createTenant(tenantId.result(), payload.result(), span);
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, (responseHeaders, status) -> {
+                if (status == HttpURLConnection.HTTP_CREATED) {
+                    Optional.ofNullable(operationResult.getPayload())
+                        .map(Id::getId)
+                        .ifPresent(id -> {
+                            final String location = String.format("/%s/%s", getName(), id);
+                            responseHeaders.set(HttpHeaders.LOCATION, location);
+                        });
+                }
+            }, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     private void updateTenant(final RoutingContext ctx) {
@@ -231,31 +176,18 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-        final JsonObject payload = getRequestPayload(ctx.get(KEY_REQUEST_BODY));
-        if (payload != null) {
-            payload.remove(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID);
-        }
+        final Future<Optional<String>> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), true);
+        final Future<Tenant> payload = fromPayload(ctx);
 
-        if (isValidRequestPayload(payload)) {
-            logger.debug("updating tenant [{}]", tenantId);
-
-            addNotPresentFieldsWithDefaultValuesForTenant(payload);
-
-            final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
-
-
-            getService().updateTenant(tenantId, payload.mapTo(Tenant.class), resourceVersion, span)
-                    .onComplete(handler -> writeOperationResponse(ctx, handler.result(), null, span));
-
-        } else {
-            final String msg = "request contains malformed payload";
-            logger.debug(msg);
-            TracingHelper.logError(span, msg);
-            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
-            HttpUtils.badRequest(ctx, msg);
-            span.finish();
-        }
+        CompositeFuture.all(tenantId, payload)
+            .compose(tenant -> {
+                final String id = tenantId.result().get();
+                logger.debug("updating tenant [{}]", id);
+                return getService().updateTenant(id, payload.result(), Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION)), span);
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     private void deleteTenant(final RoutingContext ctx) {
@@ -267,65 +199,53 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-
-        logger.debug("removing tenant [{}]", tenantId);
-
-        final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
-
-        getService().deleteTenant(tenantId, resourceVersion, span)
-                .onComplete(handler -> writeResponse(ctx, handler.result(), null, span));
-    }
-
-    private static String getTenantParamFromPayload(final JsonObject payload) {
-        return (payload != null ? (String) payload.remove(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID) : null);
+        getRequestParameter(ctx, PARAM_TENANT_ID, config.getTenantIdPattern(), false)
+            .compose(tenantId -> {
+                logger.debug("removing tenant [{}]", tenantId.get());
+                final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
+                return getService().deleteTenant(tenantId.get(), resourceVersion, span);
+            })
+            .onSuccess(result -> writeResponse(ctx, result, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     /**
-     * Checks the request payload for validity.
+     * Gets the tenant from the request body.
      *
-     * @param payload The payload to check.
-     * @return boolean The result of the check : {@link Boolean#TRUE} if the payload is valid, {@link Boolean#FALSE} otherwise.
-     * @throws NullPointerException If the payload is {@code null}.
+     * @param ctx The context to retrieve the request body from.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the request body is either empty or contains a JSON
+     *         object that complies with the Device Registry Management API's Tenant object definition.
+     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ClientErrorException}
+     *         containing a corresponding status code.
+     * @throws NullPointerException If the context is {@code null}.
      */
-    protected final boolean isValidRequestPayload(final JsonObject payload) {
+    private static Future<Tenant> fromPayload(final RoutingContext ctx) {
 
-        Objects.requireNonNull(payload);
+        Objects.requireNonNull(ctx);
 
-        try {
-            return payload.mapTo(Tenant.class).isValid();
-        } catch (final IllegalArgumentException e) {
-            logger.debug("Error parsing payload of tenant request", e);
-            return false;
-        }
-    }
-
-    /**
-     * Add default values for optional fields that are not filled in the payload.
-     * <p>
-     * Payload should be checked for validity first, there is no error handling inside this method anymore.
-     * </p>
-     *
-     * @param checkedPayload The checked payload to add optional fields to.
-     * @throws ClassCastException If the {@link RegistryManagementConstants#FIELD_ADAPTERS_TYPE} element is not a {@link JsonArray}
-     *       or the JsonArray contains elements that are not of type {@link JsonObject}.
-     */
-    protected final void addNotPresentFieldsWithDefaultValuesForTenant(final JsonObject checkedPayload) {
-        final JsonArray adapters = checkedPayload.getJsonArray(RegistryManagementConstants.FIELD_ADAPTERS);
-        if (adapters != null) {
-            adapters.forEach(elem -> addNotPresentFieldsWithDefaultValuesForAdapter((JsonObject) elem));
-        }
-    }
-
-    private void addNotPresentFieldsWithDefaultValuesForAdapter(final JsonObject adapter) {
-        if (!adapter.containsKey(RegistryManagementConstants.FIELD_ENABLED)) {
-            logger.trace("adding 'enabled' key to payload");
-            adapter.put(RegistryManagementConstants.FIELD_ENABLED, Boolean.TRUE);
-        }
-
-        if (!adapter.containsKey(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED)) {
-            logger.trace("adding 'device-authentication-required' key to adapter payload");
-            adapter.put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, Boolean.TRUE);
-        }
+        final Promise<Tenant> result = Promise.promise();
+        Optional.ofNullable(ctx.get(KEY_REQUEST_BODY))
+            .map(JsonObject.class::cast)
+            .ifPresentOrElse(
+                    // validate payload
+                    json -> {
+                        try {
+                            final Tenant tenant = json.mapTo(Tenant.class);
+                            if (tenant.isValid()) {
+                                result.complete(tenant);
+                            } else {
+                                result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                        "request does not contain a valid Tenant object"));
+                            }
+                        } catch (final DecodeException | IllegalArgumentException e) {
+                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                    "request does not contain a valid Tenant object", e));
+                        }
+                    },
+                    // payload was empty
+                    () -> result.complete(new Tenant()));
+        return result.future();
     }
 }

@@ -190,9 +190,39 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
+     * The name of the property that contains the configuration options to limit 
+     * the device connection duration of tenants.
+     */
+    public static final String FIELD_CONNECTION_DURATION = "connection-duration";
+    /**
+     * The name of the property that contains the configuration options for a tenant's data volume limits.
+     */
+    public static final String FIELD_DATA_VOLUME = "data-volume";
+    /**
      * The name of the JSON array containing device registration information for a tenant.
      */
     public static final String FIELD_DEVICES = "devices";
+    /**
+     * The name of the property that contains the date on which the data volume limit came into effect.
+     */
+    public static final String FIELD_EFFECTIVE_SINCE = "effective-since";
+    /**
+     * The name of the property that contains the maximum number of bytes to be allowed for a tenant.
+     */
+    public static final String FIELD_MAX_BYTES = "max-bytes";
+    /**
+     * The name of the property that contains the maximum number of connections to be allowed for a tenant.
+     */
+    public static final String FIELD_MAX_CONNECTIONS = "max-connections";
+    /**
+     * The name of the property that contains the maximum connection duration in minutes to be allowed for a tenant.
+     */
+    public static final String FIELD_MAX_MINUTES = "max-minutes";
+    /**
+     * The name of the property that contains the maximum <em>time to live</em> (seconds) for
+     * downstream events that protocol adapters should use for a tenant.
+     */
+    public static final String FIELD_MAX_TTL = "max-ttl";
     /**
      * The name of the property that contains the minimum message size in bytes.
      */
@@ -215,6 +245,19 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the property that contains the trusted certificate authority configured for a tenant.
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";
+    /**
+     * The name of the property that contains the period details for which the data usage is calculated.
+     */
+    public static final String FIELD_PERIOD = "period";
+    /**
+     * The name of the property that contains the mode of the period for which the data usage
+     * is calculated.
+     */
+    public static final String FIELD_PERIOD_MODE = "mode";    
+    /**
+     * The name of the property that contains the number of days for which the data usage is calculated.
+     */
+    public static final String FIELD_PERIOD_NO_OF_DAYS = "no-of-days";    
     /**
      * The name of the property that contains the configuration options for the resource limits.
      */
