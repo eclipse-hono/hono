@@ -140,7 +140,6 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * @param tenantId the tenant id of the authenticated device.
      * @param deviceId the device id of the authenticated device.
      * @param clientId the MQTT client id of the device.
-     * @throws IllegalArgumentException if the given filter is invalid.
      * @return {@code true} if the topic filter is valid.
      */
     protected abstract boolean isTopicFilterValid(String topicFilter, String tenantId, String deviceId,
