@@ -14,12 +14,14 @@
 package org.eclipse.hono.service.management.device;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
@@ -38,6 +40,14 @@ public class DeviceTest {
         assertThat(device.isEnabled());
     }
 
+    /**
+     * Decode device with unknown property succeeds.
+     */
+    @Test
+    public void testDecodeFailsForUnknownProperties() {
+        assertThatThrownBy(() -> Json.decodeValue("{\"unexpected\": \"property\"}", Device.class))
+            .isInstanceOf(DecodeException.class);
+    }
 
     /**
      * Decode device with "enabled=false".

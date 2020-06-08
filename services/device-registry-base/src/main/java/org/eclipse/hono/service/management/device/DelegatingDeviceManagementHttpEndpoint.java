@@ -15,25 +15,25 @@ package org.eclipse.hono.service.management.device;
 
 import java.net.HttpURLConnection;
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.Id;
-import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
-import io.opentracing.tag.Tags;
-import io.vertx.core.Handler;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -122,35 +122,17 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
+        final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
 
-        // NOTE that the remaining code would be executed in any case, i.e.
-        // even if any of the parameters retrieved from the RoutingContext were null
-        // However, this will not happen because of the way the routes are set up,
-        // i.e. a request for a URI that doesn't contain a device ID will result
-        // in a 404 response.
-
-        final HttpServerResponse response = ctx.response();
-
-        logger.debug("retrieving device [tenant: {}, device-id: {}]", tenantId, deviceId);
-        getService()
-                .readDevice(tenantId, deviceId, span)
-                .onComplete(handler -> {
-                    final OperationResult<Device> operationResult = handler.result();
-                    final int status = operationResult.getStatus();
-                    response.setStatusCode(status);
-                    switch (status) {
-                    case HttpURLConnection.HTTP_OK:
-                        operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
-                        HttpUtils.setResponseBody(response, JsonObject.mapFrom(operationResult.getPayload()));
-                        // falls through intentionally
-                    default:
-                        Tags.HTTP_STATUS.set(span, status);
-                        span.finish();
-                        response.end();
-                    }
-                });
+        CompositeFuture.all(tenantId, deviceId)
+            .compose(ok -> {
+                logger.debug("retrieving device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
+                return getService().readDevice(tenantId.result(), deviceId.result(), span);
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     private void doCreateDevice(final RoutingContext ctx) {
@@ -162,44 +144,25 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getRequestIdParam(PARAM_DEVICE_ID, ctx, span, true);
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
+        final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), true));
+        final Future<Device> device = fromPayload(ctx);
 
-        // NOTE that the remaining code would be executed in any case, i.e.
-        // even if any of the parameters retrieved from the RoutingContext were null
-        // However, this will not happen because of the way the routes are set up,
-        // i.e. a request for a URI that doesn't contain a device ID will result
-        // in a 404 response.
-
-        final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
-        if (payload == null) {
-            final String msg = "Missing request body";
-            TracingHelper.logError(span, msg);
-            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
-            HttpUtils.badRequest(ctx, msg);
-            span.finish();
-            return;
-        }
-
-        logger.debug("creating device [tenant: {}, device-id: {}]", tenantId, deviceId);
-
-        final Device device = fromPayload(payload);
-        getService()
-                .createDevice(tenantId, Optional.ofNullable(deviceId), device, span)
-                .onComplete(handler -> {
-                    final OperationResult<Id> operationResult = handler.result();
-                    final String createdDeviceId = Optional.ofNullable(operationResult.getPayload())
-                            .map(Id::getId)
-                            .orElse(null);
-                    writeOperationResponse(
-                            ctx,
-                            operationResult,
-                            (response) -> response.putHeader(
-                                    HttpHeaders.LOCATION,
-                                    String.format("/%s/%s/%s", getName(), tenantId,
-                                            createdDeviceId)),
-                            span);
-                });
+        CompositeFuture.all(tenantId, deviceId, device)
+            .compose(ok -> {
+                final Optional<String> did = Optional.ofNullable(deviceId.result());
+                logger.debug("creating device [tenant: {}, device-id: {}]", tenantId.result(), did.orElse("<auto>"));
+                return getService().createDevice(tenantId.result(), did, device.result(), span);
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, (responseHeaders, status) -> {
+                    Optional.ofNullable(operationResult.getPayload())
+                        .map(Id::getId)
+                        .ifPresent(id -> responseHeaders.set(
+                                HttpHeaders.LOCATION,
+                                String.format("/%s/%s/%s", getName(), tenantId.result(), id)));
+                }, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     private void doUpdateDevice(final RoutingContext ctx) {
@@ -211,28 +174,19 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
+        final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
+        final Future<Device> device = fromPayload(ctx);
 
-        // NOTE that the remaining code would be executed in any case, i.e.
-        // even if any of the parameters retrieved from the RoutingContext were null
-        // However, this will not happen because of the way the routes are set up,
-        // i.e. a request for a URI that doesn't contain a device ID will result
-        // in a 404 response.
-
-        final JsonObject payload = ctx.get(KEY_REQUEST_BODY);
-        if (payload != null) {
-            payload.remove(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
-        }
-
-        logger.debug("updating device [tenant: {}, device-id: {}]", tenantId, deviceId);
-
-        final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
-
-        final Device device = fromPayload(payload);
-
-        getService().updateDevice(tenantId, deviceId, device, resourceVersion, span)
-                .onComplete(handler -> writeOperationResponse(ctx, handler.result(), null, span));
+        CompositeFuture.all(tenantId, deviceId, device)
+            .compose(ok -> {
+                logger.debug("updating device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
+                final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
+                return getService().updateDevice(tenantId.result(), deviceId.result(), device.result(), resourceVersion, span);
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     private void doDeleteDevice(final RoutingContext ctx) {
@@ -244,26 +198,50 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 getClass().getSimpleName()
         ).start();
 
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
+        final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
 
-        // NOTE that the remaining code would be executed in any case, i.e.
-        // even if any of the parameters retrieved from the RoutingContext were null
-        // However, this will not happen because of the way the routes are set up,
-        // i.e. a request for a URI that doesn't contain a device ID will result
-        // in a 404 response.
-
-        logger.debug("removing device [tenant: {}, device-id: {}]", tenantId, deviceId);
-
-        final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
-
-        getService().deleteDevice(tenantId, deviceId, resourceVersion, span)
-                .onComplete(handler -> writeResponse(ctx, handler.result(), (Handler<HttpServerResponse>) null, span));
+        CompositeFuture.all(tenantId, deviceId)
+            .compose(ok -> {
+                logger.debug("removing device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
+                final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
+                return getService().deleteDevice(tenantId.result(), deviceId.result(), resourceVersion, span);
+            })
+            .onSuccess(result -> writeResponse(ctx, result, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
-    private static Device fromPayload(final JsonObject payload) throws ClientErrorException {
-        return Optional.ofNullable(payload)
-                .map(json -> json.mapTo(Device.class))
-                .orElseGet(Device::new);
+    /**
+     * Gets the device from the request body.
+     *
+     * @param ctx The context to retrieve the request body from.
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded if the request body is either empty or contains a JSON
+     *         object that complies with the Device Registry Management API's Device object definition.
+     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ClientErrorException}
+     *         containing a corresponding status code.
+     * @throws NullPointerException If the context is {@code null}.
+     */
+    private static Future<Device> fromPayload(final RoutingContext ctx) {
+
+        Objects.requireNonNull(ctx);
+
+        final Promise<Device> result = Promise.promise();
+        Optional.ofNullable(ctx.get(KEY_REQUEST_BODY))
+            .map(JsonObject.class::cast)
+            .ifPresentOrElse(
+                    // validate payload
+                    json -> {
+                        try {
+                            result.complete(json.mapTo(Device.class));
+                        } catch (final DecodeException | IllegalArgumentException e) {
+                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                    "request does not contain a valid Device object", e));
+                        }
+                    },
+                    // payload was empty
+                    () -> result.complete(new Device()));
+        return result.future();
     }
 }
