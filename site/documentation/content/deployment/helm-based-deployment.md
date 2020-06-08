@@ -124,7 +124,7 @@ The following command can then be used to return the IP address with which the J
 browser (ensure `minikube tunnel` is running when using minikube):
 
 ~~~sh
-kubectl get service hono-jaeger-query --output='jsonpath={.status.loadBalancer.ingress[0].ip}' -n hono
+kubectl get service eclipse-hono-jaeger-query --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono
 ~~~
 
 If no example Jaeger back end should be deployed but instead an existing Jaeger installation should be used,
