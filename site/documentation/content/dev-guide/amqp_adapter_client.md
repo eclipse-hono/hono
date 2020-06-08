@@ -1,6 +1,6 @@
 +++
 title = "AMQP Adapter Client for Java"
-weight = 390
+weight = 400
 +++
 
 Eclipse Hono&trade; comes with a Java client for the AMQP adapter. It is intended for the implementation of 

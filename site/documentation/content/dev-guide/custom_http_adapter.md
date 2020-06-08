@@ -1,6 +1,6 @@
 +++
 title = "Implement a Custom Hono HTTP Protocol Adapter"
-weight = 395
+weight = 500
 +++
 
 Eclipse Hono&trade; comes with a default *HTTP Adapter* which can be used to interact with devices via HTTP.
