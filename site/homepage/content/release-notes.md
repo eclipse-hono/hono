@@ -48,6 +48,8 @@ title = "Release Notes"
 * The cache based Device Connection service implementation now applies a lifespan of 28 days
   when setting/updating cache entries containing *last known gateway* information. This means
   no global expiration configuration is needed anymore for the cache.
+* Protocol adapters failed to re-establish receiver links for commands to be routed after loss
+  of connection to the AMQP Messaging Network. This has been fixed.
 
 ### API Changes
 
@@ -78,6 +80,8 @@ title = "Release Notes"
 * The cache based Device Connection service implementation now applies a lifespan of 28 days
   when setting/updating cache entries containing *last known gateway* information. This means
   no global expiration configuration is needed anymore for the cache.
+* Protocol adapters failed to re-establish receiver links for commands to be routed after loss
+  of connection to the AMQP Messaging Network. This has been fixed.
 
 ### API Changes
 
