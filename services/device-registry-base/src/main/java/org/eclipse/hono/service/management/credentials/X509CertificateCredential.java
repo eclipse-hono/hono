@@ -14,6 +14,9 @@ package org.eclipse.hono.service.management.credentials;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Predicate;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -38,6 +41,30 @@ public class X509CertificateCredential extends CommonCredential {
     private List<X509CertificateSecret> secrets = new LinkedList<>();
 
     /**
+     * Creates a new credentials object for a an X.500 Distinguished Name.
+     * <p>
+     * The given distinguished name will be normalized to RFC 2253 format.
+     *
+     * @param distinguishedName The DN to use as the authentication identifier.
+     * @throws NullPointerException if the DN is {@code null}.
+     * @throws IllegalArgumentException if the given string is not a valid X.500 distinguished name.
+     */
+    public X509CertificateCredential(@JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String distinguishedName) {
+        super(new X500Principal(distinguishedName).getName(X500Principal.RFC2253));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Predicate<String> getAuthIdValidator() {
+        return authId -> {
+            final X500Principal distinguishedName = new X500Principal(authId);
+            return distinguishedName.getName(X500Principal.RFC2253).equals(authId);
+        };
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -47,7 +74,7 @@ public class X509CertificateCredential extends CommonCredential {
     }
 
     @Override
-    public List<X509CertificateSecret> getSecrets() {
+    public final List<X509CertificateSecret> getSecrets() {
         return secrets;
     }
 
@@ -60,7 +87,7 @@ public class X509CertificateCredential extends CommonCredential {
      * @return        a reference to this for fluent use.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
-    public X509CertificateCredential setSecrets(final List<X509CertificateSecret> secrets) {
+    public final X509CertificateCredential setSecrets(final List<X509CertificateSecret> secrets) {
         if (secrets != null && secrets.isEmpty()) {
             throw new IllegalArgumentException("secrets cannot be empty");
         }

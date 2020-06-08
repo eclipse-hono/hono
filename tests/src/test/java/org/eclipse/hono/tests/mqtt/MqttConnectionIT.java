@@ -237,8 +237,8 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.addTenant(tenantId, tenant);
                 }).compose(ok -> helper.registry.registerDevice(tenantId, deviceId))
                 .compose(ok -> {
-                    final X509CertificateCredential credential = new X509CertificateCredential();
-                    credential.setAuthId(new X500Principal("CN=4711").getName(X500Principal.RFC2253));
+                    final String authId = new X500Principal("CN=4711").getName(X500Principal.RFC2253);
+                    final X509CertificateCredential credential = new X509CertificateCredential(authId);
                     credential.getSecrets().add(new X509CertificateSecret());
                     return helper.registry.addCredentials(tenantId, deviceId, Collections.singleton(credential));
                 })

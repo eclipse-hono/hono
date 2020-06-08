@@ -32,9 +32,20 @@ public class PskCredential extends CommonCredential {
 
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY;
 
-    @JsonProperty
+    @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private List<PskSecret> secrets = new LinkedList<>();
+
+    /**
+     * Creates a new credentials object for an authentication identifier.
+     *
+     * @param authId The authentication identifier.
+     * @throws NullPointerException if the auth ID is {@code null}.
+     * @throws IllegalArgumentException if auth ID does not match {@link org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE}.
+     */
+    public PskCredential(@JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId) {
+        super(authId);
+    }
 
     /**
      * {@inheritDoc}
@@ -46,7 +57,7 @@ public class PskCredential extends CommonCredential {
     }
 
     @Override
-    public List<PskSecret> getSecrets() {
+    public final List<PskSecret> getSecrets() {
         return secrets;
     }
 
@@ -59,7 +70,7 @@ public class PskCredential extends CommonCredential {
      * @return        a reference to this for fluent use.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
-    public PskCredential setSecrets(final List<PskSecret> secrets) {
+    public final PskCredential setSecrets(final List<PskSecret> secrets) {
         if (secrets != null && secrets.isEmpty()) {
             throw new IllegalArgumentException("secrets cannot be empty");
         }

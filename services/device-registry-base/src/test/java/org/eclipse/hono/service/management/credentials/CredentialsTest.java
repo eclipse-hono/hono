@@ -35,6 +35,7 @@ import java.util.function.Function;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -60,8 +61,7 @@ public class CredentialsTest {
 
         secret.setHashFunction(RegistryManagementConstants.HASH_FUNCTION_SHA256);
 
-        final PasswordCredential credential = new PasswordCredential();
-        credential.setAuthId("foo");
+        final PasswordCredential credential = new PasswordCredential("foo");
         credential.setComment("setec astronomy");
         credential.setSecrets(Collections.singletonList(secret));
 
@@ -85,9 +85,8 @@ public class CredentialsTest {
      */
     @Test
     public void testEncodePskCredential() {
-        final PskCredential credential = new PskCredential();
-                credential.setAuthId("psk-device");
-                credential.setSecrets(List.of(new PskSecret().setKey(new byte[] { 0x00, 0x01 })));
+        final PskCredential credential = new PskCredential("foo");
+        credential.setSecrets(List.of(new PskSecret().setKey(new byte[] { 0x00, 0x01 })));
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertNotNull(json);
@@ -103,13 +102,14 @@ public class CredentialsTest {
      */
     @Test
     public void testEncodeX509Credential() {
-        final X509CertificateCredential credential = new X509CertificateCredential();
+        final X509CertificateCredential credential = new X509CertificateCredential("CN=foo, O=bar");
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertNotNull(json);
         assertNull(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS));
 
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
+        assertEquals("CN=foo,O=bar", json.getString(RegistryManagementConstants.FIELD_AUTH_ID));
     }
 
     /**
@@ -117,14 +117,13 @@ public class CredentialsTest {
      */
     @Test
     public void testEncodeGenericCredential() {
-        final GenericCredential credential = new GenericCredential();
-        credential.setType("custom");
+        final GenericCredential credential = new GenericCredential("custom-type", "foo");
 
         final JsonObject json = JsonObject.mapFrom(credential);
         assertThat(json).isNotNull();
         assertThat(json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS)).isNull();
 
-        assertThat(json.getString(RegistryManagementConstants.FIELD_TYPE)).isEqualTo("custom");
+        assertThat(json.getString(RegistryManagementConstants.FIELD_TYPE)).isEqualTo("custom-type");
         final CommonCredential decodedCredential = json.mapTo(CommonCredential.class);
         assertThat(decodedCredential).isInstanceOf(GenericCredential.class);
 
@@ -146,8 +145,7 @@ public class CredentialsTest {
     protected void testEncodeMany(final Function<List<CommonCredential>, Object> provider) {
         final List<CommonCredential> credentials = new ArrayList<>();
 
-        final PskCredential credential = new PskCredential();
-        credential.setAuthId(RegistryManagementConstants.FIELD_AUTH_ID);
+        final PskCredential credential = new PskCredential("device");
         final PskSecret secret = new PskSecret();
         secret.setKey("foo".getBytes(StandardCharsets.UTF_8));
         credential.setSecrets(Collections.singletonList(secret));
@@ -162,6 +160,25 @@ public class CredentialsTest {
             assertNotNull(((JsonObject) o).getString(RegistryManagementConstants.FIELD_AUTH_ID));
             assertNotNull(((JsonObject) o).getJsonArray(RegistryManagementConstants.FIELD_SECRETS));
         }
+    }
+
+    /**
+     * Decode credentials with unknown property fails.
+     */
+    @Test
+    public void testDecodeFailsForUnknownProperties() {
+        assertThatThrownBy(() -> Json.decodeValue(
+                "{\"type\": \"psk\", \"auth-id\": \"device1\", \"unexpected\": \"property\"}",
+                CommonCredential.class))
+        .isInstanceOf(DecodeException.class);
+        assertThatThrownBy(() -> Json.decodeValue(
+                "{\"type\": \"hashed-password\", \"auth-id\": \"device1\", \"unexpected\": \"property\"}",
+                CommonCredential.class))
+        .isInstanceOf(DecodeException.class);
+        assertThatThrownBy(() -> Json.decodeValue(
+                "{\"type\": \"x509-cert\", \"auth-id\": \"CN=foo\", \"unexpected\": \"property\"}",
+                CommonCredential.class))
+        .isInstanceOf(DecodeException.class);
     }
 
     /**
@@ -208,7 +225,7 @@ public class CredentialsTest {
     @Test
     public void testEncodeDecode1() {
 
-        final String authId = "abcd+#:,%\"";
+        final String authId = "abcd-=.";
         final Instant notAfter = Instant.parse("1992-09-11T11:38:00.123456Z");
 
         // create credentials to encode
@@ -218,19 +235,12 @@ public class CredentialsTest {
         secret.setSalt("abc");
         secret.setNotAfter(notAfter);
 
-        final PasswordCredential cred = new PasswordCredential();
-        cred.setAuthId(authId);
+        final PasswordCredential cred = new PasswordCredential(authId);
         cred.setSecrets(Arrays.asList(secret));
 
         // encode
 
         final String encode = Json.encode(new CommonCredential[] { cred });
-
-        // Test for the exact format
-
-        assertEquals(
-                "[{\"type\":\"hashed-password\",\"secrets\":[{\"not-after\":\"1992-09-11T11:38:00Z\",\"pwd-hash\":\"setec astronomy\",\"salt\":\"abc\"}],\"auth-id\":\"abcd+#:,%\\\"\"}]",
-                encode);
 
         // now decode
 
@@ -254,8 +264,8 @@ public class CredentialsTest {
     @Test
     public void testMergeFailsForDifferentType() {
 
-        final PasswordCredential pwdCredentials = new PasswordCredential();
-        assertThatThrownBy(() -> pwdCredentials.merge(new PskCredential()))
+        final PasswordCredential pwdCredentials = new PasswordCredential("foo");
+        assertThatThrownBy(() -> pwdCredentials.merge(new PskCredential("bar")))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -268,12 +278,12 @@ public class CredentialsTest {
 
         final PasswordSecret existingSecret = spy(PasswordSecret.class);
         existingSecret.setId("two");
-        final PasswordCredential existingCredentials = new PasswordCredential();
+        final PasswordCredential existingCredentials = new PasswordCredential("foo");
         existingCredentials.setSecrets(List.of(existingSecret));
 
         final PasswordSecret newSecret = spy(PasswordSecret.class);
         newSecret.setId("one");
-        final PasswordCredential newCredentials = new PasswordCredential();
+        final PasswordCredential newCredentials = new PasswordCredential("foo");
         newCredentials.setSecrets(List.of(newSecret));
 
         assertThatThrownBy(() -> newCredentials.merge(existingCredentials))
@@ -291,13 +301,13 @@ public class CredentialsTest {
 
         final PskSecret existingSecret = spy(PskSecret.class);
         existingSecret.setId("one");
-        final PskCredential existingCredentials = new PskCredential();
+        final PskCredential existingCredentials = new PskCredential("foo");
         existingCredentials.setSecrets(List.of(existingSecret));
 
         final PskSecret updatedSecret = spy(PskSecret.class);
         updatedSecret.setId("one");
         final PskSecret newSecret = spy(PskSecret.class);
-        final PskCredential updatedCredentials = new PskCredential();
+        final PskCredential updatedCredentials = new PskCredential("foo");
         updatedCredentials.setSecrets(List.of(updatedSecret, newSecret));
 
         updatedCredentials.merge(existingCredentials);
@@ -305,5 +315,83 @@ public class CredentialsTest {
         verify(existingSecret, never()).merge(any(CommonSecret.class));
         verify(newSecret, never()).merge(any(CommonSecret.class));
         assertThat(updatedCredentials.getSecrets()).hasSize(2);
+    }
+
+    /**
+     * Verifies that a credentials object requires the authentication identifier to match
+     * the auth id regex.
+     */
+    @Test
+    public void testSetAuthIdFailsForIllegalIdentifier() {
+        assertThatThrownBy(() -> new PskCredential("_illegal"))
+        .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PskCredential("#illegal"))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PskCredential(""))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that decoding of a JSON object to a PSK credential
+     * fails if the authentication identifier does not match the auth ID regex.
+     */
+    @Test
+    public void testDecodePskCredentialFailsForIllegalAuthId() {
+        final JsonObject jsonCredential = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "#illegal");
+        assertThatThrownBy(() -> jsonCredential.mapTo(PskCredential.class))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that decoding of a JSON object to a PSK credential
+     * fails if the JSON object does not contain an auth-id property.
+     */
+    @Test
+    public void testDecodePskCredentialFailsForMissingAuthId() {
+        final JsonObject jsonCredential = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY);
+        assertThatThrownBy(() -> jsonCredential.mapTo(PskCredential.class))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that a generic credentials object requires the type to match
+     * the type name regex.
+     */
+    @Test
+    public void testSetTypeFailsForIllegalName() {
+        assertThatThrownBy(() -> new GenericCredential("_illegal", "device"))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new GenericCredential("#illegal", "device"))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new GenericCredential("", "device"))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that decoding of a JSON object to a generic credentials object
+     * fails if the type does not match the type name regex.
+     */
+    @Test
+    public void testDecodeGenericCredentialFailsForIllegalType() {
+        final JsonObject jsonCredential = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, "#illegal")
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "device1");
+        assertThatThrownBy(() -> jsonCredential.mapTo(GenericCredential.class))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * Verifies that decoding of a JSON object to a credentials object
+     * fails if the JSON does not contain a type property.
+     */
+    @Test
+    public void testDecodeCredentialFailsForMissingType() {
+        final JsonObject jsonCredential = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "device1");
+        assertThatThrownBy(() -> jsonCredential.mapTo(CommonCredential.class))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 }

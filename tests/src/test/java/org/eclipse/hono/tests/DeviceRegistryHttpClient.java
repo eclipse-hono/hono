@@ -687,7 +687,7 @@ public final class DeviceRegistryHttpClient {
      *         Otherwise the future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if the tenant is {@code null}.
      */
-    public Future<Void> updateCredentialsWithVersion(
+    public Future<MultiMap> updateCredentialsWithVersion(
             final String tenantId,
             final String deviceId,
             final Collection<CommonCredential> credentialsSpec,
@@ -704,9 +704,7 @@ public final class DeviceRegistryHttpClient {
         // encode array not list, workaround for vert.x issue
         final var payload = Json.encodeToBuffer(credentialsSpec.toArray(CommonCredential[]::new));
 
-        return httpClient
-                .update(uri, payload, headers, status -> status == expectedStatusCode, true)
-                .compose(ok -> Future.succeededFuture());
+        return httpClient.update(uri, payload, headers, status -> status == expectedStatusCode, true);
     }
 
     /**
@@ -904,8 +902,8 @@ public final class DeviceRegistryHttpClient {
                 .compose(ok -> registerDevice(tenantId, deviceId))
                 .compose(ok -> {
 
-                    final X509CertificateCredential credential = new X509CertificateCredential();
-                    credential.setAuthId(deviceCert.getSubjectDN().getName());
+                    final String authId = deviceCert.getSubjectDN().getName();
+                    final X509CertificateCredential credential = new X509CertificateCredential(authId);
                     credential.getSecrets().add(new X509CertificateSecret());
 
                     return addCredentials(tenantId, deviceId, Collections.singleton(credential));
@@ -961,8 +959,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(deviceData);
         Objects.requireNonNull(key);
 
-        final PskCredential credential = new PskCredential();
-        credential.setAuthId(deviceId);
+        final PskCredential credential = new PskCredential(deviceId);
 
         final PskSecret secret = new PskSecret();
         secret.setKey(key.getBytes(StandardCharsets.UTF_8));
@@ -988,8 +985,7 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<MultiMap> addPskDeviceToTenant(final String tenantId, final String deviceId, final String key) {
 
-        final PskCredential credential = new PskCredential();
-        credential.setAuthId(deviceId);
+        final PskCredential credential = new PskCredential(deviceId);
 
         final PskSecret secret = new PskSecret();
         secret.setKey(key.getBytes(StandardCharsets.UTF_8));

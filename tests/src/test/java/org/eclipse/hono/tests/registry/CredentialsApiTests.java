@@ -299,8 +299,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         final var secret2 = AbstractCredentialsServiceTest.createPasswordSecret("hono-password",
                 OptionalInt.of(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS));
 
-        final var credential = new PasswordCredential();
-        credential.setAuthId(authId);
+        final var credential = new PasswordCredential(authId);
         credential.setSecrets(Arrays.asList(secret1, secret2));
 
         return credential;

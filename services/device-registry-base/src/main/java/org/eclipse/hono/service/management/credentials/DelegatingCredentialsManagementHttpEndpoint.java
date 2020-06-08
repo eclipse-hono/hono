@@ -20,21 +20,21 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;
-import io.opentracing.tag.Tags;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -101,47 +101,6 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         router.put(pathWithTenantAndDeviceId).handler(this::updateCredentials);
     }
 
-    private void updateCredentials(final RoutingContext ctx) {
-
-        final Span span = TracingHelper.buildServerChildSpan(
-                tracer,
-                TracingHandler.serverSpanContext(ctx),
-                SPAN_NAME_UPDATE_CREDENTIALS,
-                getClass().getSimpleName()
-        ).start();
-
-        final JsonArray credentials = ctx.get(KEY_REQUEST_BODY);
-
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
-        final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
-
-        final List<CommonCredential> commonCredentials;
-        try {
-            commonCredentials = decodeCredentials(credentials);
-        } catch (final IllegalArgumentException e) {
-            final String msg = "Error parsing credentials";
-            logger.debug(msg);
-            TracingHelper.logError(span, msg);
-            Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_BAD_REQUEST);
-            HttpUtils.badRequest(ctx, msg);
-            span.finish();
-            return;
-        }
-
-        logger.debug("updating credentials [tenant: {}, device-id: {}] - {}", tenantId, deviceId, credentials);
-
-        getService().updateCredentials(tenantId, deviceId, commonCredentials, resourceVersion, span)
-                .onComplete(handler -> {
-                    final OperationResult<Void> operationResult = handler.result();
-                    writeOperationResponse(
-                            ctx,
-                            operationResult,
-                            null,
-                            span);
-                });
-    }
-
     private void getCredentialsForDevice(final RoutingContext ctx) {
 
         final Span span = TracingHelper.buildServerChildSpan(
@@ -151,113 +110,102 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
                 getClass().getSimpleName()
         ).start();
 
-        // mandatory params
-        final String tenantId = getMandatoryIdRequestParam(PARAM_TENANT_ID, ctx, span);
-        final String deviceId = getMandatoryIdRequestParam(PARAM_DEVICE_ID, ctx, span);
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
+        final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
 
-        final HttpServerResponse response = ctx.response();
+        CompositeFuture.all(tenantId, deviceId)
+            .compose(ok -> {
+                logger.debug("getting credentials [tenant: {}, device-id: {}]]",
+                        tenantId.result(), deviceId.result());
+                return getService().readCredentials(tenantId.result(), deviceId.result(), span);
+            })
+            .map(operationResult -> {
+                if (operationResult.isOk()) {
+                    // we need to map the payload from List to JsonArray because
+                    // Jackson does not include the credential's type property in the
+                    // JSON when serializing a plain java List<?> object.
+                    final JsonArray credentialsArray = operationResult.getPayload().stream()
+                            .map(credentials -> JsonObject.mapFrom(credentials))
+                            .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
+                    return OperationResult.ok(
+                            operationResult.getStatus(),
+                            credentialsArray,
+                            operationResult.getCacheDirective(),
+                            operationResult.getResourceVersion());
+                } else {
+                    return operationResult;
+                }
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
+    }
 
-        logger.debug("getCredentialsForDevice [tenant: {}, device-id: {}]]", tenantId, deviceId);
+    private void updateCredentials(final RoutingContext ctx) {
 
-        getService().readCredentials(tenantId, deviceId, span)
-                .onComplete(handler -> {
-                    final OperationResult<List<CommonCredential>> operationResult = handler.result();
-                    final int status = operationResult.getStatus();
-                    response.setStatusCode(status);
-                    switch (status) {
-                    case HttpURLConnection.HTTP_OK:
-                        final JsonArray credentialsArray = new JsonArray();
-                        for (final CommonCredential credential : operationResult.getPayload()) {
-                            credentialsArray.add(JsonObject.mapFrom(credential));
-                        }
-                        operationResult.getResourceVersion().ifPresent(v -> response.putHeader(HttpHeaders.ETAG, v));
-                        HttpUtils.setResponseBody(response, credentialsArray);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_UPDATE_CREDENTIALS,
+                getClass().getSimpleName()
+        ).start();
 
-                        // falls through intentionally
-                    default:
-                        Tags.HTTP_STATUS.set(span, status);
-                        span.finish();
-                        response.end();
-                    }
-                });
+        final Future<String> tenantId = getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false));
+        final Future<String> deviceId = getRequestParameter(ctx, PARAM_DEVICE_ID, getPredicate(config.getDeviceIdPattern(), false));
+        final Future<List<CommonCredential>> updatedCredentials = fromPayload(ctx);
+
+        CompositeFuture.all(tenantId, deviceId, updatedCredentials)
+            .compose(ok -> {
+                logger.debug("updating {} credentials [tenant: {}, device-id: {}]",
+                        updatedCredentials.result().size(), tenantId.result(), deviceId.result());
+                final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
+                return getService().updateCredentials(
+                        tenantId.result(),
+                        deviceId.result(),
+                        updatedCredentials.result(),
+                        resourceVersion,
+                        span);
+            })
+            .onSuccess(operationResult -> writeResponse(ctx, operationResult, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
     }
 
     /**
-     * Decode a list of secrets from a JSON array.
-     * <p>
-     * This is a convenience method, decoding a list of secrets from a JSON array.
+     * Decodes a list of secrets from a request body.
      *
-     * @param objects The JSON array.
+     * @param ctx The request to retrieve the updated credentials from.
      * @return The list of decoded secrets.
-     * @throws NullPointerException in the case the {@code objects} parameter is {@code null}.
+     * @throws NullPointerException if context is {@code null}.
      * @throws IllegalArgumentException If a credentials object is invalid.
      */
-    protected List<CommonCredential> decodeCredentials(final JsonArray objects) {
-        return objects
-                .stream()
+    private static Future<List<CommonCredential>> fromPayload(final RoutingContext ctx) {
+
+        Objects.requireNonNull(ctx);
+        final Promise<List<CommonCredential>> result = Promise.promise();
+        Optional.ofNullable(ctx.get(KEY_REQUEST_BODY))
+            .map(JsonArray.class::cast)
+            .ifPresentOrElse(
+                    // deserialize & validate payload
+                    array -> {
+                        try {
+                            result.complete(decodeCredentials(array));
+                        } catch (final IllegalArgumentException | DecodeException e) {
+                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                    "request body does not contain valid Credentials objects"));
+                        }
+                    },
+                    () -> result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                            "request body does not contain JSON array")));
+        return result.future();
+
+    }
+
+    private static List<CommonCredential> decodeCredentials(final JsonArray array) {
+        return array.stream()
                 .filter(JsonObject.class::isInstance)
                 .map(JsonObject.class::cast)
-                .map(this::decodeCredential)
-                .filter(Objects::nonNull)
+                .map(json -> json.mapTo(CommonCredential.class))
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * Decode a credential from a JSON object.
-     *
-     * @param object The object to device from.
-     * @return The decoded secret. Or {@code null} if the provided JSON object was {@code null}.
-     * @throws IllegalArgumentException If the credential object is invalid.
-     */
-    protected CommonCredential decodeCredential(final JsonObject object) {
-
-        if (object == null) {
-            return null;
-        }
-
-        verifyRegex(object, CredentialsConstants.FIELD_TYPE, CredentialsConstants.TYPE_VALUE_REGEX);
-        verifyRegex(object, CredentialsConstants.FIELD_AUTH_ID, CredentialsConstants.AUTH_ID_VALUE_REGEX);
-
-        final String type = object.getString(CredentialsConstants.FIELD_TYPE);
-        return decodeCredential(type, object);
-    }
-
-    /**
-     * Verify a fields exists in a JSON object and match a regular expression.
-     *
-     * @throws IllegalArgumentException If field is not set or does not match the regular expression.
-     */
-    private void verifyRegex(final JsonObject object, final String name, final String regexp) {
-        final String value = object.getString(name);
-
-        if (value == null || value.isEmpty()) {
-            throw new IllegalArgumentException(String.format("'%s' field must be set", name));
-        }
-
-        if (! value.matches(regexp)) {
-            throw new IllegalArgumentException(String.format("'%s' value : '%s' does not match allowed pattern: %s",
-                    name, value, regexp));
-        }
-    }
-
-    /**
-     * Decode a credential, based on the provided type.
-     *
-     * @param type The type of the secret. Will never be {@code null}.
-     * @param object The JSON object to decode. Will never be {@code null}.
-     * @return The decoded secret.
-     * @throws IllegalArgumentException If the credential object is invalid.
-     */
-    protected CommonCredential decodeCredential(final String type, final JsonObject object) {
-        switch (type) {
-            case RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD:
-                return object.mapTo(PasswordCredential.class);
-            case RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY:
-                return object.mapTo(PskCredential.class);
-            case RegistryManagementConstants.SECRETS_TYPE_X509_CERT:
-                return object.mapTo(X509CertificateCredential.class);
-            default:
-                return object.mapTo(GenericCredential.class);
-        }
     }
 }

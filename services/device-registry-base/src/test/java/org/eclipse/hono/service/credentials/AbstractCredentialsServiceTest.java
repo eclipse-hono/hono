@@ -164,8 +164,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @return The fully populated secret.
      */
     public static PskCredential createPSKCredential(final String authId, final String psk) {
-        final PskCredential p = new PskCredential();
-        p.setAuthId(authId);
+        final PskCredential p = new PskCredential(authId);
 
         final PskSecret s = new PskSecret();
         s.setKey(psk.getBytes());
@@ -185,8 +184,7 @@ public abstract class AbstractCredentialsServiceTest {
      */
     public static PasswordCredential createPasswordCredential(final String authId, final String password,
             final OptionalInt maxBcryptIterations) {
-        final PasswordCredential p = new PasswordCredential();
-        p.setAuthId(authId);
+        final PasswordCredential p = new PasswordCredential(authId);
 
         p.setSecrets(Collections.singletonList(createPasswordSecret(password, maxBcryptIterations)));
 
@@ -201,8 +199,7 @@ public abstract class AbstractCredentialsServiceTest {
      * @return The fully populated credential.
      */
     public static PasswordCredential createPlainPasswordCredential(final String authId, final String password) {
-        final PasswordCredential p = new PasswordCredential();
-        p.setAuthId(authId);
+        final PasswordCredential p = new PasswordCredential(authId);
 
         final PasswordSecret secret = new PasswordSecret();
         secret.setPasswordPlain(password);
@@ -892,8 +889,7 @@ public abstract class AbstractCredentialsServiceTest {
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final PasswordCredential credential = new PasswordCredential();
-        credential.setAuthId(authId);
+        final PasswordCredential credential = new PasswordCredential(authId);
         final PasswordSecret sec1 = new PasswordSecret().setPasswordPlain("bar");
         final PasswordSecret sec2 = new PasswordSecret().setPasswordPlain("foo");
 
@@ -943,8 +939,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().onComplete(ctx.succeeding(n -> {
             // create a credential object with only one of the ID.
-            final PasswordCredential credentialWithOnlyId = new PasswordCredential();
-            credentialWithOnlyId.setAuthId(authId);
+            final PasswordCredential credentialWithOnlyId = new PasswordCredential(authId);
 
             final PasswordSecret secretWithOnlyId = new PasswordSecret();
             secretWithOnlyId.setId(secretIDs.get(0));
@@ -1137,8 +1132,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().onComplete(ctx.succeeding(n -> {
             // Add some metadata to the secret
-            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential();
-            credentialWithMetadataUpdate.setAuthId(authId);
+            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential(authId);
 
             final PasswordSecret secretWithOnlyIdAndMetadata = new PasswordSecret();
             secretWithOnlyIdAndMetadata.setId(secretIDs.get(0));
@@ -1248,8 +1242,7 @@ public abstract class AbstractCredentialsServiceTest {
 
         phase2.future().onComplete(ctx.succeeding(n -> {
             // Add some other metadata to the secret
-            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential();
-            credentialWithMetadataUpdate.setAuthId(authId);
+            final PasswordCredential credentialWithMetadataUpdate = new PasswordCredential(authId);
 
             final PasswordSecret secretWithOnlyIdAndMetadata = new PasswordSecret();
             secretWithOnlyIdAndMetadata.setId(secretIDs.get(0));

@@ -17,11 +17,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.regex.Matcher;
 
+import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -34,10 +36,23 @@ import com.google.common.base.Strings;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", visible = true)
 @JsonTypeIdResolver(CredentialTypeResolver.class)
-@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class CommonCredential {
 
-    @JsonProperty(RegistryManagementConstants.FIELD_AUTH_ID)
+    /**
+     * A predicate for matching authentication identifiers against the
+     * {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE default pattern}.
+     */
+    protected static final Predicate<String> AUTH_ID_VALIDATOR_DEFAULT = authId -> {
+        final Matcher matcher = CredentialsConstants.PATTERN_AUTH_ID_VALUE.matcher(authId);
+        if (matcher.matches()) {
+            return true;
+        } else {
+            throw new IllegalArgumentException("authentication identifier must match pattern "
+                    + CredentialsConstants.PATTERN_AUTH_ID_VALUE.pattern());
+        }
+    };
+
+    @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID)
     private String authId;
     @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
@@ -47,6 +62,22 @@ public abstract class CommonCredential {
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> extensions = new HashMap<>();
+
+    /**
+     * Creates a new credentials object for an authentication identifier.
+     *
+     * @param authId The authentication identifier.
+     * @throws NullPointerException if the auth ID is {@code null}.
+     * @throws IllegalArgumentException if auth ID does not match {@link CredentialsConstants#PATTERN_AUTH_ID_VALUE}.
+     */
+    protected CommonCredential(final String authId) {
+        Objects.requireNonNull(authId);
+        if (getAuthIdValidator().test(authId)) {
+            this.authId = authId;
+        } else {
+            throw new IllegalArgumentException("validation of authentication identifier failed");
+        }
+    }
 
     /**
      * Get a list of secrets for this credential.
@@ -62,19 +93,41 @@ public abstract class CommonCredential {
      */
     public abstract String getType();
 
-    public String getAuthId() {
-        return authId;
+    /**
+     * Gets a predicate to use for validating authentication identifiers.
+     * <p>
+     * The predicate is invoked by the constructor before setting the authId property.
+     * This default implementation returns a predicate that matches the identifier
+     * against the {@linkplain CredentialsConstants#PATTERN_AUTH_ID_VALUE default pattern}.
+     * <p>
+     * The constructor will re-throw an {@code IllegalArgumentException}y thrown by the
+     * predicate's <em>test</em> method. This might be used to convey additional information
+     * about the failed validation.
+     * <p>
+     * Subclasses should override this method in order to use other means of validation.
+     *
+     * @return The predicate.
+     */
+    protected Predicate<String> getAuthIdValidator() {
+        return AUTH_ID_VALIDATOR_DEFAULT;
     }
 
     /**
-     * Sets the authentication identifier that the device uses for authenticating to protocol adapters.
+     * Sets the authentication identifier used by the device.
      *
-     * @param authId The authentication identifier use for authentication.
+     * @param authId The identifier.
      * @return A reference to this for fluent use.
+     * @throws NullPointerException if ID is {@code null}.
      */
-    public CommonCredential setAuthId(final String authId) {
+    @JsonIgnore
+    protected final CommonCredential setAuthId(final String authId) {
+        Objects.requireNonNull(authId);
         this.authId = authId;
         return this;
+    }
+
+    public final String getAuthId() {
+        return authId;
     }
 
     @JsonIgnore
