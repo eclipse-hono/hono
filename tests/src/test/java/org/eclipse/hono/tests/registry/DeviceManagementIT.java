@@ -15,17 +15,18 @@ package org.eclipse.hono.tests.registry;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
-import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,7 +38,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -53,11 +56,10 @@ public class DeviceManagementIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceManagementIT.class);
 
-    private static final String TENANT = Constants.DEFAULT_TENANT;
-
     private static Vertx vertx = Vertx.vertx();
     private static DeviceRegistryHttpClient registry;
-
+    private static IntegrationTestSupport helper;
+    private String tenantId;
     private String deviceId;
 
     /**
@@ -66,10 +68,9 @@ public class DeviceManagementIT {
     @BeforeAll
     public static void setUpClient() {
 
-        registry = new DeviceRegistryHttpClient(
-                vertx,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
+        helper = new IntegrationTestSupport(vertx);
+        helper.initRegistryClient();
+        registry = helper.registry;
     }
 
     /**
@@ -80,7 +81,8 @@ public class DeviceManagementIT {
     @BeforeEach
     public void setUp(final TestInfo testInfo) {
         LOG.info("running {}", testInfo.getDisplayName());
-        deviceId = UUID.randomUUID().toString();
+        tenantId = helper.getRandomTenantId();
+        deviceId = helper.getRandomDeviceId(tenantId);
     }
 
     /**
@@ -90,8 +92,7 @@ public class DeviceManagementIT {
      */
     @AfterEach
     public void removeDevice(final VertxTestContext ctx) {
-        registry.deregisterDevice(TENANT, deviceId)
-        .onComplete(s -> ctx.completeNow());
+        helper.deleteObjects(ctx);
     }
 
     /**
@@ -115,19 +116,7 @@ public class DeviceManagementIT {
         final Device device = new Device();
         device.putExtension("test", "test");
 
-        registry.registerDevice(TENANT, deviceId, device).onComplete(ctx.completing());
-    }
-
-    /**
-     * Verifies that a device can be properly registered without providing a payload.
-     *
-     * @param ctx The vert.x test context
-     */
-    @Test
-    public void testAddDeviceWithoutPayloadSucceeds(final VertxTestContext ctx) {
-
-        registry.registerDevice(TENANT, deviceId, (Device) null, null, HttpURLConnection.HTTP_CREATED)
-                .onComplete(ctx.completing());
+        registry.registerDevice(tenantId, deviceId, device).onComplete(ctx.completing());
     }
 
     /**
@@ -141,15 +130,12 @@ public class DeviceManagementIT {
         final Device device = new Device();
         device.putExtension("test", "test");
 
-        registry.registerDevice(TENANT, null, device)
-                .onComplete(ctx.succeeding(s -> {
+        registry.registerDevice(tenantId, null, device)
+                .onComplete(ctx.succeeding(responseHeaders -> {
                     ctx.verify(() -> {
-                        final List<String> locations = s.getAll("location");
-                        assertThat(locations).isNotNull();
-                        assertThat(locations).hasSize(1);
-                        final String location = locations.get(0);
-                        assertThat(location).isNotNull();
-                        assertThat(location.matches("/(.*)/(.*)/(.*)/(.*)"));
+                        assertThat(responseHeaders.get(HttpHeaders.ETAG)).isNotNull();
+                        final String createdDeviceId = assertLocationHeader(responseHeaders, tenantId);
+                        helper.addDeviceIdForRemoval(tenantId, createdDeviceId);
                     });
                     ctx.completeNow();
                 }));
@@ -165,10 +151,10 @@ public class DeviceManagementIT {
 
         final Device device = new Device();
         // add the device
-        registry.registerDevice(TENANT, deviceId, device)
+        registry.registerDevice(tenantId, deviceId, device)
         .compose(ok -> {
             // now try to add the device again
-            return registry.registerDevice(TENANT, deviceId, device, HttpURLConnection.HTTP_CONFLICT);
+            return registry.registerDevice(tenantId, deviceId, device, HttpURLConnection.HTTP_CONFLICT);
         })
         .onComplete(ctx.completing());
     }
@@ -186,9 +172,30 @@ public class DeviceManagementIT {
 
         registry
                 .registerDevice(
-                        TENANT, deviceId, device, null,
+                        tenantId, deviceId, device, null,
                         HttpURLConnection.HTTP_BAD_REQUEST)
                 .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that a request to register a device that contains unsupported properties
+     * fails with a 400 status.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testAddDeviceFailsForUnknownProperties(final VertxTestContext ctx) {
+
+        final JsonObject requestBody = JsonObject.mapFrom(new Device());
+        requestBody.put("unexpected", "property");
+
+        registry.registerDevice(
+                tenantId,
+                deviceId,
+                requestBody,
+                "application/json",
+                HttpURLConnection.HTTP_BAD_REQUEST)
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -200,7 +207,7 @@ public class DeviceManagementIT {
     @Test
     public void testAddDeviceSucceedsForEmptyBody(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
+        registry.registerDevice(tenantId, deviceId, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
     }
 
     /**
@@ -212,7 +219,7 @@ public class DeviceManagementIT {
     @Test
     public void testAddDeviceSucceedsForEmptyBodyAndContentType(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, (Device) null, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
+        registry.registerDevice(tenantId, deviceId, (Device) null, null, HttpURLConnection.HTTP_CREATED).onComplete(ctx.completing());
     }
 
     /**
@@ -230,8 +237,8 @@ public class DeviceManagementIT {
         device.putExtension("testBoolean", false);
         device.setEnabled(false);
 
-        registry.registerDevice(TENANT, deviceId, device)
-            .compose(ok -> registry.getRegistrationInfo(TENANT, deviceId))
+        registry.registerDevice(tenantId, deviceId, device)
+            .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId))
             .compose(info -> {
                     assertRegistrationInformation(ctx, info.toJsonObject().mapTo(Device.class), deviceId, device);
                 return Future.succeededFuture();
@@ -247,7 +254,7 @@ public class DeviceManagementIT {
     @Test
     public void testGetDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        registry.getRegistrationInfo(TENANT, "non-existing-device")
+        registry.getRegistrationInfo(tenantId, "non-existing-device")
         .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
@@ -263,7 +270,7 @@ public class DeviceManagementIT {
     @Test
     public void testGetDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
-        registry.getRegistrationInfo(TENANT, null)
+        registry.getRegistrationInfo(tenantId, null)
         .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
@@ -288,10 +295,20 @@ public class DeviceManagementIT {
                 .put("ext", new JsonObject()
                         .put("newKey1", "newValue1"))
                 .put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
+        final AtomicReference<String> latestVersion = new AtomicReference<>();
 
-        registry.registerDevice(TENANT, deviceId, originalData.mapTo(Device.class))
-            .compose(ok -> registry.updateDevice(TENANT, deviceId, updatedData))
-            .compose(ok -> registry.getRegistrationInfo(TENANT, deviceId))
+        registry.registerDevice(tenantId, deviceId, originalData.mapTo(Device.class))
+            .compose(responseHeaders -> {
+                latestVersion.set(responseHeaders.get(HttpHeaders.ETAG));
+                assertThat(latestVersion.get()).isNotNull();
+                return registry.updateDevice(tenantId, deviceId, updatedData);
+            })
+            .compose(responseHeaders -> {
+                final String updatedVersion = responseHeaders.get(HttpHeaders.ETAG);
+                assertThat(updatedVersion).isNotNull();
+                assertThat(updatedVersion).isNotEqualTo(latestVersion.get());
+                return registry.getRegistrationInfo(tenantId, deviceId);
+            })
             .compose(info -> {
                     assertRegistrationInformation(ctx, info.toJsonObject().mapTo(Device.class), deviceId,
                             updatedData.mapTo(Device.class));
@@ -307,7 +324,7 @@ public class DeviceManagementIT {
     @Test
     public void testUpdateDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        registry.updateDevice(TENANT, "non-existing-device", new JsonObject().put("ext", new JsonObject().put("test", "test")))
+        registry.updateDevice(tenantId, "non-existing-device", new JsonObject().put("ext", new JsonObject().put("test", "test")))
         .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
@@ -323,7 +340,7 @@ public class DeviceManagementIT {
     @Test
     public void testUpdateDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
-        registry.updateDevice(TENANT, null, new JsonObject())
+        registry.updateDevice(tenantId, null, new JsonObject())
         .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
@@ -338,14 +355,14 @@ public class DeviceManagementIT {
     @Test
     public void testUpdateDeviceFailsForMissingContentType(final VertxTestContext context) {
 
-        registry.registerDevice(TENANT, deviceId, new Device())
+        registry.registerDevice(tenantId, deviceId, new Device())
             .compose(ok -> {
                 // now try to update the device with missing content type
                     final JsonObject requestBody = new JsonObject()
                             .put("ext", new JsonObject()
                                     .put("test", "testUpdateDeviceFailsForMissingContentType")
                                     .put("newKey1", "newValue1"));
-                return registry.updateDevice(TENANT, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
+                return registry.updateDevice(tenantId, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
             }).onComplete(context.completing());
     }
 
@@ -358,9 +375,9 @@ public class DeviceManagementIT {
     @Test
     public void testDeregisterDeviceSucceeds(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, deviceId, new Device())
-        .compose(ok -> registry.deregisterDevice(TENANT, deviceId))
-        .compose(ok -> registry.getRegistrationInfo(TENANT, deviceId))
+        registry.registerDevice(tenantId, deviceId, new Device())
+        .compose(ok -> registry.deregisterDevice(tenantId, deviceId))
+        .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId))
         .onComplete(getAttempt -> {
             if (getAttempt.succeeded()) {
                 ctx.failNow(new AssertionError("should not have found registration"));
@@ -381,7 +398,7 @@ public class DeviceManagementIT {
     @Test
     public void testDeregisterDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
-        registry.deregisterDevice(TENANT, null)
+        registry.deregisterDevice(tenantId, null)
         .onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
@@ -396,7 +413,7 @@ public class DeviceManagementIT {
     @Test
     public void testDeregisterDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
-        registry.deregisterDevice(TENANT, "non-existing-device").onComplete(ctx.failing(t -> {
+        registry.deregisterDevice(tenantId, "non-existing-device").onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
             ctx.completeNow();
         }));
@@ -410,7 +427,7 @@ public class DeviceManagementIT {
     @Test
     public void testAddDeviceFailsForInvalidDeviceId(final VertxTestContext ctx) {
 
-        registry.registerDevice(TENANT, "device ID With spaces and $pecial chars!", null)
+        registry.registerDevice(tenantId, "device ID With spaces and $pecial chars!", null)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
                 ctx.completeNow();
@@ -430,6 +447,19 @@ public class DeviceManagementIT {
                 ctx.verify(() -> assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
                 ctx.completeNow();
             }));
+    }
+
+    private static String assertLocationHeader(final MultiMap responseHeaders, final String tenantId) {
+        final String location = responseHeaders.get(HttpHeaders.LOCATION);
+        assertThat(location).isNotNull();
+        final Pattern pattern = Pattern.compile("/(.*)/(.*)/(.*)/(.*)");
+        final Matcher matcher = pattern.matcher(location);
+        assertThat(matcher.matches());
+        assertThat(matcher.group(2)).isEqualTo(RegistryManagementConstants.DEVICES_HTTP_ENDPOINT);
+        assertThat(matcher.group(3)).isEqualTo(tenantId);
+        final String generatedId = matcher.group(4);
+        assertThat(generatedId).isNotNull();
+        return generatedId;
     }
 
     private static void assertRegistrationInformation(

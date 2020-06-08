@@ -672,6 +672,18 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Adds a device identifier to the list
+     * of devices to be deleted after the current test has finished.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device's identifier.
+     * @see #deleteObjects(VertxTestContext)
+     */
+    public void addDeviceIdForRemoval(final String tenantId, final String deviceId) {
+        devicesToDelete.computeIfAbsent(tenantId, t -> new HashSet<>()).add(deviceId);
+    }
+
+    /**
      * Gets a random device identifier and adds it to the list
      * of devices to be deleted after the current test has finished.
      *
