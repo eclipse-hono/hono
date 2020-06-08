@@ -14,7 +14,7 @@ In order to run the tests you will need the following:
 Run the tests by executing the following command from the `tests` directory (add `-Ddocker.host=tcp://${host}:${port}` if Docker is not installed locally)
 
     # in directory: hono/tests/
-    mvn verify -Prun-tests
+    $ mvn verify -Prun-tests
 
 This starts the following Docker containers and runs the test cases against them
 
@@ -51,6 +51,12 @@ With that profile, the Docker containers will be kept running as well.
 In order to stop and remove the Docker containers started by a test run, use:
 
     $ mvn verify -PstopContainers
+
+### Running the Tests with the MongoDB based device registry
+
+By default, the integration tests include the file based device registry. In order to include the Mongo DB based device registry instead of the file based counterpart, use the `device-registry-mongodb` maven profile:
+
+    $ mvn verify -Pdevice-registry-mongodb,run-tests
 
 ### Running the Tests with the Jaeger tracing component
 
