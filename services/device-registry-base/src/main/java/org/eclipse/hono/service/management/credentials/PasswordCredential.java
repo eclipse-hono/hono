@@ -37,6 +37,17 @@ public class PasswordCredential extends CommonCredential {
     private List<PasswordSecret> secrets = new LinkedList<>();
 
     /**
+     * Creates a new credentials object for an authentication identifier.
+     *
+     * @param authId The authentication identifier.
+     * @throws NullPointerException if the auth ID is {@code null}.
+     * @throws IllegalArgumentException if auth ID does not match {@link org.eclipse.hono.util.CredentialsConstants#PATTERN_AUTH_ID_VALUE}.
+     */
+    public PasswordCredential(@JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId) {
+        super(authId);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

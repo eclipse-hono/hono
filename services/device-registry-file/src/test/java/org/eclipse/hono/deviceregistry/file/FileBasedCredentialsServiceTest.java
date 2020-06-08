@@ -370,8 +370,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         when(fileSystem.existsBlocking(credentialsConfig.getFilename())).thenReturn(Boolean.TRUE);
 
         // 4700
-        final PasswordCredential passwordCredential = new PasswordCredential();
-        passwordCredential.setAuthId("bumlux");
+        final PasswordCredential passwordCredential = new PasswordCredential("bumlux");
 
         final PasswordSecret hashedPassword = new PasswordSecret();
         hashedPassword.setPasswordHash("$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.");
@@ -379,8 +378,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         passwordCredential.setSecrets(Collections.singletonList(hashedPassword));
 
         // 4711RegistryManagementConstants.FIELD_ID
-        final PskCredential pskCredential = new PskCredential();
-        pskCredential.setAuthId("sensor1");
+        final PskCredential pskCredential = new PskCredential("sensor1");
 
         final PskSecret pskSecret = new PskSecret();
         pskSecret.setKey("sharedkey".getBytes(StandardCharsets.UTF_8));
@@ -525,8 +523,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         credentialsConfig.setHashAlgorithmsWhitelist(whitelist);
 
         // 4700
-        final PasswordCredential passwordCredential = new PasswordCredential();
-        passwordCredential.setAuthId("bumlux");
+        final PasswordCredential passwordCredential = new PasswordCredential("bumlux");
 
         final PasswordSecret hashedPassword = new PasswordSecret();
         hashedPassword.setPasswordHash("$2a$10$UK9lmSMlYmeXqABkTrDRsu1nlZRnAmGnBdPIWZoDajtjyxX18Dry.");
@@ -564,8 +561,7 @@ public class FileBasedCredentialsServiceTest extends AbstractCredentialsServiceT
         final PskSecret pskSecret = new PskSecret();
         pskSecret.setKey("sharedkey".getBytes(StandardCharsets.UTF_8));
 
-        final PskCredential pskCredential = new PskCredential();
-        pskCredential.setAuthId(authId);
+        final PskCredential pskCredential = new PskCredential(authId);
         pskCredential.setExtensions(Map.of("property-to-match", expectedContextValue));
         pskCredential.setSecrets(Collections.singletonList(pskSecret));
 

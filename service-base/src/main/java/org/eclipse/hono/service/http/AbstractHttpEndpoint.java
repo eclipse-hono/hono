@@ -19,7 +19,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -39,7 +38,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.CorsHandler;
@@ -69,8 +67,6 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * The key that is used to put the if-Match ETags values to the RoutingContext.
      */
     protected static final String KEY_RESOURCE_VERSION = "KEY_RESOURCE_VERSION";
-
-    private static final Pattern PATTERN_ANY_STRING = Pattern.compile(".*");
 
     /**
      * The configuration properties for this endpoint.
@@ -152,9 +148,14 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
     }
 
     /**
-     * Check if the payload is not null and call \
-     * {@link #extractRequiredJson(RoutingContext, Function)}} to extract it accordingly.
+     * Extracts JSON payload from a request body, if not empty.
      * <p>
+     * This method tries to de-serialize the content of the request body
+     * into a {@code JsonObject} and put it to the request context using key
+     * {@value #KEY_REQUEST_BODY}.
+     * <p>
+     * The request is failed with a 400 status code if de-serialization fails, for example
+     * because the content is not a valid JSON string.
      *
      * @param ctx The routing context to retrieve the JSON request body from.
      */
@@ -163,7 +164,6 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         if (ctx.getBody().length() != 0) {
             extractRequiredJson(ctx, RoutingContext::getBodyAsJson);
         } else {
-            ctx.put(KEY_REQUEST_BODY, new JsonObject());
             ctx.next();
         }
     }
@@ -254,94 +254,6 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
                     e));
         }
         return result.future();
-    }
-
-    /**
-     * Get request parameter value and check if it has been set. If it's not set, fail the request.
-     *
-     * @param paramName The name of the parameter to get.
-     * @param ctx The routing context of the request.
-     * @param span The active OpenTracing span for this operation. In case of the missing mandatory parameter, the error is logged and the span is finished.
-     *             Otherwise, the parameter is set as a span tag.
-     * @return The value of the parameter if it's set or {@code null} otherwise.
-     * @throws NullPointerException If ctx or paramName are {@code null}.
-     * @deprecated Use {@link #getRequestIdParam(String, RoutingContext, Span, boolean)} instead.
-     */
-    @Deprecated
-    protected final String getMandatoryIdRequestParam(final String paramName, final RoutingContext ctx, final Span span) {
-        return getRequestIdParam(paramName, ctx, span, false);
-    }
-
-    /**
-     * Get request parameter value. Optionally, if parameter has not been set, fail the request.
-     *
-     * @param paramName The name of the parameter to get.
-     * @param ctx The routing context of the request.
-     * @param span The active OpenTracing span for this operation. In case of the missing mandatory parameter, the error is logged and the span is finished.
-     *             Otherwise, the parameter is set as a span tag.
-     * @param optional Whether to check if parameter has been set or not.
-     * @return The value of the parameter if it's set or {@code null} otherwise.
-     * @throws NullPointerException If ctx or paramName are {@code null}.
-     * @deprecated Use {@link #getRequestIdParam(String, RoutingContext, Span, boolean)} instead.
-     */
-    @Deprecated
-    protected final String getRequestIdParam(final String paramName, final RoutingContext ctx, final Span span, final boolean optional) {
-
-        final String value = ctx.request().getParam(paramName);
-
-        if (value != null) {
-
-            final Pattern pattern;
-            final boolean matches;
-            switch (paramName) {
-            case PARAM_TENANT_ID:
-                pattern = config.getTenantIdPattern();
-                matches = pattern.matcher(value).matches();
-                break;
-            case PARAM_DEVICE_ID:
-                pattern = config.getDeviceIdPattern();
-                matches = pattern.matcher(value).matches();
-                break;
-            default:
-                pattern = PATTERN_ANY_STRING;
-                matches = true;
-            }
-
-            if (matches) {
-                span.setTag(paramName, value);
-                return value;
-            } else {
-                final String msg = String.format("parameter [name: %s, value: %s] does not match allowed pattern: %s",
-                        paramName, value, pattern.pattern());
-                HttpUtils.badRequest(ctx, msg);
-                finishSpanWithError(span, HttpURLConnection.HTTP_BAD_REQUEST, msg);
-                return null;
-            }
-
-        } else if (!optional) {
-            final String msg = String.format("Missing request parameter: %s", paramName);
-            HttpUtils.badRequest(ctx, msg);
-            finishSpanWithError(span, HttpURLConnection.HTTP_BAD_REQUEST, msg);
-            return null;
-        } else {
-            span.setTag(paramName, value);
-            return value;
-        }
-    }
-
-    /**
-     * Finish the given span with the error code and logs the error message.
-     *
-     * @param span The nspan to finish.
-     * @param httpErrorCode The HTTP Error code to use.
-     * @param errorMessage A string containing a message describing the error.
-     * @deprecated Use {@link #failRequest(RoutingContext, Throwable, Span)} instead.
-     */
-    @Deprecated
-    protected final void finishSpanWithError(final Span span, final int httpErrorCode, final String errorMessage) {
-        TracingHelper.logError(span, errorMessage);
-        Tags.HTTP_STATUS.set(span, httpErrorCode);
-        span.finish();
     }
 
     /**

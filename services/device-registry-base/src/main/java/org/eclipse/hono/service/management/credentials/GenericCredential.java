@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,16 +17,25 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Predicate;
+
+import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A generic credentials implementation.
  */
 public class GenericCredential extends CommonCredential {
 
+    private static final Predicate<String> typeValidator = CredentialsConstants.PATTERN_TYPE_VALUE.asMatchPredicate();
+
+    @JsonProperty(value = RegistryManagementConstants.FIELD_TYPE)
     private String type;
 
     @JsonAnySetter
@@ -36,26 +45,34 @@ public class GenericCredential extends CommonCredential {
     private List<GenericSecret> secrets = new LinkedList<>();
 
     /**
-     * Sets the credentials type name reflecting the type of authentication mechanism a device will use
-     * when authenticating to protocol adapters.
+     * Creates a new credentials object for a type and authentication identifier.
      *
-     * @param type  The credential name type to set.
-     * @return      a reference to this for fluent use.
-     *
-     * @see <a href="https://www.eclipse.org/hono/docs/api/credentials/#standard-credential-types">Standard Credential Types</a>
+     * @param type The credentials type to set.
+     * @param authId The authentication identifier.
+     * @throws NullPointerException if type or auth ID are {@code null}.
+     * @throws IllegalArgumentException if type does not match {@link CredentialsConstants#PATTERN_TYPE_VALUE}
+     *         or if auth ID does not match {@link CredentialsConstants#PATTERN_AUTH_ID_VALUE}.
      */
-    public GenericCredential setType(final String type) {
-        this.type = type;
-        return this;
+    public GenericCredential(
+            @JsonProperty(value = RegistryManagementConstants.FIELD_TYPE, required = true) final String type,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId) {
+        super(authId);
+        Objects.requireNonNull(type);
+        if (typeValidator.test(type)) {
+            this.type = type;
+        } else {
+            throw new IllegalArgumentException("type name must match pattern "
+                    + CredentialsConstants.PATTERN_TYPE_VALUE.pattern());
+        }
     }
 
     @Override
-    public String getType() {
+    public final String getType() {
         return type;
     }
 
     @Override
-    public List<GenericSecret> getSecrets() {
+    public final List<GenericSecret> getSecrets() {
         return this.secrets;
     }
 
@@ -68,7 +85,7 @@ public class GenericCredential extends CommonCredential {
      * @return        a reference to this for fluent use.
      * @throws IllegalArgumentException if the list of secrets is empty.
      */
-    public GenericCredential setSecrets(final List<GenericSecret> secrets) {
+    public final GenericCredential setSecrets(final List<GenericSecret> secrets) {
         if (secrets != null && secrets.isEmpty()) {
             throw new IllegalArgumentException("Secrets cannot be empty");
         }
@@ -82,13 +99,13 @@ public class GenericCredential extends CommonCredential {
      * @param additionalProperties  The additional properties for this credential.
      * @return                      a reference to this for fluent use.
      */
-    public GenericCredential setAdditionalProperties(final Map<String, Object> additionalProperties) {
+    public final GenericCredential setAdditionalProperties(final Map<String, Object> additionalProperties) {
         this.additionalProperties = additionalProperties;
         return this;
     }
 
     @JsonAnyGetter
-    public Map<String, Object> getAdditionalProperties() {
+    public final Map<String, Object> getAdditionalProperties() {
         return this.additionalProperties;
     }
 

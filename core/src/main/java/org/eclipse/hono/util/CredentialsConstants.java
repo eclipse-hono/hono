@@ -14,6 +14,7 @@ package org.eclipse.hono.util;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import io.vertx.core.json.JsonObject;
 
@@ -119,11 +120,11 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
     /**
      * The regular expression to validate that the auth-id field supplied in credentials is legal.
      */
-    public static final String AUTH_ID_VALUE_REGEX = "^[a-zA-Z0-9-=.]+$";
+    public static final Pattern PATTERN_AUTH_ID_VALUE = Pattern.compile("^[a-zA-Z0-9-=.]+$");
     /**
      * The regular expression to validate that the type field supplied in credentials is legal.
      */
-    public static final String TYPE_VALUE_REGEX = "^[a-z0-9-]+$";
+    public static final Pattern PATTERN_TYPE_VALUE = Pattern.compile("^[a-z0-9-]+$");
 
     /**
      * Request actions that belong to the Credentials API.

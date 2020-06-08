@@ -17,11 +17,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.GenericCredential;
 import org.eclipse.hono.service.management.credentials.GenericSecret;
@@ -32,7 +34,6 @@ import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -48,6 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.Json;
@@ -66,13 +68,12 @@ import io.vertx.junit5.VertxTestContext;
 public class CredentialsManagementIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(CredentialsManagementIT.class);
-    private static final String HTTP_HEADER_ETAG = HttpHeaders.ETAG.toString();
 
-    private static final String TENANT = Constants.DEFAULT_TENANT;
-    private static final String TEST_AUTH_ID = "sensor20";
-    private static final Vertx vertx = Vertx.vertx();
-
+    private static final String PREFIX_AUTH_ID = "sensor20";
+    private static final Vertx VERTX = Vertx.vertx();
     private static final String ORIG_BCRYPT_PWD;
+
+    private static IntegrationTestSupport helper;
     private static DeviceRegistryHttpClient registry;
 
     static {
@@ -80,8 +81,10 @@ public class CredentialsManagementIT {
         ORIG_BCRYPT_PWD = encoder.encode("thePassword");
     }
 
+    private String tenantId;
     private String deviceId;
     private String authId;
+    private AtomicReference<String> resourceVersion = new AtomicReference<>();
     private PasswordCredential hashedPasswordCredential;
     private PskCredential pskCredentials;
 
@@ -91,11 +94,9 @@ public class CredentialsManagementIT {
     @BeforeAll
     public static void setUpClient() {
 
-        registry = new DeviceRegistryHttpClient(
-                vertx,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HOST,
-                IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT);
-
+        helper = new IntegrationTestSupport(VERTX);
+        helper.initRegistryClient();
+        registry = helper.registry;
     }
 
     /**
@@ -108,12 +109,13 @@ public class CredentialsManagementIT {
     public void setUp(final VertxTestContext ctx, final TestInfo testInfo) {
 
         LOG.info("running test: {}", testInfo.getDisplayName());
-        deviceId = UUID.randomUUID().toString();
-        authId = getRandomAuthId(TEST_AUTH_ID);
+        tenantId = helper.getRandomTenantId();
+        deviceId = helper.getRandomDeviceId(tenantId);
+        authId = getRandomAuthId(PREFIX_AUTH_ID);
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
         pskCredentials = newPskCredentials(authId);
-        registry.registerDevice(Constants.DEFAULT_TENANT, deviceId)
-        .onComplete(ctx.completing());
+        registry.registerDevice(tenantId, deviceId)
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -123,8 +125,7 @@ public class CredentialsManagementIT {
      */
     @AfterEach
     public void removeCredentials(final VertxTestContext ctx) {
-
-        registry.deregisterDevice(TENANT, deviceId).onComplete(ctx.completing());
+        helper.deleteObjects(ctx);
     }
 
     /**
@@ -134,21 +135,14 @@ public class CredentialsManagementIT {
      */
     @AfterAll
     public static void tearDown(final VertxTestContext context) {
-        vertx.close(context.completing());
+        VERTX.close(context.completing());
     }
 
-    /**
-     * Verifies that the service accepts an add credentials request containing valid credentials.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void testAddCredentialsSucceeds(final VertxTestContext context)  {
-
-        registry
-                .updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
-                        HttpURLConnection.HTTP_NO_CONTENT)
-                .onComplete(context.completing());
+    private static void assertResourceVersionHasChanged(final AtomicReference<String> originalVersion, final MultiMap responseHeaders) {
+        final String resourceVersion = responseHeaders.get(HttpHeaders.ETAG);
+        assertThat(resourceVersion).isNotNull();
+        assertThat(resourceVersion).isNotEqualTo(originalVersion.get());
+        originalVersion.set(resourceVersion);
     }
 
     /**
@@ -159,17 +153,37 @@ public class CredentialsManagementIT {
     @Test
     public void testNewDeviceReturnsEmptyCredentials(final VertxTestContext context) {
 
-        registry
-                .getCredentials(TENANT, deviceId)
-                .onComplete(context.succeeding(ok2 -> {
-                    context.verify(() -> {
-                        final CommonCredential[] credentials = Json.decodeValue(ok2,
-                                CommonCredential[].class);
-                        assertThat(credentials).hasSize(0);
-                    });
-                    context.completeNow();
-                }));
+        registry.getCredentials(tenantId, deviceId)
+            .onComplete(context.succeeding(responseBody -> {
+                context.verify(() -> {
+                    final CommonCredential[] credentials = Json.decodeValue(responseBody,
+                            CommonCredential[].class);
+                    assertThat(credentials).isEmpty();
+                });
+                context.completeNow();
+            }));
 
+    }
+
+    /**
+     * Verifies that the service accepts a request to add credentials request containing valid credentials.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddCredentialsSucceeds(final VertxTestContext context)  {
+
+        registry.updateCredentials(
+                tenantId,
+                deviceId,
+                List.of(hashedPasswordCredential),
+                HttpURLConnection.HTTP_NO_CONTENT)
+            .onComplete(context.succeeding(responseHeaders -> {
+                context.verify(() -> {
+                    assertResourceVersionHasChanged(resourceVersion, responseHeaders);
+                });
+                context.completeNow();
+            }));
     }
 
     /**
@@ -183,8 +197,11 @@ public class CredentialsManagementIT {
         final PasswordCredential credential = IntegrationTestSupport.createPasswordCredential(authId, "thePassword");
         credential.getExtensions().put("client-id", "MQTT-client-2384236854");
 
-        registry.addCredentials(TENANT, deviceId, Collections.singleton(credential))
-                .compose(createAttempt -> registry.getCredentials(TENANT, deviceId))
+        registry.addCredentials(tenantId, deviceId, List.of(credential))
+                .compose(responseHeaders -> {
+                    context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+                    return registry.getCredentials(tenantId, deviceId);
+                })
                 .onComplete(context.succeeding(b -> {
                     context.verify(() -> {
                         final JsonArray response = b.toJsonArray();
@@ -210,38 +227,13 @@ public class CredentialsManagementIT {
     @Test
     public void testAddCredentialsFailsForWrongContentType(final VertxTestContext context) {
 
-        registry
-                .updateCredentials(
-                        TENANT,
-                        deviceId,
-                        Collections.singleton(hashedPasswordCredential),
-                        "application/x-www-form-urlencoded",
-                        HttpURLConnection.HTTP_BAD_REQUEST)
-                .onComplete(context.completing());
-
-    }
-
-    /**
-     * Verifies that the service rejects a request to update a credentials set if the resource Version value is
-     * outdated.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void testUpdateCredentialsWithOutdatedResourceVersionFails(final VertxTestContext context) {
-
-        registry
-                .updateCredentials(
-                        TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
-                        HttpURLConnection.HTTP_NO_CONTENT)
-                .compose(ar -> {
-                    final var etag = ar.get(HTTP_HEADER_ETAG);
-                    context.verify(() -> assertThat(etag).as("missing etag header").isNotNull());
-                    // now try to update credentials with other version
-                    return registry.updateCredentialsWithVersion(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
-                            etag + 10, HttpURLConnection.HTTP_PRECON_FAILED);
-                })
-                .onComplete(context.completing());
+        registry.updateCredentials(
+                tenantId,
+                deviceId,
+                List.of(hashedPasswordCredential),
+                "application/x-www-form-urlencoded",
+                HttpURLConnection.HTTP_BAD_REQUEST)
+            .onComplete(context.completing());
 
     }
 
@@ -257,23 +249,41 @@ public class CredentialsManagementIT {
         // GIVEN a hashed password using bcrypt with more than the configured max iterations
         final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(IntegrationTestSupport.MAX_BCRYPT_ITERATIONS + 1);
 
-        final PasswordCredential credential = new PasswordCredential();
-        credential.setAuthId(authId);
+        final PasswordCredential credential = new PasswordCredential(authId);
 
         final PasswordSecret secret = new PasswordSecret();
         secret.setHashFunction(CredentialsConstants.HASH_FUNCTION_BCRYPT);
         secret.setPasswordHash(encoder.encode("thePassword"));
-        credential.setSecrets(Collections.singletonList(secret));
+        credential.setSecrets(List.of(secret));
 
         // WHEN adding the credentials
-        registry
-                .updateCredentials(
-                        TENANT,
-                        deviceId,
-                        Collections.singleton(credential),
-                        // THEN the request fails with 400
-                        HttpURLConnection.HTTP_BAD_REQUEST)
-                .onComplete(context.completing());
+        testAddCredentialsWithErroneousPayload(
+                context,
+                new JsonArray().add(JsonObject.mapFrom(credential)),
+                // THEN the request fails with 400
+                HttpURLConnection.HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * Verifies that a request to add credentials that contain unsupported properties
+     * fails with a 400 status code.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testAddCredentialsFailsForUnknownProperties(final VertxTestContext ctx) {
+
+        final PskCredential credentials = newPskCredentials("device1");
+        final JsonArray requestBody = new JsonArray()
+                .add(JsonObject.mapFrom(credentials).put("unexpected", "property"));
+
+        registry.updateCredentialsRaw(
+                tenantId,
+                deviceId,
+                requestBody.toBuffer(),
+                HttpUtils.CONTENT_TYPE_JSON_UTF8,
+                HttpURLConnection.HTTP_BAD_REQUEST)
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -284,10 +294,10 @@ public class CredentialsManagementIT {
     @Test
     public void testAddCredentialsFailsForEmptyBody(final VertxTestContext context) {
 
-        registry.updateCredentialsRaw(TENANT, deviceId, null, CrudHttpClient.CONTENT_TYPE_JSON,
-                HttpURLConnection.HTTP_BAD_REQUEST)
-                .onComplete(context.completing());
-
+        testAddCredentialsWithErroneousPayload(
+                context,
+                null,
+                HttpURLConnection.HTTP_BAD_REQUEST);
     }
 
     /**
@@ -299,7 +309,33 @@ public class CredentialsManagementIT {
      */
     @Test
     public void testAddCredentialsFailsForMissingType(final VertxTestContext context) {
-        testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_TYPE);
+
+        final JsonObject credentials = JsonObject.mapFrom(hashedPasswordCredential);
+        credentials.remove(CredentialsConstants.FIELD_TYPE);
+
+        testAddCredentialsWithErroneousPayload(
+                context,
+                new JsonArray().add(credentials),
+                HttpURLConnection.HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * Verifies that a JSON payload to add generic credentials that contain a type name that
+     * does not match the type name regex is rejected with a 400.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddCredentialsFailsForIllegalTypeName(final VertxTestContext context) {
+
+        final JsonObject credentials = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "deviceId")
+                .put(RegistryManagementConstants.FIELD_TYPE, "#illegal");
+
+        testAddCredentialsWithErroneousPayload(
+                context,
+                new JsonArray().add(credentials),
+                HttpURLConnection.HTTP_BAD_REQUEST);
     }
 
     /**
@@ -311,20 +347,49 @@ public class CredentialsManagementIT {
      */
     @Test
     public void testAddCredentialsFailsForMissingAuthId(final VertxTestContext context) {
-        testAddCredentialsWithMissingPayloadParts(context, CredentialsConstants.FIELD_AUTH_ID);
+
+        final JsonObject credentials = JsonObject.mapFrom(hashedPasswordCredential);
+        credentials.remove(CredentialsConstants.FIELD_AUTH_ID);
+
+        testAddCredentialsWithErroneousPayload(
+                context,
+                new JsonArray().add(credentials),
+                HttpURLConnection.HTTP_BAD_REQUEST);
     }
 
-    private void testAddCredentialsWithMissingPayloadParts(final VertxTestContext context, final String fieldMissing) {
+    /**
+     * Verifies that a JSON payload to add credentials that contains an authentication identifier that
+     * does not match the auth-id regex is rejected with a 400.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddCredentialsFailsForIllegalAuthId(final VertxTestContext context) {
 
-        final JsonObject json = JsonObject.mapFrom(hashedPasswordCredential);
-        json.remove(fieldMissing);
-        final JsonArray payload = new JsonArray()
-                .add(json);
+        final JsonObject credentials = JsonObject.mapFrom(hashedPasswordCredential)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "#illegal");
 
-        registry
-                .updateCredentialsRaw(TENANT, deviceId, payload.toBuffer(),
-                        CrudHttpClient.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_BAD_REQUEST)
-                .onComplete(context.completing());
+        testAddCredentialsWithErroneousPayload(
+                context,
+                new JsonArray().add(credentials),
+                HttpURLConnection.HTTP_BAD_REQUEST);
+    }
+
+    private void testAddCredentialsWithErroneousPayload(
+            final VertxTestContext context,
+            final JsonArray payload,
+            final int expectedStatus) {
+
+        LOG.debug("updating credentials with request body: {}",
+                Optional.ofNullable(payload).map(p -> p.encodePrettily()).orElse(null));
+
+        registry.updateCredentialsRaw(
+                tenantId,
+                deviceId,
+                Optional.ofNullable(payload).map(JsonArray::toBuffer).orElse(null),
+                CrudHttpClient.CONTENT_TYPE_JSON,
+                HttpURLConnection.HTTP_BAD_REQUEST)
+            .onComplete(context.completing());
     }
 
     /**
@@ -340,11 +405,24 @@ public class CredentialsManagementIT {
                 .mapTo(PasswordCredential.class);
         altered.getSecrets().get(0).setComment("test");
 
-        registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
+        registry.updateCredentials(
+                tenantId,
+                deviceId,
+                List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
-                .compose(ar -> registry.updateCredentials(TENANT, deviceId, Collections.singleton(altered),
-                        HttpURLConnection.HTTP_NO_CONTENT))
-            .compose(ur -> registry.getCredentials(TENANT, deviceId))
+            .compose(responseHeaders -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+                return registry.updateCredentialsWithVersion(
+                        tenantId,
+                        deviceId,
+                        List.of(altered),
+                        resourceVersion.get(),
+                        HttpURLConnection.HTTP_NO_CONTENT);
+            })
+            .compose(responseHeaders -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+                return registry.getCredentials(tenantId, deviceId);
+            })
             .onComplete(context.succeeding(gr -> {
                 final JsonObject retrievedSecret = gr.toJsonArray().getJsonObject(0).getJsonArray("secrets").getJsonObject(0);
                 context.verify(() -> assertThat(retrievedSecret.getString("comment")).isEqualTo("test"));
@@ -363,9 +441,9 @@ public class CredentialsManagementIT {
 
         final PasswordCredential secret = IntegrationTestSupport.createPasswordCredential(authId, "newPassword");
 
-        registry.addCredentials(TENANT, deviceId, Collections.<CommonCredential> singleton(hashedPasswordCredential))
-                .compose(ar -> registry.updateCredentials(TENANT, deviceId, secret))
-                .compose(ur -> registry.getCredentials(TENANT, deviceId))
+        registry.addCredentials(tenantId, deviceId, List.of(hashedPasswordCredential))
+                .compose(ar -> registry.updateCredentials(tenantId, deviceId, secret))
+                .compose(ur -> registry.getCredentials(tenantId, deviceId))
                 .onComplete(context.succeeding(gr -> {
                     final CredentialsObject o = extractFirstCredential(gr.toJsonObject())
                             .mapTo(CredentialsObject.class);
@@ -380,21 +458,32 @@ public class CredentialsManagementIT {
     }
 
     /**
-     * Verifies that the service rejects an update request for non-existing credentials.
+     * Verifies that the service rejects a request to update a credentials set if the resource Version value is
+     * outdated.
      *
      * @param context The vert.x test context.
      */
     @Test
-    public void testUpdateCredentialsFailsForNonExistingCredentials(final VertxTestContext context) {
-        registry
-                .updateCredentialsWithVersion(
-                        TENANT,
+    public void testUpdateCredentialsFailsForWrongResourceVersion(final VertxTestContext context) {
+
+        registry.updateCredentials(
+                tenantId,
+                deviceId,
+                List.of(hashedPasswordCredential),
+                HttpURLConnection.HTTP_NO_CONTENT)
+            .compose(responseHeaders -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+                // now try to update credentials with other version
+                return registry.updateCredentialsWithVersion(
+                        tenantId,
                         deviceId,
-                        Collections.singleton(hashedPasswordCredential),
-                        "3",
-                        HttpURLConnection.HTTP_PRECON_FAILED)
-                .onComplete(context.completing());
+                        List.of(hashedPasswordCredential),
+                        resourceVersion.get() + "_other",
+                        HttpURLConnection.HTTP_PRECON_FAILED);
+            })
+            .onComplete(context.completing());
     }
+
 
     /**
      * Verify that a correctly added credentials record can be successfully looked up again by using the type and
@@ -405,13 +494,15 @@ public class CredentialsManagementIT {
     @Test
     public void testGetAddedCredentials(final VertxTestContext context) {
 
-        registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
-                HttpURLConnection.HTTP_NO_CONTENT)
-                .compose(ar -> registry.getCredentials(TENANT, deviceId))
+        registry.updateCredentials(tenantId, deviceId, List.of(hashedPasswordCredential), HttpURLConnection.HTTP_NO_CONTENT)
+                .compose(ar -> registry.getCredentials(tenantId, deviceId))
                 .onComplete(context.succeeding(b -> {
-                    final PasswordCredential cred = b.toJsonArray().getJsonObject(0).mapTo(PasswordCredential.class);
-                    cred.getSecrets().forEach(secret -> {
-                        context.verify(() -> assertThat(secret.getId()).isNotNull());
+                    context.verify(() -> {
+                        final JsonArray credentials = b.toJsonArray();
+                        LOG.trace("retrieved credentials [tenant-id: {}, device-id: {}]: {}",
+                                tenantId, deviceId, credentials);
+                        final PasswordCredential cred = credentials.getJsonObject(0).mapTo(PasswordCredential.class);
+                        cred.getSecrets().forEach(secret -> assertThat(secret.getId()).isNotNull());
                     });
                     context.completeNow();;
                 }));
@@ -424,15 +515,16 @@ public class CredentialsManagementIT {
      * @param context The vert.x test context.
      */
     @Test
-    public void testAddedCredentialsContainsEtag(final VertxTestContext context)  {
+    public void testUpdateCredentialsChangesResourceVersion(final VertxTestContext context)  {
 
-        registry
-                .updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
-                        HttpURLConnection.HTTP_NO_CONTENT)
-                .onComplete(context.succeeding(res -> {
-                    context.verify(() -> assertThat(res.get(HTTP_HEADER_ETAG)).as("etag header missing").isNotNull());
-                    context.completeNow();
-                }));
+        registry.updateCredentials(
+                tenantId,
+                deviceId, List.of(hashedPasswordCredential),
+                HttpURLConnection.HTTP_NO_CONTENT)
+            .onComplete(context.succeeding(responseHeaders -> {
+                context.verify(() -> assertResourceVersionHasChanged(resourceVersion, responseHeaders));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -448,10 +540,10 @@ public class CredentialsManagementIT {
         credentialsListToAdd.add(hashedPasswordCredential);
         credentialsListToAdd.add(pskCredentials);
 
-        registry.addCredentials(TENANT, deviceId, credentialsListToAdd)
-            .compose(ar -> registry.getCredentials(TENANT, deviceId))
+        registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
+            .compose(ar -> registry.getCredentials(tenantId, deviceId))
             .onComplete(context.succeeding(b -> {
-                assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
+                context.verify(() -> assertResponseBodyContainsAllCredentials(b.toJsonArray(), credentialsListToAdd));
                 context.completeNow();
         }));
     }
@@ -471,10 +563,10 @@ public class CredentialsManagementIT {
         credentialsListToAdd.add(newPskCredentials("auth"));
         credentialsListToAdd.add(newPskCredentials("other-auth"));
 
-        registry.addCredentials(TENANT, deviceId, credentialsListToAdd)
-            .compose(ar -> registry.getCredentials(TENANT, deviceId))
+        registry.addCredentials(tenantId, deviceId, credentialsListToAdd)
+            .compose(ar -> registry.getCredentials(tenantId, deviceId))
             .onComplete(context.succeeding(b -> {
-                assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsListToAdd);
+                context.verify(() -> assertResponseBodyContainsAllCredentials(b.toJsonArray(), credentialsListToAdd));
                 context.completeNow();
             }));
     }
@@ -490,12 +582,10 @@ public class CredentialsManagementIT {
     @Test
     public void testGetCredentialsForDeviceRegardlessOfType(final VertxTestContext context) throws InterruptedException {
 
-        final String pskAuthId = getRandomAuthId(TEST_AUTH_ID);
+        final String pskAuthId = getRandomAuthId(PREFIX_AUTH_ID);
         final List<CommonCredential> credentialsToAdd = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
-            final GenericCredential credential = new GenericCredential();
-            credential.setAuthId(pskAuthId);
-            credential.setType("type" + i);
+            final GenericCredential credential = new GenericCredential("type" + i, pskAuthId);
 
             final GenericSecret secret = new GenericSecret();
             secret.getAdditionalProperties().put("field" + i, "setec astronomy");
@@ -504,10 +594,10 @@ public class CredentialsManagementIT {
             credentialsToAdd.add(credential);
         }
 
-        registry.addCredentials(TENANT, deviceId, credentialsToAdd)
-            .compose(ar -> registry.getCredentials(TENANT, deviceId))
+        registry.addCredentials(tenantId, deviceId, credentialsToAdd)
+            .compose(ar -> registry.getCredentials(tenantId, deviceId))
             .onComplete(context.succeeding(b -> {
-                assertResponseBodyContainsAllCredentials(context, b.toJsonArray(), credentialsToAdd);
+                context.verify(() -> assertResponseBodyContainsAllCredentials(b.toJsonArray(), credentialsToAdd));
                 context.completeNow();
             }));
     }
@@ -520,9 +610,9 @@ public class CredentialsManagementIT {
     @Test
     public void testGetAddedCredentialsButWithWrongType(final VertxTestContext context)  {
 
-        registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
+        registry.updateCredentials(tenantId, deviceId, List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
-            .compose(ar -> registry.getCredentials(TENANT, authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
+            .compose(ar -> registry.getCredentials(tenantId, authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
             .onComplete(context.completing());
     }
 
@@ -534,18 +624,17 @@ public class CredentialsManagementIT {
     @Test
     public void testGetAddedCredentialsButWithWrongAuthId(final VertxTestContext context)  {
 
-        registry.updateCredentials(TENANT, deviceId, Collections.singleton(hashedPasswordCredential),
+        registry.updateCredentials(tenantId, deviceId, List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
             .compose(ar -> registry.getCredentials(
-                    TENANT,
+                    tenantId,
                     "wrong-auth-id",
                     CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
                     HttpURLConnection.HTTP_NOT_FOUND))
             .onComplete(context.completing());
     }
 
-    private static void assertResponseBodyContainsAllCredentials(final VertxTestContext context, final JsonArray responseBody,
-            final List<CommonCredential> expected) {
+    private static void assertResponseBodyContainsAllCredentials(final JsonArray responseBody, final List<CommonCredential> expected) {
 
         assertThat(expected.size()).isEqualTo(responseBody.size());
 
@@ -574,7 +663,7 @@ public class CredentialsManagementIT {
         });
 
         // now compare
-        context.verify(() -> assertThat(responseBody).isEqualTo(expectedArray));
+        assertThat(responseBody).isEqualTo(expectedArray);
     }
 
     private static String getRandomAuthId(final String authIdPrefix) {
@@ -583,12 +672,11 @@ public class CredentialsManagementIT {
 
     private static PskCredential newPskCredentials(final String authId) {
 
-        final PskCredential credential = new PskCredential();
-        credential.setAuthId(authId);
+        final PskCredential credential = new PskCredential(authId);
 
         final PskSecret secret = new PskSecret();
         secret.setKey("secret".getBytes(StandardCharsets.UTF_8));
-        credential.setSecrets(Collections.singletonList(secret));
+        credential.setSecrets(List.of(secret));
 
         return credential;
 
