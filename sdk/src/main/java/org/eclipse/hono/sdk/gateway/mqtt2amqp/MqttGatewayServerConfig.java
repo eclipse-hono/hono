@@ -23,6 +23,12 @@ import org.eclipse.hono.util.Constants;
  */
 public class MqttGatewayServerConfig extends AbstractConfig {
 
+    /**
+     * The default number of milliseconds to wait for PUBACK.
+     */
+    protected static final int DEFAULT_COMMAND_ACK_TIMEOUT = 100;
+
+    private int commandAckTimeout = DEFAULT_COMMAND_ACK_TIMEOUT;
     private int port = 0;
     private String bindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
     private boolean sni;
@@ -92,5 +98,37 @@ public class MqttGatewayServerConfig extends AbstractConfig {
      */
     public final boolean isSni() {
         return this.sni;
+    }
+
+    /**
+     * Gets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * <p>
+     * This time out is used by the MQTT protocol gateway for commands published with QoS 1. If there is no
+     * acknowledgement within this time limit, then the command is settled with the <em>released</em> outcome.
+     * <p>
+     * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
+     *
+     * @return The time out in milliseconds.
+     */
+    public final int getCommandAckTimeout() {
+        return commandAckTimeout;
+    }
+
+    /**
+     * Sets the waiting for acknowledgement time out in milliseconds for commands published with QoS 1.
+     * <p>
+     * This time out is used by the MQTT protocol gateway for commands published with QoS 1. If there is no
+     * acknowledgement within this time limit, then the command is settled with the <em>released</em> outcome.
+     * <p>
+     * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
+     *
+     * @param timeout The time out in milliseconds.
+     * @throws IllegalArgumentException if the timeout is negative.
+     */
+    public final void setCommandAckTimeout(final int timeout) {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout must not be negative");
+        }
+        this.commandAckTimeout = timeout;
     }
 }

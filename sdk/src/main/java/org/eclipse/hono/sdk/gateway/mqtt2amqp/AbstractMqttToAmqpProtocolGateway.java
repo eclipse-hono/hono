@@ -80,7 +80,6 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
     private final ClientConfigProperties amqpClientConfig;
     private final MqttGatewayServerConfig mqttServerConfig;
     private final Map<String, AmqpAdapterClientFactory> clientFactoryPerTenant = new HashMap<>();
-    private final int commandAckTimeout;
 
     private MqttServer server;
 
@@ -91,31 +90,20 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * adapter. If it contains a username and password, those are used to authenticate the amqp client with. Otherwise
      * {@link #provideGatewayCredentials(String)} needs to be overridden in order to dynamically resolve credentials for
      * the tenant of a device request ("multi-tenant mode").
-     * <p>
-     * The command acknowledgement timeout determines how long the protocol gateway waits for acknowledgement of a
-     * command published with QoS 1. If there is no acknowledgement within this time limit, then the command is settled
-     * with the <em>released</em> outcome.
      *
      * @param amqpClientConfig The AMQP client configuration.
      * @param mqttServerConfig The MQTT server configuration.
-     * @param commandAckTimeout The timeout in milliseconds.
-     * @throws NullPointerException if amqpClientConfig or mqttServerConfig is {@code null}.
-     * @throws IllegalArgumentException if the timeout is negative.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      * @see ClientConfigProperties#setTlsEnabled(boolean)
      * @see ClientConfigProperties#setTrustStorePath(String)
      */
     public AbstractMqttToAmqpProtocolGateway(final ClientConfigProperties amqpClientConfig,
-            final MqttGatewayServerConfig mqttServerConfig, final int commandAckTimeout) {
+            final MqttGatewayServerConfig mqttServerConfig) {
         Objects.requireNonNull(amqpClientConfig);
         Objects.requireNonNull(mqttServerConfig);
 
-        if (commandAckTimeout < 0) {
-            throw new IllegalArgumentException("timeout must not be negative");
-        }
-
         this.amqpClientConfig = amqpClientConfig;
         this.mqttServerConfig = mqttServerConfig;
-        this.commandAckTimeout = commandAckTimeout;
     }
 
     /**
@@ -470,7 +458,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
                 message -> handlePublishedMessage(
                         MqttDownstreamContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
 
-        final CommandHandler cmdHandler = createCommandHandler(authenticatedDevice, vertx, commandAckTimeout);
+        final CommandHandler cmdHandler = createCommandHandler(authenticatedDevice, vertx);
         endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, this::onCommandPublished));
         endpoint.subscribeHandler(msg -> onSubscribe(endpoint, authenticatedDevice, msg, cmdHandler));
         endpoint.unsubscribeHandler(msg -> onUnsubscribe(endpoint, authenticatedDevice, msg, cmdHandler));
@@ -489,12 +477,10 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      *
      * @param authenticatedDevice The device.
      * @param vertx The vert.x instance
-     * @param commandAckTimeout The command acknowledgement timeout in milliseconds.
      * @return The command handler for the given device.
      */
-    CommandHandler createCommandHandler(final Device authenticatedDevice, final Vertx vertx,
-            final int commandAckTimeout) {
-        return new CommandHandler(vertx, commandAckTimeout, authenticatedDevice);
+    CommandHandler createCommandHandler(final Device authenticatedDevice, final Vertx vertx) {
+        return new CommandHandler(vertx, mqttServerConfig.getCommandAckTimeout(), authenticatedDevice);
     }
 
     /**

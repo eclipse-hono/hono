@@ -126,11 +126,6 @@ public class AzureIotHubMqttGateway extends AbstractMqttToAmqpProtocolGateway {
      */
     public static final String DIRECT_METHOD_RESPONSE_TOPIC_PREFIX = "$iothub/methods/res/";
 
-    /**
-     * Milliseconds to wait for acknowledgement by the device for commands published with QoS 1.
-     */
-    public static final int COMMAND_ACK_TIMEOUT = 100;
-
     private static final int DEVICE_TO_CLOUD_SIZE_LIMIT = 256 * 1024; // 256 KB
     private static final int DIRECT_METHOD_SIZE_LIMIT = 128 * 1024; // 128 KB
     private static final int CLOUD_TO_DEVICE_SIZE_LIMIT = 64 * 1024; // 64 KB
@@ -139,17 +134,16 @@ public class AzureIotHubMqttGateway extends AbstractMqttToAmqpProtocolGateway {
     private DemoDeviceConfiguration demoDeviceConfig;
 
     /**
-     * Creates an instance of this protocol gateway with command acknowledgement timeout of {@link #COMMAND_ACK_TIMEOUT}
-     * milliseconds.
+     * Creates an instance.
      *
      * @param amqpClientConfig The AMQP client configuration.
      * @param mqttServerConfig The MQTT server configuration.
      * @see AbstractMqttToAmqpProtocolGateway#AbstractMqttToAmqpProtocolGateway(ClientConfigProperties,
-     *      MqttGatewayServerConfig, int) The constructor of the superclass for details.
+     *      MqttGatewayServerConfig) The constructor of the superclass for details.
      */
     public AzureIotHubMqttGateway(final ClientConfigProperties amqpClientConfig,
             final MqttGatewayServerConfig mqttServerConfig) {
-        super(amqpClientConfig, mqttServerConfig, COMMAND_ACK_TIMEOUT);
+        super(amqpClientConfig, mqttServerConfig);
     }
 
     /**

@@ -67,7 +67,7 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
     TestMqttToAmqpProtocolGateway(final ClientConfigProperties clientConfigProperties,
             final MqttGatewayServerConfig mqttGatewayServerConfig, final Vertx vertx,
             final AmqpAdapterClientFactory amqpAdapterClientFactory) {
-        super(clientConfigProperties, mqttGatewayServerConfig, 100);
+        super(clientConfigProperties, mqttGatewayServerConfig);
         this.amqpAdapterClientFactory = amqpAdapterClientFactory;
         super.vertx = vertx;
     }
@@ -181,8 +181,8 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
     }
 
     @Override
-    CommandHandler createCommandHandler(final Device device, final Vertx vertx, final int commandAckTimeout) {
-        commandHandler = super.createCommandHandler(device, vertx, commandAckTimeout);
+    CommandHandler createCommandHandler(final Device device, final Vertx vertx) {
+        commandHandler = super.createCommandHandler(device, vertx);
         return commandHandler;
     }
 
