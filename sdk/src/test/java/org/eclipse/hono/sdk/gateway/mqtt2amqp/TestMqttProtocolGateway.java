@@ -29,9 +29,9 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttEndpoint;
 
 /**
- * A {@link AbstractMqttToAmqpProtocolGateway} implementation for testing purposes. It handles only one device.
+ * A {@link AbstractMqttProtocolGateway} implementation for testing purposes. It handles only one device.
  */
-class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
+class TestMqttProtocolGateway extends AbstractMqttProtocolGateway {
 
     public static final String DEVICE_USERNAME = "device-user";
     public static final String DEVICE_PASSWORD = "device-password";
@@ -64,10 +64,10 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
 
     private CommandHandler commandHandler;
 
-    TestMqttToAmqpProtocolGateway(final ClientConfigProperties clientConfigProperties,
-            final MqttGatewayServerConfig mqttGatewayServerConfig, final Vertx vertx,
-            final AmqpAdapterClientFactory amqpAdapterClientFactory) {
-        super(clientConfigProperties, mqttGatewayServerConfig);
+    TestMqttProtocolGateway(final ClientConfigProperties clientConfigProperties,
+                            final MqttProtocolGatewayConfig mqttProtocolGatewayConfig, final Vertx vertx,
+                            final AmqpAdapterClientFactory amqpAdapterClientFactory) {
+        super(clientConfigProperties, mqttProtocolGatewayConfig);
         this.amqpAdapterClientFactory = amqpAdapterClientFactory;
         super.vertx = vertx;
     }
@@ -75,7 +75,7 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
     /**
      * Checks if the startup completed.
      *
-     * @return {@code true} if {@link AbstractMqttToAmqpProtocolGateway#afterStartup(Promise)} has been invoked.
+     * @return {@code true} if {@link AbstractMqttProtocolGateway#afterStartup(Promise)} has been invoked.
      */
     public boolean isStartupComplete() {
         return startupComplete.get();
@@ -84,7 +84,7 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
     /**
      * Checks if the shutdown has been initiated.
      *
-     * @return {@code true} if {@link AbstractMqttToAmqpProtocolGateway#beforeShutdown(Promise)} has been invoked.
+     * @return {@code true} if {@link AbstractMqttProtocolGateway#beforeShutdown(Promise)} has been invoked.
      */
     public boolean isShutdownStarted() {
         return shutdownStarted.get();
@@ -93,7 +93,7 @@ class TestMqttToAmqpProtocolGateway extends AbstractMqttToAmqpProtocolGateway {
     /**
      * Checks if the connection to a device has been closed.
      *
-     * @return {@code true} if {@link AbstractMqttToAmqpProtocolGateway#onDeviceConnectionClose(MqttEndpoint)} has been
+     * @return {@code true} if {@link AbstractMqttProtocolGateway#onDeviceConnectionClose(MqttEndpoint)} has been
      *         invoked.
      */
     public boolean isConnectionClosed() {

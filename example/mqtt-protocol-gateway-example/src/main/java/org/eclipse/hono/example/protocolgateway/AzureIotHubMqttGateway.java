@@ -22,11 +22,11 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.sdk.gateway.mqtt2amqp.AbstractMqttToAmqpProtocolGateway;
+import org.eclipse.hono.sdk.gateway.mqtt2amqp.AbstractMqttProtocolGateway;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.Command;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.MqttCommandContext;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.MqttDownstreamContext;
-import org.eclipse.hono.sdk.gateway.mqtt2amqp.MqttGatewayServerConfig;
+import org.eclipse.hono.sdk.gateway.mqtt2amqp.MqttProtocolGatewayConfig;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.downstream.CommandResponseMessage;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.downstream.DownstreamMessage;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.downstream.EventMessage;
@@ -40,7 +40,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A Protocol Gateway implementation that shows how production ready protocol gateways can be implemented using the base
- * class {@link AbstractMqttToAmqpProtocolGateway} on the example of the "Azure IoT Hub". It provides parts of the MQTT
+ * class {@link AbstractMqttProtocolGateway} on the example of the "Azure IoT Hub". It provides parts of the MQTT
  * API of the Azure IoT Hub to show how to use the communication patterns that Hono provides.
  * <p>
  * This is not intended to be fully compatible with Azure IoT Hub. Especially it has the following limitations:
@@ -59,7 +59,7 @@ import io.vertx.core.json.JsonObject;
  * <a href= "https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-mqtt-support#respond-to-a-direct-method">direct
  * method messages</a> and direct method responses are sent as command responses.
  */
-public class AzureIotHubMqttGateway extends AbstractMqttToAmqpProtocolGateway {
+public class AzureIotHubMqttGateway extends AbstractMqttProtocolGateway {
 
     /**
      * The topic to which device-to-cloud messages are being sent.
@@ -138,11 +138,11 @@ public class AzureIotHubMqttGateway extends AbstractMqttToAmqpProtocolGateway {
      *
      * @param amqpClientConfig The AMQP client configuration.
      * @param mqttServerConfig The MQTT server configuration.
-     * @see AbstractMqttToAmqpProtocolGateway#AbstractMqttToAmqpProtocolGateway(ClientConfigProperties,
-     *      MqttGatewayServerConfig) The constructor of the superclass for details.
+     * @see AbstractMqttProtocolGateway#AbstractMqttProtocolGateway(ClientConfigProperties,
+     *      MqttProtocolGatewayConfig) The constructor of the superclass for details.
      */
     public AzureIotHubMqttGateway(final ClientConfigProperties amqpClientConfig,
-            final MqttGatewayServerConfig mqttServerConfig) {
+            final MqttProtocolGatewayConfig mqttServerConfig) {
         super(amqpClientConfig, mqttServerConfig);
     }
 

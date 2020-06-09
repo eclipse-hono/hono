@@ -19,9 +19,9 @@ import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.util.Constants;
 
 /**
- * Configuration of server properties for {@link AbstractMqttToAmqpProtocolGateway}.
+ * Configuration of server properties for {@link AbstractMqttProtocolGateway}.
  */
-public class MqttGatewayServerConfig extends AbstractConfig {
+public class MqttProtocolGatewayConfig extends AbstractConfig {
 
     /**
      * The default number of milliseconds to wait for PUBACK.

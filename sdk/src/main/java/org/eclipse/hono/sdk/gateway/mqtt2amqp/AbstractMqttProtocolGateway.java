@@ -70,7 +70,7 @@ import io.vertx.proton.ProtonDelivery;
  * This implementation does not support MQTT QoS 2; when a device requests QoS 2 in its <em>SUBSCRIBE</em> message, only
  * QoS 1 is granted.
  */
-public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle {
+public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
 
     /**
      * A logger to be shared with subclasses.
@@ -78,7 +78,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     private final ClientConfigProperties amqpClientConfig;
-    private final MqttGatewayServerConfig mqttServerConfig;
+    private final MqttProtocolGatewayConfig mqttGatewayConfig;
     private final Map<String, AmqpAdapterClientFactory> clientFactoryPerTenant = new HashMap<>();
 
     private MqttServer server;
@@ -92,18 +92,18 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * the tenant of a device request ("multi-tenant mode").
      *
      * @param amqpClientConfig The AMQP client configuration.
-     * @param mqttServerConfig The MQTT server configuration.
+     * @param mqttGatewayConfig The configuration of the protocol gateway.
      * @throws NullPointerException if any of the parameters is {@code null}.
      * @see ClientConfigProperties#setTlsEnabled(boolean)
      * @see ClientConfigProperties#setTrustStorePath(String)
      */
-    public AbstractMqttToAmqpProtocolGateway(final ClientConfigProperties amqpClientConfig,
-            final MqttGatewayServerConfig mqttServerConfig) {
+    public AbstractMqttProtocolGateway(final ClientConfigProperties amqpClientConfig,
+            final MqttProtocolGatewayConfig mqttGatewayConfig) {
         Objects.requireNonNull(amqpClientConfig);
-        Objects.requireNonNull(mqttServerConfig);
+        Objects.requireNonNull(mqttGatewayConfig);
 
         this.amqpClientConfig = amqpClientConfig;
-        this.mqttServerConfig = mqttServerConfig;
+        this.mqttGatewayConfig = mqttGatewayConfig;
     }
 
     /**
@@ -480,7 +480,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * @return The command handler for the given device.
      */
     CommandHandler createCommandHandler(final Device authenticatedDevice, final Vertx vertx) {
-        return new CommandHandler(vertx, mqttServerConfig.getCommandAckTimeout(), authenticatedDevice);
+        return new CommandHandler(vertx, mqttGatewayConfig.getCommandAckTimeout(), authenticatedDevice);
     }
 
     /**
@@ -764,8 +764,8 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
     @Override
     public final void start(final Promise<Void> startPromise) {
 
-        if (mqttServerConfig.getKeyCertOptions() == null
-                && mqttServerConfig.getPort() == MqttServerOptions.DEFAULT_TLS_PORT) {
+        if (mqttGatewayConfig.getKeyCertOptions() == null
+                && mqttGatewayConfig.getPort() == MqttServerOptions.DEFAULT_TLS_PORT) {
             log.error("configuration must have key & certificate if port 8883 is configured");
             startPromise.fail("TLS configuration invalid");
         }
@@ -775,7 +775,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
                 .listen(asyncResult -> {
                     if (asyncResult.succeeded()) {
                         final MqttServer startedServer = asyncResult.result();
-                        log.info("MQTT server running on {}:{}", mqttServerConfig.getBindAddress(),
+                        log.info("MQTT server running on {}:{}", mqttGatewayConfig.getBindAddress(),
                                 startedServer.actualPort());
                         server = startedServer;
                         afterStartup(startPromise);
@@ -791,12 +791,12 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
      * <p>
      * This method is only visible for testing purposes.
      *
-     * @return The options configured with the values of the {@link MqttGatewayServerConfig}.
+     * @return The options configured with the values of the {@link MqttProtocolGatewayConfig}.
      */
     MqttServerOptions getMqttServerOptions() {
         final MqttServerOptions options = new MqttServerOptions()
-                .setHost(mqttServerConfig.getBindAddress())
-                .setPort(mqttServerConfig.getPort());
+                .setHost(mqttGatewayConfig.getBindAddress())
+                .setPort(mqttGatewayConfig.getPort());
 
         addTlsKeyCertOptions(options);
         addTlsTrustOptions(options);
@@ -805,18 +805,18 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
 
     private void addTlsKeyCertOptions(final NetServerOptions serverOptions) {
 
-        final KeyCertOptions keyCertOptions = mqttServerConfig.getKeyCertOptions();
+        final KeyCertOptions keyCertOptions = mqttGatewayConfig.getKeyCertOptions();
 
         if (keyCertOptions != null) {
             serverOptions.setSsl(true).setKeyCertOptions(keyCertOptions);
             log.info("Enabling TLS");
 
-            final LinkedHashSet<String> enabledProtocols = new LinkedHashSet<>(mqttServerConfig.getSecureProtocols());
+            final LinkedHashSet<String> enabledProtocols = new LinkedHashSet<>(mqttGatewayConfig.getSecureProtocols());
             serverOptions.setEnabledSecureTransportProtocols(enabledProtocols);
             log.info("Enabling secure protocols [{}]", enabledProtocols);
 
-            serverOptions.setSni(mqttServerConfig.isSni());
-            log.info("Supporting TLS ServerNameIndication: {}", mqttServerConfig.isSni());
+            serverOptions.setSni(mqttGatewayConfig.isSni());
+            log.info("Supporting TLS ServerNameIndication: {}", mqttGatewayConfig.isSni());
         }
     }
 
@@ -824,7 +824,7 @@ public abstract class AbstractMqttToAmqpProtocolGateway extends AbstractVerticle
 
         if (serverOptions.isSsl()) {
 
-            final TrustOptions trustOptions = mqttServerConfig.getTrustOptions();
+            final TrustOptions trustOptions = mqttGatewayConfig.getTrustOptions();
             if (trustOptions != null) {
                 serverOptions.setTrustOptions(trustOptions).setClientAuth(ClientAuth.REQUEST);
                 log.info("Enabling client authentication using certificates [{}]", trustOptions.getClass().getName());

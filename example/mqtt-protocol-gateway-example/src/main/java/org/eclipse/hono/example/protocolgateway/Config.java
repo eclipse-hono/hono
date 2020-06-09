@@ -16,7 +16,7 @@ package org.eclipse.hono.example.protocolgateway;
 import java.util.List;
 
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.sdk.gateway.mqtt2amqp.MqttGatewayServerConfig;
+import org.eclipse.hono.sdk.gateway.mqtt2amqp.MqttProtocolGatewayConfig;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,10 +42,10 @@ public class Config {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.server.mqtt")
-    public MqttGatewayServerConfig mqttGatewayServerConfig() {
-        final MqttGatewayServerConfig mqttGatewayServerConfig = new MqttGatewayServerConfig();
-        mqttGatewayServerConfig.setSecureProtocols(enabledProtocols);
-        return mqttGatewayServerConfig;
+    public MqttProtocolGatewayConfig mqttGatewayConfig() {
+        final MqttProtocolGatewayConfig mqttProtocolGatewayConfig = new MqttProtocolGatewayConfig();
+        mqttProtocolGatewayConfig.setSecureProtocols(enabledProtocols);
+        return mqttProtocolGatewayConfig;
     }
 
     /**
@@ -66,7 +66,7 @@ public class Config {
      */
     @Bean
     public AzureIotHubMqttGateway azureIotHubMqttGateway() {
-        return new AzureIotHubMqttGateway(amqpClientConfig(), mqttGatewayServerConfig());
+        return new AzureIotHubMqttGateway(amqpClientConfig(), mqttGatewayConfig());
     }
 
     /**

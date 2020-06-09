@@ -47,7 +47,7 @@ import io.vertx.mqtt.messages.impl.MqttSubscribeMessageImpl;
 import io.vertx.mqtt.messages.impl.MqttUnsubscribeMessageImpl;
 
 /**
- * Support for mocking MQTT connections to a {@link AbstractMqttToAmqpProtocolGateway}.
+ * Support for mocking MQTT connections to a {@link AbstractMqttProtocolGateway}.
  **/
 public final class ProtocolGatewayTestHelper {
 
@@ -63,7 +63,7 @@ public final class ProtocolGatewayTestHelper {
      * @param password The password.
      * @return The connected and authenticated endpoint mock.
      */
-    public static MqttEndpoint connectMqttEndpoint(final AbstractMqttToAmqpProtocolGateway gateway,
+    public static MqttEndpoint connectMqttEndpoint(final AbstractMqttProtocolGateway gateway,
             final String username,
             final String password) {
 
@@ -83,7 +83,7 @@ public final class ProtocolGatewayTestHelper {
      * @param deviceCertificate The X.509 client certificate.
      * @return The connected and authenticated endpoint mock.
      */
-    public static MqttEndpoint connectMqttEndpointWithClientCertificate(final AbstractMqttToAmqpProtocolGateway gateway,
+    public static MqttEndpoint connectMqttEndpointWithClientCertificate(final AbstractMqttProtocolGateway gateway,
             final X509Certificate deviceCertificate) {
 
         final MqttEndpoint endpoint = createMqttEndpoint();
@@ -112,8 +112,8 @@ public final class ProtocolGatewayTestHelper {
      * @param topicFilters The topic filters to subscribe for.
      * @return A random message id.
      *
-     * @see #connectMqttEndpoint(AbstractMqttToAmqpProtocolGateway, String, String)
-     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttToAmqpProtocolGateway, X509Certificate)
+     * @see #connectMqttEndpoint(AbstractMqttProtocolGateway, String, String)
+     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttProtocolGateway, X509Certificate)
      */
     public static int subscribe(final MqttEndpoint endpoint, final String... topicFilters) {
 
@@ -132,8 +132,8 @@ public final class ProtocolGatewayTestHelper {
      * @param subscriptions The topic subscriptions to subscribe for.
      * @return A random message id.
      *
-     * @see #connectMqttEndpoint(AbstractMqttToAmqpProtocolGateway, String, String)
-     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttToAmqpProtocolGateway, X509Certificate)
+     * @see #connectMqttEndpoint(AbstractMqttProtocolGateway, String, String)
+     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttProtocolGateway, X509Certificate)
      */
     public static int subscribe(final MqttEndpoint endpoint, final MqttTopicSubscription... subscriptions) {
 
@@ -154,8 +154,8 @@ public final class ProtocolGatewayTestHelper {
      * @param topics The topic filters to unsubscribe.
      * @return A random message id.
      *
-     * @see #connectMqttEndpoint(AbstractMqttToAmqpProtocolGateway, String, String)
-     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttToAmqpProtocolGateway, X509Certificate)
+     * @see #connectMqttEndpoint(AbstractMqttProtocolGateway, String, String)
+     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttProtocolGateway, X509Certificate)
      */
     public static int unsubscribe(final MqttEndpoint endpoint, final String... topics) {
 
@@ -176,8 +176,8 @@ public final class ProtocolGatewayTestHelper {
      * @param payload The payload of the message.
      * @param topic The topic of the message.
      *
-     * @see #connectMqttEndpoint(AbstractMqttToAmqpProtocolGateway, String, String)
-     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttToAmqpProtocolGateway, X509Certificate)
+     * @see #connectMqttEndpoint(AbstractMqttProtocolGateway, String, String)
+     * @see #connectMqttEndpointWithClientCertificate(AbstractMqttProtocolGateway, X509Certificate)
      */
     public static void sendMessage(final MqttEndpoint endpoint, final Buffer payload, final String topic) {
 

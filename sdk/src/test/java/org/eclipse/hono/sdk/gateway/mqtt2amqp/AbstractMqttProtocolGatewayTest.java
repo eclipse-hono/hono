@@ -84,11 +84,11 @@ import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
 
 /**
- * Verifies behavior of {@link AbstractMqttToAmqpProtocolGateway}.
+ * Verifies behavior of {@link AbstractMqttProtocolGateway}.
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-public class AbstractMqttToAmqpProtocolGatewayTest {
+public class AbstractMqttProtocolGatewayTest {
 
     private final ClientConfigProperties amqpClientConfig = new ClientConfigProperties();
     private final Vertx vertx = mock(Vertx.class);
@@ -107,17 +107,17 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         when(amqpAdapterClientFactory.connect()).thenReturn(Future.succeededFuture());
 
         final Future<EventSender> eventSender = AmqpAdapterClientEventSenderImpl
-                .createWithAnonymousLinkAddress(connection, TestMqttToAmqpProtocolGateway.TENANT_ID, s -> {
+                .createWithAnonymousLinkAddress(connection, TestMqttProtocolGateway.TENANT_ID, s -> {
                 });
         when(amqpAdapterClientFactory.getOrCreateEventSender()).thenReturn(eventSender);
 
         final Future<TelemetrySender> telemetrySender = AmqpAdapterClientTelemetrySenderImpl
-                .createWithAnonymousLinkAddress(connection, TestMqttToAmqpProtocolGateway.TENANT_ID, s -> {
+                .createWithAnonymousLinkAddress(connection, TestMqttProtocolGateway.TENANT_ID, s -> {
                 });
         when(amqpAdapterClientFactory.getOrCreateTelemetrySender()).thenReturn(telemetrySender);
 
         final Future<CommandResponder> commandResponseSender = AmqpAdapterClientCommandResponseSender
-                .createWithAnonymousLinkAddress(connection, TestMqttToAmqpProtocolGateway.TENANT_ID, s -> {
+                .createWithAnonymousLinkAddress(connection, TestMqttProtocolGateway.TENANT_ID, s -> {
                 });
         when(amqpAdapterClientFactory.getOrCreateCommandResponseSender()).thenReturn(commandResponseSender);
 
@@ -125,8 +125,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
                 .thenAnswer(invocation -> {
                     final Consumer<Message> msgHandler = invocation.getArgument(1);
                     setCommandHandler(msgHandler);
-                    return AmqpAdapterClientCommandConsumer.create(connection, TestMqttToAmqpProtocolGateway.TENANT_ID,
-                            TestMqttToAmqpProtocolGateway.DEVICE_ID,
+                    return AmqpAdapterClientCommandConsumer.create(connection, TestMqttProtocolGateway.TENANT_ID,
+                            TestMqttProtocolGateway.DEVICE_ID,
                             (protonDelivery, message) -> msgHandler.accept(message));
                 });
 
@@ -153,12 +153,12 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final int port = 1111;
         final String bindAddress = "127.0.0.127";
 
-        final MqttGatewayServerConfig serverConfig = new MqttGatewayServerConfig();
-        serverConfig.setBindAddress(bindAddress);
-        serverConfig.setPort(port);
+        final MqttProtocolGatewayConfig config = new MqttProtocolGatewayConfig();
+        config.setBindAddress(bindAddress);
+        config.setPort(port);
 
         // GIVEN a protocol gateway with properties configured
-        final TestMqttToAmqpProtocolGateway gateway = createGateway(serverConfig);
+        final TestMqttProtocolGateway gateway = createGateway(config);
 
         // WHEN the server options are created
         final MqttServerOptions serverOptions = gateway.getMqttServerOptions();
@@ -186,12 +186,12 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final List<String> enabledProtocols = Arrays.asList("TLSv1", "TLSv1.1", "TLSv1.2");
 
         // GIVEN a protocol gateway with TLS configured
-        final MqttGatewayServerConfig config = new MqttGatewayServerConfig();
+        final MqttProtocolGatewayConfig config = new MqttProtocolGatewayConfig();
         config.setKeyStorePath(keyStorePath); // sets KeyCertOptions
         config.setSecureProtocols(enabledProtocols);
         config.setSni(true);
 
-        final TestMqttToAmqpProtocolGateway gateway = createGateway(config);
+        final TestMqttProtocolGateway gateway = createGateway(config);
 
         // WHEN the server options are created
         final MqttServerOptions serverOptions = gateway.getMqttServerOptions();
@@ -221,13 +221,13 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final List<String> enabledProtocols = Arrays.asList("TLSv1", "TLSv1.1", "TLSv1.2");
 
         // GIVEN a protocol gateway with client certificate based authentication (and TLS) configured
-        final MqttGatewayServerConfig config = new MqttGatewayServerConfig();
+        final MqttProtocolGatewayConfig config = new MqttProtocolGatewayConfig();
         config.setKeyStorePath(keyStorePath); // sets KeyCertOptions
         config.setTrustStorePath(trustStorePath); // sets TrustOptions
         config.setSecureProtocols(enabledProtocols);
         config.setSni(true);
 
-        final TestMqttToAmqpProtocolGateway gateway = createGateway(config);
+        final TestMqttProtocolGateway gateway = createGateway(config);
 
         // WHEN the server options are created
         final MqttServerOptions serverOptions = gateway.getMqttServerOptions();
@@ -242,7 +242,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
 
     /**
      * Verifies that an MQTT server is bound to the configured port and address during startup and
-     * {@link AbstractMqttToAmqpProtocolGateway#afterStartup(Promise)} is being invoked.
+     * {@link AbstractMqttProtocolGateway#afterStartup(Promise)} is being invoked.
      *
      * @param ctx The helper to use for running async tests on vertx.
      */
@@ -252,11 +252,11 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final String bindAddress = "127.0.0.127";
 
         // GIVEN a protocol gateway with port and address configured
-        final MqttGatewayServerConfig serverConfig = new MqttGatewayServerConfig();
+        final MqttProtocolGatewayConfig serverConfig = new MqttProtocolGatewayConfig();
         serverConfig.setPort(port);
         serverConfig.setBindAddress(bindAddress);
 
-        final TestMqttToAmqpProtocolGateway gateway = createGateway(serverConfig);
+        final TestMqttProtocolGateway gateway = createGateway(serverConfig);
 
         // WHEN starting the verticle
         final Promise<Void> startupTracker = Promise.promise();
@@ -276,7 +276,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
 
     /**
      * Verifies that an MQTT server is bound to the configured port and address during startup and
-     * {@link AbstractMqttToAmqpProtocolGateway#afterStartup(Promise)} is being invoked.
+     * {@link AbstractMqttProtocolGateway#afterStartup(Promise)} is being invoked.
      *
      * @param ctx The helper to use for running async tests on vertx.
      */
@@ -284,7 +284,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
     public void testServerStopSucceeds(final VertxTestContext ctx) {
 
         // GIVEN a started protocol gateway
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
 
         final Promise<Void> startupTracker = Promise.promise();
         gateway.start(startupTracker);
@@ -315,12 +315,12 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
     public void testConnectWithUsernamePasswordSucceeds() {
 
         // GIVEN a protocol gateway
-        final AbstractMqttToAmqpProtocolGateway gateway = createGateway();
+        final AbstractMqttProtocolGateway gateway = createGateway();
 
         // WHEN connecting with known credentials
         final MqttEndpoint mqttEndpoint = ProtocolGatewayTestHelper.connectMqttEndpoint(gateway,
-                TestMqttToAmqpProtocolGateway.DEVICE_USERNAME,
-                TestMqttToAmqpProtocolGateway.DEVICE_PASSWORD);
+                TestMqttProtocolGateway.DEVICE_USERNAME,
+                TestMqttProtocolGateway.DEVICE_PASSWORD);
 
         // THEN the connection is accepted
         verify(mqttEndpoint).accept(false);
@@ -334,12 +334,12 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
     public void testAuthenticationWithWrongUsernameFails() {
 
         // GIVEN a protocol gateway
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
 
         // WHEN connecting with an unknown user
         final MqttEndpoint mqttEndpoint = ProtocolGatewayTestHelper.connectMqttEndpoint(gateway,
                 "unknown-user",
-                TestMqttToAmqpProtocolGateway.DEVICE_PASSWORD);
+                TestMqttProtocolGateway.DEVICE_PASSWORD);
 
         // THEN the connection is rejected
         verify(mqttEndpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
@@ -353,11 +353,11 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
     public void testAuthenticationWithWrongPasswordFails() {
 
         // GIVEN a protocol gateway
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
 
         // WHEN connecting with an invalid password
         final MqttEndpoint mqttEndpoint = ProtocolGatewayTestHelper.connectMqttEndpoint(gateway,
-                TestMqttToAmqpProtocolGateway.DEVICE_USERNAME, "wrong-password");
+                TestMqttProtocolGateway.DEVICE_USERNAME, "wrong-password");
 
         // THEN the connection is rejected
         verify(mqttEndpoint).reject(MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED);
@@ -373,8 +373,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final X509Certificate deviceCertificate = ProtocolGatewayTestHelper.createCertificate();
 
         // GIVEN a protocol gateway configured with a trust anchor
-        final TestMqttToAmqpProtocolGateway gateway = new TestMqttToAmqpProtocolGateway(amqpClientConfig,
-                new MqttGatewayServerConfig(), vertx, amqpAdapterClientFactory) {
+        final TestMqttProtocolGateway gateway = new TestMqttProtocolGateway(amqpClientConfig,
+                new MqttProtocolGatewayConfig(), vertx, amqpAdapterClientFactory) {
 
             @Override
             protected Future<Set<TrustAnchor>> getTrustAnchors(final List<X509Certificate> certificates) {
@@ -398,8 +398,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
     public void testAuthenticationWithClientCertFailsIfTrustAnchorDoesNotMatch() {
 
         // GIVEN a protocol gateway configured with a trust anchor
-        final TestMqttToAmqpProtocolGateway gateway = new TestMqttToAmqpProtocolGateway(amqpClientConfig,
-                new MqttGatewayServerConfig(), vertx, amqpAdapterClientFactory) {
+        final TestMqttProtocolGateway gateway = new TestMqttProtocolGateway(amqpClientConfig,
+                new MqttProtocolGatewayConfig(), vertx, amqpAdapterClientFactory) {
 
             @Override
             protected Future<Set<TrustAnchor>> getTrustAnchors(final List<X509Certificate> certificates) {
@@ -428,7 +428,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         // GIVEN a protocol gateway where establishing a connection to Hono's AMQP adapter fails
         when(amqpAdapterClientFactory.connect()).thenReturn(Future.failedFuture("Connect failed"));
 
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
 
         // WHEN a device connects
         final MqttEndpoint endpoint = connectTestDevice(gateway);
@@ -439,8 +439,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
 
     /**
      * Verifies that the credentials for the gateway provided by the implementation of
-     * {@link AbstractMqttToAmqpProtocolGateway} are used to configure the connection to the AMQP adapter, if no
-     * credentials are provided in the client configuration.
+     * {@link AbstractMqttProtocolGateway} are used to configure the connection to the AMQP adapter, if no credentials
+     * are provided in the client configuration.
      */
     @Test
     public void testConnectWithGatewayCredentialsResolvedDynamicallySucceeds() {
@@ -448,8 +448,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         // GIVEN a protocol gateway where the AMQP config does NOT contain credentials ...
         // ... and where the gateway credentials are resolved by the implementation
         final ClientConfigProperties configWithoutCredentials = new ClientConfigProperties();
-        final AbstractMqttToAmqpProtocolGateway gateway = new TestMqttToAmqpProtocolGateway(
-                configWithoutCredentials, new MqttGatewayServerConfig(), vertx, amqpAdapterClientFactory) {
+        final AbstractMqttProtocolGateway gateway = new TestMqttProtocolGateway(configWithoutCredentials,
+                new MqttProtocolGatewayConfig(), vertx, amqpAdapterClientFactory) {
 
             @Override
             AmqpAdapterClientFactory createTenantClientFactory(final String tenantId,
@@ -475,7 +475,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
     /**
      * Verifies that the credentials for the gateway provided by the client configuration are used to configure the
      * connection to the AMQP adapter and take precedence over the ones provided by the implementation of
-     * {@link AbstractMqttToAmqpProtocolGateway}.
+     * {@link AbstractMqttProtocolGateway}.
      */
     @Test
     public void testConfiguredCredentialsTakePrecedenceOverImplementation() {
@@ -487,8 +487,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         configWithCredentials.setPassword(password);
 
         // GIVEN a protocol gateway where the AMQP config does contains credentials
-        final AbstractMqttToAmqpProtocolGateway gateway = new TestMqttToAmqpProtocolGateway(
-                configWithCredentials, new MqttGatewayServerConfig(), vertx, amqpAdapterClientFactory) {
+        final AbstractMqttProtocolGateway gateway = new TestMqttProtocolGateway(configWithCredentials,
+                new MqttProtocolGatewayConfig(), vertx, amqpAdapterClientFactory) {
 
             @Override
             AmqpAdapterClientFactory createTenantClientFactory(final String tenantId,
@@ -513,8 +513,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
 
     /**
      * Verifies that the downstream message constructed in
-     * {@link AbstractMqttToAmqpProtocolGateway#onPublishedMessage(MqttDownstreamContext)} is set completely into the
-     * AMQP message sent downstream.
+     * {@link AbstractMqttProtocolGateway#onPublishedMessage(MqttDownstreamContext)} is set completely into the AMQP
+     * message sent downstream.
      */
     @Test
     public void testDownstreamMessage() {
@@ -525,7 +525,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
 
         // GIVEN a protocol gateway with a MQTT endpoint connected
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
         // WHEN sending a MQTT message
@@ -539,10 +539,10 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         assertThat(MessageHelper.getPayloadAsString(amqpMessage)).isEqualTo(payload);
 
         assertThat(MessageHelper.getApplicationProperty(amqpMessage.getApplicationProperties(),
-                TestMqttToAmqpProtocolGateway.KEY_APPLICATION_PROPERTY_TOPIC, String.class)).isEqualTo(topic);
-        assertThat(MessageHelper.getDeviceId(amqpMessage)).isEqualTo(TestMqttToAmqpProtocolGateway.DEVICE_ID);
+                TestMqttProtocolGateway.KEY_APPLICATION_PROPERTY_TOPIC, String.class)).isEqualTo(topic);
+        assertThat(MessageHelper.getDeviceId(amqpMessage)).isEqualTo(TestMqttProtocolGateway.DEVICE_ID);
 
-        assertThat(amqpMessage.getContentType()).isEqualTo(TestMqttToAmqpProtocolGateway.CONTENT_TYPE);
+        assertThat(amqpMessage.getContentType()).isEqualTo(TestMqttProtocolGateway.CONTENT_TYPE);
     }
 
     /**
@@ -558,7 +558,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
 
         // GIVEN a protocol gateway that sends every MQTT publish message as an event downstream and a connected MQTT
         // endpoint
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
         // WHEN sending a MQTT message
@@ -567,8 +567,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         // THEN the AMQP message contains the correct address
         verify(protonSender).send(messageCaptor.capture(), any());
 
-        final String expectedAddress = "event/" + TestMqttToAmqpProtocolGateway.TENANT_ID + "/"
-                + TestMqttToAmqpProtocolGateway.DEVICE_ID;
+        final String expectedAddress = "event/" + TestMqttProtocolGateway.TENANT_ID + "/"
+                + TestMqttProtocolGateway.DEVICE_ID;
         assertThat(messageCaptor.getValue().getAddress()).isEqualTo(expectedAddress);
 
     }
@@ -583,8 +583,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
 
         // GIVEN a protocol gateway that sends every MQTT publish messages as telemetry messages downstream and a
         // connected MQTT endpoint
-        final TestMqttToAmqpProtocolGateway gateway = new TestMqttToAmqpProtocolGateway(amqpClientConfig,
-                new MqttGatewayServerConfig(), vertx, amqpAdapterClientFactory) {
+        final TestMqttProtocolGateway gateway = new TestMqttProtocolGateway(amqpClientConfig,
+                new MqttProtocolGatewayConfig(), vertx, amqpAdapterClientFactory) {
 
             @Override
             protected Future<DownstreamMessage> onPublishedMessage(final MqttDownstreamContext ctx) {
@@ -600,8 +600,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         // THEN the AMQP message contains the correct address
         verify(protonSender).send(messageCaptor.capture(), any());
 
-        final String expectedAddress = "telemetry/" + TestMqttToAmqpProtocolGateway.TENANT_ID + "/"
-                + TestMqttToAmqpProtocolGateway.DEVICE_ID;
+        final String expectedAddress = "telemetry/" + TestMqttProtocolGateway.TENANT_ID + "/"
+                + TestMqttProtocolGateway.DEVICE_ID;
         assertThat(messageCaptor.getValue().getAddress()).isEqualTo(expectedAddress);
     }
 
@@ -620,8 +620,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
 
         // GIVEN a protocol gateway that sends every MQTT publish messages as command response messages downstream and a
         // connected MQTT endpoint
-        final TestMqttToAmqpProtocolGateway gateway = new TestMqttToAmqpProtocolGateway(amqpClientConfig,
-                new MqttGatewayServerConfig(), vertx, amqpAdapterClientFactory) {
+        final TestMqttProtocolGateway gateway = new TestMqttProtocolGateway(amqpClientConfig,
+                new MqttProtocolGatewayConfig(), vertx, amqpAdapterClientFactory) {
 
             @Override
             protected Future<DownstreamMessage> onPublishedMessage(final MqttDownstreamContext ctx) {
@@ -645,8 +645,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         assertThat(MessageHelper.getApplicationProperty(amqpMessage.getApplicationProperties(),
                 MessageHelper.APP_PROPERTY_STATUS, Integer.class)).isEqualTo(status);
 
-        final String expectedAddress = "command_response/" + TestMqttToAmqpProtocolGateway.TENANT_ID + "/"
-                + TestMqttToAmqpProtocolGateway.DEVICE_ID + "/" + replyId;
+        final String expectedAddress = "command_response/" + TestMqttProtocolGateway.TENANT_ID + "/"
+                + TestMqttProtocolGateway.DEVICE_ID + "/" + replyId;
         assertThat(amqpMessage.getAddress()).isEqualTo(expectedAddress);
     }
 
@@ -660,13 +660,13 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final ArgumentCaptor<List<MqttQoS>> subscribeAckCaptor = ArgumentCaptor.forClass(List.class);
 
         // GIVEN a protocol gateway and a connected MQTT endpoint
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
         // WHEN sending a subscribe message with multiple topic filters
         final int subscribeMsgId = ProtocolGatewayTestHelper.subscribe(mqttEndpoint,
-                new MqttTopicSubscription(TestMqttToAmqpProtocolGateway.FILTER1, MqttQoS.AT_LEAST_ONCE),
-                new MqttTopicSubscription(TestMqttToAmqpProtocolGateway.FILTER2, MqttQoS.AT_MOST_ONCE));
+                new MqttTopicSubscription(TestMqttProtocolGateway.FILTER1, MqttQoS.AT_LEAST_ONCE),
+                new MqttTopicSubscription(TestMqttProtocolGateway.FILTER2, MqttQoS.AT_MOST_ONCE));
 
         // THEN the subscriptions are acknowledged correctly...
         verify(mqttEndpoint).subscribeAcknowledge(eq(subscribeMsgId), subscribeAckCaptor.capture());
@@ -677,8 +677,8 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final Map<String, CommandSubscription> subscriptions = gateway.getCommandHandler().getSubscriptions();
 
         assertThat(subscriptions.size()).isEqualTo(2);
-        assertThat(subscriptions.get(TestMqttToAmqpProtocolGateway.FILTER1).getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
-        assertThat(subscriptions.get(TestMqttToAmqpProtocolGateway.FILTER2).getQos()).isEqualTo(MqttQoS.AT_MOST_ONCE);
+        assertThat(subscriptions.get(TestMqttProtocolGateway.FILTER1).getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
+        assertThat(subscriptions.get(TestMqttProtocolGateway.FILTER2).getQos()).isEqualTo(MqttQoS.AT_MOST_ONCE);
     }
 
     /**
@@ -691,12 +691,12 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final ArgumentCaptor<List<MqttQoS>> subscribeAckCaptor = ArgumentCaptor.forClass(List.class);
 
         // GIVEN a protocol gateway and a connected MQTT endpoint
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
         // WHEN sending a subscribe message that requests QoS 2
         final int subscribeMsgId = ProtocolGatewayTestHelper.subscribe(mqttEndpoint,
-                new MqttTopicSubscription(TestMqttToAmqpProtocolGateway.FILTER1, MqttQoS.EXACTLY_ONCE));
+                new MqttTopicSubscription(TestMqttProtocolGateway.FILTER1, MqttQoS.EXACTLY_ONCE));
 
         // THEN the QoS is downgraded to QoS 1 in the acknowledgement...
         verify(mqttEndpoint).subscribeAcknowledge(eq(subscribeMsgId), subscribeAckCaptor.capture());
@@ -706,7 +706,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         // ... and in the internal map as well
         final Map<String, CommandSubscription> subscriptions = gateway.getCommandHandler().getSubscriptions();
 
-        assertThat(subscriptions.get(TestMqttToAmqpProtocolGateway.FILTER1).getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
+        assertThat(subscriptions.get(TestMqttProtocolGateway.FILTER1).getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
     }
 
     /**
@@ -719,12 +719,12 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final ArgumentCaptor<List<MqttQoS>> subscribeAckCaptor = ArgumentCaptor.forClass(List.class);
 
         // GIVEN a protocol gateway and a connected MQTT endpoint
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
         // WHEN sending a subscribe message with a topic filter that the gateway does not provide
         final int subscribeMsgId = ProtocolGatewayTestHelper.subscribe(mqttEndpoint,
-                TestMqttToAmqpProtocolGateway.FILTER_INVALID);
+                TestMqttProtocolGateway.FILTER_INVALID);
 
         // THEN the subscription is acknowledged correctly as a failure...
         verify(mqttEndpoint).subscribeAcknowledge(eq(subscribeMsgId), subscribeAckCaptor.capture());
@@ -749,26 +749,26 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         final String messageId = "the-message-id";
 
         final Message commandMessage = new MessageImpl();
-        MessageHelper.setJsonPayload(commandMessage, TestMqttToAmqpProtocolGateway.PAYLOAD);
+        MessageHelper.setJsonPayload(commandMessage, TestMqttProtocolGateway.PAYLOAD);
         commandMessage.setSubject(subject);
         commandMessage.setReplyTo(replyTo);
         commandMessage.setCorrelationId(correlationId);
         commandMessage.setMessageId(messageId);
 
         final JsonObject expected = new JsonObject()
-                .put(TestMqttToAmqpProtocolGateway.KEY_SUBJECT, subject)
-                .put(TestMqttToAmqpProtocolGateway.KEY_REPLY_TO, replyTo)
-                .put(TestMqttToAmqpProtocolGateway.KEY_CORRELATION_ID, correlationId)
-                .put(TestMqttToAmqpProtocolGateway.KEY_MESSAGE_ID, messageId)
-                .put(TestMqttToAmqpProtocolGateway.KEY_COMMAND_PAYLOAD, TestMqttToAmqpProtocolGateway.PAYLOAD)
-                .put(TestMqttToAmqpProtocolGateway.KEY_CONTENT_TYPE, TestMqttToAmqpProtocolGateway.CONTENT_TYPE);
+                .put(TestMqttProtocolGateway.KEY_SUBJECT, subject)
+                .put(TestMqttProtocolGateway.KEY_REPLY_TO, replyTo)
+                .put(TestMqttProtocolGateway.KEY_CORRELATION_ID, correlationId)
+                .put(TestMqttProtocolGateway.KEY_MESSAGE_ID, messageId)
+                .put(TestMqttProtocolGateway.KEY_COMMAND_PAYLOAD, TestMqttProtocolGateway.PAYLOAD)
+                .put(TestMqttProtocolGateway.KEY_CONTENT_TYPE, TestMqttProtocolGateway.CONTENT_TYPE);
 
         // GIVEN a protocol gateway and a connected MQTT endpoint with a command subscription
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
 
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
-        ProtocolGatewayTestHelper.subscribe(mqttEndpoint, TestMqttToAmqpProtocolGateway.FILTER1);
+        ProtocolGatewayTestHelper.subscribe(mqttEndpoint, TestMqttProtocolGateway.FILTER1);
 
         // WHEN receiving the command
         commandHandler.accept(commandMessage);
@@ -776,7 +776,7 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         // THEN the command is published to the MQTT endpoint
         final ArgumentCaptor<Buffer> payloadCaptor = ArgumentCaptor.forClass(Buffer.class);
 
-        verify(mqttEndpoint).publish(eq(TestMqttToAmqpProtocolGateway.COMMAND_TOPIC), payloadCaptor.capture(),
+        verify(mqttEndpoint).publish(eq(TestMqttProtocolGateway.COMMAND_TOPIC), payloadCaptor.capture(),
                 eq(MqttQoS.AT_LEAST_ONCE), eq(false), eq(false), any());
 
         assertThat(payloadCaptor.getValue().toJsonObject()).isEqualTo(expected);
@@ -790,16 +790,16 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
     public void testUnsubscribe() {
 
         // GIVEN a protocol gateway and a connected MQTT endpoint with two subscriptions
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
         ProtocolGatewayTestHelper.subscribe(mqttEndpoint,
-                new MqttTopicSubscription(TestMqttToAmqpProtocolGateway.FILTER1, MqttQoS.AT_LEAST_ONCE),
-                new MqttTopicSubscription(TestMqttToAmqpProtocolGateway.FILTER2, MqttQoS.AT_MOST_ONCE));
+                new MqttTopicSubscription(TestMqttProtocolGateway.FILTER1, MqttQoS.AT_LEAST_ONCE),
+                new MqttTopicSubscription(TestMqttProtocolGateway.FILTER2, MqttQoS.AT_MOST_ONCE));
 
         // WHEN sending an unsubscribe message containing one of the topic filters and a third onw
         final int unsubscribeMsgId = ProtocolGatewayTestHelper.unsubscribe(mqttEndpoint,
-                TestMqttToAmqpProtocolGateway.FILTER2, TestMqttToAmqpProtocolGateway.FILTER_INVALID);
+                TestMqttProtocolGateway.FILTER2, TestMqttProtocolGateway.FILTER_INVALID);
 
         // THEN the message is acknowledged
         verify(mqttEndpoint).unsubscribeAcknowledge(eq(unsubscribeMsgId));
@@ -807,25 +807,25 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         // ... and the internal map is correct as well
         final Map<String, CommandSubscription> subscriptions = gateway.getCommandHandler().getSubscriptions();
         assertThat(subscriptions.size()).isEqualTo(1);
-        assertThat(subscriptions.containsKey(TestMqttToAmqpProtocolGateway.FILTER1)).isTrue();
-        assertThat(subscriptions.containsKey(TestMqttToAmqpProtocolGateway.FILTER2)).isFalse();
+        assertThat(subscriptions.containsKey(TestMqttProtocolGateway.FILTER1)).isTrue();
+        assertThat(subscriptions.containsKey(TestMqttProtocolGateway.FILTER2)).isFalse();
 
     }
 
     /**
      * Verifies that when the MQTT connections is being closed, the subscriptions are removed and
-     * {@link AbstractMqttToAmqpProtocolGateway#onDeviceConnectionClose(MqttEndpoint)} is invoked.
+     * {@link AbstractMqttProtocolGateway#onDeviceConnectionClose(MqttEndpoint)} is invoked.
      */
     @Test
     public void testConnectionClose() {
 
         // GIVEN a protocol gateway and a connected MQTT endpoint with subscriptions
-        final TestMqttToAmqpProtocolGateway gateway = createGateway();
+        final TestMqttProtocolGateway gateway = createGateway();
         final MqttEndpoint mqttEndpoint = connectTestDevice(gateway);
 
         ProtocolGatewayTestHelper.subscribe(mqttEndpoint,
-                new MqttTopicSubscription(TestMqttToAmqpProtocolGateway.FILTER1, MqttQoS.AT_LEAST_ONCE),
-                new MqttTopicSubscription(TestMqttToAmqpProtocolGateway.FILTER2, MqttQoS.AT_MOST_ONCE));
+                new MqttTopicSubscription(TestMqttProtocolGateway.FILTER1, MqttQoS.AT_LEAST_ONCE),
+                new MqttTopicSubscription(TestMqttProtocolGateway.FILTER2, MqttQoS.AT_MOST_ONCE));
 
         // WHEN the connection is closed
         mqttEndpoint.close();
@@ -901,19 +901,18 @@ public class AbstractMqttToAmqpProtocolGatewayTest {
         commandHandler = msgHandler;
     }
 
-    private MqttEndpoint connectTestDevice(final AbstractMqttToAmqpProtocolGateway gateway) {
+    private MqttEndpoint connectTestDevice(final AbstractMqttProtocolGateway gateway) {
         return ProtocolGatewayTestHelper.connectMqttEndpoint(gateway,
-                TestMqttToAmqpProtocolGateway.DEVICE_USERNAME,
-                TestMqttToAmqpProtocolGateway.DEVICE_PASSWORD);
+                TestMqttProtocolGateway.DEVICE_USERNAME,
+                TestMqttProtocolGateway.DEVICE_PASSWORD);
     }
 
-    private TestMqttToAmqpProtocolGateway createGateway() {
-        return createGateway(new MqttGatewayServerConfig());
+    private TestMqttProtocolGateway createGateway() {
+        return createGateway(new MqttProtocolGatewayConfig());
     }
 
-    private TestMqttToAmqpProtocolGateway createGateway(final MqttGatewayServerConfig gatewayServerConfig) {
-        return new TestMqttToAmqpProtocolGateway(amqpClientConfig, gatewayServerConfig, vertx,
-                amqpAdapterClientFactory);
+    private TestMqttProtocolGateway createGateway(final MqttProtocolGatewayConfig gatewayServerConfig) {
+        return new TestMqttProtocolGateway(amqpClientConfig, gatewayServerConfig, vertx, amqpAdapterClientFactory);
     }
 
 }
