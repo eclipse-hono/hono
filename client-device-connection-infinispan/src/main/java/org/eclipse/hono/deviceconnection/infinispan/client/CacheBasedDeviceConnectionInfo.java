@@ -459,9 +459,9 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     private void checkForCacheAvailability(final Promise<Status> status) {
 
         cache.checkForCacheAvailability()
-            .map(stats -> Status.OK(stats))
+            .map(Status::OK)
             .otherwise(t -> Status.KO())
-            .onComplete(status);
+            .onComplete(ar -> status.tryComplete(ar.result()));
     }
 
     /**
