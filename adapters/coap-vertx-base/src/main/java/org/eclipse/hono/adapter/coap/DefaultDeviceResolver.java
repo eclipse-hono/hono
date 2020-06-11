@@ -200,7 +200,7 @@ public class DefaultDeviceResolver implements ApplicationLevelInfoSupplier, PskS
      * On success, add hono device to cache.
      *
      * @param handshakeIdentity The identity used by the device.
-     * @return A future completed with the key or failed with a {@link ServiceInvocationException}.
+     * @return A future completed with the key or failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     private Future<SecretKey> getSharedKeyForDevice(final PreSharedKeyDeviceIdentity handshakeIdentity, final SpanContext context) {
 

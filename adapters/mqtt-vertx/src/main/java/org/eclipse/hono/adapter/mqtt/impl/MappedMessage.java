@@ -34,7 +34,8 @@ final class MappedMessage {
     /**
      * Creates a new mapping result.
      *
-     * @param ctx The original context of the received message.
+     * @param targetAddress The target address that the original message has been mapped to.
+     * @param payload The payload that the original message has been mapped to.
      * @throws NullPointerException if targetAddress is {@code null}.
      */
     MappedMessage(final ResourceIdentifier targetAddress, final Buffer payload) {
