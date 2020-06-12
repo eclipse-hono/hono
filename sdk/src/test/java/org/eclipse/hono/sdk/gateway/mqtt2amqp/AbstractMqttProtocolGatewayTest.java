@@ -674,7 +674,7 @@ public class AbstractMqttProtocolGatewayTest {
         assertThat(subscribeAckCaptor.getValue()).isEqualTo(Arrays.asList(MqttQoS.AT_LEAST_ONCE, MqttQoS.AT_MOST_ONCE));
 
         // ... and the internal map is correct as well
-        final Map<String, CommandSubscription> subscriptions = gateway.getCommandHandler().getSubscriptions();
+        final Map<String, CommandSubscription> subscriptions = gateway.getCommandSubscriptionsManager().getSubscriptions();
 
         assertThat(subscriptions.size()).isEqualTo(2);
         assertThat(subscriptions.get(TestMqttProtocolGateway.FILTER1).getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
@@ -704,7 +704,7 @@ public class AbstractMqttProtocolGatewayTest {
         assertThat(subscribeAckCaptor.getValue()).isEqualTo(Collections.singletonList(MqttQoS.AT_LEAST_ONCE));
 
         // ... and in the internal map as well
-        final Map<String, CommandSubscription> subscriptions = gateway.getCommandHandler().getSubscriptions();
+        final Map<String, CommandSubscription> subscriptions = gateway.getCommandSubscriptionsManager().getSubscriptions();
 
         assertThat(subscriptions.get(TestMqttProtocolGateway.FILTER1).getQos()).isEqualTo(MqttQoS.AT_LEAST_ONCE);
     }
@@ -732,7 +732,7 @@ public class AbstractMqttProtocolGatewayTest {
         assertThat(subscribeAckCaptor.getValue()).isEqualTo(Collections.singletonList(MqttQoS.FAILURE));
 
         // ... and it is not contained in the internal map
-        final Map<String, CommandSubscription> subscriptions = gateway.getCommandHandler().getSubscriptions();
+        final Map<String, CommandSubscription> subscriptions = gateway.getCommandSubscriptionsManager().getSubscriptions();
 
         assertThat(subscriptions.isEmpty()).isTrue();
     }
@@ -805,7 +805,7 @@ public class AbstractMqttProtocolGatewayTest {
         verify(mqttEndpoint).unsubscribeAcknowledge(eq(unsubscribeMsgId));
 
         // ... and the internal map is correct as well
-        final Map<String, CommandSubscription> subscriptions = gateway.getCommandHandler().getSubscriptions();
+        final Map<String, CommandSubscription> subscriptions = gateway.getCommandSubscriptionsManager().getSubscriptions();
         assertThat(subscriptions.size()).isEqualTo(1);
         assertThat(subscriptions.containsKey(TestMqttProtocolGateway.FILTER1)).isTrue();
         assertThat(subscriptions.containsKey(TestMqttProtocolGateway.FILTER2)).isFalse();
@@ -831,7 +831,7 @@ public class AbstractMqttProtocolGatewayTest {
         mqttEndpoint.close();
 
         // THEN the subscriptions are removed ...
-        assertThat(gateway.getCommandHandler().getSubscriptions().isEmpty()).isTrue();
+        assertThat(gateway.getCommandSubscriptionsManager().getSubscriptions().isEmpty()).isTrue();
 
         // ... and the callback onDeviceConnectionClose() has been invoked
         assertThat(gateway.isConnectionClosed()).isTrue();

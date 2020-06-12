@@ -49,6 +49,7 @@ import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.ClientAuth;
@@ -458,16 +459,24 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
                 message -> handlePublishedMessage(
                         MqttDownstreamContext.fromPublishPacket(message, endpoint, authenticatedDevice)));
 
-        final CommandHandler cmdHandler = createCommandHandler(authenticatedDevice, vertx);
-        endpoint.publishAcknowledgeHandler(msgId -> cmdHandler.handlePubAck(msgId, this::onCommandPublished));
-        endpoint.subscribeHandler(msg -> onSubscribe(endpoint, authenticatedDevice, msg, cmdHandler));
-        endpoint.unsubscribeHandler(msg -> onUnsubscribe(endpoint, authenticatedDevice, msg, cmdHandler));
+        final CommandSubscriptionsManager cmdSubscriptionsManager = createCommandHandler(vertx);
+        endpoint.closeHandler(v -> close(endpoint, cmdSubscriptionsManager));
+        endpoint.publishAcknowledgeHandler(cmdSubscriptionsManager::handlePubAck);
+        endpoint.subscribeHandler(msg -> onSubscribe(endpoint, authenticatedDevice, msg, cmdSubscriptionsManager));
+        endpoint.unsubscribeHandler(msg -> onUnsubscribe(endpoint, authenticatedDevice, msg, cmdSubscriptionsManager));
 
-        endpoint.closeHandler(v -> {
-            onDeviceConnectionClose(endpoint);
-            cmdHandler.removeAllSubscriptions();
-        });
 
+    }
+
+    private void close(final MqttEndpoint endpoint, final CommandSubscriptionsManager cmdSubscriptionsManager) {
+        onDeviceConnectionClose(endpoint);
+        cmdSubscriptionsManager.removeAllSubscriptions();
+        if (endpoint.isConnected()) {
+            log.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
+            endpoint.close();
+        } else {
+            log.trace("connection to client is already closed");
+        }
     }
 
     /**
@@ -475,12 +484,11 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
      * <p>
      * This method is only visible for testing purposes.
      *
-     * @param authenticatedDevice The device.
      * @param vertx The vert.x instance
      * @return The command handler for the given device.
      */
-    CommandHandler createCommandHandler(final Device authenticatedDevice, final Vertx vertx) {
-        return new CommandHandler(vertx, mqttGatewayConfig.getCommandAckTimeout(), authenticatedDevice);
+    CommandSubscriptionsManager createCommandHandler(final Vertx vertx) {
+        return new CommandSubscriptionsManager(vertx, mqttGatewayConfig);
     }
 
     /**
@@ -623,16 +631,17 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
      * @param endpoint The endpoint representing the connection to the device.
      * @param authenticatedDevice The authenticated identity of the device.
      * @param subscribeMsg The subscribe request received from the device.
-     * @param cmdHandler The CommandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
+     * @param cmdSubscriptionsManager The CommandSubscriptionsManager to track command subscriptions, unsubscriptions
+     *            and handle PUBACKs.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     private void onSubscribe(final MqttEndpoint endpoint, final Device authenticatedDevice,
-            final MqttSubscribeMessage subscribeMsg, final CommandHandler cmdHandler) {
+            final MqttSubscribeMessage subscribeMsg, final CommandSubscriptionsManager cmdSubscriptionsManager) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(authenticatedDevice);
         Objects.requireNonNull(subscribeMsg);
-        Objects.requireNonNull(cmdHandler);
+        Objects.requireNonNull(cmdSubscriptionsManager);
 
         @SuppressWarnings("rawtypes")
         final List<Future> subscriptionOutcome = new ArrayList<>(subscribeMsg.topicSubscriptions().size());
@@ -652,7 +661,8 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
                 final CommandSubscription cmdSub = new CommandSubscription(subscription.topicName(), grantedQos,
                         endpoint.clientIdentifier());
 
-                result = cmdHandler.addSubscription(cmdSub, () -> createCommandConsumer(endpoint, cmdHandler));
+                result = cmdSubscriptionsManager.addSubscription(cmdSub,
+                        () -> createCommandConsumer(endpoint, cmdSubscriptionsManager, authenticatedDevice));
             } else {
                 log.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
                         subscription.topicName(), subscription.qualityOfService());
@@ -682,16 +692,17 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
      * @param endpoint The endpoint representing the connection to the device.
      * @param authenticatedDevice The authenticated identity of the device.
      * @param unsubscribeMsg The unsubscribe request received from the device.
-     * @param cmdHandler The CommandHandler to track command subscriptions, unsubscriptions and handle PUBACKs.
+     * @param cmdSubscriptionsManager The CommandSubscriptionsManager to track command subscriptions, unsubscriptions
+     *            and handle PUBACKs.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     private void onUnsubscribe(final MqttEndpoint endpoint, final Device authenticatedDevice,
-            final MqttUnsubscribeMessage unsubscribeMsg, final CommandHandler cmdHandler) {
+            final MqttUnsubscribeMessage unsubscribeMsg, final CommandSubscriptionsManager cmdSubscriptionsManager) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(authenticatedDevice);
         Objects.requireNonNull(unsubscribeMsg);
-        Objects.requireNonNull(cmdHandler);
+        Objects.requireNonNull(cmdSubscriptionsManager);
 
         unsubscribeMsg.topics().forEach(topic -> {
             if (!isTopicFilterValid(topic, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
@@ -700,7 +711,7 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
             } else {
                 log.debug("unsubscribing device [tenant-id: {}, device-id: {}] from topic [{}]",
                         authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(), topic);
-                cmdHandler.removeSubscription(topic);
+                cmdSubscriptionsManager.removeSubscription(topic);
             }
         });
         if (endpoint.isConnected()) {
@@ -709,13 +720,14 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
     }
 
     private Future<MessageConsumer> createCommandConsumer(final MqttEndpoint endpoint,
-            final CommandHandler cmdHandler) {
-        return clientFactoryPerTenant.get(cmdHandler.getAuthenticatedDevice().getTenantId())
-                .createDeviceSpecificCommandConsumer(cmdHandler.getAuthenticatedDevice().getDeviceId(),
-                        cmd -> handleCommand(endpoint, cmd, cmdHandler));
+            final CommandSubscriptionsManager cmdSubscriptionsManager, final Device authenticatedDevice) {
+        return clientFactoryPerTenant.get(authenticatedDevice.getTenantId()).createDeviceSpecificCommandConsumer(
+                authenticatedDevice.getDeviceId(),
+                cmd -> handleCommand(endpoint, cmd, cmdSubscriptionsManager, authenticatedDevice));
     }
 
-    private void handleCommand(final MqttEndpoint endpoint, final Message message, final CommandHandler cmdHandler) {
+    private void handleCommand(final MqttEndpoint endpoint, final Message message,
+            final CommandSubscriptionsManager cmdSubscriptionsManager, final Device authenticatedDevice) {
 
         if (message.getReplyTo() != null) {
             log.debug("Received request/response command [subject: {}, correlationID: {}, messageID: {}, reply-to: {}]",
@@ -724,36 +736,57 @@ public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
             log.debug("Received one-way command [subject: {}]", message.getSubject());
         }
 
-        final MqttCommandContext ctx = MqttCommandContext.fromAmqpMessage(message, cmdHandler.getAuthenticatedDevice());
+        final MqttCommandContext ctx = MqttCommandContext.fromAmqpMessage(message, authenticatedDevice);
         final Command command = onCommandReceived(ctx);
 
         if (command == null) {
             throw new IllegalStateException("onCommandReceived returned null");
         }
 
-        final CommandSubscription subscription = cmdHandler.getSubscriptions().get(command.getTopicFilter());
+        final CommandSubscription subscription = cmdSubscriptionsManager.getSubscriptions()
+                .get(command.getTopicFilter());
         if (subscription == null) {
             throw new IllegalStateException(
                     String.format("No subscription found for topic filter %s. Discarding message from %s",
-                            command.getTopicFilter(), cmdHandler.getAuthenticatedDevice().toString()));
+                            command.getTopicFilter(), authenticatedDevice.toString()));
         }
 
         log.debug("Publishing command on topic [{}] to device {} [MQTT client-id: {}, QoS: {}]", command.getTopic(),
-                cmdHandler.getAuthenticatedDevice().toString(), endpoint.clientIdentifier(), subscription.getQos());
+                authenticatedDevice.toString(), endpoint.clientIdentifier(), subscription.getQos());
 
         endpoint.publish(command.getTopic(), command.getPayload(), subscription.getQos(), false, false,
-                ar -> {
-                    // Vert.x only calls this handler after it successfully published the message, otherwise it throws
-                    // an exception which causes the AMQP Command Consumer not to be settled (and the backend
-                    // application to receive an error)
-                    if (MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos())) {
-                        cmdHandler.addToWaitingForAcknowledgement(ar.result(), subscription,
-                                message);
-                    } else {
-                        onCommandPublished(message, subscription);
-                    }
-                });
+                ar -> afterCommandPublished(ar.result(), message, authenticatedDevice, subscription,
+                        cmdSubscriptionsManager));
 
+    }
+
+    // Vert.x only calls this handler after it successfully published the message, otherwise it throws an exception
+    // which causes the AMQP Command Consumer not to be settled (and the backend application to receive an error)
+    private void afterCommandPublished(final Integer publishedMsgId, final Message message,
+            final Device authenticatedDevice, final CommandSubscription subscription,
+            final CommandSubscriptionsManager cmdSubscriptionsManager) {
+
+        if (MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos())) {
+
+            final Handler<Integer> onAckHandler = msgId -> {
+
+                onCommandPublished(message, subscription);
+
+                log.debug(
+                        "Acknowledged [Msg-id: {}] command to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
+                        msgId, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
+                        subscription.getClientId(), subscription.getQos());
+            };
+
+            final Handler<Void> onAckTimeoutHandler = v -> log.debug(
+                    "Timed out waiting for acknowledgment for command sent to device [tenant-id: {}, device-id: {}, MQTT client-id: {}, QoS: {}]",
+                    authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
+                    subscription.getClientId(), subscription.getQos());
+
+            cmdSubscriptionsManager.addToWaitingForAcknowledgement(publishedMsgId, onAckHandler, onAckTimeoutHandler);
+        } else {
+            onCommandPublished(message, subscription);
+        }
     }
 
     /**

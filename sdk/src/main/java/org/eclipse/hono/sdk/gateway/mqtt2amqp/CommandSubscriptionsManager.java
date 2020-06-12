@@ -18,96 +18,88 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.MessageConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 /**
- * A class that tracks command subscriptions, unsubscriptions and handles PUBACKs of a device.
+ * A class that tracks command subscriptions, unsubscriptions and handles PUBACKs.
  */
-final class CommandHandler {
+final class CommandSubscriptionsManager {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CommandHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CommandSubscriptionsManager.class);
+    /**
+     * Map of the current subscriptions. Key is the topic name.
+     */
     private final Map<String, CommandSubscription> subscriptions = new ConcurrentHashMap<>();
+    /**
+     * Map of the requests waiting for an acknowledgement. Key is the command message id.
+     */
     private final Map<Integer, PendingCommandRequest> waitingForAcknowledgement = new ConcurrentHashMap<>();
     private final Vertx vertx;
-    private final int commandAckTimeout;
+    private final MqttProtocolGatewayConfig config;
     private Future<MessageConsumer> commandConsumer;
-    private final Device authenticatedDevice;
 
     /**
-     * Creates a new CommandHandler instance.
+     * Creates a new CommandSubscriptionsManager instance.
      *
      * @param vertx The Vert.x instance to execute the client on.
-     * @param commandAckTimeout The number of milliseconds to wait for a acknowledgement.
-     * @param authenticatedDevice The authenticated device or {@code null}.
-     * @throws NullPointerException if vertx is {@code null}.
+     * @param config The configuration properties to use.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    CommandHandler(final Vertx vertx, final int commandAckTimeout, final Device authenticatedDevice) {
+    CommandSubscriptionsManager(final Vertx vertx, final MqttProtocolGatewayConfig config) {
         this.vertx = Objects.requireNonNull(vertx);
-        this.authenticatedDevice = Objects.requireNonNull(authenticatedDevice);
-        this.commandAckTimeout = commandAckTimeout;
-    }
-
-    public Device getAuthenticatedDevice() {
-        return authenticatedDevice;
+        this.config = Objects.requireNonNull(config);
     }
 
     /**
      * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
      *
      * @param msgId The msgId of the command published with QoS 1.
-     * @param afterCommandPublished The action to be invoked if not {@code null} on arrival of PUBACK.
      * @throws NullPointerException if msgId is {@code null}.
      */
-    public void handlePubAck(final Integer msgId,
-            final BiConsumer<Message, CommandSubscription> afterCommandPublished) {
+    public void handlePubAck(final Integer msgId) {
         Objects.requireNonNull(msgId);
         LOG.trace("Acknowledgement received for command [Msg-id: {}] that has been sent to device.", msgId);
         Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
             cancelTimer(value.timerId);
-
-            final CommandSubscription subscription = value.subscription;
-            if (afterCommandPublished != null) {
-                afterCommandPublished.accept(value.message, subscription);
-            }
-            LOG.debug("Acknowledged [Msg-id: {}] command to {} [MQTT client-id: {}, QoS: {}]", msgId,
-                    authenticatedDevice.toString(), subscription.getClientId(), subscription.getQos());
+            value.onAckHandler.handle(msgId);
         });
     }
 
     /**
-     * Stores the published message id along with message subscription and message context.
+     * Registers handlers to be invoked when the command message with the given id is either acknowledged or a timeout
+     * occurs.
      *
-     * @param msgId The id of the message (message) that has been published.
-     * @param subscription The device's message subscription.
-     * @param message The message sent.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @param msgId The id of the command (message) that has been published.
+     * @param onAckHandler Handler to invoke when the device has acknowledged the command.
+     * @param onAckTimeoutHandler Handler to invoke when there is a timeout waiting for the acknowledgement from the
+     *            device.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public void addToWaitingForAcknowledgement(final Integer msgId, final CommandSubscription subscription,
-            final Message message) {
+    public void addToWaitingForAcknowledgement(final Integer msgId, final Handler<Integer> onAckHandler,
+            final Handler<Void> onAckTimeoutHandler) {
 
         Objects.requireNonNull(msgId);
-        Objects.requireNonNull(subscription);
-        Objects.requireNonNull(message);
+        Objects.requireNonNull(onAckHandler);
+        Objects.requireNonNull(onAckTimeoutHandler);
 
-        waitingForAcknowledgement.put(msgId, new PendingCommandRequest(startTimer(msgId), subscription, message));
+        waitingForAcknowledgement.put(msgId,
+                new PendingCommandRequest(startTimer(msgId), onAckHandler, onAckTimeoutHandler));
     }
 
     /**
      * Removes the entry from the waitingForAcknowledgement map for the given msgId.
      *
      * @param msgId The id of the command (message) that has been published.
-     * @return The PendingCommandRequest object containing timer-id, subscription and message for the given msgId.
+     * @return The PendingCommandRequest object containing timer-id and event handlers.
      */
     private PendingCommandRequest removeFromWaitingForAcknowledgement(final Integer msgId) {
         return waitingForAcknowledgement.remove(msgId);
@@ -156,14 +148,22 @@ final class CommandHandler {
 
         final CommandSubscription value = subscriptions.remove(topicFilter);
         if (value != null) {
-            LOG.debug("Remove subscription for topicFilter [{}]", topicFilter);
+            LOG.debug("Remove subscription for topic filter [{}]", topicFilter);
 
-            if (commandConsumer != null && subscriptions.isEmpty()) {
-                if (commandConsumer.succeeded()) {
-                    closeCommandConsumer(commandConsumer.result());
-                }
+            if (subscriptions.isEmpty() && commandConsumer != null && commandConsumer.succeeded()) {
+                closeCommandConsumer(commandConsumer.result());
             }
+        } else {
+            LOG.debug("Cannot remove subscription; none registered for topic filter [{}].", topicFilter);
         }
+    }
+
+    /**
+     * Removes all the subscription entries and closes the command consumer.
+     *
+     **/
+    public void removeAllSubscriptions() {
+        subscriptions.keySet().forEach(this::removeSubscription);
     }
 
     private void closeCommandConsumer(final MessageConsumer consumer) {
@@ -177,23 +177,11 @@ final class CommandHandler {
         });
     }
 
-    /**
-     * Removes all the subscription entries and closes the command consumer.
-     *
-     **/
-    public void removeAllSubscriptions() {
-        subscriptions.keySet().forEach(this::removeSubscription);
-    }
-
     private long startTimer(final Integer msgId) {
 
-        return vertx.setTimer(commandAckTimeout, timerId -> {
-
-            Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId)).ifPresent(value -> {
-                final CommandSubscription subscription = value.subscription;
-                LOG.debug("Timed out waiting for acknowledgment for command sent to {} [MQTT client-id: {}, QoS: {}]",
-                        authenticatedDevice.toString(), subscription.getClientId(), subscription.getQos());
-            });
+        return vertx.setTimer(config.getCommandAckTimeout(), timerId -> {
+            Optional.ofNullable(removeFromWaitingForAcknowledgement(msgId))
+                    .ifPresent(value -> value.onAckTimeoutHandler.handle(null));
         });
     }
 
@@ -214,27 +202,28 @@ final class CommandHandler {
 
     /**
      * A class to facilitate storing of information in connection with the pending command requests. The pending command
-     * requests are tracked using a map in the enclosing class {@link CommandHandler} and is used to handle PUBACKs from
-     * devices.
+     * requests are tracked using a map in the enclosing class {@link CommandSubscriptionsManager}.
      */
     private static class PendingCommandRequest {
 
         private final Long timerId;
-        private final CommandSubscription subscription;
-        private final Message message;
+        private final Handler<Integer> onAckHandler;
+        private final Handler<Void> onAckTimeoutHandler;
 
         /**
          * Creates a new PendingCommandRequest instance.
          *
          * @param timerId The unique ID of the timer.
-         * @param subscription The device's msg subscription.
-         * @param msg The msg sent.
+         * @param onAckHandler Handler to invoke when the device has acknowledged the command.
+         * @param onAckTimeoutHandler Handler to invoke when there is a timeout waiting for the acknowledgement from the
+         *            device.
+         * @throws NullPointerException if any of the parameters is {@code null}.
          */
-        private PendingCommandRequest(final Long timerId, final CommandSubscription subscription, final Message msg) {
-
-            this.timerId = timerId;
-            this.subscription = subscription;
-            this.message = msg;
+        private PendingCommandRequest(final Long timerId, final Handler<Integer> onAckHandler,
+                final Handler<Void> onAckTimeoutHandler) {
+            this.timerId = Objects.requireNonNull(timerId);
+            this.onAckHandler = Objects.requireNonNull(onAckHandler);
+            this.onAckTimeoutHandler = Objects.requireNonNull(onAckTimeoutHandler);
         }
 
     }

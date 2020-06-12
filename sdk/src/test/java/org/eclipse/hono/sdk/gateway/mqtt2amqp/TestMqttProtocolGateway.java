@@ -62,7 +62,7 @@ class TestMqttProtocolGateway extends AbstractMqttProtocolGateway {
     private final AtomicBoolean connectionClosed = new AtomicBoolean();
     private final AmqpAdapterClientFactory amqpAdapterClientFactory;
 
-    private CommandHandler commandHandler;
+    private CommandSubscriptionsManager commandSubscriptionsManager;
 
     TestMqttProtocolGateway(final ClientConfigProperties clientConfigProperties,
                             final MqttProtocolGatewayConfig mqttProtocolGatewayConfig, final Vertx vertx,
@@ -101,12 +101,12 @@ class TestMqttProtocolGateway extends AbstractMqttProtocolGateway {
     }
 
     /**
-     * Return the command handler for the test device.
+     * Return the command subscription manager for the test device.
      *
-     * @return The command handler that has been created during the establishment of the device connection.
+     * @return The command subscription manager that has been created during the establishment of the device connection.
      */
-    public CommandHandler getCommandHandler() {
-        return commandHandler;
+    public CommandSubscriptionsManager getCommandSubscriptionsManager() {
+        return commandSubscriptionsManager;
     }
 
     @Override
@@ -181,9 +181,9 @@ class TestMqttProtocolGateway extends AbstractMqttProtocolGateway {
     }
 
     @Override
-    CommandHandler createCommandHandler(final Device device, final Vertx vertx) {
-        commandHandler = super.createCommandHandler(device, vertx);
-        return commandHandler;
+    CommandSubscriptionsManager createCommandHandler(final Vertx vertx) {
+        commandSubscriptionsManager = super.createCommandHandler(vertx);
+        return commandSubscriptionsManager;
     }
 
     @Override

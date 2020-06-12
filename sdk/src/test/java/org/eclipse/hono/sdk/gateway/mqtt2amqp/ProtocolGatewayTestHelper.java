@@ -247,6 +247,7 @@ public final class ProtocolGatewayTestHelper {
         when(endpoint.closeHandler(anyHandler())).then(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             doAnswer(s -> {
+                when(endpoint.isConnected()).thenReturn(false);
                 handler.handle(null);
                 return null;
             }).when(endpoint).close();
