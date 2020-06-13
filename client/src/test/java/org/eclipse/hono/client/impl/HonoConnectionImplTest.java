@@ -1022,4 +1022,26 @@ public class HonoConnectionImplTest {
                 ctx.completeNow();
             }));
     }
+
+    /**
+     * Verifies that the calculation of the maximum reconnect delay value works as expected (also for high reconnect
+     * attempt numbers).
+     */
+    @Test
+    public void testGetReconnectMaxDelay() {
+        final long reconnectMaxDelay = 20000;
+        props.setReconnectMaxDelay(reconnectMaxDelay);
+        props.setReconnectDelayIncrement(100);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+        assertThat(honoConnection.getReconnectMaxDelay(0)).isEqualTo(0);
+        assertThat(honoConnection.getReconnectMaxDelay(1)).isEqualTo(100);
+        assertThat(honoConnection.getReconnectMaxDelay(3)).isEqualTo(400);
+        assertThat(honoConnection.getReconnectMaxDelay(31)).isEqualTo(reconnectMaxDelay);
+        assertThat(honoConnection.getReconnectMaxDelay(Integer.MAX_VALUE)).isEqualTo(reconnectMaxDelay);
+
+        props.setReconnectDelayIncrement(Long.MAX_VALUE);
+        honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
+        assertThat(honoConnection.getReconnectMaxDelay(31)).isEqualTo(reconnectMaxDelay);
+        assertThat(honoConnection.getReconnectMaxDelay(Integer.MAX_VALUE)).isEqualTo(reconnectMaxDelay);
+    }
 }
