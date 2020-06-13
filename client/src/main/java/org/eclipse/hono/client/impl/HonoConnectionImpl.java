@@ -563,26 +563,39 @@ public class HonoConnectionImpl implements HonoConnection {
                 logConnectionError(connectionFailureCause);
             }
             // apply exponential backoff with jitter
-            // determine the max delay for this reconnect attempt as 2^attempt * delayIncrement
-            final long currentMaxDelay = (long) Math.pow(2, reconnectAttempt - 1)
-                    * clientConfigProperties.getReconnectDelayIncrement();
-            final long reconnectInterval;
-            if (currentMaxDelay > clientConfigProperties.getReconnectMinDelay()) {
-                // let the actual reconnect delay be a random between the minDelay and the currentMaxDelay,
-                // capped by the overall maxDelay
-                reconnectInterval = ThreadLocalRandom.current().nextLong(clientConfigProperties.getReconnectMinDelay(),
-                        Math.min(clientConfigProperties.getReconnectMaxDelay(), currentMaxDelay));
-            } else {
-                reconnectInterval = clientConfigProperties.getReconnectMinDelay();
-            }
-            if (reconnectInterval > 0) {
-                log.trace("scheduling new connection attempt in {}ms ...", reconnectInterval);
-                vertx.setTimer(reconnectInterval, tid -> {
+            final long reconnectMaxDelay = getReconnectMaxDelay(reconnectAttempt);
+            // let the actual reconnect delay be a random between the minDelay and the current maxDelay
+            final long reconnectDelay = reconnectMaxDelay > clientConfigProperties.getReconnectMinDelay()
+                    ? ThreadLocalRandom.current().nextLong(clientConfigProperties.getReconnectMinDelay(), reconnectMaxDelay)
+                    : clientConfigProperties.getReconnectMinDelay();
+            if (reconnectDelay > 0) {
+                log.trace("scheduling new connection attempt in {}ms ...", reconnectDelay);
+                vertx.setTimer(reconnectDelay, tid -> {
                     connect(clientOptions, connectionHandler, disconnectHandler);
                 });
             } else {
                 connect(clientOptions, connectionHandler, disconnectHandler);
             }
+        }
+    }
+
+    /**
+     * Get the maximum delay to be applied before the given reconnect attempt.
+     *
+     * @param reconnectAttempt The reconnect attempt.
+     * @return The delay in milliseconds.
+     */
+    final long getReconnectMaxDelay(final int reconnectAttempt) {
+        if (reconnectAttempt <= 0) {
+            return 0L;
+        } else if (reconnectAttempt <= 31) {
+            // determine the max delay for this reconnect attempt as 2^attempt * delayIncrement
+            final long currentMaxDelay = (1 << (reconnectAttempt - 1)) * clientConfigProperties.getReconnectDelayIncrement();
+            return currentMaxDelay >= 0 ? Math.min(clientConfigProperties.getReconnectMaxDelay(), currentMaxDelay)
+                    : clientConfigProperties.getReconnectMaxDelay();
+        } else {
+            // higher reconnectAttempt values would result in a maxDelay of more than a year, so use the configured maxDelay
+            return clientConfigProperties.getReconnectMaxDelay();
         }
     }
 
