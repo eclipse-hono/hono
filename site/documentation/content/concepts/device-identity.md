@@ -26,7 +26,7 @@ In many real world scenarios there will already be a component in place which ke
 
 In addition to that, Hono defines a [Device Registry Management API]({{< relref "/api/management" >}}), which can be implemented to take advantage of standardized  operations for managing devices and credentials. This API is optional because Hono components do not require it during runtime. 
 
-Hono comes with a [MongoDB]({{< relref "/admin-guide/mongodb-device-registry-config.md" >}}) and a [simple file]({{< relref "/admin-guide/device-registry-config.md" >}}) based implementations of both APIs. The file based implementation, which keeps all data in memory, is to be used only for demonstration purposes and is not supposed to be used in production scenarios.
+Hono comes with a [MongoDB]({{< relref "/admin-guide/mongodb-device-registry-config.md" >}}) and a [simple file]({{< relref "/admin-guide/file-based-device-registry-config.md" >}}) based implementations of both APIs. The file based implementation, which keeps all data in memory, is to be used only for demonstration purposes and is not supposed to be used in production scenarios.
 
 ## Device Authentication
 

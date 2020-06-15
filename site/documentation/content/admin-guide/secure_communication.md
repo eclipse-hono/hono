@@ -49,7 +49,7 @@ The `demo-certs/certs` folder includes the following demo keys and certificates 
 ### Device Registry
 
 The Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
-Please refer to the [Device Registry admin guide]({{< relref "device-registry-config.md" >}}) for details regarding the required configuration steps.
+Please refer to the [Device Registry admin guide]({{< relref "file-based-device-registry-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Device Registry for that purpose.
 

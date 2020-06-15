@@ -75,7 +75,7 @@ The Device Registry supports configuration of both, an AMQP based endpoint as we
 * an insecure port only or
 * both a secure and an insecure port (dual port configuration)
 
-See [Port Configuration]({{< relref "admin-guide/device-registry-config.md#port-configuration" >}}) for more information. 
+See [Port Configuration]({{< relref "admin-guide/file-based-device-registry-config.md#port-configuration" >}}) for more information. 
 
 {{% note %}}
 The environment variables to use for configuring the REST endpoint are the same as the ones for the AMQP endpoint, substituting `_AMQP_` with `_HTTP_`.
@@ -83,7 +83,7 @@ The environment variables to use for configuring the REST endpoint are the same 
 
 ## Authentication Service Connection Configuration
 
-See [Authentication Service Connection Configuration]({{< relref "admin-guide/device-registry-config.md#authentication-service-connection-configuration" >}}) for more information.
+See [Authentication Service Connection Configuration]({{< relref "admin-guide/file-based-device-registry-config.md#authentication-service-connection-configuration" >}}) for more information.
 
 ## Metrics Configuration
 

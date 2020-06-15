@@ -74,7 +74,7 @@ The following sequence diagrams show the different steps involved in having a ga
 
 {{< figure src="../command_control_concept_gateway_1.svg" title="Command subscription" >}}
 
-The gateway "gw-1" is connected to a protocol adapter and subscribes to commands for a device 4711 (1). This device has to be configured so that the gateway may act on its behalf (see [Configuring Gateway Devices]({{< relref "/admin-guide/device-registry-config.md#configuring-gateway-devices" >}}) for details).
+The gateway "gw-1" is connected to a protocol adapter and subscribes to commands for a device 4711 (1). This device has to be configured so that the gateway may act on its behalf (see [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config.md#configuring-gateway-devices" >}}) for details).
 
 The protocol adapter creates the tenant-scoped consumer link on the `command/TENANT` address (if it doesn't already exist) (2) and then updates the [command-handling protocol adapter instance for device]({{< relref "/api/device-connection#set-command-handling-protocol-adapter-instance-for-device" >}}) information (3), assigning the device 4711 to adapter instance id #1.
 
