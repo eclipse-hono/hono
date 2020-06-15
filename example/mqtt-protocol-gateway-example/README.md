@@ -38,7 +38,7 @@ Not supported are the following features of Azure IoT Hub:
 
 ## Device Authentication
 
-A Hono protocol gateway is responsible for the authentication of the devices because the devices are not necessarily registered in Hono's device registry.
+A Hono protocol gateway is responsible for the authentication of the devices.
 This example implementation does not provide or require data storage for device credentials. 
 Instead, it can only be configured to use a single demo device, which must already be present in Hono's device registry (see below).
 Client certificate based authentication is not implemented.
@@ -84,6 +84,9 @@ mvn spring-boot:run
  
 ## Enable TLS 
 
+Azure IoT Hub only provides connections with TLS and only offers port 8883. To start the protocol gateway listening
+on this port with TLS enabled and a demo certificate, run:
+
 ~~~sh
 # in base directory of Hono repository:
 mvn clean install
@@ -91,17 +94,14 @@ cd example/mqtt-protocol-gateway-example/
 java -jar target/mqtt-protocol-gateway-example*-exec.jar --spring.profiles.active=ssl
 ~~~
 
-Azure IoT Hub only provides connections with TLS and only offers port 8883. 
-This protocol gateway can of course not provide an Azure Server certificate, 
-but if the certificate can be changed or hostname verification disabled on the device, it should connect with TLS. 
-
 With the [Eclipse Mosquitto](https://mosquitto.org/) command line client, for example, sending an event message would then look like this:
 
 ~~~sh
 # in directory: hono/example/mqtt-protocol-gateway-example/
 mosquitto_pub -d -h localhost -p 8883 -i '4712' -u 'demo1' -P 'demo-secret'  -t "devices/4712/messages/events/" -m "hello world" -V mqttv311 --cafile target/config/hono-demo-certs-jar/trusted-certs.pem -q 1
 ~~~
- 
+
+Existing hardware devices might need to be configured to accept the used certificate. 
 
 ## Example Requests
 
@@ -136,7 +136,7 @@ mosquitto_sub -v -h localhost -u "demo1" -P "demo-secret" -t 'devices/4712/messa
 mosquitto_sub -v -h localhost -u "demo1" -P "demo-secret" -t '$iothub/methods/POST/#' -q 1
 ~~~
 
-When the command is received, in the terminal should appear something like this:
+When Mosquitto receives the command, in the terminal should appear something like this:
 ~~~sh
 $iothub/methods/POST/setBrightness/?$rid=0100bba05d61-7027-4131-9a9d-30238b9ec9bb {"brightness": 87}
 ~~~
