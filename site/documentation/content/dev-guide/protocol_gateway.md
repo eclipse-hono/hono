@@ -26,7 +26,7 @@ The abstract methods must be implemented to handle the following events:
 
 1. when a device connects: authenticate the device
 1. when a device subscribes: validate the topic filters
-1. when a back-end application sends a command:
+1. when a business application sends a command:
   * determine the topic on which the device expects it
   * select the corresponding subscription
   * (optional) modify the payload
@@ -41,6 +41,10 @@ The abstract class is configured by its constructor parameters.
 The `ClientConfigProperties` configure the connection to the AMQP protocol adapter and the `MqttProtocolGatewayConfig`
 configures the protocol gateway including the MQTT server.
 
+**NB**  When receiving commands, the AMQP message is settled (and accepted) as soon as the message has been successfully
+published to the device. The implementation does not wait for an acknowledgement from the device, regardless of the 
+QoS with which the device has subscribed. 
+If the business application requires a higher delivery guarantee, it is recommended to use request-response commands.
 
 ### Device Registration
 
@@ -54,7 +58,7 @@ It is not necessary to provision credentials for the devices to Hono's device re
 ### Device Authentication
 
 The protocol gateway is responsible for establishing and verifying the identity of devices.
-This template supports both the authentication based on the username/password provided in
+This template supports both the authentication based on the username and password provided in
 an MQTT CONNECT packet and client certificate-based authentication as part of a TLS handshake for this purpose.
 
 For authentication with username, the abstract method _authenticateDevice_ must be implemented.

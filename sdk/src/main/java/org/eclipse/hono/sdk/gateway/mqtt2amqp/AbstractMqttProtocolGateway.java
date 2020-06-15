@@ -70,6 +70,10 @@ import io.vertx.proton.ProtonDelivery;
  * <p>
  * This implementation does not support MQTT QoS 2; when a device requests QoS 2 in its <em>SUBSCRIBE</em> message, only
  * QoS 1 is granted.
+ * <p>
+ * When receiving commands, the AMQP message is settled with the outcome <em>accepted</em> as soon as the message has
+ * been successfully published to the device. The implementation does not wait for an acknowledgement from the device,
+ * regardless of the QoS with which the device has subscribed.
  */
 public abstract class AbstractMqttProtocolGateway extends AbstractVerticle {
 
