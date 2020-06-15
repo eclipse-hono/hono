@@ -136,3 +136,7 @@ Authentication and authorization of gateways works in the same way.
 
 Hono's [*examples* module](https://github.com/eclipse/hono/tree/master/example/protocol-adapter-example) contains code for
 a simple protocol gateway illustrating how devices using a binary TCP based protocol can be connected to Hono's AMQP adapter.
+
+The repository [hono-extras](https://github.com/eclipse/hono-extras) contains a generic template for an MQTT protocol gateway. 
+With this template, a production-ready protocol gateway can be easily built to connect existing MQTT-enabled devices to Hono. 
+For example, topics can be mapped or the payload can be transformed, enriched, compressed, or encrypted.
