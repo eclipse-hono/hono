@@ -16,6 +16,7 @@ package org.eclipse.hono.example.protocolgateway;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -31,7 +32,6 @@ import org.eclipse.hono.sdk.gateway.mqtt2amqp.downstream.CommandResponseMessage;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.downstream.DownstreamMessage;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.downstream.EventMessage;
 import org.eclipse.hono.sdk.gateway.mqtt2amqp.downstream.TelemetryMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.Future;
@@ -130,20 +130,25 @@ public class AzureIotHubMqttGateway extends AbstractMqttProtocolGateway {
     private static final int DIRECT_METHOD_SIZE_LIMIT = 128 * 1024; // 128 KB
     private static final int CLOUD_TO_DEVICE_SIZE_LIMIT = 64 * 1024; // 64 KB
 
-    @Autowired
-    private DemoDeviceConfiguration demoDeviceConfig;
+    private final DemoDeviceConfiguration demoDeviceConfig;
 
     /**
      * Creates an instance.
      *
      * @param amqpClientConfig The AMQP client configuration.
      * @param mqttServerConfig The MQTT server configuration.
-     * @see AbstractMqttProtocolGateway#AbstractMqttProtocolGateway(ClientConfigProperties,
-     *      MqttProtocolGatewayConfig) The constructor of the superclass for details.
+     * @param demoDeviceConfig The configuration for the demo device.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @see AbstractMqttProtocolGateway#AbstractMqttProtocolGateway(ClientConfigProperties, MqttProtocolGatewayConfig)
+     *      The constructor of the superclass for details.
      */
     public AzureIotHubMqttGateway(final ClientConfigProperties amqpClientConfig,
-            final MqttProtocolGatewayConfig mqttServerConfig) {
+            final MqttProtocolGatewayConfig mqttServerConfig,
+            final DemoDeviceConfiguration demoDeviceConfig) {
         super(amqpClientConfig, mqttServerConfig);
+
+        Objects.requireNonNull(demoDeviceConfig);
+        this.demoDeviceConfig = demoDeviceConfig;
     }
 
     /**

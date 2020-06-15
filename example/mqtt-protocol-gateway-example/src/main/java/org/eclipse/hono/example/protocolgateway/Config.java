@@ -66,7 +66,7 @@ public class Config {
      */
     @Bean
     public AzureIotHubMqttGateway azureIotHubMqttGateway() {
-        return new AzureIotHubMqttGateway(amqpClientConfig(), mqttGatewayConfig());
+        return new AzureIotHubMqttGateway(amqpClientConfig(), mqttGatewayConfig(), demoDevice());
     }
 
     /**
