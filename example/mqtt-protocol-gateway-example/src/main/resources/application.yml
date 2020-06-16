@@ -45,6 +45,5 @@ hono:
     mqtt:
       bindAddress: 0.0.0.0
       port: 8883
-      keyPath: target/config/hono-demo-certs-jar/azure-protocol-gateway-key.pem
-      certPath: target/config/hono-demo-certs-jar/azure-protocol-gateway-cert.pem
-        
+      keyPath: target/config/hono-demo-certs-jar/example-gateway-key.pem
+      certPath: target/config/hono-demo-certs-jar/example-gateway-cert.pem
