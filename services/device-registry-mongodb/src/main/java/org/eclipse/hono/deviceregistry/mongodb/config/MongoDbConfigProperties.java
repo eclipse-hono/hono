@@ -182,7 +182,7 @@ public final class MongoDbConfigProperties {
      * Gets the time in milliseconds that the mongo driver will wait to select a
      * server for an operation before raising an error.
      * <p>
-     * When this property is not set, the Vert.x mongodb client uses a default value of 300000 ms.
+     * When this property is not set, the Vert.x mongodb client uses a default value of 30000 ms.
      *
      * @return The server selection timeout in milliseconds.
      */
@@ -194,7 +194,7 @@ public final class MongoDbConfigProperties {
      * Sets the timeout in milliseconds that the mongo driver will wait to select a server 
      * for an operation before raising an error.
      * <p>
-     * When this property is not set, the Vert.x mongodb client uses a default value of 300000 ms.
+     * When this property is not set, the Vert.x mongodb client uses a default value of 30000 ms.
      *
      * @param serverSelectionTimeoutInMs The server selection timeout in milliseconds.
      * @return A reference to this for fluent use.
