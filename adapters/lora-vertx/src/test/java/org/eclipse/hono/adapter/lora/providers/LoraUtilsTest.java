@@ -14,9 +14,10 @@
 package org.eclipse.hono.adapter.lora.providers;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.eclipse.hono.adapter.lora.providers.LoraUtils;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.JsonObject;
@@ -70,7 +71,7 @@ public class LoraUtilsTest {
     @Test
     public void testInvalidHexInput() {
         assertThatThrownBy(() -> LoraUtils.convertFromHexToBase64("68A5K9")).isInstanceOf(LoraProviderMalformedPayloadException.class);
-        ;
+
     }
 
     /**
