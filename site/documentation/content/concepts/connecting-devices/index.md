@@ -134,5 +134,5 @@ Authentication and authorization of gateways works in the same way.
 
 ### Example Code
 
-Hono's [*examples* module](https://github.com/eclipse/hono/tree/master/example/protocol-adapter-example) contains code for
+Hono's [*examples* module](https://github.com/eclipse/hono/tree/master/examples/protocol-adapter-example) contains code for
 a simple protocol gateway illustrating how devices using a binary TCP based protocol can be connected to Hono's AMQP adapter.

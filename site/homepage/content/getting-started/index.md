@@ -35,6 +35,25 @@ The Hono command line client is used in this guide for simulating an application
 The client is available from [Hono's download page]({{< relref "downloads" >}}).
 Note that running the command line client requires a Java 11 runtime environment being installed locally.
 
+#### Very quick Quickstart
+
+In the following all necessary commands and operations will be explained on how to register a tenant and a device via the HTTP API.
+Then, it will be shown how messages can be sent via the HTTP and MQTT protocol adapters.
+If you want to really kickstart your Hono experience there also is a convenience Python script which you can use to 
+automatically replay the Tutorial given here (at least the telemetry part for now).
+
+{{% note title="Python Quickstart" %}}
+You can find the Python tutorial in the [Examples](https://github.com/eclipse/hono/tree/master/examples/quickstart/python/src/main/python).
+The python script does
+* Setup a Tenant
+* Setup a Device in the tenant
+* Add credentials to the device
+* Start an (northbound) AMQP Receiver as "Consumer" of the data
+* Send a Telemetry message via HTTP API
+* Send a Telemetry message via MQTT API
+For more details have a look in the [Readme](https://github.com/eclipse/hono/tree/master/examples/quickstart/python/README.md).
+{{% /note %}}
+
 #### Hono Sandbox
 
 The most important prerequisite is, of course, a Hono instance that you can work with.
