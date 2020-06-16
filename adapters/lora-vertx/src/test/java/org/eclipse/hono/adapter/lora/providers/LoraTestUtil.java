@@ -18,7 +18,10 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 
@@ -38,14 +41,21 @@ public final class LoraTestUtil {
      *
      * @param providerName The name of the provider to load the file for.
      * @param type The type of message to load.
+     * @param classifiers additional classifiers of the test file.
      * @return the contents of the file.
      * @throws IOException if the test file could not be loaded.
      * @throws URISyntaxException if the test file could not be loaded.
      */
-    public static Buffer loadTestFile(final String providerName, final LoraMessageType type) throws IOException, URISyntaxException {
+    public static Buffer loadTestFile(final String providerName, final LoraMessageType type, final String... classifiers) throws IOException, URISyntaxException {
         Objects.requireNonNull(providerName);
         Objects.requireNonNull(type);
-        final URL location = LoraTestUtil.class.getResource(String.format("/payload/%s.%s.json", providerName, type.name().toLowerCase()));
+        final String name = Stream
+                .<String>concat(
+                        Stream.of(providerName, type.name().toLowerCase()),
+                        Arrays.stream(classifiers))
+                .collect(Collectors.joining("."));
+        final URL location = LoraTestUtil.class.getResource(String.format("/payload/%s.json", name));
         return Buffer.buffer(Files.readAllBytes(Paths.get(location.toURI())));
     }
+
 }

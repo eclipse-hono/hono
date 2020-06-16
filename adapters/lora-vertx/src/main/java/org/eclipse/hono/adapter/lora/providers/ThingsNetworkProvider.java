@@ -67,6 +67,12 @@ public class ThingsNetworkProvider extends BaseLoraProvider {
     protected Buffer extractPayload(final JsonObject loraMessage) {
 
         Objects.requireNonNull(loraMessage);
+
+        if (loraMessage.containsKey(FIELD_TTN_PAYLOAD_RAW) && loraMessage.getValue(FIELD_TTN_PAYLOAD_RAW) == null) {
+            // ... this is an empty payload message, still valid.
+            return Buffer.buffer();
+        }
+
         return LoraUtils.getChildObject(loraMessage, FIELD_TTN_PAYLOAD_RAW, String.class)
                 .map(s -> Buffer.buffer(Base64.getDecoder().decode(s)))
                 .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain Base64 encoded payload property"));

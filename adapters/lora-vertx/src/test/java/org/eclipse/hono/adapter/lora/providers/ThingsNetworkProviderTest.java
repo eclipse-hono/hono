@@ -13,6 +13,12 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.eclipse.hono.adapter.lora.LoraMessageType;
+import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
+import org.junit.jupiter.api.Test;
+
 /**
  * Verifies behavior of {@link ThingsNetworkProvider}.
  */
@@ -25,6 +31,21 @@ public class ThingsNetworkProviderTest extends LoraProviderTestBase<ThingsNetwor
     @Override
     protected ThingsNetworkProvider newProvider() {
         return new ThingsNetworkProvider();
+    }
+
+    /**
+     * Test an uplink message with a null payload.
+     *
+     * @throws Exception if anything goes wrong.
+     */
+    @Test
+    public void testGetMessageParsesUplinkMessagePropertiesWithNullPayload() throws Exception {
+
+        final UplinkLoraMessage loraMessage = (UplinkLoraMessage) this.provider.getMessage(LoraTestUtil.loadTestFile(this.provider.getProviderName(), LoraMessageType.UPLINK, "with-null-payload"));
+
+        assertThat(loraMessage.getDevEUIAsString()).isEqualTo("0102030405060708");
+        assertThat(loraMessage.getPayload()).isNotNull();
+        assertThat(loraMessage.getPayload().length()).isEqualTo(0);
     }
 
 }
